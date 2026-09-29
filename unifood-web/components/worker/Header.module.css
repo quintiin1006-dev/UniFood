@@ -1,0 +1,351 @@
+.header {
+  position: relative;
+  z-index: 20;
+
+  width: 100%;
+  min-height: 104px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 17px 34px;
+
+  background: rgba(255, 255, 255, 0.96);
+
+  border-radius: 0 0 24px 24px;
+
+  box-shadow:
+    0 8px 30px rgba(10, 55, 120, 0.1),
+    0 1px 2px rgba(10, 55, 120, 0.05);
+
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+
+  animation: headerIn 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+
+  min-width: 0;
+}
+
+.logoWrapper {
+  width: 64px;
+  height: 64px;
+
+  flex-shrink: 0;
+
+  overflow: hidden;
+
+  border-radius: 18px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 5px 18px rgba(16, 75, 150, 0.13),
+    inset 0 0 0 1px rgba(16, 75, 150, 0.08);
+
+  animation: logoIn 750ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.logo {
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+
+  display: block;
+}
+
+.brandInfo h1 {
+  margin: 0;
+
+  color: #102d68;
+
+  font-size: clamp(26px, 2vw, 30px);
+  font-weight: 750;
+
+  line-height: 1;
+
+  letter-spacing: -1.4px;
+}
+
+.brandInfo h1 span {
+  color: #1468e8;
+}
+
+.brandInfo p {
+  margin: 6px 0 0;
+
+  color: #7894c1;
+
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+
+  margin-left: 30px;
+}
+
+.search {
+  width: min(390px, 32vw);
+  height: 48px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 11px;
+
+  padding: 0 17px;
+
+  border-radius: 26px;
+
+  background: #eaf2ff;
+
+  color: #1658b7;
+
+  transition:
+    background-color 220ms ease,
+    box-shadow 220ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.search:hover {
+  background: #e5efff;
+}
+
+.search:focus-within {
+  transform: scale(1.012);
+
+  background: #ffffff;
+
+  box-shadow:
+    0 0 0 3px rgba(20, 104, 232, 0.1),
+    0 8px 22px rgba(20, 104, 232, 0.08);
+}
+
+.searchToggle {
+  display: grid;
+  place-items: center;
+
+  flex-shrink: 0;
+
+  padding: 0;
+
+  border: 0;
+
+  background: transparent;
+
+  color: inherit;
+
+  cursor: pointer;
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+
+  border: 0;
+  outline: 0;
+
+  background: transparent;
+
+  color: #173e7b;
+
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.search input::placeholder {
+  color: #7895c4;
+}
+
+.searchClose {
+  display: grid;
+  place-items: center;
+
+  flex-shrink: 0;
+
+  padding: 2px;
+
+  border: 0;
+
+  background: transparent;
+
+  color: #1658b7;
+
+  cursor: pointer;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  color: #102d68;
+
+  font-size: 14px;
+  font-weight: 650;
+
+  white-space: nowrap;
+}
+
+.statusDot {
+  width: 10px;
+  height: 10px;
+
+  border-radius: 50%;
+
+  background: #19b66b;
+
+  animation: pulse 2.3s ease-out infinite;
+}
+
+@keyframes headerIn {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes logoIn {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(25, 182, 107, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgba(25, 182, 107, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(25, 182, 107, 0);
+  }
+}
+
+@media (max-width: 1000px) {
+  .header {
+    padding: 16px 24px;
+  }
+
+  .actions {
+    gap: 18px;
+  }
+
+  .search {
+    width: 300px;
+  }
+}
+
+@media (max-width: 760px) {
+  .header {
+    min-height: 82px;
+
+    padding: 13px 17px;
+
+    border-radius: 0 0 20px 20px;
+  }
+
+  .logoWrapper {
+    width: 50px;
+    height: 50px;
+
+    border-radius: 14px;
+  }
+
+  .brand {
+    gap: 10px;
+  }
+
+  .brandInfo h1 {
+    font-size: 22px;
+  }
+
+  .brandInfo p {
+    font-size: 10px;
+  }
+
+  .actions {
+    margin-left: 10px;
+    gap: 10px;
+  }
+
+  .search {
+    position: relative;
+
+    width: 44px;
+    height: 44px;
+
+    justify-content: center;
+
+    padding: 0;
+  }
+
+  .searchOpen {
+    position: absolute;
+
+    top: 50%;
+
+    right: 14px;
+
+    transform: translateY(-50%);
+
+    width: min(82vw, 400px);
+
+    justify-content: flex-start;
+
+    padding: 0 10px 0 16px;
+  }
+
+  .searchOpen:focus-within {
+    transform: translateY(-50%);
+  }
+
+  .search input {
+    display: none;
+  }
+
+  .searchOpen input {
+    display: block;
+  }
+
+  .status span:last-child {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header,
+  .logoWrapper,
+  .statusDot {
+    animation: none;
+  }
+
+  .search {
+    transition: none;
+  }
+}

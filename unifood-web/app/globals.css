@@ -1,0 +1,317 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+
+  width: 100%;
+  height: 100%;
+
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    "SF Pro Text",
+    "Segoe UI",
+    sans-serif;
+}
+
+body {
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+/* =========================================================
+   CONTENEDOR PRINCIPAL
+   ========================================================= */
+
+.worker-page {
+  position: relative;
+
+  width: calc(100% / 0.7);
+
+  height: calc(100vh / 0.7);
+  min-height: calc(100vh / 0.7);
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  transform: scale(0.7);
+  transform-origin: top left;
+
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      rgba(35, 129, 239, 0.26),
+      transparent 40%
+    ),
+    linear-gradient(
+      145deg,
+      #063d82 0%,
+      #0756a9 48%,
+      #043d7f 100%
+    );
+
+  isolation: isolate;
+}
+
+/* =========================================================
+   CAPA DE ILUMINACIÓN DEL FONDO
+   ========================================================= */
+
+.worker-page::before {
+  content: "";
+
+  position: absolute;
+
+  inset: 0;
+
+  pointer-events: none;
+
+  background:
+    radial-gradient(
+      circle at 50% 70%,
+      rgba(255, 255, 255, 0.035),
+      transparent 35%
+    );
+
+  opacity: 0.8;
+
+  z-index: 0;
+}
+
+
+/* =========================================================
+   CONTENIDO PRINCIPAL
+   ========================================================= */
+
+.worker-main {
+  position: relative;
+
+  z-index: 2;
+
+  flex: 1 1 0;
+
+  min-height: 0;
+
+  min-width: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  overflow: hidden;
+
+  padding:
+    14px 24px 7px;
+
+  /*
+   * Permite controlar correctamente
+   * la marca de agua.
+   */
+  isolation: isolate;
+}
+
+
+/* =========================================================
+   LOGO UNIFOOD CENTRAL
+   MARCA DE AGUA
+   ========================================================= */
+
+.worker-main::before {
+  content: "";
+
+  position: absolute;
+
+  left: 50%;
+  top: 52%;
+
+  transform:
+    translate(-50%, -50%);
+
+  width: 420px;
+  height: 420px;
+
+  background-image:
+    url("/unifood-pantalla.png");
+
+  background-repeat:
+    no-repeat;
+
+  background-position:
+    center;
+
+  background-size:
+    contain;
+
+  /*
+   * Transparencia de la marca de agua.
+   */
+  opacity: 0.10;
+
+  pointer-events:
+    none;
+
+  user-select:
+    none;
+
+  /*
+   * El logo queda sobre el fondo,
+   * pero debajo del Kanban.
+   */
+  z-index: 0;
+}
+
+
+/* =========================================================
+   CONTENIDO DEL KANBAN
+   ========================================================= */
+
+.worker-main > * {
+  position: relative;
+
+  z-index: 1;
+
+  min-height: 0;
+
+  min-width: 0;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.worker-page > header {
+  position: relative;
+
+  z-index: 5;
+}
+
+
+/* =========================================================
+   NAVEGACIÓN INFERIOR
+   ========================================================= */
+
+.worker-page > nav {
+  position: relative;
+
+  z-index: 5;
+}
+
+
+/* =========================================================
+   TABLET / PANTALLAS MEDIANAS
+   ========================================================= */
+
+@media (max-width: 1150px) {
+
+  .worker-main {
+    padding:
+      12px 16px 7px;
+  }
+
+  .worker-main::before {
+    width:
+      360px;
+
+    height:
+      360px;
+
+    opacity:
+      0.09;
+  }
+}
+
+
+/* =========================================================
+   MÓVIL
+   ========================================================= */
+
+@media (max-width: 760px) {
+
+  body {
+    overflow-y:
+      auto;
+  }
+
+
+  .worker-page {
+    height:
+      auto;
+
+    min-height:
+      100vh;
+
+    overflow-y:
+      auto;
+
+    overflow-x:
+      hidden;
+  }
+
+
+  .worker-main {
+    flex:
+      none;
+
+    min-height:
+      calc(100vh - 140px);
+
+    overflow:
+      visible;
+
+    padding:
+      10px 10px 6px;
+  }
+
+
+  .worker-main::before {
+    width:
+      280px;
+
+    height:
+      280px;
+
+    top:
+      50%;
+
+    opacity:
+      0.08;
+  }
+}
+
+
+/* =========================================================
+   REDUCIR ANIMACIONES
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+  * {
+    scroll-behavior:
+      auto !important;
+
+    animation-duration:
+      0.01ms !important;
+
+    animation-iteration-count:
+      1 !important;
+  }
+}

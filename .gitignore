@@ -1,33 +1,38 @@
-HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+﻿# =========================
+# UniFood monorepo
+# =========================
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
 
-### IntelliJ IDEA ###
-.idea
-*.iws
+# IDEs
+.idea/
+.vscode/
 *.iml
+*.iws
 *.ipr
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+# OS
+.DS_Store
+Thumbs.db
 
-### VS Code ###
-.vscode/
+# Backend / Maven
+**/target/
+*.class
+
+# Frontend / Node / Next.js
+**/node_modules/
+**/.next/
+unifood-web/out/
+**/coverage/
+**/.vercel/
+**/*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

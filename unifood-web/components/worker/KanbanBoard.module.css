@@ -1,0 +1,435 @@
+/* =====================================================
+   TABLERO
+   ===================================================== */
+
+.board {
+  width: 100%;
+  height: 100%;
+
+  min-height: 0;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 16px;
+
+  overflow: hidden;
+
+  padding: 4px 0;
+}
+
+
+/* =====================================================
+   COLUMNA
+   ===================================================== */
+
+.column {
+  min-width: 0;
+
+  min-height: 0;
+
+  height: 100%;
+
+  display: flex;
+
+  flex-direction: column;
+
+  overflow: hidden;
+
+  border-radius: 20px;
+
+  background:
+    rgba(255, 255, 255, 0.08);
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.12);
+
+  backdrop-filter:
+    blur(14px);
+
+  -webkit-backdrop-filter:
+    blur(14px);
+
+  box-shadow:
+    0 8px 30px
+    rgba(0, 0, 0, 0.08);
+}
+
+
+/* =====================================================
+   HEADER DE COLUMNA
+   ===================================================== */
+
+.columnHeader {
+  flex-shrink: 0;
+
+  height: 76px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  padding:
+    0 16px;
+
+  border-bottom:
+    1px solid
+    rgba(255, 255, 255, 0.10);
+
+  background:
+    rgba(255, 255, 255, 0.04);
+}
+
+
+/* =====================================================
+   ICONO + TÍTULO
+   ===================================================== */
+
+.columnHeading {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  min-width: 0;
+}
+
+
+/* =====================================================
+   ICONOS DE LAS COLUMNAS
+   ===================================================== */
+
+.columnIcon {
+  width: 38px;
+
+  height: 38px;
+
+  flex-shrink: 0;
+
+  color:
+    #ffffff;
+}
+
+
+/* =====================================================
+   ICONO DE ENTREGADOS
+   ===================================================== */
+
+.deliveredIcon {
+  width: 38px;
+
+  height: 38px;
+
+  flex-shrink: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background:
+    #ffffff;
+
+  color:
+    #1768d8;
+}
+
+
+/* =====================================================
+   TÍTULO
+   ===================================================== */
+
+.columnTitle {
+  color:
+    rgba(255, 255, 255, 0.95);
+
+  font-size:
+    16px;
+
+  font-weight:
+    650;
+
+  letter-spacing:
+    -0.01em;
+
+  white-space:
+    nowrap;
+
+  overflow:
+    hidden;
+
+  text-overflow:
+    ellipsis;
+}
+
+
+/* =====================================================
+   CONTADOR
+   ===================================================== */
+
+.columnCount {
+  min-width:
+    40px;
+
+  height:
+    40px;
+
+  padding:
+    0 10px;
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  border-radius:
+    999px;
+
+  background:
+    rgba(177, 215, 255, 0.55);
+
+  color:
+    #ffffff;
+
+  font-size:
+    16px;
+
+  font-weight:
+    600;
+
+  flex-shrink:
+    0;
+}
+
+
+/* =====================================================
+   CONTENIDO DE LA COLUMNA
+   ===================================================== */
+
+.columnContent {
+  flex:
+    1;
+
+  min-height:
+    0;
+
+  overflow-y:
+    auto;
+
+  overflow-x:
+    hidden;
+
+  padding:
+    12px;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    10px;
+
+  padding-bottom:
+    18px;
+
+  scrollbar-width:
+    thin;
+
+  scrollbar-color:
+    rgba(255, 255, 255, 0.28)
+    transparent;
+}
+
+
+/* =====================================================
+   SCROLLBAR
+   ===================================================== */
+
+.columnContent::-webkit-scrollbar {
+  width:
+    6px;
+}
+
+.columnContent::-webkit-scrollbar-track {
+  background:
+    transparent;
+}
+
+.columnContent::-webkit-scrollbar-thumb {
+  background:
+    rgba(255, 255, 255, 0.24);
+
+  border-radius:
+    999px;
+
+  transition:
+    background
+    0.2s ease;
+}
+
+.columnContent::-webkit-scrollbar-thumb:hover {
+  background:
+    rgba(255, 255, 255, 0.42);
+}
+
+
+/* =====================================================
+   COLUMNA VACÍA
+   ===================================================== */
+
+.emptyColumn {
+  min-height:
+    100px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  text-align:
+    center;
+
+  padding:
+    20px;
+
+  color:
+    rgba(255, 255, 255, 0.42);
+
+  font-size:
+    13px;
+}
+
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+
+@media (max-width: 1100px) {
+  .board {
+    gap:
+      12px;
+  }
+
+  .columnContent {
+    padding:
+      10px;
+  }
+}
+
+
+@media (max-width: 850px) {
+  .board {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+
+    grid-template-rows:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+
+    gap:
+      12px;
+  }
+}
+
+
+@media (max-width: 600px) {
+  .board {
+    grid-template-columns:
+      1fr;
+
+    grid-template-rows:
+      none;
+
+    overflow-y:
+      auto;
+
+    overflow-x:
+      hidden;
+
+    gap:
+      12px;
+
+    padding-right:
+      2px;
+  }
+
+  .column {
+    min-height:
+      320px;
+
+    height:
+      320px;
+
+    flex-shrink:
+      0;
+  }
+
+  .columnHeader {
+    height:
+      70px;
+
+    padding:
+      0 14px;
+  }
+
+  .columnIcon,
+  .deliveredIcon {
+    width:
+      34px;
+
+    height:
+      34px;
+  }
+
+  .columnTitle {
+    font-size:
+      15px;
+  }
+
+  .columnCount {
+    min-width:
+      34px;
+
+    height:
+      34px;
+
+    font-size:
+      14px;
+  }
+}
+
+
+/* =====================================================
+   REDUCCIÓN DE MOVIMIENTO
+   ===================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .columnContent::-webkit-scrollbar-thumb {
+    transition:
+      none;
+  }
+}

@@ -1,0 +1,342 @@
+.card {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 9px;
+
+  width: 100%;
+
+  padding: 12px;
+
+  border-radius: 17px;
+
+  background: rgba(255, 255, 255, 0.97);
+
+  box-shadow:
+    0 5px 16px rgba(5, 52, 115, 0.12),
+    0 1px 2px rgba(5, 52, 115, 0.06);
+
+  animation:
+    cardIn 450ms
+    cubic-bezier(0.22, 1, 0.36, 1)
+    both;
+
+  transition:
+    transform 220ms
+      cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 10px 25px rgba(5, 52, 115, 0.15),
+    0 2px 4px rgba(5, 52, 115, 0.07);
+}
+
+/* =========================================================
+   INFORMACIÓN DEL ESTUDIANTE
+   ========================================================= */
+
+.mainInfo {
+  position: relative;
+
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 2px;
+
+  border: 0;
+
+  background: transparent;
+
+  color: inherit;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mainInfo:focus-visible {
+  outline: 3px solid
+    rgba(8, 104, 233, 0.22);
+
+  outline-offset: 3px;
+
+  border-radius: 8px;
+}
+
+.userIcon {
+  width: 32px;
+  height: 32px;
+
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 50%;
+
+  color: #0757b7;
+
+  background: #e5f0ff;
+}
+
+.student {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.student strong {
+  overflow: hidden;
+
+  color: #122c67;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.student span {
+  color: #5072ad;
+
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.time {
+  margin-left: auto;
+
+  align-self: flex-start;
+
+  color: #7591bd;
+
+  font-size: 10px;
+  font-weight: 500;
+
+  white-space: nowrap;
+}
+
+.arrow {
+  flex-shrink: 0;
+
+  color: #0759ba;
+
+  transition:
+    transform 200ms
+    cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mainInfo:hover .arrow {
+  transform: translateX(3px);
+}
+
+/* =========================================================
+   ESTUDIANTE AVISADO
+   ========================================================= */
+
+.calledStatus {
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+
+  margin: 0 5px 1px;
+
+  padding: 7px 9px;
+
+  border-radius: 9px;
+
+  background: #eaf8f3;
+
+  color: #087f5b;
+
+  font-size: 11px;
+  font-weight: 650;
+
+  animation:
+    calledAppear 250ms
+    cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.calledDot {
+  width: 7px;
+  height: 7px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  background: #12b886;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(18, 184, 134, 0.12);
+}
+
+/* =========================================================
+   BOTÓN DE ACCIÓN
+   ========================================================= */
+
+.actionButton {
+  width: 100%;
+
+  min-height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 9px;
+
+  border: 0;
+
+  border-radius: 12px;
+
+  background: linear-gradient(
+    135deg,
+    #d8eaff,
+    #c9e1ff
+  );
+
+  color: #075be0;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    transform 180ms
+      cubic-bezier(0.22, 1, 0.36, 1),
+    background 180ms ease,
+    box-shadow 180ms ease;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+.actionButton:hover:not(:disabled) {
+  transform: scale(1.015);
+
+  background: linear-gradient(
+    135deg,
+    #cee4ff,
+    #bcd9ff
+  );
+
+  box-shadow:
+    0 5px 13px
+    rgba(17, 103, 225, 0.13);
+}
+
+.actionButton:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.actionButton:focus-visible {
+  outline: 3px solid
+    rgba(8, 104, 233, 0.22);
+
+  outline-offset: 3px;
+}
+
+.actionDisabled {
+  cursor: default;
+
+  color: #637aa2;
+
+  background: #e4ecf7;
+}
+
+.actionDisabled:focus-visible {
+  outline: none;
+}
+
+.deliveredTime {
+  font-weight: 600;
+}
+
+/* =========================================================
+   ANIMACIONES
+   ========================================================= */
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(10px)
+      scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+@keyframes calledAppear {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(-3px)
+      scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 760px) {
+  .card {
+    padding: 10px;
+
+    border-radius: 15px;
+  }
+
+  .time {
+    display: none;
+  }
+
+  .actionButton {
+    min-height: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .actionButton,
+  .arrow,
+  .calledStatus {
+    animation: none;
+    transition: none;
+  }
+}
