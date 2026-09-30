@@ -10,8 +10,9 @@ package com.santotofood.shared.error;
  * mientras que las excepciones concretas permanecen en la
  * capa a la que conceptualmente pertenecen.
  */
-
 public enum ErrorCode {
+
+    ORDER_NOT_FOUND,
 
     INVALID_ORDER_STATE,
 
