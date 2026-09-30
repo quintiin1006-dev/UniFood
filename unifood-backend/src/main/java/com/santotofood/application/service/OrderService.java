@@ -1,5 +1,6 @@
 package com.santotofood.application.service;
 
+import com.santotofood.application.exception.OrderNotFoundException;
 import com.santotofood.application.port.in.CallStudentUseCase;
 import com.santotofood.application.port.in.CancelOrderUseCase;
 import com.santotofood.application.port.in.DeliverOrderUseCase;
@@ -239,9 +240,7 @@ public class OrderService implements
         return orderRepository
                 .findById(orderId)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
-                                "El pedido no existe"
-                        )
+                        new OrderNotFoundException(orderId)
                 );
     }
 }
