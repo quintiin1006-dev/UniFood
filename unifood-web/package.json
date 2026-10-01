@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "format": "prettier --write",
+    "format:check": "prettier --check"
   },
   "dependencies": {
     "lucide-react": "^1.47.0",
@@ -23,7 +25,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "prettier": "3.9.9"
   }
 }
-
