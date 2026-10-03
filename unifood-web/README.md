@@ -1,6 +1,10 @@
 ﻿# UniFood web
 
-Panel de trabajadores en Next.js. Ejecutar `npm install` y `npm run dev`; abrir `/worker`.
+Aplicación en Next.js con login, registro de estudiantes y panel de trabajadores. Ejecutar `npm install` y `npm run dev`; abrir `/login`. El panel `/worker` requiere una cuenta verificada con rol y cafetería asignados.
+
+En este equipo se trabaja desde `C:\Users\credi\Documents\UniFood`. Se puede iniciar desde la raíz con `npm run dev` o con `iniciar-unifood.cmd`; local y red usan el mismo servidor en el puerto 3000. Ver [arranque del proyecto](../README.md). No ejecutar la copia independiente de `OneDrive\Desktop\UniFood` para consultar estos cambios.
+
+La configuración de Supabase, migración, plantillas de correo y estructura del módulo se documentan en [Autenticación](docs/auth.md). Copiar `.env.example` a `.env.local` y completar las claves públicas del proyecto antes de probar el acceso real.
 
 ## Conexión al backend
 
