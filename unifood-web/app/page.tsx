@@ -7,7 +7,7 @@ export default function HomePage() {
         minHeight: "100vh",
         display: "grid",
         placeItems: "center",
-        background: "#07509c",
+        background: "#08284e",
         color: "white",
         fontFamily:
           "Inter, -apple-system, BlinkMacSystemFont, sans-serif",
@@ -25,7 +25,7 @@ export default function HomePage() {
         <h1
           style={{
             margin: 0,
-            fontSize: "32px",
+            fontSize: "28px",
             fontWeight: 700,
           }}
         >
@@ -48,8 +48,10 @@ export default function HomePage() {
             color: "white",
             textDecoration: "none",
             padding: "14px 22px",
-            borderRadius: "14px",
-            background: "rgba(255,255,255,.14)",
+            borderRadius: "var(--radius-control)",
+            background: "var(--accent)",
+            fontSize: "14px",
+            fontWeight: 600,
           }}
         >
           Ir al panel de trabajador

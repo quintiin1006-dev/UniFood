@@ -1,3 +1,7 @@
+/* =====================================================
+   OVERLAY
+   ===================================================== */
+
 .overlay {
   position: fixed;
   inset: 0;
@@ -18,26 +22,32 @@
     overlayIn 220ms ease both;
 }
 
+
+/* =====================================================
+   MODAL
+   ===================================================== */
+
 .modal {
   position: relative;
 
   width: min(440px, 100%);
-
   max-height: min(700px, 90vh);
 
   overflow-y: auto;
 
   padding: 27px;
 
-  border-radius: 25px;
+  /*
+   * Contenedor principal:
+   * 20–24px.
+   */
+  border-radius: 24px;
 
   background: rgba(255, 255, 255, 0.98);
 
   box-shadow:
-    0 30px 80px
-    rgba(3, 31, 70, 0.3),
-    0 5px 20px
-    rgba(3, 31, 70, 0.12);
+    0 30px 80px rgba(3, 31, 70, 0.3),
+    0 5px 20px rgba(3, 31, 70, 0.12);
 
   animation:
     modalIn 360ms
@@ -50,6 +60,7 @@
     #cbd9ec
     transparent;
 }
+
 
 /* =====================================================
    SCROLLBAR DEL MODAL
@@ -73,6 +84,7 @@
   background: #b4c7e0;
 }
 
+
 /* =====================================================
    CERRAR
    ===================================================== */
@@ -89,37 +101,41 @@
   display: grid;
   place-items: center;
 
+  color: #4f6482;
+
+  background: #f2f5f9;
+
   border: 0;
-
   border-radius: 50%;
-
-  background: #edf3fc;
-
-  color: #183d78;
 
   cursor: pointer;
 
   transition:
     transform 180ms ease,
-    background-color 180ms ease;
+    background-color 180ms ease,
+    color 180ms ease;
 
   -webkit-tap-highlight-color: transparent;
 }
 
 .close:hover {
+  color: #183d78;
+
+  background: #e9eef6;
+
   transform:
     rotate(4deg)
     scale(1.05);
-
-  background: #e3edfc;
 }
 
 .close:focus-visible {
-  outline: 3px solid
+  outline:
+    3px solid
     rgba(8, 104, 233, 0.22);
 
   outline-offset: 3px;
 }
+
 
 /* =====================================================
    ESTUDIANTE
@@ -143,35 +159,51 @@
   display: grid;
   place-items: center;
 
-  border-radius: 50%;
-
   color: #0757b7;
 
   background: #e4f0ff;
 
-  font-size: 20px;
-  font-weight: 750;
+  border-radius: 50%;
+
+  font-size: 18px;
+  font-weight: 600;
 }
+
+
+/* Nombre del estudiante */
 
 .header h2 {
   margin: 0;
 
-  color: #102d68;
+  /*
+   * El nombre deja de ser azul.
+   * Es información principal,
+   * por lo que usamos un neutral oscuro.
+   */
+  color: #172033;
 
-  font-size: 20px;
-  font-weight: 750;
+  font-size: 16px;
+  font-weight: 600;
 
-  letter-spacing: -0.5px;
+  line-height: 1.25;
+
+  letter-spacing: -0.2px;
 }
+
+
+/* ID del estudiante */
 
 .header p {
   margin: 4px 0 0;
 
-  color: #5577b0;
+  color: #6f7b8c;
 
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 400;
+
+  line-height: 1.3;
 }
+
 
 /* =====================================================
    DIVISOR
@@ -182,8 +214,9 @@
 
   margin: 20px 0;
 
-  background: #e3ebf6;
+  background: #e3e8ef;
 }
+
 
 /* =====================================================
    SECCIONES
@@ -192,10 +225,18 @@
 .section h3 {
   margin: 0;
 
-  color: #15376f;
+  /*
+   * Los títulos principales
+   * también pasan a neutral oscuro.
+   */
+  color: #172033;
 
-  font-size: 14px;
-  font-weight: 750;
+  font-size: 18px;
+  font-weight: 700;
+
+  line-height: 1.25;
+
+  letter-spacing: -0.2px;
 }
 
 .sectionTitle {
@@ -206,12 +247,20 @@
 
   margin-bottom: 13px;
 
+  /*
+   * El icono puede seguir siendo azul.
+   * El texto h3 tiene su propio
+   * color neutral.
+   */
   color: #1761bd;
 }
 
 .sectionTitle h3 {
   margin: 0;
+
+  color: #172033;
 }
+
 
 /* =====================================================
    ITEMS
@@ -225,29 +274,50 @@
 }
 
 .item {
-  padding: 12px 13px;
+  padding: 13px 14px;
 
-  border-radius: 12px;
+  /*
+   * Card interna:
+   * 16px.
+   */
+  border-radius: 16px;
 
-  background: #f1f6fd;
+  /*
+   * Eliminamos parte del exceso
+   * de azul del fondo.
+   */
+  background: #f7f9fc;
 
-  color: #42659d;
+  border:
+    1px solid
+    #e7ebf1;
 
-  font-size: 13px;
+  color: #4f5d70;
+
+  font-size: 14px;
+  font-weight: 400;
+
+  line-height: 1.45;
 
   transition:
     background-color 160ms ease,
+    border-color 160ms ease,
     transform 160ms ease;
 }
 
 .item:hover {
-  background: #edf4fd;
+  background: #f3f6fa;
+
+  border-color: #dfe5ed;
 
   transform:
     translateY(-1px);
 }
 
-/* Nombre + subtotal */
+
+/* =====================================================
+   NOMBRE + SUBTOTAL
+   ===================================================== */
 
 .itemMain {
   display: flex;
@@ -262,10 +332,14 @@
 }
 
 .itemName strong {
-  color: #284e8a;
+  /*
+   * Producto:
+   * neutral oscuro en lugar de azul.
+   */
+  color: #1f2937;
 
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
 
   line-height: 1.4;
 }
@@ -273,38 +347,57 @@
 .itemSubtotal {
   flex-shrink: 0;
 
-  color: #1761bd;
+  /*
+   * El precio tampoco necesita
+   * ser azul.
+   */
+  color: #172033;
 
-  font-size: 13px;
-  font-weight: 750;
+  font-size: 14px;
+  font-weight: 600;
+
+  line-height: 1.4;
+
+  font-variant-numeric:
+    tabular-nums;
 }
 
-/* Precio unitario */
+
+/* =====================================================
+   PRECIO UNITARIO
+   ===================================================== */
 
 .itemPrice {
   display: block;
 
   margin-top: 4px;
 
-  color: #7890b5;
+  color: #7a8596;
 
-  font-size: 11px;
-  font-weight: 550;
+  font-size: 12.5px;
+  font-weight: 400;
+
+  line-height: 1.35;
 }
 
-/* Bebida / nota */
+
+/* =====================================================
+   BEBIDA / INFORMACIÓN ADICIONAL
+   ===================================================== */
 
 .itemExtra {
   display: block;
 
   margin-top: 7px;
 
-  color: #5273a8;
+  color: #5f6b7a;
 
-  font-size: 11.5px;
+  font-size: 13px;
+  font-weight: 400;
 
-  line-height: 1.4;
+  line-height: 1.45;
 }
+
 
 /* =====================================================
    TOTAL
@@ -315,27 +408,52 @@
   align-items: center;
   justify-content: space-between;
 
+  gap: 12px;
+
   margin-top: 14px;
-  padding: 14px 13px;
 
-  border-radius: 12px;
+  padding: 14px;
 
-  background: #e8f2ff;
+  /*
+   * Antes era un bloque azul.
+   * Ahora es una superficie neutral.
+   */
+  background: #f7f9fc;
 
-  color: #21477f;
+  border:
+    1px solid
+    #e3e8ef;
+
+  border-radius: 16px;
+
+  color: #172033;
 }
 
 .total span {
-  font-size: 13px;
-  font-weight: 650;
+  color: #3f4a5a;
+
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .total strong {
-  color: #0757b7;
+  /*
+   * El total es importante por
+   * tamaño y peso, no porque sea azul.
+   */
+  color: #172033;
 
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 700;
+
+  line-height: 1;
+
+  letter-spacing: -0.2px;
+
+  font-variant-numeric:
+    tabular-nums;
 }
+
 
 /* =====================================================
    OBSERVACIONES
@@ -344,12 +462,14 @@
 .note {
   margin: 0;
 
-  color: #5273a8;
+  color: #5f6b7a;
 
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 400;
 
   line-height: 1.5;
 }
+
 
 /* =====================================================
    TIEMPO
@@ -361,6 +481,10 @@
 
   gap: 12px;
 
+  /*
+   * El icono puede conservar
+   * el azul como acento.
+   */
   color: #1761bd;
 }
 
@@ -372,24 +496,30 @@
 }
 
 .timeInfo span {
-  color: #7a93ba;
+  color: #7a8596;
 
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 400;
+
+  line-height: 1.3;
 }
 
 .timeInfo strong {
-  color: #284e8a;
+  color: #283341;
 
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
+
+  line-height: 1.3;
 }
 
+
 /* =====================================================
-   ACCIÓN
+   ACCIÓN PRINCIPAL
    ===================================================== */
 
 .action {
   width: 100%;
-
   min-height: 47px;
 
   display: flex;
@@ -400,20 +530,31 @@
 
   margin-top: 23px;
 
+  color: #ffffff;
+
+  /*
+   * El azul se mantiene aquí
+   * porque es la acción principal.
+   */
+  background:
+    linear-gradient(
+      135deg,
+      #176fe9,
+      #0754bd
+    );
+
   border: 0;
 
-  border-radius: 13px;
+  /*
+   * Botones:
+   * 10–12px.
+   */
+  border-radius: 12px;
 
-  background: linear-gradient(
-    135deg,
-    #176fe9,
-    #0754bd
-  );
+  font-size: 14px;
+  font-weight: 600;
 
-  color: white;
-
-  font-size: 13px;
-  font-weight: 700;
+  line-height: 1.2;
 
   box-shadow:
     0 7px 17px
@@ -443,25 +584,27 @@
 }
 
 .action:focus-visible {
-  outline: 3px solid
+  outline:
+    3px solid
     rgba(8, 104, 233, 0.25);
 
   outline-offset: 3px;
 }
 
 .action:disabled {
-  cursor: default;
+  color: #718093;
 
-  color: #7184a3;
-
-  background: #e5ecf6;
+  background: #e5e9ef;
 
   box-shadow: none;
+
+  cursor: default;
 }
 
 .action:disabled:focus-visible {
   outline: none;
 }
+
 
 /* =====================================================
    ANIMACIONES
@@ -495,6 +638,7 @@
   }
 }
 
+
 /* =====================================================
    RESPONSIVE
    ===================================================== */
@@ -508,25 +652,39 @@
 
   .modal {
     width: 100%;
-
     max-height: 88vh;
 
     padding: 23px;
 
     border-radius:
-      25px 25px 0 0;
+      24px 24px 0 0;
+  }
+
+  .header h2 {
+    font-size: 16px;
+  }
+
+  .header p {
+    font-size: 12px;
+  }
+
+  .section h3 {
+    font-size: 17px;
   }
 
   .itemMain {
-    align-items:
-      flex-start;
+    align-items: flex-start;
   }
 
   .itemSubtotal {
-    font-size:
-      12px;
+    font-size: 13px;
+  }
+
+  .action {
+    font-size: 13px;
   }
 }
+
 
 /* =====================================================
    ACCESIBILIDAD
