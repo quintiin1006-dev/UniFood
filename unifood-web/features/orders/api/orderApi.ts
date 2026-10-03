@@ -47,6 +47,7 @@ export async function getOrders(): Promise<Order[]> {
     {
       method: "GET",
       cache: "no-store",
+      signal: AbortSignal.timeout(30000),
     }
   );
 

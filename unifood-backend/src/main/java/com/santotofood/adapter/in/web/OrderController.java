@@ -11,6 +11,7 @@ import com.santotofood.application.port.in.PrepareOrderUseCase;
 import com.santotofood.domain.model.Order;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,6 +31,7 @@ public class OrderController {
     private final OrderResponseMapper orderResponseMapper;
 
     @GetMapping
+    @PreAuthorize("@orderAuthorization.cafeteria(authentication, #cafeteriaId)")
     public ResponseEntity<List<OrderResponse>> getOrdersByCafeteria(
             @RequestParam UUID cafeteriaId
     ) {
@@ -45,6 +47,7 @@ public class OrderController {
     }
 
     @PatchMapping("/{orderId}/prepare")
+    @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
     public ResponseEntity<OrderResponse> prepareOrder(
             @PathVariable UUID orderId
     ) {
@@ -60,6 +63,7 @@ public class OrderController {
     }
 
     @PatchMapping("/{orderId}/ready")
+    @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
     public ResponseEntity<OrderResponse> markOrderReady(
             @PathVariable UUID orderId
     ) {
@@ -75,6 +79,7 @@ public class OrderController {
     }
 
     @PatchMapping("/{orderId}/call")
+    @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
     public ResponseEntity<OrderResponse> callStudent(
             @PathVariable UUID orderId
     ) {
@@ -90,6 +95,7 @@ public class OrderController {
     }
 
     @PatchMapping("/{orderId}/deliver")
+    @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
     public ResponseEntity<OrderResponse> deliverOrder(
             @PathVariable UUID orderId
     ) {
@@ -105,6 +111,7 @@ public class OrderController {
     }
 
     @PatchMapping("/{orderId}/cancel")
+    @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
     public ResponseEntity<OrderResponse> cancelOrder(
             @PathVariable UUID orderId
     ) {

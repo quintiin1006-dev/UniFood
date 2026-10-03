@@ -1,3 +1,6 @@
+import { getAuth } from "@/features/auth/server/session";
+import { isWorker, sameOrigin } from "@/features/auth/validation";
+
 const actions = new Set(["prepare", "ready", "call", "deliver", "cancel"]);
 
 async function forward(request: Request, context: { params: Promise<{ path?: string[] }> }) {
@@ -10,14 +13,20 @@ async function forward(request: Request, context: { params: Promise<{ path?: str
     return Response.json({ message: "Ruta de pedidos no disponible." }, { status: 404 });
   }
 
+  if (isAction && !sameOrigin(request)) {
+    return Response.json({ message: "Origen no permitido." }, { status: 403 });
+  }
+  const auth = await getAuth();
+  if (!auth) return Response.json({ message: "Inicia sesión para consultar los pedidos." }, { status: 401 });
+  if (!isWorker(auth.profile)) return Response.json({ message: "No tienes permisos de trabajador." }, { status: 403 });
+
   const base = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080").replace(/\/+$/, "");
   const url = new URL(`${base}/api/orders${path.length ? `/${path.join("/")}` : ""}`);
   if (isList) url.search = new URL(request.url).search;
 
   try {
     const headers = new Headers();
-    const authorization = request.headers.get("authorization");
-    if (authorization) headers.set("authorization", authorization);
+    headers.set("authorization", `Bearer ${auth.accessToken}`);
     const response = await fetch(url, {
       method: request.method,
       headers,
