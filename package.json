@@ -1,0 +1,10 @@
+{
+  "name": "unifood-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix unifood-web run dev",
+    "build": "npm --prefix unifood-web run build",
+    "start": "npm --prefix unifood-web run start",
+    "test": "npm --prefix unifood-web test"
+  }
+}
