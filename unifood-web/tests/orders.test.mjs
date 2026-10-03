@@ -6,6 +6,7 @@ import ts from "typescript";
 
 // Load application TypeScript without adding a second test toolchain.
 const cache = new Map();
+let authSession = { profile: { active: true, roles: ["WORKER"] }, accessToken: "verified-token" };
 function load(file) {
   const resolved = path.resolve(file);
   if (cache.has(resolved)) return cache.get(resolved).exports;
@@ -15,7 +16,8 @@ function load(file) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   new Function("require", "module", "exports", source)(
-    (name) => name.startsWith("@/") ? load(`${name.slice(2)}.ts`) : (() => { throw new Error(`Unexpected import: ${name}`); })(),
+    (name) => name === "@/features/auth/server/session" ? { getAuth: async () => authSession }
+      : name.startsWith("@/") ? load(`${name.slice(2)}.ts`) : (() => { throw new Error(`Unexpected import: ${name}`); })(),
     loaded, loaded.exports,
   );
   return loaded.exports;
@@ -77,7 +79,7 @@ test("Next proxy preserves GET query, PATCH, authorization and backend conflict"
     assert.equal(response.status, 409);
     assert.match(await response.text(), /pedido anterior/);
     assert.equal(received[0][1].method, "PATCH");
-    assert.equal(received[0][1].headers.get("authorization"), "Bearer test");
+    assert.equal(received[0][1].headers.get("authorization"), "Bearer verified-token");
     assert.equal(received[0][1].headers.get("origin"), null);
     await route.GET(new Request("http://localhost:3001/api/orders?cafeteriaId=test"), { params: Promise.resolve({}) });
     assert.match(received[1][0], /cafeteriaId=test/);
