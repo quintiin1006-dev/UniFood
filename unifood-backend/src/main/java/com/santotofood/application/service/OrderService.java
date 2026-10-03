@@ -1,6 +1,7 @@
 package com.santotofood.application.service;
 
 import com.santotofood.application.exception.OrderNotFoundException;
+import com.santotofood.application.exception.OrderProcessingSequenceException;
 import com.santotofood.application.port.in.CallStudentUseCase;
 import com.santotofood.application.port.in.CancelOrderUseCase;
 import com.santotofood.application.port.in.DeliverOrderUseCase;
@@ -61,15 +62,12 @@ public class OrderService implements
                         )
                         .orElseThrow(() ->
                                 new IllegalStateException(
-                                        "No hay pedidos pendientes"
+                                        "No hay pedidos pendientes para una orden en estado PENDING"
                                 )
                         );
 
         if (!firstPendingOrder.getId().equals(order.getId())) {
-            throw new IllegalStateException(
-                    "No puedes preparar este pedido todavía. " +
-                            "El pedido anterior debe ser procesado primero."
-            );
+            throw new OrderProcessingSequenceException();
         }
 
         Instant now = timeProvider.now();
