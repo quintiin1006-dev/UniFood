@@ -41,16 +41,12 @@ public class Client {
             throw new IllegalArgumentException("El documento es obligatorio");
         }
 
-        if (phone == null || phone.isBlank()) {
-            throw new IllegalArgumentException("El teléfono es obligatorio");
-        }
-
         this.id = id;
         this.userId = userId;
         this.institutionId = institutionId;
         this.fullName = fullName;
         this.document = document;
-        this.phone = phone;
+        this.phone = phone == null || phone.isBlank() ? null : phone.trim();
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
     }
