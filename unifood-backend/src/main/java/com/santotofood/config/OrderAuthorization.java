@@ -34,6 +34,12 @@ public class OrderAuthorization {
     }
   }
 
+  public boolean clientOrder(Authentication authentication, UUID orderId) {
+    return authenticatedUser(authentication)
+        .map(userId -> authorization.clientOrder(userId, orderId))
+        .orElse(false);
+  }
+
   public boolean order(Authentication authentication, UUID orderId) {
     return authenticatedUser(authentication)
         .map(userId -> authorization.order(userId, orderId))

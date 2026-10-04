@@ -24,13 +24,19 @@ El Route Handler reenvía las acciones PATCH al backend sin reenviar el Origin d
 
 - Pendiente → preparación → listo → llamado → entregado.
 - El backend autoriza pasar a preparación únicamente al primer pendiente de la cafetería (createdAt e id). El frontend conserva el orden recibido y no omite esa validación, incluso cuando hay una búsqueda activa.
-- Cancelar requiere un pedido pendiente; el backend valida también el plazo de cancelación.
+- Cancelar desde worker requiere un pedido pendiente; el backend valida también el plazo de cancelación.
 - Las órdenes se consultan cada 10 segundos, al recuperar el foco y después de cada acción. Las solicitudes anteriores no pueden sobrescribir una mutación y se bloquean acciones simultáneas sobre el mismo pedido.
 - Los conflictos muestran el mensaje real del backend. Solo un rechazo de preparación por un pedido anterior se identifica como prioridad.
 - CANCELLED y NOT_COLLECTED son terminales y no aparecen como pendientes.
 - La vista de llamadas permite entregar; el detalle se cierra al dejar de estar llamado. El botón de recordatorio está deshabilitado porque OrderController todavía no expone ese endpoint.
 
 ## Verificación
+
+La cancelación propia usa `PATCH /api/me/orders/{orderId}/cancel`, tanto en backend como en BFF. Exige CLIENT activo como único rol vigente. El backend resuelve el propietario por `orders.client_id → clients.user_id → users.id` y lo compara con el subject autenticado; ningún email, clientId, body o parámetro del navegador concede permisos. La regla PENDING vive en `Order` y esta operación CLIENT no aplica un deadline adicional. Las operaciones worker conservan su política y su deadline.
+
+El backend devuelve 200 con `OrderResponse`; el BFF entrega únicamente `{id, status: "CANCELLED"}`. Sin sesión: 401; cuenta no elegible: 403; pedido inexistente, ajeno o sin cliente vinculado para un CLIENT elegible: 404 (`ORDER_NOT_FOUND`); cualquier estado diferente de PENDING en un pedido propio: 409 (`INVALID_ORDER_STATE`). Los errores del backend usan `ApiErrorResponse`; el BFF mantiene esos estados con mensajes fijos y el mismo formato de error, sin copiar bodies ni headers upstream. Fallos de conexión, redirects o respuestas inválidas producen 502. No hay cambios de UI ni historial CLIENT en esta fase.
+
+Roles, actividad y ownership se consultan de nuevo en cada petición. Persiste el riesgo de cambios simultáneos entre autorización, lectura y guardado: la transacción actual no aplica locking ni una actualización condicional. Esta fase no garantiza exclusión frente a una preparación worker concurrente; locking e idempotencia quedan pendientes.
 
 ```sh
 npm test

@@ -1,5 +1,6 @@
 package com.santotofood.adapter.out.persistence;
 
+import com.santotofood.application.model.OrderOwner;
 import com.santotofood.application.model.UserAuthorization;
 import com.santotofood.application.port.out.AuthorizationQueryPort;
 import java.io.IOException;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Component;
 public class AuthorizationPersistenceAdapter implements AuthorizationQueryPort {
   private static final String USER_SQL = sql("user-authorization.sql");
   private static final String ORDER_SQL = sql("order-cafeteria.sql");
+  private static final String OWNER_SQL = sql("order-owner.sql");
   private final JdbcTemplate jdbc;
 
   public AuthorizationPersistenceAdapter(JdbcTemplate jdbc) {
@@ -34,6 +36,17 @@ public class AuthorizationPersistenceAdapter implements AuthorizationQueryPort {
   public Optional<UUID> findOrderCafeteria(UUID orderId) {
     var cafeterias = jdbc.queryForList(ORDER_SQL, UUID.class, orderId);
     return cafeterias.size() == 1 ? Optional.of(cafeterias.getFirst()) : Optional.empty();
+  }
+
+  @Override
+  public Optional<OrderOwner> findOrderOwner(UUID orderId) {
+    return jdbc
+        .query(
+            OWNER_SQL,
+            (row, rowNumber) -> new OrderOwner(row.getObject("user_id", UUID.class)),
+            orderId)
+        .stream()
+        .findFirst();
   }
 
   private static UserAuthorization userAuthorization(ResultSet row, int rowNumber)
