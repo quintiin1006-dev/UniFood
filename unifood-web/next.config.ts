@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 import { networkInterfaces } from "node:os";
+import { validateEnvironment } from "./config/environment";
+
+// Next loads .env files before this configuration: fail before starting or building.
+validateEnvironment(process.env);
 
 const networkHosts = Object.values(networkInterfaces()).flatMap((addresses) =>
   (addresses ?? [])

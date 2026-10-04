@@ -1,27 +1,47 @@
 import { getAuth } from "@/features/auth/server/session";
 import { isWorker, sameOrigin } from "@/features/auth/validation";
+import { serverApiUrl } from "@/config/server";
 
 const actions = new Set(["prepare", "ready", "call", "deliver", "cancel"]);
 
-async function forward(request: Request, context: { params: Promise<{ path?: string[] }> }) {
+async function forward(
+  request: Request,
+  context: { params: Promise<{ path?: string[] }> },
+) {
   const { path = [] } = await context.params;
   const isList = request.method === "GET" && path.length === 0;
-  const isAction = request.method === "PATCH" && path.length === 2 &&
-    /^[0-9a-f-]{36}$/i.test(path[0]) && actions.has(path[1]);
+  const isAction =
+    request.method === "PATCH" &&
+    path.length === 2 &&
+    /^[0-9a-f-]{36}$/i.test(path[0]) &&
+    actions.has(path[1]);
 
   if (!isList && !isAction) {
-    return Response.json({ message: "Ruta de pedidos no disponible." }, { status: 404 });
+    return Response.json(
+      { message: "Ruta de pedidos no disponible." },
+      { status: 404 },
+    );
   }
 
   if (isAction && !sameOrigin(request)) {
     return Response.json({ message: "Origen no permitido." }, { status: 403 });
   }
   const auth = await getAuth();
-  if (!auth) return Response.json({ message: "Inicia sesión para consultar los pedidos." }, { status: 401 });
-  if (!isWorker(auth.profile)) return Response.json({ message: "No tienes permisos de trabajador." }, { status: 403 });
+  if (!auth)
+    return Response.json(
+      { message: "Inicia sesión para consultar los pedidos." },
+      { status: 401 },
+    );
+  if (!isWorker(auth.profile))
+    return Response.json(
+      { message: "No tienes permisos de trabajador." },
+      { status: 403 },
+    );
 
-  const base = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080").replace(/\/+$/, "");
-  const url = new URL(`${base}/api/orders${path.length ? `/${path.join("/")}` : ""}`);
+  const base = serverApiUrl();
+  const url = new URL(
+    `${base}/api/orders${path.length ? `/${path.join("/")}` : ""}`,
+  );
   if (isList) url.search = new URL(request.url).search;
 
   try {
@@ -36,13 +56,17 @@ async function forward(request: Request, context: { params: Promise<{ path?: str
     return new Response(response.body, {
       status: response.status,
       headers: {
-        "Content-Type": response.headers.get("content-type") || "text/plain; charset=utf-8",
+        "Content-Type":
+          response.headers.get("content-type") || "text/plain; charset=utf-8",
         "Cache-Control": "no-store",
       },
     });
   } catch {
     return Response.json(
-      { message: "No se pudo conectar con el backend de pedidos. Revisa que esté disponible." },
+      {
+        message:
+          "No se pudo conectar con el backend de pedidos. Revisa que esté disponible.",
+      },
       { status: 502 },
     );
   }
