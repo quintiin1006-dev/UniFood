@@ -64,9 +64,6 @@ for (const [name, destination] of [
   ["worker", "/worker"],
   ["admin", "/admin"],
   ["superadmin", "/super-admin"],
-  ["clientworker", "/worker"],
-  ["clientadmin", "/admin"],
-  ["clientsuperadmin", "/super-admin"],
 ]) {
   test(`${name} cannot use the own-order CLIENT route`, async ({ page }) => {
     await login(page, name, destination);

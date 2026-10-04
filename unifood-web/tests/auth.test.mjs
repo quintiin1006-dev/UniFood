@@ -268,8 +268,6 @@ test("login preserves provider failures and routes users using database roles", 
   for (const [roles, target] of [
     [["ADMIN"], "/admin"],
     [["SUPER_ADMIN"], "/super-admin"],
-    [["WORKER", "ADMIN"], "/admin"],
-    [["WORKER", "SUPER_ADMIN"], "/super-admin"],
   ]) {
     state.profile.roles = roles;
     for (const action of ["login", "verify"]) {
@@ -288,6 +286,36 @@ test("login preserves provider failures and routes users using database roles", 
     403,
   );
   assert.ok(calls.some(([name]) => name === "logout"));
+});
+
+test("login and verification reject zero, multiple, duplicate and unknown business roles", async () => {
+  for (const roles of [
+    [],
+    ["UNKNOWN"],
+    ["CLIENT", "CLIENT"],
+    ["CLIENT", "WORKER"],
+    ["CLIENT", "ADMIN"],
+    ["CLIENT", "SUPER_ADMIN"],
+    ["WORKER", "ADMIN"],
+    ["WORKER", "SUPER_ADMIN"],
+    ["ADMIN", "SUPER_ADMIN"],
+    null,
+    "CLIENT",
+  ]) {
+    for (const action of ["login", "verify"]) {
+      const { post, state, calls } = fixture();
+      state.profile.roles = roles;
+      const response = await post(action, {
+        email: "fixture",
+        password: "UnaClave8",
+        code: "123456",
+      });
+      assert.equal(response.status, 403);
+      const body = await response.json();
+      assert.equal(body.redirect, undefined);
+      assert.ok(calls.some(([name]) => name === "logout"));
+    }
+  }
 });
 
 test("OTP failures do not authenticate and password reset requires a verified session", async () => {

@@ -27,6 +27,8 @@ class OrderAuthorizationServiceTest {
         new UserAuthorization(true, Set.of("ADMIN"), List.of(cafeteria)),
         new UserAuthorization(true, Set.of("SUPER_ADMIN"), List.of(cafeteria)),
         new UserAuthorization(true, Set.of("CLIENT"), List.of(cafeteria)),
+        new UserAuthorization(true, Set.of("WORKER", "CLIENT"), List.of(cafeteria)),
+        new UserAuthorization(true, Set.of("UNKNOWN"), List.of(cafeteria)),
         new UserAuthorization(false, Set.of("WORKER"), List.of(cafeteria)),
         new UserAuthorization(true, Set.of("WORKER"), List.of()),
         new UserAuthorization(true, Set.of("WORKER"), List.of(cafeteria, UUID.randomUUID())),
@@ -51,8 +53,7 @@ class OrderAuthorizationServiceTest {
   void validWorkerCanOperateOnlyItsOwnCafeteriaAndTheOrdersActualCafeteria() {
     when(queries.findUserAuthorization(userId))
         .thenReturn(
-            Optional.of(
-                new UserAuthorization(true, Set.of("WORKER", "CLIENT"), List.of(cafeteriaId))));
+            Optional.of(new UserAuthorization(true, Set.of("WORKER"), List.of(cafeteriaId))));
     assertEquals(Optional.of(cafeteriaId), authorization.workerCafeteria(userId));
     assertTrue(authorization.cafeteria(userId, cafeteriaId));
     assertFalse(authorization.cafeteria(userId, UUID.randomUUID()));

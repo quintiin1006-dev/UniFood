@@ -243,6 +243,8 @@ class OrderRoleAuthorizationTest {
         "ADMIN",
         "SUPER_ADMIN",
         "CLIENT",
+        "WORKER_CLIENT",
+        "UNKNOWN",
         "WORKER_ADMIN",
         "WORKER_SUPER_ADMIN",
         "INACTIVE"
@@ -250,6 +252,7 @@ class OrderRoleAuthorizationTest {
   void databaseFactsDenyInvalidWorkersBeforeUseCases(String scenario) throws Exception {
     Set<String> roles =
         switch (scenario) {
+          case "WORKER_CLIENT" -> Set.of("WORKER", "CLIENT");
           case "WORKER_ADMIN" -> Set.of("WORKER", "ADMIN");
           case "WORKER_SUPER_ADMIN" -> Set.of("WORKER", "SUPER_ADMIN");
           case "INACTIVE" -> Set.of("WORKER");

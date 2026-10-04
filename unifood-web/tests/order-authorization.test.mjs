@@ -68,10 +68,7 @@ test("authorization persistence SQL reads current database facts without trustin
     ["SUPER_ADMIN", ["SUPER_ADMIN"], true],
     ["CLIENT", ["CLIENT"], true],
     ["inactive WORKER", ["WORKER"], false],
-    ["WORKER plus ADMIN", ["WORKER", "ADMIN"], true],
-    ["WORKER plus SUPER_ADMIN", ["WORKER", "SUPER_ADMIN"], true],
-    ["all roles", ["CLIENT", "WORKER", "ADMIN", "SUPER_ADMIN"], true],
-    ["no database role despite forged metadata", [], true],
+    ["inactive pending account despite forged metadata", [], false],
   ]) {
     await t.test(label, async () => {
       const userId = await createUser(roles, active);
@@ -136,13 +133,34 @@ test("authorization persistence SQL reads current database facts without trustin
         [userId],
       );
       assert.equal((await facts(userId)).is_active, false);
-      await db.query("UPDATE public.users SET is_active = true WHERE id = $1", [
-        userId,
-      ]);
+      // Revoke only after deactivation; active accounts must retain one role.
       await db.query("DELETE FROM public.user_roles WHERE user_id = $1", [
         userId,
       ]);
       assert.deepEqual((await facts(userId)).roles, []);
+    },
+  );
+  await t.test(
+    "second business roles are rejected rather than used as valid fixtures",
+    async () => {
+      for (const [first, second] of [
+        ["CLIENT", "WORKER"],
+        ["CLIENT", "ADMIN"],
+        ["CLIENT", "SUPER_ADMIN"],
+        ["WORKER", "ADMIN"],
+        ["WORKER", "SUPER_ADMIN"],
+        ["ADMIN", "SUPER_ADMIN"],
+      ]) {
+        const userId = await createUser([first]);
+        await assert.rejects(
+          db.query(
+            "INSERT INTO public.user_roles(user_id,role_id) SELECT $1,id FROM public.roles WHERE name::text=$2",
+            [userId, second],
+          ),
+          /uq_user_roles_user/,
+        );
+        assert.deepEqual((await facts(userId)).roles, [first]);
+      }
     },
   );
   await t.test("missing users and orders produce no facts", async () => {
@@ -167,7 +185,7 @@ test("authorization persistence SQL reads current database facts without trustin
   await t.test(
     "three assignments are bounded at two, enough to deny cardinality",
     async () => {
-      const userId = await createUser(["WORKER", "CLIENT"]);
+      const userId = await createUser(["WORKER"]);
       await db.query(
         "INSERT INTO public.cafeteria_users(user_id, cafeteria_id) VALUES ($1, $2)",
         [userId, cafeterias[1]],
@@ -185,7 +203,7 @@ test("authorization persistence SQL reads current database facts without trustin
       const user = await facts(userId);
       assert.equal(user.cafeteria_ids.length, 2);
       assert.equal(new Set(user.cafeteria_ids).size, 2);
-      assert.deepEqual(user.roles.toSorted(), ["CLIENT", "WORKER"]);
+      assert.deepEqual(user.roles, ["WORKER"]);
     },
   );
 });

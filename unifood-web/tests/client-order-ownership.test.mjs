@@ -55,6 +55,9 @@ test("client ownership SQL follows actual PostgreSQL links and current roles, ne
       "INSERT INTO public.user_roles(user_id,role_id) SELECT $1,id FROM public.roles WHERE name='CLIENT'",
       [user],
     );
+    await db.query("UPDATE public.users SET is_active=true WHERE id=$1", [
+      user,
+    ]);
     return { user, client };
   }
   const first = await createClient(1),
@@ -119,18 +122,19 @@ test("client ownership SQL follows actual PostgreSQL links and current roles, ne
         first.user,
       ]);
       assert.equal((await facts()).is_active, false);
-      await db.query("UPDATE public.users SET is_active=true WHERE id=$1", [
-        first.user,
-      ]);
       await db.query("DELETE FROM public.user_roles WHERE user_id=$1", [
         first.user,
       ]);
       assert.deepEqual((await facts()).roles, []);
       await db.query(
-        "INSERT INTO public.user_roles(user_id,role_id) SELECT $1,id FROM public.roles WHERE name IN ('CLIENT','ADMIN')",
+        "INSERT INTO public.user_roles(user_id,role_id) SELECT $1,id FROM public.roles WHERE name='ADMIN'",
         [first.user],
       );
-      assert.deepEqual((await facts()).roles.toSorted(), ["ADMIN", "CLIENT"]);
+      assert.deepEqual((await facts()).roles, ["ADMIN"]);
+      await db.query("UPDATE public.users SET is_active=true WHERE id=$1", [
+        first.user,
+      ]);
+      assert.equal((await facts()).is_active, true);
     },
   );
   await t.test(

@@ -12,6 +12,9 @@ const fixtures = Object.entries({
   clientworker: ["CLIENT", "WORKER"],
   clientadmin: ["CLIENT", "ADMIN"],
   clientsuperadmin: ["CLIENT", "SUPER_ADMIN"],
+  adminsuperadmin: ["ADMIN", "SUPER_ADMIN"],
+  norole: [],
+  unknownrole: ["UNKNOWN"],
   inactive: ["WORKER"],
   unassigned: ["WORKER"],
   multiassigned: ["WORKER"],
@@ -135,6 +138,7 @@ createServer(async (request, response) => {
       if (
         !profile.active ||
         profile.assignments !== 1 ||
+        profile.roles.length !== 1 ||
         !profile.roles.includes("WORKER") ||
         profile.roles.some((role) => ["ADMIN", "SUPER_ADMIN"].includes(role))
       )

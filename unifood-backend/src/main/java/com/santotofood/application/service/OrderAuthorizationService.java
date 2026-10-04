@@ -20,6 +20,7 @@ public class OrderAuthorizationService {
         .filter(
             user ->
                 user.active()
+                    && user.roles().size() == 1
                     && user.roles().contains("WORKER")
                     && !user.roles().contains("ADMIN")
                     && !user.roles().contains("SUPER_ADMIN")

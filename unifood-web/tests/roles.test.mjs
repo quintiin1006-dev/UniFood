@@ -83,16 +83,15 @@ const cases = [
   ["WORKER", ["WORKER"], "/worker", true],
   ["ADMIN", ["ADMIN"], "/admin", false],
   ["SUPER_ADMIN", ["SUPER_ADMIN"], "/super-admin", false],
-  ["WORKER + ADMIN", ["WORKER", "ADMIN"], "/admin", false],
-  ["WORKER + SUPER_ADMIN", ["WORKER", "SUPER_ADMIN"], "/super-admin", false],
-  [
-    "all roles",
-    ["CLIENT", "WORKER", "ADMIN", "SUPER_ADMIN"],
-    "/super-admin",
-    false,
-  ],
-  ["no roles", [], "/cuenta", false],
-  ["unknown role", ["UNKNOWN"], "/cuenta", false],
+  ["WORKER + ADMIN", ["WORKER", "ADMIN"], "/login", false],
+  ["WORKER + SUPER_ADMIN", ["WORKER", "SUPER_ADMIN"], "/login", false],
+  ["CLIENT + WORKER", ["CLIENT", "WORKER"], "/login", false],
+  ["CLIENT + ADMIN", ["CLIENT", "ADMIN"], "/login", false],
+  ["CLIENT + SUPER_ADMIN", ["CLIENT", "SUPER_ADMIN"], "/login", false],
+  ["ADMIN + SUPER_ADMIN", ["ADMIN", "SUPER_ADMIN"], "/login", false],
+  ["all roles", ["CLIENT", "WORKER", "ADMIN", "SUPER_ADMIN"], "/login", false],
+  ["no roles", [], "/login", false],
+  ["unknown role", ["UNKNOWN"], "/login", false],
 ];
 
 test("role predicates and destinations separate operations from administration", () => {
@@ -100,19 +99,31 @@ test("role predicates and destinations separate operations from administration",
     const current = profile(roles);
     assert.equal(validation.destination(current), destination, label);
     assert.equal(validation.isWorker(current), worker, label);
-    assert.equal(validation.isAdmin(current), roles.includes("ADMIN"), label);
+    const valid =
+      roles.length === 1 &&
+      ["CLIENT", "WORKER", "ADMIN", "SUPER_ADMIN"].includes(roles[0]);
+    assert.equal(validation.hasValidBusinessRole(current), valid, label);
     assert.equal(
-      validation.isSuperAdmin(current),
-      roles.includes("SUPER_ADMIN"),
+      validation.isAdmin(current),
+      valid && roles.includes("ADMIN"),
       label,
     );
-    assert.equal(validation.isClient(current), roles.includes("CLIENT"), label);
+    assert.equal(
+      validation.isSuperAdmin(current),
+      valid && roles.includes("SUPER_ADMIN"),
+      label,
+    );
+    assert.equal(
+      validation.isClient(current),
+      valid && roles.includes("CLIENT"),
+      label,
+    );
     const inactive = profile(roles, false);
     for (const predicate of ["isWorker", "isAdmin", "isSuperAdmin", "isClient"])
       assert.equal(validation[predicate](inactive), false, label);
-    assert.equal(validation.destination(inactive), "/cuenta");
+    assert.equal(validation.destination(inactive), "/login");
   }
-  assert.equal(validation.destination(null), "/cuenta");
+  assert.equal(validation.destination(null), "/login");
 });
 
 function pages(current) {
@@ -120,7 +131,7 @@ function pages(current) {
     ...uiMocks,
     "@/features/auth/server/session": {
       requireAuth: async () => {
-        if (!current?.active) redirect("/login");
+        if (!validation.hasValidBusinessRole(current)) redirect("/login");
         return { profile: current };
       },
     },
@@ -146,7 +157,11 @@ test("worker page only renders for active operational workers", async () => {
 test("account page never offers the worker panel to administrative roles", async () => {
   for (const [, roles, destination, worker] of cases) {
     const page = load("app/cuenta/page.tsx", pages(profile(roles))).default;
-    if (roles.includes("ADMIN") || roles.includes("SUPER_ADMIN"))
+    if (
+      !validation.hasValidBusinessRole(profile(roles)) ||
+      roles.includes("ADMIN") ||
+      roles.includes("SUPER_ADMIN")
+    )
       await assert.rejects(page(), (error) => error.location === destination);
     else
       assert.equal(
@@ -163,7 +178,10 @@ test("administrative placeholders enforce explicit active roles and provide no o
   ]) {
     for (const [, roles, destination] of cases) {
       const page = load(file, pages(profile(roles))).default;
-      if (roles.includes(role)) {
+      if (
+        validation.hasValidBusinessRole(profile(roles)) &&
+        roles.includes(role)
+      ) {
         const html = renderToStaticMarkup(await page());
         assert.ok(html.includes(heading));
         assert.match(html, /Cerrar sesión/);

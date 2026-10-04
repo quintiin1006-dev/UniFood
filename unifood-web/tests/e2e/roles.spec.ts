@@ -13,8 +13,6 @@ for (const [name, target] of [
   ["client", "/cuenta"],
   ["admin", "/admin"],
   ["superadmin", "/super-admin"],
-  ["workeradmin", "/admin"],
-  ["workersuperadmin", "/super-admin"],
 ]) {
   test(`${name} follows its database destination and cannot access worker operations`, async ({
     page,
@@ -58,6 +56,49 @@ for (const [name, target] of [
       ).toBeVisible();
   });
 }
+
+test.describe("invalid database role cardinality is denied at login and session loading", () => {
+  for (const name of [
+    "workeradmin",
+    "workersuperadmin",
+    "clientworker",
+    "clientadmin",
+    "clientsuperadmin",
+    "adminsuperadmin",
+    "norole",
+    "unknownrole",
+  ]) {
+    test(`${name} cannot authenticate or reach any protected role destination`, async ({
+      page,
+    }) => {
+      await page.goto("/login");
+      await page
+        .getByLabel("Usuario o correo institucional", { exact: true })
+        .fill(`${name}@example.invalid`);
+      await page.getByLabel("Contraseña", { exact: true }).fill("UnaClave8");
+      await page
+        .getByRole("button", { name: "Iniciar sesión", exact: true })
+        .click();
+      await expect(page.getByRole("main").getByRole("alert")).toContainText(
+        "Tu cuenta no está habilitada",
+      );
+      await expect(page).toHaveURL(/\/login$/);
+      for (const path of ["/cuenta", "/worker", "/admin", "/super-admin"]) {
+        await page.goto(path);
+        await expect(page).toHaveURL(/\/login$/);
+      }
+      expect((await page.request.get("/api/orders")).status()).toBe(401);
+      expect(
+        (
+          await page.request.patch(
+            "/api/me/orders/00000000-0000-0000-0000-000000000010/cancel",
+            { headers: { origin: new URL(page.url()).origin } },
+          )
+        ).status(),
+      ).toBe(401);
+    });
+  }
+});
 
 test("worker login loads its dashboard and can prepare an assigned order", async ({
   page,

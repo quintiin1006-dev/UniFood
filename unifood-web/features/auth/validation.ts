@@ -34,9 +34,20 @@ export type AuthProfile = {
   roles: string[];
 };
 
+const businessRoles = new Set(["CLIENT", "WORKER", "ADMIN", "SUPER_ADMIN"]);
+
+export function hasValidBusinessRole(profile: AuthProfile | null | undefined) {
+  return (
+    profile?.active === true &&
+    Array.isArray(profile.roles) &&
+    profile.roles.length === 1 &&
+    businessRoles.has(profile.roles[0])
+  );
+}
+
 export function isWorker(profile: AuthProfile) {
   return (
-    profile.active &&
+    hasValidBusinessRole(profile) &&
     profile.roles.includes("WORKER") &&
     !isAdmin(profile) &&
     !isSuperAdmin(profile)
@@ -44,19 +55,19 @@ export function isWorker(profile: AuthProfile) {
 }
 
 export function isAdmin(profile: AuthProfile) {
-  return profile.active && profile.roles.includes("ADMIN");
+  return hasValidBusinessRole(profile) && profile.roles.includes("ADMIN");
 }
 
 export function isSuperAdmin(profile: AuthProfile) {
-  return profile.active && profile.roles.includes("SUPER_ADMIN");
+  return hasValidBusinessRole(profile) && profile.roles.includes("SUPER_ADMIN");
 }
 
 export function isClient(profile: AuthProfile) {
-  return profile.active && profile.roles.includes("CLIENT");
+  return hasValidBusinessRole(profile) && profile.roles.includes("CLIENT");
 }
 
 export function destination(profile: AuthProfile | null) {
-  if (!profile) return "/cuenta";
+  if (!profile || !hasValidBusinessRole(profile)) return "/login";
   if (isSuperAdmin(profile)) return "/super-admin";
   if (isAdmin(profile)) return "/admin";
   return isWorker(profile) ? "/worker" : "/cuenta";
