@@ -79,7 +79,11 @@ Los correos ya entregados no cambian. Para probar el registro completo, usar una
 
 Las cookies de sesión son `HttpOnly`, `SameSite=Lax` y `Secure` en producción. “Mantener sesión iniciada” usa una cookie persistente de 30 días; desmarcarlo usa cookies de sesión del navegador. Un navegador configurado para restaurar sesiones puede conservar estas últimas. Supabase sigue controlando expiración y revocación.
 
-El proxy de pedidos toma el access token de la sesión verificada; ignora cualquier Authorization enviado por el navegador. Spring valida firma, emisor y audiencia y consulta los permisos vigentes en la base de datos. Trabajadores y administradores solo acceden a sus cafeterías; SUPER_ADMIN tiene alcance global. Los roles nunca se toman de `user_metadata`.
+El proxy de pedidos toma el access token de la sesión verificada; ignora cualquier Authorization enviado por el navegador. Spring valida firma, emisor y audiencia y consulta los permisos vigentes en la base de datos. Solo WORKER activo y asignado a la cafetería puede listar u operar pedidos. CLIENT, ADMIN y SUPER_ADMIN no tienen permisos operativos. Una cuenta con ADMIN o SUPER_ADMIN se bloquea también si tiene WORKER. Los roles nunca se toman de `user_metadata`.
+
+Los destinos son `/cuenta` para CLIENT, `/worker` para WORKER, `/admin` para ADMIN y `/super-admin` para SUPER_ADMIN. Los dos destinos administrativos son placeholders protegidos, sin funciones administrativas ni acceso al panel worker. En cuentas con varios roles, el destino da prioridad a SUPER_ADMIN, después ADMIN y después WORKER. Esta fase no impone un límite de cuentas WORKER por cafetería ni implementa el aprovisionamiento administrativo o la restricción de una única cafetería para ADMIN.
+
+Hallazgo pendiente fuera de esta fase: `InstitutionController` exige autenticación, pero sus consultas por dominio o ID no filtran por rol ni pertenencia institucional. La política de visibilidad de instituciones debe definirse antes de cambiar esos endpoints.
 
 ## Verificación
 
@@ -96,12 +100,12 @@ En el backend, con Java 21:
 ./mvnw -Dtest=OrderTest,OrderServiceTest,ClientTest,SecurityConfigTest test
 ```
 
-Las pruebas automatizadas de auth usan un proveedor simulado y las de permisos un repositorio simulado. Para validar la integración real, configurar el proyecto y comprobar: registro con documento nuevo, correo real, código inválido/vencido, reenvío, confirmación, login, recarga, cierre de sesión, recuperación y rechazo del estudiante al acceder a `/worker` y `/api/orders`. Con un trabajador, comprobar acceso a su cafetería y rechazo a otra. No asumir que las pruebas locales verifican SMTP o la aplicación remota de las migraciones.
+Las pruebas automatizadas de auth usan un proveedor simulado. Los tests HTTP backend usan los endpoints, guards y handlers reales con decisiones JDBC simuladas; la consulta SQL de producción de `OrderAuthorization` se ejecuta además en PostgreSQL en memoria para comprobar cada rol, asignaciones, inactividad, combinaciones administrativas con WORKER y revocación. Para validar la integración real, configurar el proyecto y comprobar: registro con documento nuevo, correo real, código inválido/vencido, reenvío, confirmación, login, recarga, cierre de sesión, recuperación y rechazo del estudiante al acceder a `/worker` y `/api/orders`. Con un trabajador, comprobar acceso a su cafetería y rechazo a otra. No asumir que las pruebas locales verifican SMTP o la aplicación remota de las migraciones.
 
 `npm test` también ejecuta las migraciones completas en PostgreSQL en memoria (PGlite). Comprueba los dos dominios, conservación del correo, coincidencia exacta, rechazo de subdominios/sufijos falsos, institución inactiva, rollback de registros inválidos y asignación exclusiva del rol CLIENT. La API de registro se prueba contra esa validación SQL real; el envío de correo de Supabase sigue simulado.
 
-Playwright inicia Next.js en el puerto 3100 y usa Edge en Windows o Chromium en otros sistemas (`npx playwright install chromium` si falta). Las pruebas de formularios simulan las respuestas de `/api/auth`; la prueba de acceso anónimo usa las rutas reales. Las capturas se guardan en `test-results/`. Ejecutar las pruebas de navegador sin una sesión previamente iniciada.
+Playwright inicia Next.js en el puerto 3100 y un proveedor/backend de prueba en `127.0.0.1:3101`; usa Edge en Windows o Chromium en otros sistemas (`npx playwright install chromium` si falta). Las pruebas de formularios simulan las respuestas de `/api/auth`; las pruebas de roles usan login, páginas y BFF reales con sesiones del proveedor local de prueba, sin relajar guards. Se comprueba también el dashboard y la preparación de un pedido. Estos fixtures no sustituyen la comprobación de Spring y SQL. Las capturas se guardan en `test-results/`. Ejecutar las pruebas de navegador sin una sesión previamente iniciada.
 
-Si ya está corriendo el servidor de desarrollo, probarlo sin levantar otra instancia: en PowerShell, `$env:PLAYWRIGHT_BASE_URL='http://localhost:3000'` y después `npm run test:e2e`.
+Si ya está corriendo el servidor de desarrollo, probarlo sin levantar otra instancia: en PowerShell, `$env:PLAYWRIGHT_BASE_URL='http://localhost:3000'` y después `npm run test:e2e`. En ese modo externo se omiten los tests de roles que requieren el proveedor local controlado; para la validación completa ejecutar sin `PLAYWRIGHT_BASE_URL`.
 
 Referencias: [Supabase SSR](https://supabase.com/docs/guides/auth/server-side/creating-a-client), [plantillas de correo](https://supabase.com/docs/guides/auth/auth-email-templates), [Spring JWT resource server](https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html).

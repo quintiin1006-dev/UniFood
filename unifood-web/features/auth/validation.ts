@@ -1,7 +1,12 @@
 export const DEFAULT_USERNAME_DOMAIN = "ustavillavo.edu.co";
 
 export function passwordRules(password: string) {
-  return [password.length >= 8, /[A-Z]/.test(password), /[a-z]/.test(password), /[0-9]/.test(password)];
+  return [
+    password.length >= 8,
+    /[A-Z]/.test(password),
+    /[a-z]/.test(password),
+    /[0-9]/.test(password),
+  ];
 }
 
 export function validPassword(password: string) {
@@ -21,17 +26,44 @@ export function normalizeIdentifier(identifier: string, domain: string) {
   return value.includes("@") ? value : `${value}@${domain}`;
 }
 
-export type AuthProfile = { id: string; email: string; fullName: string | null; active: boolean; roles: string[] };
+export type AuthProfile = {
+  id: string;
+  email: string;
+  fullName: string | null;
+  active: boolean;
+  roles: string[];
+};
 
 export function isWorker(profile: AuthProfile) {
-  return profile.active && profile.roles.some((role) => ["WORKER", "ADMIN", "SUPER_ADMIN"].includes(role));
+  return (
+    profile.active &&
+    profile.roles.includes("WORKER") &&
+    !isAdmin(profile) &&
+    !isSuperAdmin(profile)
+  );
+}
+
+export function isAdmin(profile: AuthProfile) {
+  return profile.active && profile.roles.includes("ADMIN");
+}
+
+export function isSuperAdmin(profile: AuthProfile) {
+  return profile.active && profile.roles.includes("SUPER_ADMIN");
+}
+
+export function isClient(profile: AuthProfile) {
+  return profile.active && profile.roles.includes("CLIENT");
 }
 
 export function destination(profile: AuthProfile | null) {
-  return profile && isWorker(profile) ? "/worker" : "/cuenta";
+  if (!profile) return "/cuenta";
+  if (isSuperAdmin(profile)) return "/super-admin";
+  if (isAdmin(profile)) return "/admin";
+  return isWorker(profile) ? "/worker" : "/cuenta";
 }
 
-const firstValue = (header: string | null) => header?.split(",")[0].trim() || undefined;
+const firstValue = (header: string | null) =>
+  header?.split(",")[0].trim() || undefined;
 
 export function sameOrigin(request: Request) {
   const origin = request.headers.get("origin");
@@ -42,7 +74,14 @@ export function sameOrigin(request: Request) {
   } catch {
     return false;
   }
-  const proto = firstValue(request.headers.get("x-forwarded-proto")) ?? protocol.replace(":", "");
-  const host = firstValue(request.headers.get("x-forwarded-host")) ?? firstValue(request.headers.get("host"));
-  return origin === (host ? `${proto}://${host}` : `${proto}://${new URL(request.url).host}`);
+  const proto =
+    firstValue(request.headers.get("x-forwarded-proto")) ??
+    protocol.replace(":", "");
+  const host =
+    firstValue(request.headers.get("x-forwarded-host")) ??
+    firstValue(request.headers.get("host"));
+  return (
+    origin ===
+    (host ? `${proto}://${host}` : `${proto}://${new URL(request.url).host}`)
+  );
 }
