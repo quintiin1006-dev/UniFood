@@ -17,7 +17,7 @@ El mismo código se utiliza en local, staging y production. No hay selección au
 
 Las variables anteriores son **server-only**. La clave publishable/anon es una credencial pública del proveedor, pero esta implementación la usa deliberadamente en el servidor. La validación exige una clave presente y no vacía; no interpreta su formato ni determina sus privilegios. Configurar exclusivamente la clave pública del proyecto, nunca una clave privilegiada. `NEXT_PUBLIC_API_URL` no es una alternativa admitida.
 
-`AUTH_USERNAME_DOMAIN` sigue siendo server-only y conserva su comportamiento actual. `NEXT_PUBLIC_CAFETERIA_ID` sigue siendo pública, con su comportamiento actual y su valor fijado al construir. Su eliminación corresponde a otra fase.
+`AUTH_USERNAME_DOMAIN` sigue siendo server-only y conserva su comportamiento actual. La cafetería operativa no se configura mediante variables de entorno: se resuelve desde la identidad autenticada y su asignación vigente en PostgreSQL. No hay una variable pública que seleccione la cafetería del WORKER.
 
 El backend conserva la audiencia JWT `authenticated`. Se exige una URL JDBC PostgreSQL y un issuer HTTP(S) sin credenciales, query ni fragmento. Las URLs web deben ser HTTP(S), absolutas y sin credenciales, query ni fragmento; se permiten rutas base y se normaliza la barra final. HTTP sigue disponible para desarrollo y conexiones internas explícitas. En despliegues, usar HTTPS en las conexiones externas y TLS en PostgreSQL según el proveedor.
 

@@ -12,12 +12,13 @@ Definir explícitamente `API_URL` en `.env.local`, también para desarrollo loca
 
 ```dotenv
 API_URL=http://localhost:8080
-NEXT_PUBLIC_CAFETERIA_ID=59ac35a8-1c1c-4081-8720-2d517d8740bd
 ```
 
 Reiniciar Next.js después de cambiar la configuración. `API_URL` es la dirección del backend accesible desde el servidor Next.js y es obligatoria. `NEXT_PUBLIC_API_URL` no se utiliza. En `next build` y `next start`, también son obligatorias `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY`. La validación identifica la variable incorrecta sin imprimir su valor.
 
-El navegador consulta `/api/orders` en su mismo origen. El Route Handler reenvía GET y las acciones PATCH al backend sin reenviar el Origin del navegador. Esto evita depender de que Spring permita el puerto o el hostname del frontend por CORS. Los códigos y mensajes del backend, incluido 409, se conservan. Si el backend no responde, el frontend muestra un error de conexión (502).
+El navegador consulta `/api/orders` en su mismo origen, sin elegir cafetería. Para cada listado, el BFF consulta `/api/worker/context` con el token de la sesión verificada y utiliza el ID devuelto para el GET de pedidos del backend. Ignora cualquier `cafeteriaId` enviado por el navegador. El contexto exige WORKER activo, sin roles administrativos y con exactamente una asignación vigente en PostgreSQL; sin asignación o con varias devuelve 403. No se guarda ni cachea la asignación. Spring vuelve a autorizar cada lectura y operación de pedidos.
+
+El Route Handler reenvía las acciones PATCH al backend sin reenviar el Origin del navegador. Esto evita depender de que Spring permita el puerto o el hostname del frontend por CORS. Los códigos y mensajes de pedidos, incluido 409, se conservan. Los errores de contexto usan mensajes seguros: se mantienen 401/403 y los fallos de conexión o respuestas inválidas producen 502.
 
 ## Flujo de órdenes
 

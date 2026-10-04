@@ -42,11 +42,43 @@ async function forward(
   const url = new URL(
     `${base}/api/orders${path.length ? `/${path.join("/")}` : ""}`,
   );
-  if (isList) url.search = new URL(request.url).search;
 
   try {
     const headers = new Headers();
     headers.set("authorization", `Bearer ${auth.accessToken}`);
+    if (isList) {
+      const contextResponse = await fetch(`${base}/api/worker/context`, {
+        method: "GET",
+        headers,
+        cache: "no-store",
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!contextResponse.ok) {
+        return Response.json(
+          { message: "No se pudo resolver la cafetería de tu cuenta." },
+          {
+            status: [401, 403].includes(contextResponse.status)
+              ? contextResponse.status
+              : 502,
+            headers: { "Cache-Control": "no-store" },
+          },
+        );
+      }
+      const workerContext = await contextResponse.json();
+      if (
+        typeof workerContext?.cafeteriaId !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          workerContext.cafeteriaId,
+        )
+      ) {
+        return Response.json(
+          { message: "No se pudo resolver la cafetería de tu cuenta." },
+          { status: 502, headers: { "Cache-Control": "no-store" } },
+        );
+      }
+      // Only the authenticated backend context selects the cafeteria, never request parameters.
+      url.searchParams.set("cafeteriaId", workerContext.cafeteriaId);
+    }
     const response = await fetch(url, {
       method: request.method,
       headers,
@@ -67,7 +99,7 @@ async function forward(
         message:
           "No se pudo conectar con el backend de pedidos. Revisa que esté disponible.",
       },
-      { status: 502 },
+      { status: 502, headers: { "Cache-Control": "no-store" } },
     );
   }
 }

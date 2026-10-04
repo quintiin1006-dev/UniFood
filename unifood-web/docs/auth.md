@@ -19,7 +19,6 @@ SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_PUBLISHABLE_KEY=<publishable-key-o-anon-key>
 AUTH_USERNAME_DOMAIN=ustavillavo.edu.co
 API_URL=http://localhost:8080
-NEXT_PUBLIC_CAFETERIA_ID=<cafeteria-id>
 ```
 
 Usar la clave pública del proyecto, **nunca service_role**. Estos valores se leen en el servidor. Reiniciar Next.js después de cambiarlos. Sin configuración, las pantallas siguen siendo visibles y los formularios muestran un error de servicio no configurado; no hay autenticación simulada.
@@ -46,7 +45,7 @@ La migración:
 - Evita que un estudiante cambie su institución mediante la política existente de actualización de perfil.
 - Expone dos RPC con privilegios acotados: `is_institutional_email` y `current_auth_profile`.
 
-Las cuentas existentes deben tener su correspondiente registro en `public.users`. La migración no modifica ni asigna automáticamente roles a usuarios anteriores. Los trabajadores se aprovisionan administrativamente en `user_roles` y `cafeteria_users`; el registro público nunca asigna WORKER, ADMIN ni SUPER_ADMIN. Una cuenta sin perfil o deshabilitada no obtiene acceso. Confirmar que la cafetería de `NEXT_PUBLIC_CAFETERIA_ID` coincide con la asignada al trabajador.
+Las cuentas existentes deben tener su correspondiente registro en `public.users`. La migración no modifica ni asigna automáticamente roles a usuarios anteriores. Los trabajadores se aprovisionan administrativamente en `user_roles` y `cafeteria_users`; el registro público nunca asigna WORKER, ADMIN ni SUPER_ADMIN. Una cuenta sin perfil o deshabilitada no obtiene acceso. Cada WORKER operativo debe tener exactamente una fila de asignación en `cafeteria_users`; una cafetería puede tener varios WORKER. Esta cardinalidad se comprueba en cada consulta de contexto y autorización de pedidos, sin introducir una migración de aprovisionamiento.
 
 ## Correo y contraseñas en Supabase
 
@@ -80,6 +79,12 @@ Los correos ya entregados no cambian. Para probar el registro completo, usar una
 Las cookies de sesión son `HttpOnly`, `SameSite=Lax` y `Secure` en producción. “Mantener sesión iniciada” usa una cookie persistente de 30 días; desmarcarlo usa cookies de sesión del navegador. Un navegador configurado para restaurar sesiones puede conservar estas últimas. Supabase sigue controlando expiración y revocación.
 
 El proxy de pedidos toma el access token de la sesión verificada; ignora cualquier Authorization enviado por el navegador. Spring valida firma, emisor y audiencia y consulta los permisos vigentes en la base de datos. Solo WORKER activo y asignado a la cafetería puede listar u operar pedidos. CLIENT, ADMIN y SUPER_ADMIN no tienen permisos operativos. Una cuenta con ADMIN o SUPER_ADMIN se bloquea también si tiene WORKER. Los roles nunca se toman de `user_metadata`.
+
+`GET /api/worker/context` es un endpoint Spring autenticado que devuelve únicamente `{ "cafeteriaId": "<uuid>" }`, con `Cache-Control: no-store`. La identidad procede del subject JWT; `OrderAuthorization.workerCafeteria()` consulta actividad, roles y asignaciones actuales. Falta de asignación, múltiples asignaciones, rol no operativo e inactividad producen el mismo 403 mediante `ApiErrorResponse`, sin revelar detalles de asignaciones. El endpoint no acepta un ID de usuario ni una cafetería como fuente de autoridad.
+
+El navegador solo pide `GET /api/orders`. El BFF consulta primero el contexto y después llama al GET Spring existente con la cafetería resuelta; ignora las queries del cliente. Solo hay una resolución de contexto por listado, sin fetch adicional del dashboard ni caché, cookies o localStorage de asignación. Las acciones PATCH siguen autorizándose contra la cafetería real del pedido en Spring y no dependen de un contexto obtenido anteriormente. `current_auth_profile()` conserva su contrato de identidad/roles; no se añaden RPC ni SQL duplicado.
+
+Ante errores de contexto, el BFF no consulta pedidos ni usa cafeterías predeterminadas. Devuelve mensajes genéricos sin copiar cuerpos internos del backend; conserva 401/403 y usa 502 para otros fallos o respuestas malformadas. El dashboard muestra su estado de error existente sin rediseño.
 
 Los destinos son `/cuenta` para CLIENT, `/worker` para WORKER, `/admin` para ADMIN y `/super-admin` para SUPER_ADMIN. Los dos destinos administrativos son placeholders protegidos, sin funciones administrativas ni acceso al panel worker. En cuentas con varios roles, el destino da prioridad a SUPER_ADMIN, después ADMIN y después WORKER. Esta fase no impone un límite de cuentas WORKER por cafetería ni implementa el aprovisionamiento administrativo o la restricción de una única cafetería para ADMIN.
 
