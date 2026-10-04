@@ -548,7 +548,7 @@ export default function WorkerDashboard() {
             >
               Vas a cancelar
               el pedido de{" "}
-              <strong>
+              <strong style={{ fontSize: "16px", fontWeight: 600 }}>
                 {
                   orderToCancel.student
                 }
@@ -596,7 +596,7 @@ export default function WorkerDashboard() {
                   border:
                     "1px solid #d9dee8",
                   borderRadius:
-                    "14px",
+                    "var(--radius-control)",
                   padding:
                     "13px 18px",
                   background:
@@ -604,7 +604,7 @@ export default function WorkerDashboard() {
                   color:
                     "#172033",
                   fontSize:
-                    "15px",
+                    "14px",
                   fontWeight:
                     600,
                   cursor:
@@ -624,7 +624,7 @@ export default function WorkerDashboard() {
                   border:
                     "none",
                   borderRadius:
-                    "14px",
+                    "var(--radius-control)",
                   padding:
                     "13px 18px",
                   background:
@@ -632,7 +632,7 @@ export default function WorkerDashboard() {
                   color:
                     "#ffffff",
                   fontSize:
-                    "15px",
+                    "14px",
                   fontWeight:
                     600,
                   cursor:
@@ -768,7 +768,7 @@ export default function WorkerDashboard() {
                 border:
                   "none",
                 borderRadius:
-                  "14px",
+                  "var(--radius-control)",
                 padding:
                   "13px 18px",
                 background:
@@ -776,7 +776,7 @@ export default function WorkerDashboard() {
                 color:
                   "#ffffff",
                 fontSize:
-                  "15px",
+                  "14px",
                 fontWeight:
                   600,
                 cursor:
