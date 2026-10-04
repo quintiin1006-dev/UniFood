@@ -15,18 +15,17 @@ import com.santotofood.domain.model.OrderItem;
 import com.santotofood.domain.port.out.OrderItemRepository;
 import com.santotofood.domain.port.out.OrderRepository;
 import com.santotofood.domain.port.out.TimeProvider;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class OrderService implements
-        PrepareOrderUseCase,
+public class OrderService
+    implements PrepareOrderUseCase,
         MarkOrderReadyUseCase,
         CallStudentUseCase,
         RemindStudentUseCase,
@@ -35,210 +34,177 @@ public class OrderService implements
         CancelOrderUseCase,
         GetOrdersByCafeteriaUseCase {
 
-    private final OrderRepository orderRepository;
-    private final OrderItemRepository orderItemRepository;
-    private final TimeProvider timeProvider;
+  private final OrderRepository orderRepository;
+  private final OrderItemRepository orderItemRepository;
+  private final TimeProvider timeProvider;
 
-    public OrderService(
-            OrderRepository orderRepository,
-            OrderItemRepository orderItemRepository,
-            TimeProvider timeProvider
-    ) {
-        this.orderRepository = orderRepository;
-        this.orderItemRepository = orderItemRepository;
-        this.timeProvider = timeProvider;
+  public OrderService(
+      OrderRepository orderRepository,
+      OrderItemRepository orderItemRepository,
+      TimeProvider timeProvider) {
+    this.orderRepository = orderRepository;
+    this.orderItemRepository = orderItemRepository;
+    this.timeProvider = timeProvider;
+  }
+
+  @Override
+  @Transactional
+  public Order prepareOrder(UUID orderId) {
+
+    Order order = findOrder(orderId);
+
+    Order firstPendingOrder =
+        orderRepository
+            .findFirstPendingByCafeteriaId(order.getCafeteriaId())
+            .orElseThrow(
+                () ->
+                    new IllegalStateException(
+                        "No hay pedidos pendientes para una orden en estado PENDING"));
+
+    if (!firstPendingOrder.getId().equals(order.getId())) {
+      throw new OrderProcessingSequenceException();
     }
 
-    @Override
-    @Transactional
-    public Order prepareOrder(UUID orderId) {
+    Instant now = timeProvider.now();
 
-        Order order = findOrder(orderId);
+    order.prepare(now);
 
-        Order firstPendingOrder =
-                orderRepository
-                        .findFirstPendingByCafeteriaId(
-                                order.getCafeteriaId()
-                        )
-                        .orElseThrow(() ->
-                                new IllegalStateException(
-                                        "No hay pedidos pendientes para una orden en estado PENDING"
-                                )
-                        );
+    Order savedOrder = orderRepository.save(order);
 
-        if (!firstPendingOrder.getId().equals(order.getId())) {
-            throw new OrderProcessingSequenceException();
-        }
+    return loadOrderItems(savedOrder);
+  }
 
-        Instant now = timeProvider.now();
+  @Override
+  @Transactional
+  public Order markOrderReady(UUID orderId) {
 
-        order.prepare(now);
+    Order order = findOrder(orderId);
 
-        Order savedOrder =
-                orderRepository.save(order);
+    Instant now = timeProvider.now();
 
-        return loadOrderItems(savedOrder);
+    order.markReady(now);
+
+    Order savedOrder = orderRepository.save(order);
+
+    return loadOrderItems(savedOrder);
+  }
+
+  @Override
+  @Transactional
+  public Order callStudent(UUID orderId) {
+
+    Order order = findOrder(orderId);
+
+    Instant now = timeProvider.now();
+
+    order.callStudent(now);
+
+    Order savedOrder = orderRepository.save(order);
+
+    return loadOrderItems(savedOrder);
+  }
+
+  @Override
+  @Transactional
+  public Order remindStudent(UUID orderId) {
+
+    Order order = findOrder(orderId);
+
+    Instant now = timeProvider.now();
+
+    order.remindStudent(now);
+
+    Order savedOrder = orderRepository.save(order);
+
+    return loadOrderItems(savedOrder);
+  }
+
+  @Override
+  @Transactional
+  public Order deliverOrder(UUID orderId) {
+
+    Order order = findOrder(orderId);
+
+    Instant now = timeProvider.now();
+
+    order.deliver(now);
+
+    Order savedOrder = orderRepository.save(order);
+
+    return loadOrderItems(savedOrder);
+  }
+
+  @Override
+  @Transactional
+  public Order markOrderNotCollected(UUID orderId) {
+
+    Order order = findOrder(orderId);
+
+    Instant now = timeProvider.now();
+
+    order.markNotCollected(now);
+
+    Order savedOrder = orderRepository.save(order);
+
+    return loadOrderItems(savedOrder);
+  }
+
+  @Override
+  @Transactional
+  public Order cancelOrder(UUID orderId) {
+
+    Order order = findOrder(orderId);
+
+    Instant now = timeProvider.now();
+
+    order.cancel(now);
+
+    Order savedOrder = orderRepository.save(order);
+
+    return loadOrderItems(savedOrder);
+  }
+
+  @Override
+  @Transactional
+  public Order cancelOwnOrder(UUID orderId) {
+    Order order = findOrder(orderId);
+    order.cancelByClient(timeProvider.now());
+    return loadOrderItems(orderRepository.save(order));
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<Order> getOrdersByCafeteria(UUID cafeteriaId) {
+
+    List<Order> orders = orderRepository.findByCafeteriaId(cafeteriaId);
+
+    if (orders.isEmpty()) {
+      return orders;
     }
 
-    @Override
-    @Transactional
-    public Order markOrderReady(UUID orderId) {
+    List<UUID> orderIds = orders.stream().map(Order::getId).toList();
 
-        Order order = findOrder(orderId);
+    List<OrderItem> items = orderItemRepository.findByOrderIds(orderIds);
 
-        Instant now = timeProvider.now();
+    Map<UUID, List<OrderItem>> itemsByOrderId =
+        items.stream().collect(Collectors.groupingBy(OrderItem::getOrderId));
 
-        order.markReady(now);
+    orders.forEach(order -> order.setItems(itemsByOrderId.getOrDefault(order.getId(), List.of())));
 
-        Order savedOrder =
-                orderRepository.save(order);
+    return orders;
+  }
 
-        return loadOrderItems(savedOrder);
-    }
+  private Order loadOrderItems(Order order) {
 
-    @Override
-    @Transactional
-    public Order callStudent(UUID orderId) {
+    List<OrderItem> items = orderItemRepository.findByOrderId(order.getId());
 
-        Order order = findOrder(orderId);
+    order.setItems(items);
 
-        Instant now = timeProvider.now();
+    return order;
+  }
 
-        order.callStudent(now);
+  private Order findOrder(UUID orderId) {
 
-        Order savedOrder =
-                orderRepository.save(order);
-
-        return loadOrderItems(savedOrder);
-    }
-
-    @Override
-    @Transactional
-    public Order remindStudent(UUID orderId) {
-
-        Order order = findOrder(orderId);
-
-        Instant now = timeProvider.now();
-
-        order.remindStudent(now);
-
-        Order savedOrder =
-                orderRepository.save(order);
-
-        return loadOrderItems(savedOrder);
-    }
-
-    @Override
-    @Transactional
-    public Order deliverOrder(UUID orderId) {
-
-        Order order = findOrder(orderId);
-
-        Instant now = timeProvider.now();
-
-        order.deliver(now);
-
-        Order savedOrder =
-                orderRepository.save(order);
-
-        return loadOrderItems(savedOrder);
-    }
-
-    @Override
-    @Transactional
-    public Order markOrderNotCollected(UUID orderId) {
-
-        Order order = findOrder(orderId);
-
-        Instant now = timeProvider.now();
-
-        order.markNotCollected(now);
-
-        Order savedOrder =
-                orderRepository.save(order);
-
-        return loadOrderItems(savedOrder);
-    }
-
-    @Override
-    @Transactional
-    public Order cancelOrder(UUID orderId) {
-
-        Order order = findOrder(orderId);
-
-        Instant now = timeProvider.now();
-
-        order.cancel(now);
-
-        Order savedOrder =
-                orderRepository.save(order);
-
-        return loadOrderItems(savedOrder);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Order> getOrdersByCafeteria(
-            UUID cafeteriaId
-    ) {
-
-        List<Order> orders =
-                orderRepository.findByCafeteriaId(
-                        cafeteriaId
-                );
-
-        if (orders.isEmpty()) {
-            return orders;
-        }
-
-        List<UUID> orderIds =
-                orders.stream()
-                        .map(Order::getId)
-                        .toList();
-
-        List<OrderItem> items =
-                orderItemRepository.findByOrderIds(
-                        orderIds
-                );
-
-        Map<UUID, List<OrderItem>> itemsByOrderId =
-                items.stream()
-                        .collect(
-                                Collectors.groupingBy(
-                                        OrderItem::getOrderId
-                                )
-                        );
-
-        orders.forEach(order ->
-                order.setItems(
-                        itemsByOrderId.getOrDefault(
-                                order.getId(),
-                                List.of()
-                        )
-                )
-        );
-
-        return orders;
-    }
-
-    private Order loadOrderItems(Order order) {
-
-        List<OrderItem> items =
-                orderItemRepository.findByOrderId(
-                        order.getId()
-                );
-
-        order.setItems(items);
-
-        return order;
-    }
-
-    private Order findOrder(UUID orderId) {
-
-        return orderRepository
-                .findById(orderId)
-                .orElseThrow(() ->
-                        new OrderNotFoundException(orderId)
-                );
-    }
+    return orderRepository.findById(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
+  }
 }

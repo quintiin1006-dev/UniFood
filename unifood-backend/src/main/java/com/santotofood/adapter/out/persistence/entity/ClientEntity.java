@@ -34,7 +34,7 @@ public class ClientEntity {
     @Column(name = "document", nullable = false, unique = true, length = 30)
     private String document;
 
-    @Column(name = "phone", nullable = false, length = 30)
+    @Column(name = "phone", length = 30)
     private String phone;
 
     @Column(name = "created_at", nullable = false)

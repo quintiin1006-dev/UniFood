@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import styles from "./Header.module.css";
+import LogoutButton from "@/features/auth/components/LogoutButton";
 
 interface HeaderProps {
   search: string;
@@ -145,6 +146,7 @@ export default function Header({
 
           <span>En línea</span>
         </div>
+        <LogoutButton className={styles.logout} />
       </div>
     </header>
   );

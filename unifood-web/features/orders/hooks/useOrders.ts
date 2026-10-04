@@ -13,6 +13,7 @@ export function useOrders() {
   const [busyOrderIds, setBusyOrderIds] = useState<string[]>([]);
   const pending = useRef(new Set<string>());
   const revision = useRef(0);
+  const activeRefresh = useRef<number | null>(null);
   const latestOrders = useRef<Order[]>([]);
 
   const replaceOrders = useCallback((next: Order[]) => {
@@ -21,7 +22,10 @@ export function useOrders() {
   }, []);
 
   const refresh = useCallback(async () => {
+    // A slow response must not be invalidated by every polling tick or focus.
+    if (pending.current.size || activeRefresh.current === revision.current) return;
     const version = ++revision.current;
+    activeRefresh.current = version;
     try {
       const next = await getOrders();
       if (version !== revision.current || pending.current.size) return;
@@ -32,6 +36,7 @@ export function useOrders() {
         setError(cause instanceof Error ? cause.message : "No se pudieron cargar los pedidos.");
       }
     } finally {
+      if (activeRefresh.current === version) activeRefresh.current = null;
       if (version === revision.current) setLoading(false);
     }
   }, [replaceOrders]);
