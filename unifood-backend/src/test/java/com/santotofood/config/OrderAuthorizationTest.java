@@ -38,6 +38,7 @@ class OrderAuthorizationTest {
     assertTrue(adapter.workerCafeteria(authentication).isEmpty());
     assertFalse(adapter.cafeteria(authentication, cafeteriaId));
     assertFalse(adapter.order(authentication, orderId));
+    assertFalse(adapter.clientOrder(authentication, orderId));
     verifyNoInteractions(service);
   }
 
@@ -47,6 +48,7 @@ class OrderAuthorizationTest {
       assertTrue(adapter.workerCafeteria(authentication).isEmpty());
       assertFalse(adapter.cafeteria(authentication, cafeteriaId));
       assertFalse(adapter.order(authentication, orderId));
+      assertFalse(adapter.clientOrder(authentication, orderId));
     }
     verifyNoInteractions(service);
   }
@@ -59,12 +61,15 @@ class OrderAuthorizationTest {
     when(service.workerCafeteria(userId)).thenReturn(Optional.of(cafeteriaId));
     when(service.cafeteria(userId, cafeteriaId)).thenReturn(true);
     when(service.order(userId, orderId)).thenReturn(true);
+    when(service.clientOrder(userId, orderId)).thenReturn(true);
     assertEquals(Optional.of(cafeteriaId), adapter.workerCafeteria(authentication));
     assertTrue(adapter.cafeteria(authentication, cafeteriaId));
     assertTrue(adapter.order(authentication, orderId));
+    assertTrue(adapter.clientOrder(authentication, orderId));
     verify(service).workerCafeteria(userId);
     verify(service).cafeteria(userId, cafeteriaId);
     verify(service).order(userId, orderId);
+    verify(service).clientOrder(userId, orderId);
     verifyNoMoreInteractions(service);
   }
 }

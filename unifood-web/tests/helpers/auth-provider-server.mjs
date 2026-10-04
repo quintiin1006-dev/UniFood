@@ -9,6 +9,9 @@ const fixtures = Object.entries({
   superadmin: ["SUPER_ADMIN"],
   workeradmin: ["WORKER", "ADMIN"],
   workersuperadmin: ["WORKER", "SUPER_ADMIN"],
+  clientworker: ["CLIENT", "WORKER"],
+  clientadmin: ["CLIENT", "ADMIN"],
+  clientsuperadmin: ["CLIENT", "SUPER_ADMIN"],
   inactive: ["WORKER"],
   unassigned: ["WORKER"],
   multiassigned: ["WORKER"],
@@ -23,6 +26,10 @@ const fixtures = Object.entries({
 const cafeteriaId = "00000000-0000-0000-0000-000000000002";
 const orderId = "00000000-0000-0000-0000-000000000001";
 const statuses = new Map();
+const clientOrderId = "00000000-0000-0000-0000-000000000010";
+const foreignClientOrderId = "00000000-0000-0000-0000-000000000011";
+const unlinkedClientOrderId = "00000000-0000-0000-0000-000000000013";
+const clientStatuses = new Map();
 const json = (response, status, body) => {
   response.writeHead(status, { "Content-Type": "application/json" });
   response.end(JSON.stringify(body));
@@ -57,6 +64,7 @@ createServer(async (request, response) => {
           msg: "Invalid credentials",
         });
       statuses.set(profile.id, "PENDING");
+      clientStatuses.set(profile.id, "PENDING");
       return json(response, 200, {
         access_token: token(profile),
         token_type: "bearer",
@@ -88,6 +96,38 @@ createServer(async (request, response) => {
     if (url.pathname === "/auth/v1/logout") return json(response, 200, {});
     if (url.pathname === "/rest/v1/rpc/current_auth_profile")
       return json(response, 200, profile);
+    if (
+      url.pathname.startsWith("/api/me/orders/") &&
+      request.method === "PATCH"
+    ) {
+      if (
+        !profile.active ||
+        profile.roles.length !== 1 ||
+        profile.roles[0] !== "CLIENT"
+      )
+        return json(response, 403, { message: "Forbidden provider-secret" });
+      if (
+        [foreignClientOrderId, unlinkedClientOrderId].some(
+          (id) => url.pathname === `/api/me/orders/${id}/cancel`,
+        )
+      )
+        return json(response, 404, {
+          message: "Not found provider-secret",
+        });
+      if (url.pathname !== `/api/me/orders/${clientOrderId}/cancel`)
+        return json(response, 404, { message: "Missing provider-secret" });
+      if (clientStatuses.get(profile.id) !== "PENDING")
+        return json(response, 409, {
+          message: "Invalid state provider-secret",
+        });
+      clientStatuses.set(profile.id, "CANCELLED");
+      return json(response, 200, {
+        id: clientOrderId,
+        status: "CANCELLED",
+        cancellationDeadline: "2020-01-01T00:00:00Z",
+        accessToken: "provider-secret",
+      });
+    }
     if (
       url.pathname === "/api/worker/context" ||
       url.pathname.startsWith("/api/orders")

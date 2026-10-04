@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.santotofood.application.model.OrderOwner;
 import com.santotofood.application.model.UserAuthorization;
 import java.nio.charset.StandardCharsets;
 import java.sql.Array;
@@ -82,6 +83,25 @@ class AuthorizationPersistenceAdapterTest {
     assertEquals(Optional.of(cafeteriaId), adapter.findOrderCafeteria(orderId));
     assertTrue(adapter.findOrderCafeteria(orderId).isEmpty());
     verify(jdbc, times(2)).queryForList(sql("order-cafeteria.sql"), UUID.class, orderId);
+  }
+
+  @Test
+  void ownerLookupDistinguishesLinkedUnlinkedAndMissingOrders() throws Exception {
+    UUID orderId = UUID.randomUUID();
+    ResultSet row = mock(ResultSet.class);
+    when(row.getObject("user_id", UUID.class)).thenReturn(userId, (UUID) null);
+    when(jdbc.query(eq(sql("order-owner.sql")), any(RowMapper.class), eq(orderId)))
+        .thenAnswer(
+            call -> {
+              RowMapper<OrderOwner> mapper = call.getArgument(1);
+              return List.of(mapper.mapRow(row, 0));
+            });
+    assertEquals(Optional.of(new OrderOwner(userId)), adapter.findOrderOwner(orderId));
+    assertEquals(Optional.of(new OrderOwner(null)), adapter.findOrderOwner(orderId));
+    when(jdbc.query(eq(sql("order-owner.sql")), any(RowMapper.class), eq(orderId)))
+        .thenReturn(List.of());
+    assertTrue(adapter.findOrderOwner(orderId).isEmpty());
+    verify(jdbc, times(3)).query(eq(sql("order-owner.sql")), any(RowMapper.class), eq(orderId));
   }
 
   @Test
