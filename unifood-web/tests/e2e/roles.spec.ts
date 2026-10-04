@@ -77,11 +77,15 @@ test("worker login loads its dashboard and can prepare an assigned order", async
   await expect(
     page.getByText("Estudiante de prueba", { exact: true }),
   ).toBeVisible();
+  const ownOrders = await page.request.get(
+    "/api/orders?cafeteriaId=another-cafeteria",
+  );
+  expect(ownOrders.status()).toBe(200);
   expect(
-    (
-      await page.request.get("/api/orders?cafeteriaId=another-cafeteria")
-    ).status(),
-  ).toBe(403);
+    (await ownOrders.json()).map(
+      (order: { cafeteriaId: string }) => order.cafeteriaId,
+    ),
+  ).toEqual(["00000000-0000-0000-0000-000000000002"]);
   await page
     .getByRole("button", { name: "Pasar a preparación", exact: true })
     .click();
@@ -93,6 +97,38 @@ test("worker login loads its dashboard and can prepare an assigned order", async
   await page.goto("/super-admin");
   await expect(page).toHaveURL(/\/worker$/);
 });
+
+for (const name of ["unassigned", "multiassigned"]) {
+  test(`${name} worker sees a safe context error and cannot operate orders`, async ({
+    page,
+  }) => {
+    await page.goto("/login");
+    await page
+      .getByLabel("Usuario o correo institucional", { exact: true })
+      .fill(`${name}@example.invalid`);
+    await page.getByLabel("Contraseña", { exact: true }).fill("UnaClave8");
+    await page
+      .getByRole("button", { name: "Iniciar sesión", exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/worker$/);
+    await expect(
+      page.getByText("No se pudo resolver la cafetería de tu cuenta.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Pasar a preparación", exact: true }),
+    ).toHaveCount(0);
+    expect(
+      (
+        await page.request.patch(
+          "/api/orders/00000000-0000-0000-0000-000000000001/prepare",
+          { headers: { origin: new URL(page.url()).origin } },
+        )
+      ).status(),
+    ).toBe(403);
+  });
+}
 
 test("inactive worker is denied at login", async ({ page }) => {
   await page.goto("/login");

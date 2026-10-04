@@ -13,10 +13,9 @@ test("production OrderAuthorization SQL enforces database roles and cafeteria as
     ),
     "utf8",
   );
-  let parameter = 0;
   const query = java
-    .match(/queryForObject\(\s*"""([\s\S]*?)"""/)?.[1]
-    .replace(/\?/g, () => `$${++parameter}`);
+    .match(/queryForList\(\s*"""([\s\S]*?)"""/)?.[1]
+    .replace("?", "$1");
   const orderQuery = java
     .match(/queryForList\(\s*"([^"]+)"/)?.[1]
     .replace("?", "$1");
@@ -39,8 +38,12 @@ test("production OrderAuthorization SQL enforces database roles and cafeteria as
       [cafeterias[0]],
     )
   ).rows[0].id;
+  const context = async (userId) => {
+    const rows = (await db.query(query, [userId])).rows;
+    return rows.length === 1 ? rows[0].cafeteria_id : null;
+  };
   const allowed = async (userId, cafeteriaId) =>
-    (await db.query(query, [userId, cafeteriaId])).rows[0].exists;
+    (await context(userId)) === cafeteriaId;
   let number = 0;
   const createUser = async (roles, active = true) => {
     const userId = (
@@ -80,6 +83,7 @@ test("production OrderAuthorization SQL enforces database roles and cafeteria as
   ]) {
     await t.test(label, async () => {
       const userId = await createUser(roles, active);
+      assert.equal(await context(userId), expected ? cafeterias[0] : null);
       assert.equal(await allowed(userId, cafeterias[0]), expected);
       assert.equal(
         await allowed(userId, cafeterias[1]),
@@ -112,6 +116,43 @@ test("production OrderAuthorization SQL enforces database roles and cafeteria as
         userId,
       ]);
       assert.equal(await allowed(userId, cafeterias[0]), false);
+    },
+  );
+  await t.test(
+    "multiple assignments invalidate context and both cafeterias",
+    async () => {
+      const userId = await createUser(["WORKER"]);
+      await db.query(
+        "INSERT INTO public.cafeteria_users(user_id, cafeteria_id) VALUES ($1, $2)",
+        [userId, cafeterias[1]],
+      );
+      assert.equal(await context(userId), null);
+      for (const cafeteriaId of cafeterias)
+        assert.equal(await allowed(userId, cafeteriaId), false);
+      await db.query(
+        "DELETE FROM public.cafeteria_users WHERE user_id = $1 AND cafeteria_id = $2",
+        [userId, cafeterias[1]],
+      );
+      assert.equal(await context(userId), cafeterias[0]);
+    },
+  );
+  await t.test(
+    "role revocation and inactivation invalidate a previously resolved context",
+    async () => {
+      const userId = await createUser(["WORKER"]);
+      assert.equal(await context(userId), cafeterias[0]);
+      await db.query(
+        "UPDATE public.users SET is_active = false WHERE id = $1",
+        [userId],
+      );
+      assert.equal(await context(userId), null);
+      await db.query("UPDATE public.users SET is_active = true WHERE id = $1", [
+        userId,
+      ]);
+      await db.query("DELETE FROM public.user_roles WHERE user_id = $1", [
+        userId,
+      ]);
+      assert.equal(await context(userId), null);
     },
   );
 });

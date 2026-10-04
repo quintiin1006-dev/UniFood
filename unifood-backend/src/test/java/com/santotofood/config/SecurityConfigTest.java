@@ -1,5 +1,12 @@
 package com.santotofood.config;
 
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,77 +27,98 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-@SpringJUnitWebConfig(classes = {SecurityConfig.class, OrderAuthorization.class, SecurityConfigTest.TestConfig.class})
+@SpringJUnitWebConfig(
+    classes = {SecurityConfig.class, OrderAuthorization.class, SecurityConfigTest.TestConfig.class})
 class SecurityConfigTest {
-    @Autowired WebApplicationContext context;
-    @Autowired JdbcTemplate jdbc;
-    @Autowired JwtDecoder decoder;
-    MockMvc mvc;
-    final UUID userId = UUID.randomUUID();
-    final UUID cafeteriaId = UUID.randomUUID();
-    final UUID orderId = UUID.randomUUID();
+  @Autowired WebApplicationContext context;
+  @Autowired JdbcTemplate jdbc;
+  @Autowired JwtDecoder decoder;
+  MockMvc mvc;
+  final UUID userId = UUID.randomUUID();
+  final UUID cafeteriaId = UUID.randomUUID();
+  final UUID orderId = UUID.randomUUID();
 
-    @Configuration
-    @EnableWebMvc
-    static class TestConfig {
-        @Bean JdbcTemplate jdbcTemplate() { return mock(JdbcTemplate.class); }
-        @Bean JwtDecoder jwtDecoder() { return mock(JwtDecoder.class); }
-        @Bean Probe probe() { return new Probe(); }
+  @Configuration
+  @EnableWebMvc
+  static class TestConfig {
+    @Bean
+    JdbcTemplate jdbcTemplate() {
+      return mock(JdbcTemplate.class);
     }
 
-    @RestController
-    static class Probe {
-        @GetMapping("/test/cafeterias/{id}")
-        @PreAuthorize("@orderAuthorization.cafeteria(authentication, #id)")
-        String cafeteria(@PathVariable UUID id) { return "ok"; }
-
-        @GetMapping("/test/orders/{id}")
-        @PreAuthorize("@orderAuthorization.order(authentication, #id)")
-        String order(@PathVariable UUID id) { return "ok"; }
+    @Bean
+    JwtDecoder jwtDecoder() {
+      return mock(JwtDecoder.class);
     }
 
-    @BeforeEach
-    void setup() {
-        reset(jdbc, decoder);
-        mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+    @Bean
+    Probe probe() {
+      return new Probe();
+    }
+  }
+
+  @RestController
+  static class Probe {
+    @GetMapping("/test/cafeterias/{id}")
+    @PreAuthorize("@orderAuthorization.cafeteria(authentication, #id)")
+    String cafeteria(@PathVariable UUID id) {
+      return "ok";
     }
 
-    @Test
-    void anonymousAndInvalidTokensAreRejected() throws Exception {
-        mvc.perform(get("/test/cafeterias/" + cafeteriaId)).andExpect(status().isUnauthorized());
-        when(decoder.decode("invalid")).thenThrow(new BadJwtException("Invalid signature"));
-        mvc.perform(get("/test/cafeterias/" + cafeteriaId).header("Authorization", "Bearer invalid"))
-            .andExpect(status().isUnauthorized());
-        verifyNoInteractions(jdbc);
+    @GetMapping("/test/orders/{id}")
+    @PreAuthorize("@orderAuthorization.order(authentication, #id)")
+    String order(@PathVariable UUID id) {
+      return "ok";
     }
+  }
 
-    @Test
-    void databasePermissionsOverrideAnyTokenRole() throws Exception {
-        when(jdbc.queryForObject(anyString(), eq(Boolean.class), eq(userId), eq(cafeteriaId))).thenReturn(false);
-        mvc.perform(get("/test/cafeterias/" + cafeteriaId).with(jwt().jwt(j -> j.subject(userId.toString())
-                .claim("user_metadata", java.util.Map.of("role", "SUPER_ADMIN")))))
-            .andExpect(status().isForbidden());
-        when(jdbc.queryForObject(anyString(), eq(Boolean.class), eq(userId), eq(cafeteriaId))).thenReturn(true);
-        mvc.perform(get("/test/cafeterias/" + cafeteriaId).with(jwt().jwt(j -> j.subject(userId.toString()))))
-            .andExpect(status().isOk());
-    }
+  @BeforeEach
+  void setup() {
+    reset(jdbc, decoder);
+    mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+  }
 
-    @Test
-    void orderActionsCheckTheOrdersActualCafeteria() throws Exception {
-        when(jdbc.queryForList(anyString(), eq(UUID.class), eq(orderId))).thenReturn(List.of(cafeteriaId));
-        when(jdbc.queryForObject(anyString(), eq(Boolean.class), eq(userId), eq(cafeteriaId))).thenReturn(false);
-        mvc.perform(get("/test/orders/" + orderId).with(jwt().jwt(j -> j.subject(userId.toString()))))
-            .andExpect(status().isForbidden());
-        verify(jdbc).queryForObject(anyString(), eq(Boolean.class), eq(userId), eq(cafeteriaId));
-        when(jdbc.queryForList(anyString(), eq(UUID.class), eq(orderId))).thenReturn(List.of());
-        mvc.perform(get("/test/orders/" + orderId).with(jwt().jwt(j -> j.subject(userId.toString()))))
-            .andExpect(status().isForbidden());
-    }
+  @Test
+  void anonymousAndInvalidTokensAreRejected() throws Exception {
+    mvc.perform(get("/test/cafeterias/" + cafeteriaId)).andExpect(status().isUnauthorized());
+    when(decoder.decode("invalid")).thenThrow(new BadJwtException("Invalid signature"));
+    mvc.perform(get("/test/cafeterias/" + cafeteriaId).header("Authorization", "Bearer invalid"))
+        .andExpect(status().isUnauthorized());
+    verifyNoInteractions(jdbc);
+  }
+
+  @Test
+  void databasePermissionsOverrideAnyTokenRole() throws Exception {
+    when(jdbc.queryForList(anyString(), eq(UUID.class), eq(userId))).thenReturn(List.of());
+    mvc.perform(
+            get("/test/cafeterias/" + cafeteriaId)
+                .with(
+                    jwt()
+                        .jwt(
+                            j ->
+                                j.subject(userId.toString())
+                                    .claim(
+                                        "user_metadata", java.util.Map.of("role", "SUPER_ADMIN")))))
+        .andExpect(status().isForbidden());
+    when(jdbc.queryForList(anyString(), eq(UUID.class), eq(userId)))
+        .thenReturn(List.of(cafeteriaId));
+    mvc.perform(
+            get("/test/cafeterias/" + cafeteriaId)
+                .with(jwt().jwt(j -> j.subject(userId.toString()))))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void orderActionsCheckTheOrdersActualCafeteria() throws Exception {
+    when(jdbc.queryForList(anyString(), eq(UUID.class), eq(orderId)))
+        .thenReturn(List.of(cafeteriaId));
+    when(jdbc.queryForList(anyString(), eq(UUID.class), eq(userId)))
+        .thenReturn(List.of(UUID.randomUUID()));
+    mvc.perform(get("/test/orders/" + orderId).with(jwt().jwt(j -> j.subject(userId.toString()))))
+        .andExpect(status().isForbidden());
+    verify(jdbc).queryForList(anyString(), eq(UUID.class), eq(userId));
+    when(jdbc.queryForList(anyString(), eq(UUID.class), eq(orderId))).thenReturn(List.of());
+    mvc.perform(get("/test/orders/" + orderId).with(jwt().jwt(j -> j.subject(userId.toString()))))
+        .andExpect(status().isForbidden());
+  }
 }

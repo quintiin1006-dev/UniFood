@@ -98,6 +98,7 @@ test("complete API flow, backend priority rejection, cancellation and terminal s
     );
     await assert.rejects(api.cancelOrder(order), /pendiente/);
     assert.ok(requests.every(([url]) => url.startsWith("/api/orders")));
+    assert.equal(requests[0][0], "/api/orders");
     assert.equal(mapper.mapOrderStatus("NOT_COLLECTED"), "not_collected");
     assert.throws(() => mapper.mapOrderStatus("UNKNOWN"), /desconocido/);
     global.fetch = async () =>
@@ -108,7 +109,7 @@ test("complete API flow, backend priority rejection, cancellation and terminal s
   }
 });
 
-test("Next proxy preserves GET query, PATCH, authorization and backend conflict", async (t) => {
+test("Next proxy resolves GET context and preserves PATCH authorization and backend conflict", async (t) => {
   const originalApiUrl = process.env.API_URL;
   process.env.API_URL = "http://127.0.0.1:8080";
   t.after(() => {
@@ -119,6 +120,8 @@ test("Next proxy preserves GET query, PATCH, authorization and backend conflict"
   const received = [];
   global.fetch = async (url, options) => {
     received.push([String(url), options]);
+    if (String(url).endsWith("/api/worker/context"))
+      return Response.json({ cafeteriaId: id });
     return new Response("El pedido anterior debe ser procesado primero.", {
       status: 409,
     });
@@ -149,12 +152,13 @@ test("Next proxy preserves GET query, PATCH, authorization and backend conflict"
       new Request("http://localhost:3001/api/orders?cafeteriaId=test"),
       { params: Promise.resolve({}) },
     );
-    assert.match(received[1][0], /cafeteriaId=test/);
+    assert.ok(received[1][0].endsWith("/api/worker/context"));
+    assert.equal(new URL(received[2][0]).searchParams.get("cafeteriaId"), id);
     const invalid = await route.PATCH(request, {
       params: Promise.resolve({ path: [id, "unknown"] }),
     });
     assert.equal(invalid.status, 404);
-    assert.equal(received.length, 2);
+    assert.equal(received.length, 3);
     global.fetch = async () => {
       throw new Error("ECONNREFUSED");
     };

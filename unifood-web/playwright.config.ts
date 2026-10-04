@@ -33,7 +33,6 @@ export default defineConfig({
             API_URL: "http://127.0.0.1:3101",
             SUPABASE_URL: "http://127.0.0.1:3101",
             SUPABASE_PUBLISHABLE_KEY: "opaque-public-key-test-only",
-            NEXT_PUBLIC_CAFETERIA_ID: "00000000-0000-0000-0000-000000000002",
           },
         },
       ],

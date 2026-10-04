@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.santotofood.adapter.in.web.OrderController;
+import com.santotofood.adapter.in.web.WorkerContextController;
 import com.santotofood.adapter.in.web.error.GlobalExceptionHandler;
 import com.santotofood.adapter.in.web.mapper.OrderResponseMapper;
 import com.santotofood.application.port.in.*;
@@ -39,6 +40,7 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
       SecurityConfig.class,
       OrderAuthorization.class,
       OrderController.class,
+      WorkerContextController.class,
       GlobalExceptionHandler.class,
       OrderRoleAuthorizationTest.TestConfig.class
     })
@@ -121,8 +123,8 @@ class OrderRoleAuthorizationTest {
 
   @Test
   void assignedActiveWorkerCanListAndUseEveryExistingOperation() throws Exception {
-    when(jdbc.queryForObject(anyString(), eq(Boolean.class), eq(userId), eq(cafeteriaId)))
-        .thenReturn(true);
+    when(jdbc.queryForList(anyString(), eq(UUID.class), eq(userId)))
+        .thenReturn(List.of(cafeteriaId));
     when(list.getOrdersByCafeteria(cafeteriaId)).thenReturn(List.of());
     mvc.perform(
             get("/api/orders")
@@ -140,16 +142,17 @@ class OrderRoleAuthorizationTest {
     verify(call).callStudent(orderId);
     verify(deliver).deliverOrder(orderId);
     verify(cancel).cancelOrder(orderId);
-    verify(jdbc, times(6))
-        .queryForObject(anyString(), eq(Boolean.class), eq(userId), eq(cafeteriaId));
+    verify(jdbc, times(6)).queryForList(anyString(), eq(UUID.class), eq(userId));
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"WORKER", "ADMIN", "SUPER_ADMIN", "CLIENT"})
   void databaseDenialBlocksListingAndEveryOperationRegardlessOfTokenRole(String claimedRole)
       throws Exception {
-    when(jdbc.queryForObject(anyString(), eq(Boolean.class), eq(userId), eq(cafeteriaId)))
-        .thenReturn(false);
+    when(jdbc.queryForList(anyString(), eq(UUID.class), eq(userId))).thenReturn(List.of());
+    mvc.perform(get("/api/worker/context").with(identity(claimedRole)))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     mvc.perform(
             get("/api/orders")
                 .param("cafeteriaId", cafeteriaId.toString())
@@ -169,9 +172,70 @@ class OrderRoleAuthorizationTest {
 
   @Test
   void anonymousRequestsCannotReachOperationalUseCases() throws Exception {
+    mvc.perform(get("/api/worker/context")).andExpect(status().isUnauthorized());
     mvc.perform(get("/api/orders").param("cafeteriaId", cafeteriaId.toString()))
         .andExpect(status().isUnauthorized());
     mvc.perform(patch("/api/orders/" + orderId + "/prepare")).andExpect(status().isUnauthorized());
     verifyNoInteractions(jdbc, list, prepare, ready, call, deliver, cancel);
+  }
+
+  @Test
+  void contextReturnsOnlyTheCurrentWorkersCafeteriaWithoutCaching() throws Exception {
+    when(jdbc.queryForList(anyString(), eq(UUID.class), eq(userId)))
+        .thenReturn(List.of(cafeteriaId));
+    mvc.perform(
+            get("/api/worker/context")
+                .param("cafeteriaId", UUID.randomUUID().toString())
+                .with(identity("SUPER_ADMIN")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.cafeteriaId").value(cafeteriaId.toString()))
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(header().string("Cache-Control", "no-store"));
+    verify(jdbc).queryForList(anyString(), eq(UUID.class), eq(userId));
+    verifyNoInteractions(list, prepare, ready, call, deliver, cancel);
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {0, 2})
+  void absentOrMultipleAssignmentsDenyContextAndEveryOrderOperation(int assignments)
+      throws Exception {
+    when(jdbc.queryForList(anyString(), eq(UUID.class), eq(userId)))
+        .thenReturn(assignments == 0 ? List.of() : List.of(cafeteriaId, UUID.randomUUID()));
+    mvc.perform(get("/api/worker/context").with(identity("WORKER")))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    mvc.perform(
+            get("/api/orders")
+                .param("cafeteriaId", cafeteriaId.toString())
+                .with(identity("WORKER")))
+        .andExpect(status().isForbidden());
+    for (String action : List.of("prepare", "ready", "call", "deliver", "cancel")) {
+      mvc.perform(patch("/api/orders/" + orderId + "/" + action).with(identity("WORKER")))
+          .andExpect(status().isForbidden());
+    }
+    verifyNoInteractions(list, prepare, ready, call, deliver, cancel);
+  }
+
+  @Test
+  void anotherCafeteriaCannotBeSelectedAndRevocationIsReadOnTheNextRequest() throws Exception {
+    when(jdbc.queryForList(anyString(), eq(UUID.class), eq(userId)))
+        .thenReturn(List.of(UUID.randomUUID()), List.of(cafeteriaId), List.of());
+    mvc.perform(
+            get("/api/orders")
+                .param("cafeteriaId", cafeteriaId.toString())
+                .with(identity("WORKER")))
+        .andExpect(status().isForbidden());
+    mvc.perform(get("/api/worker/context").with(identity("WORKER"))).andExpect(status().isOk());
+    mvc.perform(patch("/api/orders/" + orderId + "/prepare").with(identity("WORKER")))
+        .andExpect(status().isForbidden());
+    verify(jdbc, times(3)).queryForList(anyString(), eq(UUID.class), eq(userId));
+    verifyNoInteractions(list, prepare, ready, call, deliver, cancel);
+  }
+
+  @Test
+  void invalidIdentityCannotResolveContext() throws Exception {
+    mvc.perform(get("/api/worker/context").with(jwt().jwt(j -> j.subject("invalid-subject"))))
+        .andExpect(status().isForbidden());
+    verifyNoInteractions(jdbc);
   }
 }

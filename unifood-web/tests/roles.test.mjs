@@ -190,6 +190,10 @@ test("BFF denies every operational route for non-workers and administrative comb
     },
     async (url, options) => {
       forwarded.push([String(url), options]);
+      if (String(url).endsWith("/api/worker/context"))
+        return Response.json({
+          cafeteriaId: "00000000-0000-0000-0000-000000000002",
+        });
       return Response.json([]);
     },
   );
@@ -226,9 +230,12 @@ test("BFF denies every operational route for non-workers and administrative comb
       );
       assert.equal(response.status, allowed ? 200 : current ? 403 : 401);
     }
-    assert.equal(forwarded.length, allowed ? operations.length : 0);
+    assert.equal(forwarded.length, allowed ? operations.length + 1 : 0);
     for (const [url, options] of forwarded) {
-      assert.ok(url.startsWith("http://backend.test:8080/api/orders"));
+      assert.ok(
+        url.startsWith("http://backend.test:8080/api/orders") ||
+          url === "http://backend.test:8080/api/worker/context",
+      );
       assert.equal(
         options.headers.get("authorization"),
         "Bearer verified-token",

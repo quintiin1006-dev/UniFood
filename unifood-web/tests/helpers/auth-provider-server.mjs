@@ -10,12 +10,15 @@ const fixtures = Object.entries({
   workeradmin: ["WORKER", "ADMIN"],
   workersuperadmin: ["WORKER", "SUPER_ADMIN"],
   inactive: ["WORKER"],
+  unassigned: ["WORKER"],
+  multiassigned: ["WORKER"],
 }).map(([name, roles]) => ({
   id: randomUUID(),
   email: `${name}@example.invalid`,
   fullName: "Usuario de prueba",
   active: name !== "inactive",
   roles,
+  assignments: name === "unassigned" ? 0 : name === "multiassigned" ? 2 : 1,
 }));
 const cafeteriaId = "00000000-0000-0000-0000-000000000002";
 const orderId = "00000000-0000-0000-0000-000000000001";
@@ -85,13 +88,19 @@ createServer(async (request, response) => {
     if (url.pathname === "/auth/v1/logout") return json(response, 200, {});
     if (url.pathname === "/rest/v1/rpc/current_auth_profile")
       return json(response, 200, profile);
-    if (url.pathname.startsWith("/api/orders")) {
+    if (
+      url.pathname === "/api/worker/context" ||
+      url.pathname.startsWith("/api/orders")
+    ) {
       if (
         !profile.active ||
+        profile.assignments !== 1 ||
         !profile.roles.includes("WORKER") ||
         profile.roles.some((role) => ["ADMIN", "SUPER_ADMIN"].includes(role))
       )
         return json(response, 403, { message: "Forbidden" });
+      if (url.pathname === "/api/worker/context")
+        return json(response, 200, { cafeteriaId });
       if (
         request.method === "GET" &&
         url.searchParams.get("cafeteriaId") !== cafeteriaId
