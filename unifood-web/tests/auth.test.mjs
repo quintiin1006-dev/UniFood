@@ -265,6 +265,23 @@ test("login preserves provider failures and routes users using database roles", 
     remember: true,
   });
   assert.deepEqual(await response.json(), { redirect: "/worker" });
+  for (const [roles, target] of [
+    [["ADMIN"], "/admin"],
+    [["SUPER_ADMIN"], "/super-admin"],
+    [["WORKER", "ADMIN"], "/admin"],
+    [["WORKER", "SUPER_ADMIN"], "/super-admin"],
+  ]) {
+    state.profile.roles = roles;
+    for (const action of ["login", "verify"]) {
+      response = await post(action, {
+        email: "admin",
+        password: "UnaClave8",
+        code: "123456",
+        role: "WORKER",
+      });
+      assert.deepEqual(await response.json(), { redirect: target });
+    }
+  }
   state.profile.active = false;
   assert.equal(
     (await post("login", { email: "worker", password: "UnaClave8" })).status,
