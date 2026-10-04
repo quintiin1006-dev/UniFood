@@ -30,7 +30,7 @@ Un usuario corto como `maria` se interpreta como `maria@AUTH_USERNAME_DOMAIN`. P
 
 Santo Tomás acepta **`@ustavillavo.edu.co` y `@ustavillavicencio.edu.co`**. La migración `006_institution_email_alias.sql` resuelve ambos al mismo registro institucional, cuyo dominio principal es `ustavillavo.edu.co`. No crea otra universidad ni cambia el destinatario del código. El registro exige el correo completo; la opción de usuario corto aplica al login. Para iniciar sesión con el segundo dominio, escribir el correo completo.
 
-En Spring, configurar `SUPABASE_DB_URL` y `SUPABASE_AUTH_ISSUER=https://<project-ref>.supabase.co/auth/v1` del mismo proyecto. El backend valida la audiencia `authenticated`. Usar las claves de firma asimétricas de Supabase (ES256 o RS256/JWKS); si el proyecto conserva exclusivamente la clave legacy HS256, migrar las claves de firma antes de conectar este resource server.
+En Spring, configurar explícitamente `SUPABASE_DB_URL` y `SUPABASE_AUTH_ISSUER=https://<project-ref>.supabase.co/auth/v1` del mismo proyecto. Ambas son obligatorias en todos los entornos; no se selecciona un perfil ni un proyecto predeterminados. El backend valida la audiencia `authenticated`. Usar las claves de firma asimétricas de Supabase (ES256 o RS256/JWKS); si el proyecto conserva exclusivamente la clave legacy HS256, migrar las claves de firma antes de conectar este resource server. Ver [configuración de entornos](environments.md).
 
 ## Base de datos
 

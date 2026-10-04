@@ -4,18 +4,18 @@ Aplicación en Next.js con login, registro de estudiantes y panel de trabajadore
 
 En este equipo se trabaja desde `C:\Users\credi\Documents\UniFood`. Se puede iniciar desde la raíz con `npm run dev` o con `iniciar-unifood.cmd`; local y red usan el mismo servidor en el puerto 3000. Ver [arranque del proyecto](../README.md). No ejecutar la copia independiente de `OneDrive\Desktop\UniFood` para consultar estos cambios.
 
-La configuración de Supabase, migración, plantillas de correo y estructura del módulo se documentan en [Autenticación](docs/auth.md). Copiar `.env.example` a `.env.local` y completar las claves públicas del proyecto antes de probar el acceso real.
+La configuración de Supabase, migración, plantillas de correo y estructura del módulo se documentan en [Autenticación](docs/auth.md). Ver [configuración de local, staging y production](docs/environments.md). Copiar `.env.example` a `.env.local`; completar los dos valores Supabase antes de probar el acceso real.
 
 ## Conexión al backend
 
-Crear `.env.local` si se requieren valores distintos:
+Definir explícitamente `API_URL` en `.env.local`, también para desarrollo local:
 
 ```dotenv
 API_URL=http://localhost:8080
 NEXT_PUBLIC_CAFETERIA_ID=59ac35a8-1c1c-4081-8720-2d517d8740bd
 ```
 
-Reiniciar Next.js después de cambiar la configuración. `API_URL` es la dirección del backend accesible desde el servidor Next.js. Se acepta también la variable anterior `NEXT_PUBLIC_API_URL` como alternativa.
+Reiniciar Next.js después de cambiar la configuración. `API_URL` es la dirección del backend accesible desde el servidor Next.js y es obligatoria. `NEXT_PUBLIC_API_URL` no se utiliza. En `next build` y `next start`, también son obligatorias `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY`. La validación identifica la variable incorrecta sin imprimir su valor.
 
 El navegador consulta `/api/orders` en su mismo origen. El Route Handler reenvía GET y las acciones PATCH al backend sin reenviar el Origin del navegador. Esto evita depender de que Spring permita el puerto o el hostname del frontend por CORS. Los códigos y mensajes del backend, incluido 409, se conservan. Si el backend no responde, el frontend muestra un error de conexión (502).
 
