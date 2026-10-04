@@ -3,24 +3,21 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { createAuthDatabase } from "./helpers/auth-database.mjs";
 
-test("production OrderAuthorization SQL enforces database roles and cafeteria assignments", async (t) => {
+test("authorization persistence SQL reads current database facts without trusting metadata", async (t) => {
   const db = await createAuthDatabase();
   t.after(() => db.close());
-  const java = await readFile(
-    new URL(
-      "../../unifood-backend/src/main/java/com/santotofood/config/OrderAuthorization.java",
-      import.meta.url,
-    ),
-    "utf8",
+  // These are the resources executed by AuthorizationPersistenceAdapter;
+  // JDBC uses ?, while PGlite's query API uses $1 for the same bound value.
+  const resource = new URL(
+    "../../unifood-backend/src/main/resources/sql/authorization/",
+    import.meta.url,
   );
-  const query = java
-    .match(/queryForList\(\s*"""([\s\S]*?)"""/)?.[1]
-    .replace("?", "$1");
-  const orderQuery = java
-    .match(/queryForList\(\s*"([^"]+)"/)?.[1]
-    .replace("?", "$1");
-  assert.ok(query);
-  assert.ok(orderQuery);
+  const query = (
+    await readFile(new URL("user-authorization.sql", resource), "utf8")
+  ).replace("?", "$1");
+  const orderQuery = (
+    await readFile(new URL("order-cafeteria.sql", resource), "utf8")
+  ).replace("?", "$1");
   const site = (
     await db.query(
       "INSERT INTO public.sites(name, city, institution_id) SELECT 'Test site', 'Test city', id FROM public.institutions LIMIT 1 RETURNING id",
@@ -38,12 +35,7 @@ test("production OrderAuthorization SQL enforces database roles and cafeteria as
       [cafeterias[0]],
     )
   ).rows[0].id;
-  const context = async (userId) => {
-    const rows = (await db.query(query, [userId])).rows;
-    return rows.length === 1 ? rows[0].cafeteria_id : null;
-  };
-  const allowed = async (userId, cafeteriaId) =>
-    (await context(userId)) === cafeteriaId;
+  const facts = async (userId) => (await db.query(query, [userId])).rows[0];
   let number = 0;
   const createUser = async (roles, active = true) => {
     const userId = (
@@ -69,33 +61,30 @@ test("production OrderAuthorization SQL enforces database roles and cafeteria as
     );
     return userId;
   };
-  for (const [label, roles, active, expected] of [
-    ["assigned active WORKER", ["WORKER"], true, true],
-    ["second WORKER at the same cafeteria", ["WORKER"], true, true],
-    ["ADMIN", ["ADMIN"], true, false],
-    ["SUPER_ADMIN", ["SUPER_ADMIN"], true, false],
-    ["CLIENT", ["CLIENT"], true, false],
-    ["inactive WORKER", ["WORKER"], false, false],
-    ["WORKER plus ADMIN", ["WORKER", "ADMIN"], true, false],
-    ["WORKER plus SUPER_ADMIN", ["WORKER", "SUPER_ADMIN"], true, false],
-    ["all roles", ["CLIENT", "WORKER", "ADMIN", "SUPER_ADMIN"], true, false],
-    ["no database role despite forged metadata", [], true, false],
+  for (const [label, roles, active] of [
+    ["assigned active WORKER", ["WORKER"], true],
+    ["second WORKER at the same cafeteria", ["WORKER"], true],
+    ["ADMIN", ["ADMIN"], true],
+    ["SUPER_ADMIN", ["SUPER_ADMIN"], true],
+    ["CLIENT", ["CLIENT"], true],
+    ["inactive WORKER", ["WORKER"], false],
+    ["WORKER plus ADMIN", ["WORKER", "ADMIN"], true],
+    ["WORKER plus SUPER_ADMIN", ["WORKER", "SUPER_ADMIN"], true],
+    ["all roles", ["CLIENT", "WORKER", "ADMIN", "SUPER_ADMIN"], true],
+    ["no database role despite forged metadata", [], true],
   ]) {
     await t.test(label, async () => {
       const userId = await createUser(roles, active);
-      assert.equal(await context(userId), expected ? cafeterias[0] : null);
-      assert.equal(await allowed(userId, cafeterias[0]), expected);
-      assert.equal(
-        await allowed(userId, cafeterias[1]),
-        false,
-        "another cafeteria must be denied",
-      );
+      const user = await facts(userId);
+      assert.equal(user.is_active, active);
+      assert.deepEqual(user.roles.toSorted(), roles.toSorted());
+      assert.deepEqual(user.cafeteria_ids, [cafeterias[0]]);
       const orderCafeteria = (await db.query(orderQuery, [orderId])).rows[0]
         .cafeteria_id;
       assert.equal(
-        await allowed(userId, orderCafeteria),
-        expected,
-        "operations use the order's actual cafeteria",
+        orderCafeteria,
+        cafeterias[0],
+        "order lookup returns the real cafeteria regardless of the user's roles",
       );
       await db.query("SELECT set_config('request.jwt.claim.sub', $1, false)", [
         userId,
@@ -111,48 +100,92 @@ test("production OrderAuthorization SQL enforces database roles and cafeteria as
     "revoked cafeteria assignment takes effect immediately",
     async () => {
       const userId = await createUser(["WORKER"]);
-      assert.equal(await allowed(userId, cafeterias[0]), true);
+      assert.deepEqual((await facts(userId)).cafeteria_ids, [cafeterias[0]]);
       await db.query("DELETE FROM public.cafeteria_users WHERE user_id = $1", [
         userId,
       ]);
-      assert.equal(await allowed(userId, cafeterias[0]), false);
+      assert.deepEqual((await facts(userId)).cafeteria_ids, []);
     },
   );
   await t.test(
-    "multiple assignments invalidate context and both cafeterias",
+    "multiple assignments remain separate facts without role join duplicates",
     async () => {
       const userId = await createUser(["WORKER"]);
       await db.query(
         "INSERT INTO public.cafeteria_users(user_id, cafeteria_id) VALUES ($1, $2)",
         [userId, cafeterias[1]],
       );
-      assert.equal(await context(userId), null);
-      for (const cafeteriaId of cafeterias)
-        assert.equal(await allowed(userId, cafeteriaId), false);
+      assert.deepEqual(
+        (await facts(userId)).cafeteria_ids.toSorted(),
+        cafeterias.toSorted(),
+      );
       await db.query(
         "DELETE FROM public.cafeteria_users WHERE user_id = $1 AND cafeteria_id = $2",
         [userId, cafeterias[1]],
       );
-      assert.equal(await context(userId), cafeterias[0]);
+      assert.deepEqual((await facts(userId)).cafeteria_ids, [cafeterias[0]]);
     },
   );
   await t.test(
     "role revocation and inactivation invalidate a previously resolved context",
     async () => {
       const userId = await createUser(["WORKER"]);
-      assert.equal(await context(userId), cafeterias[0]);
+      assert.equal((await facts(userId)).is_active, true);
       await db.query(
         "UPDATE public.users SET is_active = false WHERE id = $1",
         [userId],
       );
-      assert.equal(await context(userId), null);
+      assert.equal((await facts(userId)).is_active, false);
       await db.query("UPDATE public.users SET is_active = true WHERE id = $1", [
         userId,
       ]);
       await db.query("DELETE FROM public.user_roles WHERE user_id = $1", [
         userId,
       ]);
-      assert.equal(await context(userId), null);
+      assert.deepEqual((await facts(userId)).roles, []);
+    },
+  );
+  await t.test("missing users and orders produce no facts", async () => {
+    const missing = "00000000-0000-0000-0000-000000000000";
+    assert.equal(await facts(missing), undefined);
+    assert.deepEqual((await db.query(orderQuery, [missing])).rows, []);
+  });
+  await t.test(
+    "uq_cafeteria_user rejects a duplicate user/cafeteria pair",
+    async () => {
+      const userId = await createUser(["WORKER"]);
+      await assert.rejects(
+        db.query(
+          "INSERT INTO public.cafeteria_users(user_id, cafeteria_id) VALUES ($1, $2)",
+          [userId, cafeterias[0]],
+        ),
+        /uq_cafeteria_user/,
+      );
+      assert.deepEqual((await facts(userId)).cafeteria_ids, [cafeterias[0]]);
+    },
+  );
+  await t.test(
+    "three assignments are bounded at two, enough to deny cardinality",
+    async () => {
+      const userId = await createUser(["WORKER", "CLIENT"]);
+      await db.query(
+        "INSERT INTO public.cafeteria_users(user_id, cafeteria_id) VALUES ($1, $2)",
+        [userId, cafeterias[1]],
+      );
+      const third = (
+        await db.query(
+          "INSERT INTO public.cafeterias(site_id, name, lunch_order_start, lunch_order_end) VALUES ($1, 'Third', '07:00', '08:00') RETURNING id",
+          [site],
+        )
+      ).rows[0].id;
+      await db.query(
+        "INSERT INTO public.cafeteria_users(user_id, cafeteria_id) VALUES ($1, $2)",
+        [userId, third],
+      );
+      const user = await facts(userId);
+      assert.equal(user.cafeteria_ids.length, 2);
+      assert.equal(new Set(user.cafeteria_ids).size, 2);
+      assert.deepEqual(user.roles.toSorted(), ["CLIENT", "WORKER"]);
     },
   );
 });
