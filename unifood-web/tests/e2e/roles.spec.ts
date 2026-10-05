@@ -17,7 +17,7 @@ for (const [name, target] of [
   test(`${name} follows its database destination and cannot access worker operations`, async ({
     page,
   }) => {
-    await page.goto("/login");
+    await page.goto(name === "client" ? "/login" : "/panel/login");
     await page
       .getByLabel("Usuario o correo institucional", { exact: true })
       .fill(`${name}@example.invalid`);
@@ -26,6 +26,10 @@ for (const [name, target] of [
       .getByRole("button", { name: "Iniciar sesión", exact: true })
       .click();
     await expect(page).toHaveURL(new RegExp(`${target}$`));
+    for (const entry of ["/login", "/panel/login", "/registro"]) {
+      await page.goto(entry);
+      await expect(page).toHaveURL(new RegExp(`${target}$`));
+    }
     await expect(
       page.getByRole("link", { name: "Ir al panel de trabajador" }),
     ).toHaveCount(0);
@@ -71,7 +75,7 @@ test.describe("invalid database role cardinality is denied at login and session 
     test(`${name} cannot authenticate or reach any protected role destination`, async ({
       page,
     }) => {
-      await page.goto("/login");
+      await page.goto("/panel/login");
       await page
         .getByLabel("Usuario o correo institucional", { exact: true })
         .fill(`${name}@example.invalid`);
@@ -82,10 +86,13 @@ test.describe("invalid database role cardinality is denied at login and session 
       await expect(page.getByRole("main").getByRole("alert")).toContainText(
         "Tu cuenta no está habilitada",
       );
-      await expect(page).toHaveURL(/\/login$/);
+      await expect(page).toHaveURL(/\/panel\/login$/);
       for (const path of ["/cuenta", "/worker", "/admin", "/super-admin"]) {
         await page.goto(path);
-        await expect(page).toHaveURL(/\/login$/);
+        await expect(page).toHaveURL(
+          new URL(path === "/cuenta" ? "/login" : "/panel/login", page.url())
+            .href,
+        );
       }
       expect((await page.request.get("/api/orders")).status()).toBe(401);
       expect(
@@ -103,7 +110,7 @@ test.describe("invalid database role cardinality is denied at login and session 
 test("worker login loads its dashboard and can prepare an assigned order", async ({
   page,
 }) => {
-  await page.goto("/login");
+  await page.goto("/panel/login");
   await page
     .getByLabel("Usuario o correo institucional", { exact: true })
     .fill("worker@example.invalid");
@@ -111,6 +118,8 @@ test("worker login loads its dashboard and can prepare an assigned order", async
   await page
     .getByRole("button", { name: "Iniciar sesión", exact: true })
     .click();
+  await expect(page).toHaveURL(/\/worker$/);
+  await page.goto("/cuenta");
   await expect(page).toHaveURL(/\/worker$/);
   await expect(
     page.getByText("Gestión de pedidos", { exact: true }),
@@ -143,7 +152,7 @@ for (const name of ["unassigned", "multiassigned"]) {
   test(`${name} worker sees a safe context error and cannot operate orders`, async ({
     page,
   }) => {
-    await page.goto("/login");
+    await page.goto("/panel/login");
     await page
       .getByLabel("Usuario o correo institucional", { exact: true })
       .fill(`${name}@example.invalid`);
@@ -172,7 +181,7 @@ for (const name of ["unassigned", "multiassigned"]) {
 }
 
 test("inactive worker is denied at login", async ({ page }) => {
-  await page.goto("/login");
+  await page.goto("/panel/login");
   await page
     .getByLabel("Usuario o correo institucional", { exact: true })
     .fill("inactive@example.invalid");

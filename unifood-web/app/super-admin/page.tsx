@@ -7,7 +7,7 @@ export const metadata = { title: "Administración global | UniFood" };
 export const dynamic = "force-dynamic";
 
 export default async function SuperAdminPage() {
-  const { profile } = await requireAuth();
+  const { profile } = await requireAuth("panel");
   if (!isSuperAdmin(profile)) redirect(destination(profile));
-  return <RolePlaceholder title="Administración global" />;
+  return <RolePlaceholder entrypoint="panel" title="Administración global" />;
 }

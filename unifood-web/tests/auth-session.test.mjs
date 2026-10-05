@@ -76,6 +76,7 @@ test("verified session loads each single current business role", async () => {
       accessToken: "server-only-token",
     });
     assert.equal(fixture.tokenReads(), 1);
+    assert.equal((await fixture.auth.requireAuth("panel")).profile, profile);
   }
 });
 test("invalid role profiles never load an access token and redirect protected pages to login", async () => {
@@ -96,6 +97,7 @@ test("invalid role profiles never load an access token and redirect protected pa
     const fixture = session(profile);
     assert.equal(await fixture.auth.getAuth(), null);
     await assert.rejects(fixture.auth.requireAuth(), /\/login/);
+    await assert.rejects(fixture.auth.requireAuth("panel"), /\/panel\/login/);
     assert.equal(fixture.tokenReads(), 0);
   }
 });

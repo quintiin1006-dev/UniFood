@@ -24,6 +24,14 @@ const uiMocks = {
   "@/features/auth/components/LogoutButton": {
     default: () => createElement("button", {}, "Cerrar sesión"),
   },
+  "@/features/auth/components/AuthScreen": {
+    default: ({ entrypoint, initialMode }) =>
+      createElement(
+        "div",
+        { "data-entrypoint": entrypoint, "data-mode": initialMode },
+        "Auth form",
+      ),
+  },
   "@/components/worker/WorkerDashboard": {
     default: () => createElement("div", {}, "Worker dashboard"),
   },
@@ -130,8 +138,11 @@ function pages(current) {
   return {
     ...uiMocks,
     "@/features/auth/server/session": {
-      requireAuth: async () => {
-        if (!validation.hasValidBusinessRole(current)) redirect("/login");
+      getAuth: async () =>
+        validation.hasValidBusinessRole(current) ? { profile: current } : null,
+      requireAuth: async (entrypoint = "client") => {
+        if (!validation.hasValidBusinessRole(current))
+          redirect(validation.loginPath(entrypoint));
         return { profile: current };
       },
     },
@@ -144,29 +155,35 @@ test("worker page only renders for active operational workers", async () => {
     if (worker)
       assert.match(renderToStaticMarkup(await page()), /Worker dashboard/);
     else
-      await assert.rejects(page(), (error) => error.location === destination);
+      await assert.rejects(
+        page(),
+        (error) =>
+          error.location ===
+          (validation.hasValidBusinessRole(profile(roles))
+            ? destination
+            : "/panel/login"),
+      );
   }
   for (const current of [null, profile(["WORKER"], false)]) {
     await assert.rejects(
       load("app/worker/page.tsx", pages(current)).default(),
-      (error) => error.location === "/login",
+      (error) => error.location === "/panel/login",
     );
   }
 });
 
 test("account page never offers the worker panel to administrative roles", async () => {
-  for (const [, roles, destination, worker] of cases) {
+  for (const [, roles, destination] of cases) {
     const page = load("app/cuenta/page.tsx", pages(profile(roles))).default;
     if (
       !validation.hasValidBusinessRole(profile(roles)) ||
-      roles.includes("ADMIN") ||
-      roles.includes("SUPER_ADMIN")
+      !roles.includes("CLIENT")
     )
       await assert.rejects(page(), (error) => error.location === destination);
     else
       assert.equal(
         renderToStaticMarkup(await page()).includes('href="/worker"'),
-        worker,
+        false,
       );
   }
 });
@@ -187,13 +204,89 @@ test("administrative placeholders enforce explicit active roles and provide no o
         assert.match(html, /Cerrar sesión/);
         assert.ok(!html.includes("/worker"));
       } else
-        await assert.rejects(page(), (error) => error.location === destination);
+        await assert.rejects(
+          page(),
+          (error) =>
+            error.location ===
+            (validation.hasValidBusinessRole(profile(roles))
+              ? destination
+              : "/panel/login"),
+        );
     }
     for (const current of [null, profile([role], false)])
       await assert.rejects(
         load(file, pages(current)).default(),
-        (error) => error.location === "/login",
+        (error) => error.location === "/panel/login",
       );
+  }
+});
+
+test("root opens the panel; existing sessions leave either login and registration for their actual destination", async () => {
+  assert.throws(
+    () => load("app/page.tsx", uiMocks).default(),
+    (error) => error.location === "/panel/login",
+  );
+  for (const file of [
+    "app/login/page.tsx",
+    "app/panel/login/page.tsx",
+    "app/registro/page.tsx",
+  ]) {
+    for (const [, roles, target] of cases.slice(0, 4)) {
+      await assert.rejects(
+        load(file, pages(profile(roles))).default(),
+        (error) => error.location === target,
+      );
+    }
+    for (const current of [
+      null,
+      profile([], true),
+      profile(["UNKNOWN"]),
+      profile(["WORKER"], false),
+    ]) {
+      const html = renderToStaticMarkup(
+        await load(file, pages(current)).default(),
+      );
+      assert.match(
+        html,
+        file.includes("/panel/")
+          ? /data-entrypoint="panel"/
+          : /data-entrypoint="client"/,
+      );
+    }
+  }
+});
+
+test("recovery validates context without redirecting an authenticated temporary session", async () => {
+  const mocks = {
+    ...pages(profile(["WORKER"])),
+    "next/navigation": {
+      redirect,
+      notFound: () => {
+        throw new Error("NOT_FOUND");
+      },
+    },
+  };
+  const page = load("app/recuperar-contrasena/page.tsx", mocks).default;
+  for (const entrypoint of ["client", "panel", undefined]) {
+    const html = renderToStaticMarkup(
+      await page({ searchParams: Promise.resolve({ entrypoint }) }),
+    );
+    assert.match(
+      html,
+      new RegExp('data-entrypoint="' + (entrypoint ?? "client") + '"'),
+    );
+    assert.match(html, /data-mode="recover"/);
+  }
+  for (const entrypoint of [
+    "worker",
+    ["panel", "client"],
+    null,
+    "https://evil.invalid",
+  ]) {
+    await assert.rejects(
+      page({ searchParams: Promise.resolve({ entrypoint }) }),
+      /NOT_FOUND/,
+    );
   }
 });
 
