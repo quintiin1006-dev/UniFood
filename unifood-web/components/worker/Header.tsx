@@ -146,7 +146,7 @@ export default function Header({
 
           <span>En línea</span>
         </div>
-        <LogoutButton className={styles.logout} />
+        <LogoutButton entrypoint="panel" className={styles.logout} />
       </div>
     </header>
   );

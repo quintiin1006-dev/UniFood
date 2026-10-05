@@ -80,16 +80,28 @@ function fixture(rpc) {
   const calls = [];
   const jar = {
     set: (...args) => calls.push(["cookie", ...args]),
-    delete: () => {},
+    delete: (...args) => calls.push(["delete-cookie", ...args]),
   };
   const state = {
+    onCookiesWritten: null,
+    signOutError: null,
+    throwOnSignOut: false,
+    rpcThrow: false,
     providerError: null,
     institutional: true,
     user: { id: "student" },
     profile: { active: true, roles: ["CLIENT"] },
   };
   const result = async (name, input) => {
+    if (["login", "verify"].includes(name) && !state.providerError) {
+      state.onCookiesWritten?.(["fixture-session.0", "fixture-session.1"]);
+      jar.set("fixture-session.0", "test-session", {});
+    }
     calls.push([name, input]);
+    if (name === "logout" && state.throwOnSignOut)
+      throw new Error("Provider unavailable");
+    if (name === "logout" && state.signOutError)
+      return { error: state.signOutError };
     return { data: {}, error: state.providerError };
   };
   const client = {
@@ -105,6 +117,8 @@ function fixture(rpc) {
     },
     rpc: async (name, params) => {
       calls.push([name, params]);
+      if (state.rpcThrow && name === "current_auth_profile")
+        throw new Error("Profile unavailable");
       return rpc
         ? rpc(name, params)
         : {
@@ -118,7 +132,8 @@ function fixture(rpc) {
   const route = load("app/api/auth/[action]/route.ts", {
     "next/headers": { cookies: async () => jar },
     "@/features/auth/server/client": {
-      authClient: async (remember) => {
+      authClient: async (remember, onCookiesWritten) => {
+        state.onCookiesWritten = onCookiesWritten;
         calls.push(["client", remember]);
         return client;
       },
@@ -257,10 +272,15 @@ test("login preserves provider failures and routes users using database roles", 
     remember: false,
   });
   assert.deepEqual(await response.json(), { redirect: "/cuenta" });
-  assert.equal(calls.find(([name]) => name === "cookie")[3].maxAge, undefined);
+  assert.equal(
+    calls.find(([name, key]) => name === "cookie" && key === "remember")[3]
+      .maxAge,
+    undefined,
+  );
   state.profile.roles = ["WORKER"];
   response = await post("login", {
     email: "worker",
+    entrypoint: "panel",
     password: "UnaClave8",
     remember: true,
   });
@@ -273,6 +293,7 @@ test("login preserves provider failures and routes users using database roles", 
     for (const action of ["login", "verify"]) {
       response = await post(action, {
         email: "admin",
+        entrypoint: "panel",
         password: "UnaClave8",
         code: "123456",
         role: "WORKER",
@@ -315,6 +336,179 @@ test("login and verification reject zero, multiple, duplicate and unknown busine
       assert.equal(body.redirect, undefined);
       assert.ok(calls.some(([name]) => name === "logout"));
     }
+  }
+});
+
+test("four roles by two entrypoints uses only current database roles and establishes remember last", async () => {
+  for (const [role, target] of [
+    ["CLIENT", "/cuenta"],
+    ["WORKER", "/worker"],
+    ["ADMIN", "/admin"],
+    ["SUPER_ADMIN", "/super-admin"],
+  ]) {
+    for (const entrypoint of ["client", "panel"]) {
+      for (const action of ["login", "verify"]) {
+        const { post, state, calls } = fixture();
+        state.profile.roles = [role];
+        const accepted = (role === "CLIENT") === (entrypoint === "client");
+        const response = await post(action, {
+          entrypoint,
+          email: "fixture",
+          password: "UnaClave8",
+          code: "123456",
+          remember: true,
+          role: "SUPER_ADMIN",
+          user_metadata: { role: "SUPER_ADMIN" },
+        });
+        assert.equal(response.status, accepted ? 200 : 403);
+        const payload = await response.json();
+        if (action === "verify")
+          assert.ok(
+            !calls.some(([name]) => name === "login"),
+            "OTP must not require password authentication again",
+          );
+        const rememberWrites = calls.filter(
+          ([name, key]) => name === "cookie" && key === "remember",
+        );
+        if (accepted) {
+          assert.deepEqual(payload, { redirect: target });
+          assert.equal(rememberWrites.length, 1);
+          assert.ok(
+            calls.findIndex(
+              ([name, key]) => name === "cookie" && key === "remember",
+            ) >
+              calls.findIndex(([name]) => name === "current_auth_profile"),
+          );
+          assert.ok(!calls.some(([name]) => name === "logout"));
+        } else {
+          assert.equal(payload.redirect, undefined);
+          assert.equal(rememberWrites.length, 0);
+          assert.ok(
+            calls.some(
+              ([name, input]) => name === "logout" && input.scope === "local",
+            ),
+          );
+          assert.deepEqual(
+            calls
+              .filter(([name]) => name === "delete-cookie")
+              .map(([, key]) => key)
+              .sort(),
+            ["fixture-session.0", "fixture-session.1", "remember"],
+          );
+        }
+      }
+    }
+  }
+});
+
+test("invalid entrypoints are rejected before provider calls; student registration stays client-only", async () => {
+  for (const entrypoint of [
+    null,
+    "worker",
+    "ADMIN",
+    "https://evil.invalid",
+    ["panel"],
+    {},
+    true,
+  ]) {
+    const { post, calls } = fixture();
+    assert.equal(
+      (
+        await post("login", {
+          entrypoint,
+          email: "worker",
+          password: "UnaClave8",
+        })
+      ).status,
+      400,
+    );
+    assert.equal(calls.length, 0);
+  }
+  for (const action of ["register", "institution"]) {
+    const { post, calls } = fixture();
+    assert.equal(
+      (
+        await post(action, {
+          entrypoint: "panel",
+          email: "student@ustavillavo.edu.co",
+        })
+      ).status,
+      400,
+    );
+    assert.equal(calls.length, 0);
+  }
+});
+
+test("profile errors and failed provider signOut cannot retain attempt cookies or remember", async () => {
+  for (const mode of [
+    "invalid",
+    "signOutError",
+    "signOutThrows",
+    "rpcThrows",
+  ]) {
+    const { post, state, calls } = fixture();
+    state.profile.roles = ["CLIENT"];
+    state.signOutError = mode === "signOutError" ? { status: 500 } : null;
+    state.throwOnSignOut = mode === "signOutThrows";
+    state.rpcThrow = mode === "rpcThrows";
+    if (mode === "invalid") state.profile.roles = [];
+    const response = await post("login", {
+      entrypoint: "panel",
+      email: "fixture",
+      password: "UnaClave8",
+      remember: true,
+    });
+    assert.equal(response.status, mode === "rpcThrows" ? 502 : 403);
+    assert.equal(
+      calls.filter(([name, key]) => name === "cookie" && key === "remember")
+        .length,
+      0,
+    );
+    assert.deepEqual(
+      calls
+        .filter(([name]) => name === "delete-cookie")
+        .map(([, key]) => key)
+        .sort(),
+      ["fixture-session.0", "fixture-session.1", "remember"],
+    );
+  }
+});
+
+test("logout and reset use fixed contextual destinations; recovery OTP keeps its temporary session", async () => {
+  for (const entrypoint of ["client", "panel"]) {
+    const { post, calls } = fixture();
+    const target = entrypoint === "client" ? "/login" : "/panel/login";
+    assert.deepEqual(await (await post("logout", { entrypoint })).json(), {
+      redirect: target,
+    });
+    assert.deepEqual(
+      await (
+        await post("reset", { entrypoint, password: "NuevaClave8" })
+      ).json(),
+      { redirect: target },
+    );
+    assert.ok(
+      calls.some(
+        ([name, input]) => name === "logout" && input.scope === "global",
+      ),
+    );
+    calls.length = 0;
+    assert.deepEqual(
+      await (
+        await post("verify", {
+          entrypoint,
+          email: "fixture",
+          code: "123456",
+          recovery: true,
+        })
+      ).json(),
+      { ok: true },
+    );
+    assert.ok(
+      !calls.some(([name]) =>
+        ["logout", "delete-cookie", "current_auth_profile"].includes(name),
+      ),
+    );
   }
 });
 

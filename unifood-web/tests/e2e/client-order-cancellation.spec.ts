@@ -9,7 +9,7 @@ const orderId = "00000000-0000-0000-0000-000000000010";
 const ownPath = `/api/me/orders/${orderId}/cancel`;
 
 async function login(page: Page, name: string, destination: string) {
-  await page.goto("/login");
+  await page.goto(destination === "/cuenta" ? "/login" : "/panel/login");
   await page
     .getByLabel("Usuario o correo institucional", { exact: true })
     .fill(`${name}@example.invalid`);

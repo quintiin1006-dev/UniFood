@@ -101,7 +101,7 @@ test("password recovery goes from email and OTP to password and back to login", 
 
 test("anonymous users cannot load the worker panel or orders", async ({ page, request }) => {
   await page.goto("/worker");
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/panel\/login$/);
   expect((await request.get("/api/orders")).status()).toBe(401);
   expect((await request.post("/api/auth/login", { headers: { origin: "https://evil.example" }, data: {} })).status()).toBe(403);
 });

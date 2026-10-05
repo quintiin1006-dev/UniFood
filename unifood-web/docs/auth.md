@@ -2,12 +2,13 @@
 
 ## Estructura
 
-- `app/login`, `app/registro`, `app/recuperar-contrasena`: entradas públicas, con interfaz compartida en `features/auth/components`.
+- `/` redirige a `/panel/login`. `/login` es la entrada CLIENT y `/panel/login` la entrada WORKER/ADMIN/SUPER_ADMIN; ambas reutilizan `AuthScreen` con variantes explícitas.
+- `app/registro` sigue siendo exclusivamente CLIENT. `app/recuperar-contrasena` es compartida y admite el contexto cerrado `?entrypoint=client|panel`.
 - `app/api/auth/[action]`: login, registro, dominio institucional, verificación, reenvío, recuperación y cierre de sesión. Comprueba el origen y valida los datos antes de contactar Supabase.
 - `features/auth/server`: cliente Supabase exclusivamente en el servidor y consulta del usuario/perfil real. El navegador no recibe tokens por JSON ni los guarda en localStorage.
-- `proxy.ts`: renueva la sesión antes de acceder al panel, cuenta y proxy de pedidos.
+- `proxy.ts`: renueva la sesión en las páginas públicas que la consultan, panel, cuenta y proxy de pedidos; no autoriza roles.
 - `app/worker/page.tsx`: comprueba la sesión y los roles antes de renderizar `components/worker/WorkerDashboard.tsx`.
-- `app/cuenta`: destino de estudiantes con cuenta verificada. El módulo de pedidos de estudiantes todavía no existe.
+- `app/cuenta`: exclusivamente CLIENT con cuenta verificada. WORKER/ADMIN/SUPER_ADMIN se redirigen a su destino.
 - Spring conserva los casos de uso y verifica JWT, usuario activo, rol y asignación a cafetería antes de cada lectura o mutación de pedidos.
 
 ## Configuración local
@@ -94,9 +95,15 @@ El navegador solo pide `GET /api/orders`. El BFF consulta primero el contexto y 
 
 Ante errores de contexto, el BFF no consulta pedidos ni usa cafeterías predeterminadas. Devuelve mensajes genéricos sin copiar cuerpos internos del backend; conserva 401/403 y usa 502 para otros fallos o respuestas malformadas. El dashboard muestra su estado de error existente sin rediseño.
 
-El acceso exige una cuenta activa con exactamente un rol de negocio conocido: CLIENT, WORKER, ADMIN o SUPER_ADMIN. Login, verificación, carga de sesión y predicados de autorización rechazan cero roles, roles múltiples o desconocidos. Los perfiles inválidos se dirigen a `/login`; la carga de sesión no obtiene un access token para ellos. Las combinaciones mixtas se conservan únicamente en pruebas adversariales.
+El acceso exige una cuenta activa con exactamente un rol de negocio conocido: CLIENT, WORKER, ADMIN o SUPER_ADMIN. Login, verificación, carga de sesión y predicados de autorización rechazan cero roles, roles múltiples o desconocidos. La carga de sesión no obtiene un access token para perfiles inválidos. Las combinaciones mixtas se conservan únicamente en pruebas adversariales.
 
-Los destinos son `/cuenta` para CLIENT, `/worker` para WORKER, `/admin` para ADMIN y `/super-admin` para SUPER_ADMIN. Los dos destinos administrativos son placeholders protegidos, sin funciones administrativas ni acceso al panel worker. Esta fase no impone un límite de cuentas WORKER por cafetería ni implementa el aprovisionamiento administrativo o la restricción de una única cafetería para ADMIN.
+Los destinos son `/cuenta` para CLIENT, `/worker` para WORKER, `/admin` para ADMIN y `/super-admin` para SUPER_ADMIN. Una sesión válida que visite cualquiera de los dos logins o `/registro` se redirige al destino de su rol actual. Anónimos y perfiles inválidos vuelven a `/login` desde `/cuenta`, y a `/panel/login` desde las páginas del panel. Los dos destinos administrativos siguen siendo placeholders protegidos, sin aprovisionamiento.
+
+`/api/auth/[action]` acepta únicamente `entrypoint: "client" | "panel"`; su ausencia equivale a CLIENT por compatibilidad y otros valores se rechazan antes de contactar al proveedor. Después de autenticar o confirmar el correo, consulta `current_auth_profile()`, exige actividad y un único rol conocido y comprueba compatibilidad con la entrada. CLIENT en panel y roles del panel en entrada CLIENT reciben 403 y signOut local. El contexto solo configura navegación y presentación: no crea roles, no sustituye PostgreSQL y no se persiste como permiso.
+
+`rememberCookie` se establece después de aceptar el perfil y la entrada. El login no confirmado puede continuar por OTP en su misma variante; remember se aplica después de esa confirmación, no antes. En un rechazo o fallo de lectura del perfil se intenta signOut local, se borra remember y se eliminan exactamente las cookies que escribió el SDK durante el intento, incluso si signOut falla. El cliente comunica únicamente sus nombres; no se interpretan formatos de cookies ni se exponen sus valores.
+
+Brand, logout y la navegación de AuthScreen reciben contexto explícito. La variante panel presenta una composición desktop y no ofrece registro estudiantil. La recuperación conserva su sesión temporal durante OTP/reset, no tiene redirección automática por una sesión válida ni admite returnTo arbitrario. Tras reset mantiene el login contextual en la misma pantalla y conserva el aviso de éxito; logout y los enlaces de retorno usan el login correspondiente. La comprobación del rol se repite al iniciar sesión.
 
 Hallazgo pendiente fuera de esta fase: `InstitutionController` exige autenticación, pero sus consultas por dominio o ID no filtran por rol ni pertenencia institucional. La política de visibilidad de instituciones debe definirse antes de cambiar esos endpoints.
 

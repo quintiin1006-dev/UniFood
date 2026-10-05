@@ -42,6 +42,10 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/login",
+    "/panel/login",
+    "/registro",
+    "/recuperar-contrasena",
     "/worker/:path*",
     "/cuenta",
     "/admin/:path*",

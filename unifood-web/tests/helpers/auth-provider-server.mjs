@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 const fixtures = Object.entries({
   client: ["CLIENT"],
   worker: ["WORKER"],
+  unverifiedworker: ["WORKER"],
   admin: ["ADMIN"],
   superadmin: ["SUPER_ADMIN"],
   workeradmin: ["WORKER", "ADMIN"],
@@ -29,12 +30,16 @@ const fixtures = Object.entries({
 const cafeteriaId = "00000000-0000-0000-0000-000000000002";
 const orderId = "00000000-0000-0000-0000-000000000001";
 const statuses = new Map();
+const confirmed = new Set();
 const clientOrderId = "00000000-0000-0000-0000-000000000010";
 const foreignClientOrderId = "00000000-0000-0000-0000-000000000011";
 const unlinkedClientOrderId = "00000000-0000-0000-0000-000000000013";
 const clientStatuses = new Map();
 const json = (response, status, body) => {
-  response.writeHead(status, { "Content-Type": "application/json" });
+  response.writeHead(status, {
+    "Content-Type": "application/json",
+    "X-Supabase-Api-Version": "2024-01-01",
+  });
   response.end(JSON.stringify(body));
 };
 const user = (profile) => ({
@@ -42,7 +47,10 @@ const user = (profile) => ({
   email: profile.email,
   aud: "authenticated",
   role: "authenticated",
-  email_confirmed_at: "2026-01-01T00:00:00Z",
+  email_confirmed_at:
+    profile.email.startsWith("unverified") && !confirmed.has(profile.id)
+      ? null
+      : "2026-01-01T00:00:00Z",
   created_at: "2026-01-01T00:00:00Z",
   app_metadata: { provider: "email", providers: ["email"] },
   user_metadata: { role: "WORKER" },
@@ -52,10 +60,43 @@ const encode = (value) =>
 const token = (profile) =>
   `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ sub: profile.id, aud: "authenticated", role: "authenticated", iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 3600 })}.${encode("test-signature-only")}`;
 
+function session(profile) {
+  return {
+    access_token: token(profile),
+    token_type: "bearer",
+    expires_in: 3600,
+    refresh_token: "fixture-refresh-token",
+    user: user(profile),
+  };
+}
+
 createServer(async (request, response) => {
   try {
     const url = new URL(request.url, "http://127.0.0.1:3101");
     if (url.pathname === "/health") return json(response, 200, { ok: true });
+    if (
+      ["/auth/v1/resend", "/auth/v1/recover"].includes(url.pathname) &&
+      request.method === "POST"
+    ) {
+      for await (const chunk of request) {
+        void chunk;
+      }
+      return json(response, 200, {});
+    }
+    if (url.pathname === "/auth/v1/verify" && request.method === "POST") {
+      let raw = "";
+      for await (const chunk of request) raw += chunk;
+      const body = JSON.parse(raw),
+        profile = fixtures.find(({ email }) => email === body.email);
+      if (!profile || body.token !== "123456")
+        return json(response, 400, {
+          code: "otp_expired",
+          msg: "Invalid fixture code",
+        });
+      confirmed.add(profile.id);
+      statuses.set(profile.id, "PENDING");
+      return json(response, 200, session(profile));
+    }
     if (url.pathname === "/auth/v1/token" && request.method === "POST") {
       let raw = "";
       for await (const chunk of request) raw += chunk;
@@ -66,15 +107,14 @@ createServer(async (request, response) => {
           code: "invalid_credentials",
           msg: "Invalid credentials",
         });
+      if (!user(profile).email_confirmed_at)
+        return json(response, 400, {
+          code: "email_not_confirmed",
+          msg: "Email not confirmed",
+        });
       statuses.set(profile.id, "PENDING");
       clientStatuses.set(profile.id, "PENDING");
-      return json(response, 200, {
-        access_token: token(profile),
-        token_type: "bearer",
-        expires_in: 3600,
-        refresh_token: "fixture-refresh-token",
-        user: user(profile),
-      });
+      return json(response, 200, session(profile));
     }
     const authorization = request.headers.authorization?.replace(
       /^Bearer /i,

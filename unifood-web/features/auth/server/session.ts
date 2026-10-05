@@ -3,8 +3,8 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { authClient } from "./client";
 import { authConfig } from "./config";
-import type { AuthProfile } from "../validation";
-import { hasValidBusinessRole } from "../validation";
+import type { AuthProfile, AuthEntrypoint } from "../validation";
+import { hasValidBusinessRole, loginPath } from "../validation";
 
 export const getAuth = cache(async () => {
   if (!authConfig()) return null;
@@ -26,8 +26,9 @@ export const getAuth = cache(async () => {
   return { profile: data as AuthProfile, accessToken: session.access_token };
 });
 
-export async function requireAuth() {
+export async function requireAuth(entrypoint: AuthEntrypoint = "client") {
+  // Context chooses the anonymous return path; each page still checks its role.
   const auth = await getAuth();
-  if (!auth) redirect("/login");
+  if (!auth) redirect(loginPath(entrypoint));
   return auth;
 }

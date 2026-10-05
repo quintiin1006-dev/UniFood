@@ -7,7 +7,9 @@ export const metadata = { title: "Administración | UniFood" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const { profile } = await requireAuth();
+  const { profile } = await requireAuth("panel");
   if (!isAdmin(profile)) redirect(destination(profile));
-  return <RolePlaceholder title="Administración de cafetería" />;
+  return (
+    <RolePlaceholder entrypoint="panel" title="Administración de cafetería" />
+  );
 }

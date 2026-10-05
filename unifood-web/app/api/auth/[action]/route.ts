@@ -9,6 +9,9 @@ import {
   DEFAULT_USERNAME_DOMAIN,
   destination,
   hasValidBusinessRole,
+  canUseEntrypoint,
+  parseEntrypoint,
+  loginPath,
   normalizeIdentifier,
   sameOrigin,
   validDocument,
@@ -70,16 +73,46 @@ export async function POST(
       "El servicio de acceso aún no está configurado. Contacta al administrador.",
       503,
     );
+  const cookiesWritten = new Set<string>();
+  let client: Awaited<ReturnType<typeof authClient>> | undefined;
+  let authenticated = false;
+  async function discardSession() {
+    try {
+      await client?.auth.signOut({ scope: "local" });
+    } catch {
+      /* Still erase this attempt's cookies when the provider is unavailable. */
+    }
+    const jar = await cookies();
+    for (const name of cookiesWritten) jar.delete(name);
+    jar.delete(rememberCookie);
+    authenticated = false;
+  }
   try {
     const raw = await request.text();
     if (raw.length > 4096) return fail("Solicitud demasiado grande.", 413);
     const body = JSON.parse(raw || "{}");
     if (!body || typeof body !== "object" || Array.isArray(body))
       return fail("Solicitud no válida.");
+    const entrypoint = parseEntrypoint(body.entrypoint);
+    if (!entrypoint) return fail("Entrada de acceso no válida.");
+    if (
+      (action === "register" || action === "institution") &&
+      entrypoint !== "client"
+    )
+      return fail("El registro está disponible en el acceso de estudiantes.");
     const value = (key: string) =>
       typeof body[key] === "string" ? (body[key] as string) : "";
-    const remember = action === "login" ? body.remember === true : undefined;
-    const client = await authClient(remember);
+    const remember =
+      action === "login"
+        ? body.remember === true
+        : action === "verify" &&
+            body.recovery !== true &&
+            typeof body.remember === "boolean"
+          ? body.remember
+          : undefined;
+    client = await authClient(remember, (names) =>
+      names.forEach((name) => cookiesWritten.add(name)),
+    );
     const email =
       action === "institution" || action === "register"
         ? value("email").trim().toLowerCase()
@@ -94,7 +127,7 @@ export async function POST(
       if (error && error.status !== 403 && error.code !== "session_not_found")
         return providerError(error);
       (await cookies()).delete(rememberCookie);
-      return json({ redirect: "/login" });
+      return json({ redirect: loginPath(entrypoint) });
     }
     if (action === "reset") {
       if (!validPassword(password))
@@ -111,7 +144,7 @@ export async function POST(
       if (error) return providerError(error);
       await client.auth.signOut({ scope: "global" });
       (await cookies()).delete(rememberCookie);
-      return json({ redirect: "/login" });
+      return json({ redirect: loginPath(entrypoint) });
     }
     if (!value("email").trim() || !validEmail(email))
       return fail("Escribe un correo válido.");
@@ -153,7 +186,7 @@ export async function POST(
       if (error) return providerError(error);
       // Confirmation must remain enabled in Supabase; never silently bypass the OTP screen.
       if (data.session) {
-        await client.auth.signOut({ scope: "local" });
+        await discardSession();
         return fail(
           "El servicio requiere activar la confirmación de correo. Contacta al administrador.",
           503,
@@ -184,6 +217,7 @@ export async function POST(
       });
       if (error) return providerError(error);
       if (body.recovery === true) return json({ ok: true });
+      authenticated = true;
     }
     if (action === "login") {
       if (!password || password.length > 128)
@@ -193,22 +227,33 @@ export async function POST(
         password,
       });
       if (error) return providerError(error);
+      authenticated = true;
+    }
+    const { data: profile, error } = await client.rpc("current_auth_profile");
+    if (error || !hasValidBusinessRole(profile)) {
+      await discardSession();
+      return fail(
+        "Tu cuenta no está habilitada. Contacta al administrador.",
+        403,
+      );
+    }
+    if (!canUseEntrypoint(profile, entrypoint)) {
+      await discardSession();
+      return fail(
+        "Tu cuenta no tiene acceso desde esta entrada. Usa el acceso correspondiente.",
+        403,
+      );
+    }
+    if (remember !== undefined) {
       (await cookies()).set(
         rememberCookie,
         remember ? "1" : "0",
         sessionCookieOptions(!!remember),
       );
     }
-    const { data: profile, error } = await client.rpc("current_auth_profile");
-    if (error || !hasValidBusinessRole(profile)) {
-      await client.auth.signOut({ scope: "local" });
-      return fail(
-        "Tu cuenta no está habilitada. Contacta al administrador.",
-        403,
-      );
-    }
     return json({ redirect: destination(profile) });
   } catch (error) {
+    if (authenticated) await discardSession();
     if (error instanceof SyntaxError) return fail("Solicitud no válida.");
     return fail(
       "No se pudo conectar con el servicio de acceso. Inténtalo nuevamente.",

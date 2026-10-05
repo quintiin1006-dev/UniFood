@@ -36,6 +36,28 @@ export type AuthProfile = {
 
 const businessRoles = new Set(["CLIENT", "WORKER", "ADMIN", "SUPER_ADMIN"]);
 
+export type AuthEntrypoint = "client" | "panel";
+
+export function parseEntrypoint(value: unknown): AuthEntrypoint | null {
+  if (value === undefined) return "client";
+  return value === "client" || value === "panel" ? value : null;
+}
+
+export function loginPath(entrypoint: AuthEntrypoint) {
+  return entrypoint === "panel" ? "/panel/login" : "/login";
+}
+
+export function canUseEntrypoint(
+  profile: AuthProfile | null | undefined,
+  entrypoint: AuthEntrypoint,
+) {
+  if (!profile || !hasValidBusinessRole(profile)) return false;
+  return entrypoint === "client"
+    ? isClient(profile)
+    : entrypoint === "panel" &&
+        (isWorker(profile) || isAdmin(profile) || isSuperAdmin(profile));
+}
+
 export function hasValidBusinessRole(profile: AuthProfile | null | undefined) {
   return (
     profile?.active === true &&
