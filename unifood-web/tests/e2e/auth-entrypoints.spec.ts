@@ -96,15 +96,50 @@ for (const [name, entrypoint, target] of [
     page,
   }) => {
     const login = entrypoint === "client" ? "/login" : "/panel/login";
+    const remember = name !== "worker" && name !== "superadmin";
+    const navigations: string[] = [];
+    page.on("framenavigated", (frame) => {
+      if (frame === page.mainFrame()) navigations.push(frame.url());
+    });
     await page.goto(login);
     await page
       .getByLabel("Usuario o correo institucional", { exact: true })
       .fill(name + "@example.invalid");
     await page.getByLabel("Contraseña", { exact: true }).fill("UnaClave8");
+    await page.getByRole("checkbox").setChecked(remember);
+    const loginResponse = page.waitForResponse("**/api/auth/login");
     await page
       .getByRole("button", { name: "Iniciar sesión", exact: true })
       .click();
+    const response = await loginResponse;
+    expect(response.status()).toBe(200);
+    expect(response.request().method()).toBe("POST");
+    expect(response.request().postDataJSON()).toEqual({
+      email: name + "@example.invalid",
+      password: "UnaClave8",
+      remember,
+      entrypoint,
+    });
     await expect(page).toHaveURL(new RegExp(target + "$"));
+    const authCookies = (await page.context().cookies()).filter(({ name }) =>
+      name.startsWith("sb-"),
+    );
+    expect(authCookies.length).toBeGreaterThan(0);
+    for (const cookie of authCookies) {
+      expect(cookie.httpOnly).toBe(true);
+      expect(cookie.sameSite).toBe("Lax");
+      expect(cookie.path).toBe("/");
+      expect(
+        remember ? cookie.expires > Date.now() / 1000 : cookie.expires === -1,
+      ).toBe(true);
+    }
+    await page.reload();
+    await expect(page).toHaveURL(new RegExp(target + "$"));
+    for (const url of navigations) {
+      expect(new URL(url).search).toBe("");
+      expect(url).not.toContain("UnaClave8");
+      expect(url).not.toContain("example.invalid");
+    }
     for (const path of ["/login", "/panel/login", "/registro", "/cuenta"]) {
       await page.goto(path);
       await expect(page).toHaveURL(new RegExp(target + "$"));
@@ -161,11 +196,20 @@ for (const entrypoint of ["client", "panel"]) {
   test(`recovery preserves the temporary OTP session and the ${entrypoint} login variant`, async ({
     page,
   }) => {
-    await page.goto("/recuperar-contrasena?entrypoint=" + entrypoint);
+    const navigations: string[] = [];
+    page.on("request", (request) => {
+      if (request.isNavigationRequest()) navigations.push(request.url());
+    });
+    await page.goto(
+      "/recuperar-contrasena?entrypoint=" +
+        entrypoint +
+        "&returnTo=https%3A%2F%2Funrelated.invalid%2Fcollect",
+    );
     await page
       .getByRole("textbox")
       .fill(
-        (entrypoint === "client" ? "client" : "worker") + "@example.invalid",
+        (entrypoint === "client" ? "recoveryclient" : "recoveryworker") +
+          "@example.invalid",
       );
     await page
       .getByRole("button", { name: "Enviar código", exact: true })
@@ -181,7 +225,33 @@ for (const entrypoint of ["client", "panel"]) {
       page.getByLabel("Confirmar contraseña", { exact: true }),
     ).toBeVisible();
     expect((await page.context().cookies()).length).toBeGreaterThan(0);
+    let resetRequests = 0;
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname === "/api/auth/reset")
+        resetRequests++;
+    });
+    await page.getByLabel("Contraseña", { exact: true }).fill("weakpass");
+    await page
+      .getByLabel("Confirmar contraseña", { exact: true })
+      .fill("weakpass");
+    await page
+      .getByRole("button", { name: "Restablecer contraseña", exact: true })
+      .click();
+    await expect(page.getByRole("main").getByRole("alert")).toContainText(
+      "debe cumplir",
+    );
+    expect(resetRequests).toBe(0);
     await page.getByLabel("Contraseña", { exact: true }).fill("NuevaClave9");
+    await page
+      .getByLabel("Confirmar contraseña", { exact: true })
+      .fill("OtraClave8");
+    await page
+      .getByRole("button", { name: "Restablecer contraseña", exact: true })
+      .click();
+    await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+      "Las contraseñas no coinciden.",
+    );
+    expect(resetRequests).toBe(0);
     await page
       .getByLabel("Confirmar contraseña", { exact: true })
       .fill("NuevaClave9");
@@ -189,6 +259,7 @@ for (const entrypoint of ["client", "panel"]) {
       .getByRole("button", { name: "Restablecer contraseña", exact: true })
       .click();
     await expect(page.getByRole("status")).toContainText("se actualizó");
+    expect(resetRequests).toBe(1);
     await expect(
       page.getByRole("heading", {
         name:
@@ -204,6 +275,36 @@ for (const entrypoint of ["client", "panel"]) {
       "href",
       entrypoint === "panel" ? "/panel/login" : "/login",
     );
-    expect(await page.context().cookies()).toEqual([]);
+    expect((await page.context().cookies()).length).toBe(0);
+    await link.click();
+    await expect(page).toHaveURL(
+      new URL(entrypoint === "client" ? "/login" : "/panel/login", page.url())
+        .href,
+    );
+    await page
+      .getByLabel("Usuario o correo institucional", { exact: true })
+      .fill(
+        (entrypoint === "client" ? "recoveryclient" : "recoveryworker") +
+          "@example.invalid",
+      );
+    await page.getByLabel("Contraseña", { exact: true }).fill("NuevaClave9");
+    await page
+      .getByRole("button", { name: "Iniciar sesión", exact: true })
+      .click();
+    await expect(page).toHaveURL(
+      new URL(entrypoint === "client" ? "/cuenta" : "/worker", page.url()).href,
+    );
+    for (const url of navigations) {
+      const parsed = new URL(url);
+      expect(parsed.origin).toBe(new URL(page.url()).origin);
+      for (const name of [
+        "password",
+        "username",
+        "access_token",
+        "refresh_token",
+        "code",
+      ])
+        expect(parsed.searchParams.has(name)).toBe(false);
+    }
   });
 }

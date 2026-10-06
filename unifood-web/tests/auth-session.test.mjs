@@ -34,7 +34,15 @@ function load(file, mocks = {}, cache = new Map()) {
   return mod.exports;
 }
 
-function session(profile) {
+function session(
+  profile,
+  {
+    user = { id: "verified-user", email_confirmed_at: "2026-01-01" },
+    userError = null,
+    profileError = null,
+    authSession = { access_token: "server-only-token" },
+  } = {},
+) {
   let tokenReads = 0;
   const auth = load("features/auth/server/session.ts", {
     react: { cache: (fn) => fn },
@@ -49,18 +57,18 @@ function session(profile) {
         auth: {
           getUser: async () => ({
             data: {
-              user: { id: "verified-user", email_confirmed_at: "2026-01-01" },
+              user,
             },
-            error: null,
+            error: userError,
           }),
           getSession: async () => {
             tokenReads++;
-            return { data: { session: { access_token: "server-only-token" } } };
+            return { data: { session: authSession } };
           },
         },
         rpc: async (name) => {
           assert.equal(name, "current_auth_profile");
-          return { data: profile, error: null };
+          return { data: profile, error: profileError };
         },
       }),
     },
@@ -77,6 +85,25 @@ test("verified session loads each single current business role", async () => {
     });
     assert.equal(fixture.tokenReads(), 1);
     assert.equal((await fixture.auth.requireAuth("panel")).profile, profile);
+  }
+});
+
+test("identity errors, unconfirmed email, missing session and profile RPC errors deny access", async () => {
+  const profile = { id: "verified-user", active: true, roles: ["WORKER"] };
+  for (const [options, tokenReads] of [
+    [{ user: null }, 0],
+    [{ userError: { status: 401 } }, 0],
+    [{ user: { id: "verified-user", email_confirmed_at: null } }, 0],
+    [{ profileError: { status: 503 } }, 0],
+    [{ authSession: null }, 1],
+  ]) {
+    const fixture = session(profile, options);
+    assert.equal(await fixture.auth.getAuth(), null);
+    assert.equal(fixture.tokenReads(), tokenReads);
+    await assert.rejects(
+      fixture.auth.requireAuth("panel"),
+      /^Error: \/panel\/login$/,
+    );
   }
 });
 test("invalid role profiles never load an access token and redirect protected pages to login", async () => {

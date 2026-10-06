@@ -6,6 +6,15 @@ const fixtures = Object.entries({
   client: ["CLIENT"],
   worker: ["WORKER"],
   unverifiedworker: ["WORKER"],
+  unverifiedclient: ["CLIENT"],
+  recoveryclient: ["CLIENT"],
+  recoveryworker: ["WORKER"],
+  providerdown: ["CLIENT"],
+  providerdisconnect: ["CLIENT"],
+  backendunauthorized: ["WORKER"],
+  backendforbidden: ["WORKER"],
+  backendunavailable: ["WORKER"],
+  backenddisconnect: ["WORKER"],
   admin: ["ADMIN"],
   superadmin: ["SUPER_ADMIN"],
   workeradmin: ["WORKER", "ADMIN"],
@@ -31,6 +40,8 @@ const cafeteriaId = "00000000-0000-0000-0000-000000000002";
 const orderId = "00000000-0000-0000-0000-000000000001";
 const statuses = new Map();
 const confirmed = new Set();
+const passwords = new Map();
+const refreshTokens = new Map();
 const clientOrderId = "00000000-0000-0000-0000-000000000010";
 const foreignClientOrderId = "00000000-0000-0000-0000-000000000011";
 const unlinkedClientOrderId = "00000000-0000-0000-0000-000000000013";
@@ -61,11 +72,13 @@ const token = (profile) =>
   `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ sub: profile.id, aud: "authenticated", role: "authenticated", iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 3600 })}.${encode("test-signature-only")}`;
 
 function session(profile) {
+  const refreshToken = `fixture-refresh-${profile.id}`;
+  refreshTokens.set(refreshToken, profile);
   return {
     access_token: token(profile),
     token_type: "bearer",
     expires_in: 3600,
-    refresh_token: "fixture-refresh-token",
+    refresh_token: refreshToken,
     user: user(profile),
   };
 }
@@ -101,8 +114,24 @@ createServer(async (request, response) => {
       let raw = "";
       for await (const chunk of request) raw += chunk;
       const body = JSON.parse(raw);
+      if (url.searchParams.get("grant_type") === "refresh_token") {
+        const refreshProfile = refreshTokens.get(body.refresh_token);
+        if (!refreshProfile)
+          return json(response, 400, {
+            code: "refresh_token_not_found",
+            msg: "Invalid fixture refresh",
+          });
+        return json(response, 200, session(refreshProfile));
+      }
       const profile = fixtures.find(({ email }) => email === body.email);
-      if (!profile || body.password !== "UnaClave8")
+      if (profile?.email.startsWith("providerdown@"))
+        return json(response, 503, { message: "PRIVATE_FIXTURE_DETAIL" });
+      if (profile?.email.startsWith("providerdisconnect@"))
+        return request.socket.destroy();
+      if (
+        !profile ||
+        body.password !== (passwords.get(profile.id) || "UnaClave8")
+      )
         return json(response, 400, {
           code: "invalid_credentials",
           msg: "Invalid credentials",
@@ -134,6 +163,18 @@ createServer(async (request, response) => {
         code: "session_not_found",
         msg: "No session",
       });
+    if (url.pathname === "/auth/v1/user" && request.method === "PUT") {
+      let raw = "";
+      for await (const chunk of request) raw += chunk;
+      const { password } = JSON.parse(raw);
+      if (typeof password !== "string" || password.length < 8)
+        return json(response, 400, {
+          code: "weak_password",
+          msg: "Invalid fixture password",
+        });
+      passwords.set(profile.id, password);
+      return json(response, 200, user(profile));
+    }
     if (url.pathname === "/auth/v1/user")
       return json(response, 200, user(profile));
     if (url.pathname === "/auth/v1/logout") return json(response, 200, {});
@@ -183,8 +224,18 @@ createServer(async (request, response) => {
         profile.roles.some((role) => ["ADMIN", "SUPER_ADMIN"].includes(role))
       )
         return json(response, 403, { message: "Forbidden" });
-      if (url.pathname === "/api/worker/context")
+      if (url.pathname === "/api/worker/context") {
+        const failure = {
+          backendunauthorized: 401,
+          backendforbidden: 403,
+          backendunavailable: 503,
+        }[profile.email.split("@")[0]];
+        if (failure)
+          return json(response, failure, { message: "PRIVATE_FIXTURE_DETAIL" });
+        if (profile.email.startsWith("backenddisconnect@"))
+          return request.socket.destroy();
         return json(response, 200, { cafeteriaId });
+      }
       if (
         request.method === "GET" &&
         url.searchParams.get("cafeteriaId") !== cafeteriaId

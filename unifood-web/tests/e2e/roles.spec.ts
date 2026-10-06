@@ -192,15 +192,15 @@ test("inactive worker is denied at login", async ({ page }) => {
   await expect(page.getByRole("main").getByRole("alert")).toContainText(
     "Tu cuenta no está habilitada",
   );
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(new URL("/panel/login", page.url()).href);
   await page.goto("/worker");
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(new URL("/panel/login", page.url()).href);
   expect((await page.request.get("/api/orders")).status()).toBe(401);
 });
 
 test("administrative placeholders reject anonymous users", async ({ page }) => {
   for (const path of ["/admin", "/super-admin"]) {
     await page.goto(path);
-    await expect(page).toHaveURL(/\/login$/);
+    await expect(page).toHaveURL(new URL("/panel/login", page.url()).href);
   }
 });

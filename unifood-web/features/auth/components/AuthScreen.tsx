@@ -4,6 +4,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type FormEvent,
   type InputHTMLAttributes,
   type ReactNode,
@@ -37,6 +38,9 @@ import Brand, { Waves } from "./Brand";
 import styles from "./AuthScreen.module.css";
 
 type Mode = "login" | "register" | "recover";
+const subscribeToHydration = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
 const copy = {
   es: {
     panelTitle: "Acceso al panel",
@@ -224,7 +228,8 @@ function Field({
       {password && (
         <button
           type="button"
-          onClick={() => setVisible(!visible)}
+          disabled={props.disabled}
+          onClick={() => setVisible((current) => !current)}
           aria-label={visible ? copy[language].hide : copy[language].show}
           aria-pressed={visible}
         >
@@ -244,6 +249,12 @@ export default function AuthScreen({
   usernameDomain: string;
   entrypoint: AuthEntrypoint;
 }) {
+  // The server HTML must not accept credentials before React attaches events.
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    clientSnapshot,
+    serverSnapshot,
+  );
   const [language, setLanguage] = useState<"es" | "en">("es");
   const t = copy[language];
   const [mode, setMode] = useState(initialMode);
@@ -312,7 +323,7 @@ export default function AuthScreen({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy) return;
+    if (!hydrated || busy) return;
     setError("");
     setNotice("");
     setBusy(true);
@@ -525,7 +536,7 @@ export default function AuthScreen({
                   type="button"
                   className={styles.back}
                   onClick={back}
-                  disabled={busy}
+                  disabled={!hydrated || busy}
                   aria-label={t.back}
                 >
                   <ArrowLeft size={23} />
@@ -561,6 +572,7 @@ export default function AuthScreen({
           </h1>
           <p className={styles.description}>{description}</p>
           <form
+            method="post"
             onSubmit={submit}
             className={`${styles.form} ${isLogin ? styles.loginForm : ""}`}
             aria-busy={busy}
@@ -580,7 +592,7 @@ export default function AuthScreen({
                     spellCheck={false}
                     required
                     maxLength={254}
-                    disabled={busy}
+                    disabled={!hydrated || busy}
                   />
                   <Field
                     language={language}
@@ -593,7 +605,7 @@ export default function AuthScreen({
                     autoComplete="current-password"
                     required
                     maxLength={128}
-                    disabled={busy}
+                    disabled={!hydrated || busy}
                   />
                 </>
               )}
@@ -610,7 +622,7 @@ export default function AuthScreen({
                     required
                     minLength={3}
                     maxLength={150}
-                    disabled={busy}
+                    disabled={!hydrated || busy}
                   />
                   <Field
                     language={language}
@@ -622,7 +634,7 @@ export default function AuthScreen({
                     required
                     minLength={5}
                     maxLength={30}
-                    disabled={busy}
+                    disabled={!hydrated || busy}
                   />
                 </>
               )}
@@ -642,7 +654,7 @@ export default function AuthScreen({
                   spellCheck={false}
                   required
                   maxLength={254}
-                  disabled={busy}
+                  disabled={!hydrated || busy}
                 />
               )}
               {isPassword && (
@@ -659,7 +671,7 @@ export default function AuthScreen({
                     required
                     minLength={8}
                     maxLength={128}
-                    disabled={busy}
+                    disabled={!hydrated || busy}
                     aria-describedby="password-rules"
                   />
                   <Field
@@ -674,7 +686,7 @@ export default function AuthScreen({
                     required
                     minLength={8}
                     maxLength={128}
-                    disabled={busy}
+                    disabled={!hydrated || busy}
                   />
                 </>
               )}
@@ -691,7 +703,7 @@ export default function AuthScreen({
                       inputMode="numeric"
                       autoComplete={index === 0 ? "one-time-code" : "off"}
                       aria-label={`${t.digit} ${index + 1}`}
-                      disabled={busy}
+                      disabled={!hydrated || busy}
                       onChange={(event) =>
                         updateCode(event.target.value, index)
                       }
@@ -727,7 +739,7 @@ export default function AuthScreen({
                     type="checkbox"
                     checked={remember}
                     onChange={(event) => setRemember(event.target.checked)}
-                    disabled={busy}
+                    disabled={!hydrated || busy}
                   />
                   {t.remember}
                 </label>
@@ -773,7 +785,7 @@ export default function AuthScreen({
                 <button
                   className={styles.link}
                   type="button"
-                  disabled={busy || countdown > 0}
+                  disabled={!hydrated || busy || countdown > 0}
                   onClick={() => resend()}
                 >
                   {t.resend}
@@ -791,7 +803,7 @@ export default function AuthScreen({
               <button
                 className={styles.link}
                 type="button"
-                disabled={busy}
+                disabled={!hydrated || busy}
                 onClick={() => resend(true)}
               >
                 {t.verifyLink}
@@ -805,7 +817,7 @@ export default function AuthScreen({
             <button
               className={`${styles.primary} ${!isLogin ? (isPassword ? styles.passwordContinue : styles.continue) : ""}`}
               type="submit"
-              disabled={busy}
+              disabled={!hydrated || busy}
             >
               {buttonText}
               {!busy && <ArrowRight size={21} />}
