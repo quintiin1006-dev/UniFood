@@ -12,7 +12,8 @@ const networkHosts = Object.values(networkInterfaces()).flatMap((addresses) =>
 );
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: networkHosts,
+  // Binding to :: does not allow the browser's IPv4/IPv6 loopback origins.
+  allowedDevOrigins: ["127.0.0.1", "[::1]", ...networkHosts],
   turbopack: { root: process.cwd() },
 };
 

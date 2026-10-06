@@ -76,6 +76,40 @@ test("cookies are HttpOnly; remember disabled creates a browser-session cookie",
   assert.equal(config.sessionCookieOptions(true, true).maxAge, 0);
 });
 
+test("full identifiers retain their domain and validation enforces exact length limits", () => {
+  assert.equal(
+    validation.normalizeIdentifier(
+      " PERSONA@EXAMPLE.INVALID ",
+      "ustavillavo.edu.co",
+    ),
+    "persona@example.invalid",
+  );
+  assert.equal(
+    validation.normalizeIdentifier(" PERSONA ", "example.invalid"),
+    "persona@example.invalid",
+  );
+  const email = "a".repeat(242) + "@example.com";
+  assert.equal(email.length, 254);
+  assert.equal(validation.validEmail(email), true);
+  assert.equal(validation.validEmail("a" + email), false);
+  for (const value of [
+    "",
+    " a@example.com",
+    "a@example.com ",
+    "a@",
+    "@example.com",
+    "a@@example.com",
+  ])
+    assert.equal(validation.validEmail(value), false);
+  for (const [value, accepted] of [
+    ["Aa12345", false],
+    ["Aa123456", true],
+    ["Aa1" + "b".repeat(125), true],
+    ["Aa1" + "b".repeat(126), false],
+  ])
+    assert.equal(validation.validPassword(value), accepted);
+});
+
 function fixture(rpc) {
   const calls = [];
   const jar = {
@@ -309,6 +343,40 @@ test("login preserves provider failures and routes users using database roles", 
   assert.ok(calls.some(([name]) => name === "logout"));
 });
 
+test("provider rate limits and service failures return safe statuses without establishing remember", async () => {
+  for (const [providerError, status] of [
+    [{ status: 429, code: "rate_limit_exceeded" }, 429],
+    [{ status: 503, message: "PRIVATE_FIXTURE_DETAIL" }, 502],
+    [{ name: "AuthRetryableFetchError", status: 0 }, 502],
+    [
+      {
+        status: 400,
+        code: "unknown_provider_error",
+        message: "PRIVATE_FIXTURE_DETAIL",
+      },
+      400,
+    ],
+  ]) {
+    const { post, state, calls } = fixture();
+    state.providerError = providerError;
+    const response = await post("login", {
+      email: "fixture",
+      password: "SyntheticPassword8",
+      remember: true,
+    });
+    assert.equal(response.status, status);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    const body = await response.json();
+    assert.equal(typeof body.message, "string");
+    assert.equal(body.message.includes("PRIVATE_FIXTURE_DETAIL"), false);
+    assert.equal(body.redirect, undefined);
+    assert.equal(
+      calls.some(([name]) => name === "cookie"),
+      false,
+    );
+  }
+});
+
 test("login and verification reject zero, multiple, duplicate and unknown business roles", async () => {
   for (const roles of [
     [],
@@ -376,8 +444,7 @@ test("four roles by two entrypoints uses only current database roles and establi
           assert.ok(
             calls.findIndex(
               ([name, key]) => name === "cookie" && key === "remember",
-            ) >
-              calls.findIndex(([name]) => name === "current_auth_profile"),
+            ) > calls.findIndex(([name]) => name === "current_auth_profile"),
           );
           assert.ok(!calls.some(([name]) => name === "logout"));
         } else {

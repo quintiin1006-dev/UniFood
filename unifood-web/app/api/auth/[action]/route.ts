@@ -34,7 +34,11 @@ const json = (data: object, status = 200) =>
 const fail = (message: string, status = 400, code?: string) =>
   json({ message, code }, status);
 
-function providerError(error: { code?: string; status?: number }) {
+function providerError(error: {
+  code?: string;
+  status?: number;
+  name?: string;
+}) {
   if (error.status === 429 || error.code?.includes("rate_limit"))
     return fail(
       "Demasiados intentos. Espera un momento y vuelve a intentarlo.",
@@ -56,7 +60,10 @@ function providerError(error: { code?: string; status?: number }) {
     return fail("La contraseña no cumple los requisitos de seguridad.");
   return fail(
     "No pudimos completar la solicitud. Revisa los datos o vuelve a intentarlo.",
-    error.status && error.status >= 500 ? 502 : 400,
+    error.name === "AuthRetryableFetchError" ||
+      (error.status && error.status >= 500)
+      ? 502
+      : 400,
   );
 }
 
