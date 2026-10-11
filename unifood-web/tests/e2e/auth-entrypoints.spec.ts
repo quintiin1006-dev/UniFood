@@ -5,11 +5,16 @@ test.skip(
   "Requires the controlled local auth provider",
 );
 
-test("root opens a desktop panel login with explicit context and no student registration", async ({
+test("root opens student login with registration; panel keeps its separate context", async ({
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(
+    page.getByRole("link", { name: "Registrarse como estudiante" }),
+  ).toHaveAttribute("href", "/registro");
+  await page.goto("/panel/login");
   await expect(page).toHaveURL(/\/panel\/login$/);
   await expect(
     page.getByRole("heading", { name: "Acceso al panel", exact: true }),
@@ -143,6 +148,13 @@ for (const [name, entrypoint, target] of [
     for (const path of ["/login", "/panel/login", "/registro", "/cuenta"]) {
       await page.goto(path);
       await expect(page).toHaveURL(new RegExp(target + "$"));
+    }
+    if (name === "client") {
+      await page
+        .getByRole("navigation", { name: "Navegación del estudiante" })
+        .getByRole("link", { name: "Perfil", exact: true })
+        .click();
+      await expect(page).toHaveURL(/\/cuenta\/perfil$/);
     }
     await page
       .getByRole("button", { name: "Cerrar sesión", exact: true })
