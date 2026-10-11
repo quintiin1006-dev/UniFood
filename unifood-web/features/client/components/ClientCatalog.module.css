@@ -1,0 +1,469 @@
+.home,
+.menu,
+.selection {
+  display: grid;
+  gap: 22px;
+}
+.selection {
+  padding-block: 26px 70px;
+}
+.pageHeading h1 {
+  margin: 0;
+  font-size: clamp(29px, 7.5vw, 40px);
+  line-height: 1.16;
+  letter-spacing: -1.1px;
+  font-weight: 800;
+  text-wrap: balance;
+}
+.pageHeading p {
+  margin: 10px 0 0;
+  color: var(--client-muted);
+  font-size: 17px;
+  line-height: 1.5;
+}
+.pageHeading .eyebrow {
+  margin: 0 0 18px;
+  color: #52668e;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.7px;
+}
+.siteList,
+.mealList {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.siteList {
+  margin-top: 12px;
+}
+.siteCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  border: 1px solid #e8eef9;
+  border-radius: 23px;
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 5px 14px #234b9110;
+  color: inherit;
+  text-decoration: none;
+}
+.siteCard > img {
+  width: 106px;
+  height: 120px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 16px;
+}
+.siteCard > svg {
+  flex-shrink: 0;
+  color: #7484aa;
+  margin-left: auto;
+}
+.siteText {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.siteText strong {
+  font-size: 18px;
+  line-height: 1.3;
+  letter-spacing: -0.5px;
+}
+.siteText > span {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--client-muted);
+}
+.cafeteriaSelector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 14px 10px 10px;
+  border: 1px solid #e9eff9;
+  border-radius: 21px;
+  background: #ffffffdf;
+  color: inherit;
+  text-decoration: none;
+  box-shadow: 0 4px 12px #204a8910;
+}
+.cafeteriaSelector > img {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.cafeteriaSelector > span {
+  min-width: 0;
+}
+.cafeteriaSelector strong {
+  display: block;
+  font-size: 17px;
+  line-height: 1.3;
+}
+.cafeteriaSelector small {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--client-muted);
+}
+.cafeteriaSelector > svg {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  min-width: 0;
+  min-height: 244px;
+  aspect-ratio: 1.5;
+  overflow: hidden;
+  border-radius: 23px;
+  color: white;
+  text-decoration: none;
+}
+.hero > img {
+  object-fit: cover;
+  z-index: -2;
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(15deg, #000b 5%, #0006 35%, transparent 75%);
+}
+.heroCopy {
+  display: grid;
+  gap: 10px;
+  padding: 24px;
+}
+.heroCopy strong {
+  font-size: clamp(28px, 7.5vw, 40px);
+  line-height: 1.12;
+  letter-spacing: -0.8px;
+}
+.heroCopy > span {
+  font-size: 16px;
+}
+.heroArrow {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  margin: 0 18px 20px auto;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--client-ink);
+}
+.categories {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.categories a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  min-height: 124px;
+  padding: 16px 6px;
+  border-radius: 21px;
+  background: #edf3fc;
+  color: var(--client-ink);
+  text-align: center;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.categories .primaryCategory {
+  background: #0954cf;
+  color: #fff;
+}
+.demoNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  color: var(--client-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.demoNotice svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: start;
+  min-height: 44px;
+  padding-right: 8px;
+  color: inherit;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+.menu {
+  gap: 18px;
+}
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 50px;
+  padding-left: 14px;
+  border: 1px solid #dce5f4;
+  border-radius: 18px;
+  background: #fff;
+  color: var(--client-muted);
+}
+.search > svg {
+  flex-shrink: 0;
+}
+.search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding-block: 10px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--client-ink);
+  font: inherit;
+  font-size: 16px;
+}
+.search input::-webkit-search-cancel-button {
+  display: none;
+}
+.search input::placeholder {
+  color: var(--client-muted);
+}
+.search button {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.resultCount {
+  margin: -8px 0 0;
+  color: var(--client-muted);
+  font-size: 13px;
+}
+.mealCard {
+  color: inherit;
+  text-decoration: none;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid #ecf0f8;
+  border-radius: 22px;
+  background: #ffffffdb;
+}
+.availability {
+  display: block;
+  margin-top: 8px;
+  color: #856233;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.sectionTitle {
+  margin: 0 0 16px;
+  font-size: 21px;
+  letter-spacing: -0.5px;
+}
+.mealTypes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.mealTypes a,
+.mealTypes button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 18px 14px;
+  border: 1px solid transparent;
+  border-radius: 21px;
+  color: #18295a;
+  text-align: left;
+  text-decoration: none;
+  font: inherit;
+}
+.mealTypes strong {
+  font-size: 18px;
+}
+.mealTypes span {
+  font-size: 12px;
+  line-height: 1.55;
+}
+.mealTypes small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+}
+.mealTypes .breakfastType {
+  background: #fff1db;
+  border-color: #f3e4c9;
+}
+.mealTypes .breakfastType > svg {
+  color: #966126;
+}
+.mealTypes .lunchType {
+  background: #eaf2ff;
+  border-color: #dae7fb;
+}
+.mealTypes .lunchType > svg {
+  color: #0954cf;
+}
+.mealTypes button:disabled {
+  cursor: not-allowed;
+  filter: saturate(0.5);
+  color: #566178;
+}
+.scheduleNote {
+  margin: 14px 0 0;
+  color: var(--client-muted);
+  font-size: 12px;
+}
+.mealCard > img {
+  width: 124px;
+  height: 154px;
+  align-self: stretch;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 21px;
+}
+.mealCard > div {
+  min-width: 0;
+  padding: 14px 14px 14px 0;
+}
+.mealCard h2 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.35;
+  letter-spacing: -0.4px;
+}
+.mealCard p {
+  margin: 7px 0;
+  color: var(--client-muted);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.price {
+  font-size: 20px;
+}
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 24px 12px;
+  text-align: center;
+}
+.empty h2 {
+  margin: 0;
+  font-size: 21px;
+}
+.empty p {
+  margin: 0;
+  color: var(--client-muted);
+}
+.secondaryButton {
+  min-height: 46px;
+  padding: 10px 20px;
+  border: 1px solid #dce5f4;
+  border-radius: 16px;
+  background: #fff;
+  color: var(--client-ink);
+  font: inherit;
+  cursor: pointer;
+}
+@media (max-width: 375px) {
+  .siteCard {
+    gap: 10px;
+    padding: 10px;
+  }
+  .siteCard > img {
+    width: 80px;
+    height: 110px;
+  }
+  .siteText strong {
+    font-size: 16px;
+  }
+  .siteText > span {
+    font-size: 13px;
+  }
+  .categories {
+    gap: 8px;
+  }
+  .categories a {
+    font-size: 13px;
+    border-radius: 18px;
+  }
+  .heroCopy {
+    padding: 18px;
+  }
+  .mealCard {
+    gap: 12px;
+  }
+  .mealCard > img {
+    width: 96px;
+    height: 160px;
+  }
+  .mealCard h2 {
+    font-size: 16px;
+  }
+  .mealCard p {
+    font-size: 13px;
+  }
+}
+@media (min-width: 600px) {
+  .selection {
+    padding-top: 40px;
+  }
+  .siteCard > img {
+    width: 120px;
+  }
+  .siteText strong {
+    font-size: 21px;
+  }
+  .mealCard > img {
+    width: 140px;
+  }
+  .categories a {
+    font-size: 16px;
+  }
+}
+@media (hover: hover) {
+  .siteCard:hover,
+  .cafeteriaSelector:hover {
+    border-color: #c9d9f1;
+  }
+  .categories a:hover {
+    filter: brightness(0.97);
+  }
+}
