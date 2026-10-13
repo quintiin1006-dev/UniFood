@@ -1,0 +1,38 @@
+.preview {
+  margin-bottom: 24px;
+  padding: 6px 12px 12px;
+  border: 1px solid #e8d7b0;
+  border-radius: 14px;
+  background: #fffaf0;
+  color: #654d20;
+}
+
+.control {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.control input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  accent-color: var(--client-blue);
+}
+
+.badge {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.preview p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}

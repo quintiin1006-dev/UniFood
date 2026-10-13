@@ -1,0 +1,152 @@
+.carousel {
+  min-width: 0;
+}
+.viewport {
+  overflow: hidden;
+  border-radius: 23px;
+  touch-action: pan-y;
+}
+.track {
+  display: flex;
+  transition: transform 350ms ease;
+}
+.slide {
+  min-width: 0;
+  flex: 0 0 100%;
+}
+.offer {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  min-height: 290px;
+  aspect-ratio: 1.35;
+  color: white;
+  text-decoration: none;
+  overflow: hidden;
+}
+.offer > img {
+  object-fit: cover;
+  z-index: -2;
+  user-select: none;
+}
+.offer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    0deg,
+    #080c18d9 0,
+    #090b1a55 48%,
+    transparent 80%
+  );
+}
+.kind {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: #fffef5ee;
+  color: #17285b;
+  font-size: 12px;
+  font-weight: 700;
+}
+.copy {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  padding: 22px 12px 22px 22px;
+}
+.copy strong {
+  max-width: 17ch;
+  font-size: clamp(26px, 7vw, 36px);
+  line-height: 1.1;
+  letter-spacing: -0.8px;
+}
+.copy > span {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.arrow {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin: 0 18px 24px auto;
+  border-radius: 50%;
+  background: #fff;
+  color: #090f52;
+}
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding-top: 5px;
+}
+.controls button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  min-width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #546589;
+  cursor: pointer;
+}
+.dots {
+  display: flex;
+  min-width: 0;
+}
+.dots button {
+  min-width: 24px;
+  width: 28px;
+}
+.dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 10px;
+  background: #bccbe3;
+  transition: width 200ms;
+}
+.dots [aria-current="true"] span {
+  width: 20px;
+  background: #0064ff;
+}
+.empty {
+  padding: 24px;
+  background: #fff;
+  border-radius: 22px;
+  color: var(--client-muted);
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .track,
+  .dots span {
+    transition: none;
+  }
+}
+@media (max-width: 375px) {
+  .offer {
+    min-height: 270px;
+  }
+  .copy {
+    padding-left: 18px;
+  }
+  .arrow {
+    margin-right: 14px;
+  }
+}

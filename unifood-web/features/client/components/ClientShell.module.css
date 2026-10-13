@@ -1,0 +1,205 @@
+.shell {
+  --client-ink: #090f52;
+  --client-muted: #626f93;
+  --client-blue: #0064ff;
+  --client-border: #e0e7f0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  color: var(--client-ink);
+  background:
+    radial-gradient(ellipse at 15% 105%, #dfedff 0, transparent 50%), #f7faff;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.shell :is(a, button, input, textarea):focus-visible {
+  outline: 3px solid var(--client-blue);
+  outline-offset: 3px;
+}
+
+.header {
+  padding-top: env(safe-area-inset-top, 0px);
+  background: rgb(255 255 255 / 65%);
+}
+
+.headerInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(100%, 680px);
+  min-height: 76px;
+  margin-inline: auto;
+  padding: 12px max(20px, env(safe-area-inset-right, 0px)) 12px
+    max(20px, env(safe-area-inset-left, 0px));
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  color: var(--client-ink);
+  text-decoration: none;
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: -1.1px;
+}
+
+.brandAccent {
+  color: var(--client-blue);
+}
+
+.logo {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.logo img {
+  position: absolute;
+  width: 140%;
+  height: 140%;
+  top: -20%;
+  left: -20%;
+}
+
+.profileLink {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--client-border);
+  border-radius: 50%;
+  color: var(--client-ink);
+  background: #edf4ff;
+}
+
+.main {
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior-y: contain;
+  scroll-padding-block: 24px;
+}
+
+.content {
+  width: min(100%, 680px);
+  margin-inline: auto;
+  padding: 28px max(20px, env(safe-area-inset-right, 0px)) 32px
+    max(20px, env(safe-area-inset-left, 0px));
+  overflow-wrap: anywhere;
+}
+
+/* A separate grid row reserves the navigation's actual height, including safe areas. */
+.nav {
+  padding: 8px max(12px, env(safe-area-inset-right, 0px))
+    max(8px, env(safe-area-inset-bottom, 0px))
+    max(12px, env(safe-area-inset-left, 0px));
+  border-top: 1px solid var(--client-border);
+  background: rgb(255 255 255 / 96%);
+  backdrop-filter: blur(16px);
+}
+
+.navInner {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  width: min(100%, 520px);
+  margin-inline: auto;
+}
+
+.navItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 58px;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: 14px;
+  color: var(--client-muted);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1.35;
+}
+
+.navItem[aria-current="page"] {
+  color: #0054d6;
+  background: #edf4ff;
+}
+
+.navItem:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.cartIcon {
+  position: relative;
+  display: flex;
+}
+.cartBadge {
+  position: absolute;
+  top: -7px;
+  right: -12px;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding-inline: 4px;
+  border-radius: 12px;
+  background: #0064ff;
+  color: white;
+  font-size: 11px;
+  animation: cart-pop 240ms ease-out;
+}
+@keyframes cart-pop {
+  from {
+    transform: scale(0.65);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cartBadge {
+    animation: none;
+  }
+}
+
+.skipLink {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  padding: 12px;
+  transform: translateY(-180%);
+  border-radius: 8px;
+  color: var(--client-ink);
+  background: #fff;
+}
+
+.skipLink:focus {
+  transform: translateY(0);
+}
+
+@media (hover: hover) {
+  .profileLink:hover,
+  .navItem[href]:hover {
+    background: #edf4ff;
+  }
+}
+
+@media (min-width: 760px) {
+  .content {
+    padding-top: 40px;
+    padding-bottom: 48px;
+  }
+}

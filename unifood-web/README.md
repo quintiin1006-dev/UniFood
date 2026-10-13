@@ -1,6 +1,8 @@
-﻿# UniFood web
+# UniFood web
 
 Aplicación en Next.js con login, registro de estudiantes y panel de trabajadores. Ejecutar `npm install` y `npm run dev`; abrir `/login`. El panel `/worker` requiere una cuenta verificada con rol y cafetería asignados.
+
+El estudiante accede a `/cuenta`: selección de sede, carrusel de platos, desayunos y almuerzos por horario colombiano, detalle y carrito editable persistente. `/cuenta/carrito/resumen` permite revisar el total, elegir recogida cada 30 minutos con un margen de preparación de 20 minutos, aceptar condiciones y probar la confirmación con efectivo al recoger. Los menús, precios y stock son mocks; todavía no se crean pedidos y la confirmación de prueba conserva el carrito. `/cuenta/perfil` muestra datos reales de la cuenta y conserva cierre de sesión y cambio de contraseña por correo. Ver [alcance y siguientes bloques del cliente](docs/client-shopping.md) y [análisis de arquitectura](docs/client-frontend.md).
 
 En este equipo se trabaja desde `C:\Users\credi\Documents\UniFood`. Se puede iniciar desde la raíz con `npm run dev` o con `iniciar-unifood.cmd`; local y red usan el mismo servidor en el puerto 3000. Ver [arranque del proyecto](../README.md). No ejecutar la copia independiente de `OneDrive\Desktop\UniFood` para consultar estos cambios.
 
@@ -34,7 +36,7 @@ El Route Handler reenvía las acciones PATCH al backend sin reenviar el Origin d
 
 La cancelación propia usa `PATCH /api/me/orders/{orderId}/cancel`, tanto en backend como en BFF. Exige CLIENT activo como único rol vigente. El backend resuelve el propietario por `orders.client_id → clients.user_id → users.id` y lo compara con el subject autenticado; ningún email, clientId, body o parámetro del navegador concede permisos. La regla PENDING vive en `Order` y esta operación CLIENT no aplica un deadline adicional. Las operaciones worker conservan su política y su deadline.
 
-El backend devuelve 200 con `OrderResponse`; el BFF entrega únicamente `{id, status: "CANCELLED"}`. Sin sesión: 401; cuenta no elegible: 403; pedido inexistente, ajeno o sin cliente vinculado para un CLIENT elegible: 404 (`ORDER_NOT_FOUND`); cualquier estado diferente de PENDING en un pedido propio: 409 (`INVALID_ORDER_STATE`). Los errores del backend usan `ApiErrorResponse`; el BFF mantiene esos estados con mensajes fijos y el mismo formato de error, sin copiar bodies ni headers upstream. Fallos de conexión, redirects o respuestas inválidas producen 502. No hay cambios de UI ni historial CLIENT en esta fase.
+El backend devuelve 200 con `OrderResponse`; el BFF entrega únicamente `{id, status: "CANCELLED"}`. Sin sesión: 401; cuenta no elegible: 403; pedido inexistente, ajeno o sin cliente vinculado para un CLIENT elegible: 404 (`ORDER_NOT_FOUND`); cualquier estado diferente de PENDING en un pedido propio: 409 (`INVALID_ORDER_STATE`). Los errores del backend usan `ApiErrorResponse`; el BFF mantiene esos estados con mensajes fijos y el mismo formato de error, sin copiar bodies ni headers upstream. Fallos de conexión, redirects o respuestas inválidas producen 502. La cancelación sigue sin interfaz y el historial CLIENT queda pendiente de una consulta de pedidos propios.
 
 Roles, actividad y ownership se consultan de nuevo en cada petición. Persiste el riesgo de cambios simultáneos entre autorización, lectura y guardado: la transacción actual no aplica locking ni una actualización condicional. Esta fase no garantiza exclusión frente a una preparación worker concurrente; locking e idempotencia quedan pendientes.
 

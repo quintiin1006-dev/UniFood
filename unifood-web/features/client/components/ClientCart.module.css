@@ -1,0 +1,51 @@
+.item {
+  touch-action: pan-y;
+}
+.controls {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+.editNotes {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 6px;
+  border: 0;
+  background: transparent;
+  color: #315d9c;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.swipeActions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  background: #fff1f1;
+  border-radius: 12px;
+}
+.swipeActions button {
+  min-height: 44px;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #a52929;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.swipeActions button:first-child {
+  flex: 1;
+  background: #a52929;
+  color: white;
+}

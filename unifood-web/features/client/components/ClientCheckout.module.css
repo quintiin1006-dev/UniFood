@@ -1,0 +1,196 @@
+.location {
+  padding-block: 16px;
+  border-block: 1px solid var(--client-border);
+}
+.location span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--client-muted);
+  font-size: 14px;
+}
+.location strong {
+  font-size: 18px;
+}
+.location p {
+  margin: 5px 0 0;
+  color: var(--client-muted);
+  font-size: 15px;
+}
+.lines {
+  list-style: none;
+  display: grid;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+}
+.lines li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--client-border);
+}
+.lines li > div {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.lines strong {
+  font-size: 16px;
+  line-height: 1.45;
+}
+.lines li > span {
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.lines p {
+  margin: 6px 0 0;
+  color: var(--client-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.lineNotes {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.editCart {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  justify-self: start;
+  color: #135cca;
+  font-size: 15px;
+  text-underline-offset: 4px;
+}
+.form {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.pickup {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.pickup legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  font-weight: 700;
+  font-size: 18px;
+}
+.pickup p {
+  margin: 12px 0;
+  color: var(--client-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.pickup label {
+  display: block;
+  margin: 18px 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.pickup select {
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  padding: 12px 8px;
+  border: 1px solid #dce5f4;
+  border-radius: 16px;
+  background: white;
+  color: var(--client-ink);
+  font: inherit;
+  font-size: 16px;
+}
+.pickup select:disabled {
+  opacity: 0.7;
+}
+.payment {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  background: #f1f6ff;
+  border-radius: 18px;
+}
+.payment svg {
+  flex: 0 0 auto;
+  color: #315d9c;
+}
+.payment strong {
+  font-size: 16px;
+}
+.payment p {
+  margin: 6px 0 0;
+  color: var(--client-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.terms h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.terms p {
+  color: var(--client-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.terms label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  padding-block: 8px;
+  font-size: 15px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.terms input {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--client-blue);
+}
+.previewNote {
+  margin: 0;
+  color: var(--client-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.confirmationHeading {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+}
+.confirmationHeading svg {
+  color: #087d57;
+}
+.details {
+  display: grid;
+  gap: 18px;
+  margin: 0;
+  padding-block: 18px;
+  border-block: 1px solid var(--client-border);
+}
+.details dt {
+  color: var(--client-muted);
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.details dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.details dd span {
+  display: block;
+  margin-top: 4px;
+  font-weight: 400;
+  font-size: 14px;
+}
