@@ -2,6 +2,7 @@ package com.santotofood;
 
 import com.santotofood.adapter.out.persistence.repository.SpringDataClientRepository;
 import com.santotofood.adapter.out.persistence.repository.SpringDataInstitutionRepository;
+import com.santotofood.adapter.out.persistence.repository.SpringDataLunchRepository;
 import com.santotofood.adapter.out.persistence.repository.SpringDataOrderItemRepository;
 import com.santotofood.adapter.out.persistence.repository.SpringDataOrderRepository;
 import com.santotofood.adapter.out.persistence.repository.SpringDataSiteRepository;
@@ -20,6 +21,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
     types = {
       SpringDataClientRepository.class,
       SpringDataInstitutionRepository.class,
+      SpringDataLunchRepository.class,
       SpringDataOrderItemRepository.class,
       SpringDataOrderRepository.class,
       SpringDataSiteRepository.class,

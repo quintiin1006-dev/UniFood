@@ -1,4 +1,4 @@
--- Read-only preflight after 007, usable before/after 008-011. No secrets or data repair.
+-- Read-only preflight after 007, usable before/after 008-012. No secrets or data repair.
 BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY;
 
 SELECT 'invalid_user_assignment' AS reason, u.id AS subject,
@@ -77,6 +77,25 @@ WHERE n.nspname='public' AND c.relkind IN ('r','p') AND c.relname=ANY(ARRAY[
   'lunches','orders','order_items','payments','notifications','notification_preferences','cafeteria_profile_guard'])
   AND has_column_privilege(actor,c.oid,a.attnum,privilege)
 ORDER BY actor,c.relname,a.attnum,privilege;
+
+-- The category type is optional before 012. After 012, every reported value
+-- must be false: even USAGE without business table access is unexpected here.
+-- PUBLIC is a pseudo-role (ACL grantee 0); role checks include inherited grants.
+WITH catalog_type AS (
+  SELECT t.oid,t.typowner,t.typacl
+  FROM pg_catalog.pg_type t
+  JOIN pg_catalog.pg_namespace n ON n.oid=t.typnamespace
+  WHERE n.nspname='public' AND t.typname='catalog_category'
+)
+SELECT actor,'public.catalog_category' AS type_name,
+       CASE WHEN actor='PUBLIC' THEN EXISTS (
+         SELECT 1
+         FROM aclexplode(COALESCE(t.typacl,acldefault('T',t.typowner))) permission
+         WHERE permission.grantee=0 AND permission.privilege_type='USAGE'
+       ) ELSE has_type_privilege(actor,t.oid,'USAGE') END AS unexpected_type_usage
+FROM catalog_type t
+CROSS JOIN (VALUES ('PUBLIC'),('anon'),('authenticated')) actors(actor)
+ORDER BY actor;
 
 -- Missing RPCs, missing required EXECUTE and unexpected EXECUTE are all reported.
 WITH expected(signature,actor,expected_execute) AS (VALUES
