@@ -35,6 +35,44 @@ const uiMocks = {
   "@/components/worker/WorkerDashboard": {
     default: () => createElement("div", {}, "Worker dashboard"),
   },
+  "@/features/client/components/ClientHome": {
+    default: () => createElement("div", {}, "Student home"),
+  },
+  "@/features/client/components/SiteSelection": {
+    default: () => createElement("div", {}, "Student site selection"),
+  },
+  "@/features/client/components/ClientMenu": {
+    default: () => createElement("div", {}, "Student menu"),
+  },
+  "@/features/client/components/ClientPassword": {
+    default: () => createElement("div", {}, "Student password"),
+  },
+  "@/features/client/server/profile": {
+    getClientDetails: async () => ({
+      document: null,
+      phone: null,
+      institution: null,
+      unavailable: false,
+    }),
+  },
+  "@/features/client/components/ClientProfile": {
+    default: () => createElement("div", {}, "Student profile"),
+  },
+  "@/features/client/components/ClientShell": {
+    default: ({ children }) => createElement("div", {}, children),
+  },
+  "@/features/client/components/ClientCartProvider": {
+    default: ({ children }) => createElement("div", {}, children),
+  },
+  "@/features/client/components/ClientCart": {
+    default: () => createElement("div", {}, "Student cart"),
+  },
+  "@/features/client/components/ClientCheckout": {
+    default: () => createElement("div", {}, "Student checkout"),
+  },
+  "@/features/client/components/ClientProduct": {
+    default: () => createElement("div", {}, "Student product"),
+  },
 };
 
 function load(
@@ -172,19 +210,43 @@ test("worker page only renders for active operational workers", async () => {
   }
 });
 
-test("account page never offers the worker panel to administrative roles", async () => {
-  for (const [, roles, destination] of cases) {
-    const page = load("app/cuenta/page.tsx", pages(profile(roles))).default;
-    if (
-      !validation.hasValidBusinessRole(profile(roles)) ||
-      !roles.includes("CLIENT")
-    )
-      await assert.rejects(page(), (error) => error.location === destination);
-    else
-      assert.equal(
-        renderToStaticMarkup(await page()).includes('href="/worker"'),
-        false,
+test("every student route enforces an active CLIENT role", async () => {
+  const props = {
+    children: "Student content",
+    params: Promise.resolve({ mealId: "chicken" }),
+    searchParams: Promise.resolve({
+      sede: "principal",
+      categoria: "corriente",
+    }),
+  };
+  for (const file of [
+    "app/cuenta/layout.tsx",
+    "app/cuenta/page.tsx",
+    "app/cuenta/perfil/page.tsx",
+    "app/cuenta/menu/page.tsx",
+    "app/cuenta/producto/[mealId]/page.tsx",
+    "app/cuenta/carrito/page.tsx",
+    "app/cuenta/carrito/resumen/page.tsx",
+    "app/cuenta/perfil/contrasena/page.tsx",
+  ]) {
+    for (const [, roles, destination] of cases) {
+      const page = load(file, pages(profile(roles))).default;
+      if (
+        !validation.hasValidBusinessRole(profile(roles)) ||
+        !roles.includes("CLIENT")
+      )
+        await assert.rejects(
+          page(props),
+          (error) => error.location === destination,
+        );
+      else assert.match(renderToStaticMarkup(await page(props)), /Student/);
+    }
+    for (const current of [null, profile(["CLIENT"], false)]) {
+      await assert.rejects(
+        load(file, pages(current)).default(props),
+        (error) => error.location === "/login",
       );
+    }
   }
 });
 
@@ -221,10 +283,10 @@ test("administrative placeholders enforce explicit active roles and provide no o
   }
 });
 
-test("root opens the panel; existing sessions leave either login and registration for their actual destination", async () => {
+test("root opens student login; existing sessions leave either login and registration for their actual destination", async () => {
   assert.throws(
     () => load("app/page.tsx", uiMocks).default(),
-    (error) => error.location === "/panel/login",
+    (error) => error.location === "/login",
   );
   for (const file of [
     "app/login/page.tsx",

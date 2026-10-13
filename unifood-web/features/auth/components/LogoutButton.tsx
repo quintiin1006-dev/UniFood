@@ -24,6 +24,7 @@ export default function LogoutButton({
       });
       if (!response.ok)
         throw new Error("No se pudo cerrar la sesión. Inténtalo de nuevo.");
+      window.dispatchEvent(new Event("unifood:logout"));
       window.location.replace(loginPath(entrypoint));
     } catch (err) {
       setError(

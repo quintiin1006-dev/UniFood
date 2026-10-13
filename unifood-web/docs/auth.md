@@ -16,13 +16,13 @@ Las páginas mantienen su URL y ofrecen un reintento explícito, sin redirecció
 ni recarga automática. Si falla la comprobación posterior del perfil, las API devuelven
 el mismo error temporal y las páginas muestran una pantalla segura con reintento.
 
-- `/` redirige a `/panel/login`. `/login` es la entrada CLIENT y `/panel/login` la entrada WORKER/ADMIN/SUPER_ADMIN; ambas reutilizan `AuthScreen` con variantes explícitas.
+- `/` redirige a `/login`, con acceso a registro estudiantil. `/login` es la entrada CLIENT y `/panel/login` la entrada WORKER/ADMIN/SUPER_ADMIN; ambas reutilizan `AuthScreen` con variantes explícitas.
 - `app/registro` sigue siendo exclusivamente CLIENT. `app/recuperar-contrasena` es compartida y admite el contexto cerrado `?entrypoint=client|panel`.
 - `app/api/auth/[action]`: login, registro, dominio institucional, verificación, reenvío, recuperación y cierre de sesión. Comprueba el origen y valida los datos antes de contactar Supabase.
 - `features/auth/server`: cliente Supabase exclusivamente en el servidor y consulta del usuario/perfil real. El navegador no recibe tokens por JSON ni los guarda en localStorage.
 - `proxy.ts`: renueva la sesión en las páginas públicas que la consultan, panel, cuenta y proxy de pedidos; no autoriza roles.
 - `app/worker/page.tsx`: comprueba la sesión y los roles antes de renderizar `components/worker/WorkerDashboard.tsx`.
-- `app/cuenta`: exclusivamente CLIENT con cuenta verificada. WORKER/ADMIN/SUPER_ADMIN se redirigen a su destino.
+- `app/cuenta`: Inicio móvil exclusivamente CLIENT con cuenta verificada; `/cuenta/perfil` muestra nombre, correo y datos propios leídos con RLS; conserva logout y enlaza la recuperación por correo desde `/cuenta/perfil/contrasena`. Layout y páginas comprueban el rol en el servidor; `proxy.ts` renueva la sesión en `/cuenta/:path*`. WORKER/ADMIN/SUPER_ADMIN se redirigen a su destino. El catálogo es una vista previa identificada con datos de ejemplo; ver [frontend del estudiante](client-frontend.md).
 - Spring conserva los casos de uso y verifica JWT, usuario activo, rol y asignación a cafetería antes de cada lectura o mutación de pedidos.
 
 ## Configuración local

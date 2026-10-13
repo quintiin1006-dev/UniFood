@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 
 const fixtures = Object.entries({
   client: ["CLIENT"],
+  clientlong: ["CLIENT"],
   worker: ["WORKER"],
   unverifiedworker: ["WORKER"],
   unverifiedclient: ["CLIENT"],
@@ -30,8 +31,14 @@ const fixtures = Object.entries({
   multiassigned: ["WORKER"],
 }).map(([name, roles]) => ({
   id: randomUUID(),
-  email: `${name}@example.invalid`,
-  fullName: "Usuario de prueba",
+  email:
+    name === "clientlong"
+      ? "estudiante.con.correo.institucional.extenso@universidad-de-ejemplo.example.invalid"
+      : `${name}@example.invalid`,
+  fullName:
+    name === "clientlong"
+      ? "MaríaAlejandraConUnNombreMuyLargoParaComprobarElAjusteDelContenido Torres Quintín"
+      : "Usuario de prueba",
   active: name !== "inactive",
   roles,
   assignments: name === "unassigned" ? 0 : name === "multiassigned" ? 2 : 1,
@@ -220,6 +227,17 @@ createServer(async (request, response) => {
       return;
     if (url.pathname === "/rest/v1/rpc/current_auth_profile")
       return json(response, 200, profile);
+    if (url.pathname === "/rest/v1/clients") {
+      if (url.searchParams.get("user_id") !== `eq.${profile.id}`)
+        return json(response, 403, { message: "Own profile only" });
+      return json(response, 200, {
+        document: "1234567890",
+        phone: null,
+        institution_id: "00000000-0000-0000-0000-000000000020",
+      });
+    }
+    if (url.pathname === "/rest/v1/institutions")
+      return json(response, 200, { name: "Universidad de prueba" });
     if (
       url.pathname.startsWith("/api/me/orders/") &&
       request.method === "PATCH"

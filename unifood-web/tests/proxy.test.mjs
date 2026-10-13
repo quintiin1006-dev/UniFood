@@ -57,6 +57,8 @@ test("proxy matcher covers public session readers and protected routes without g
     "/registro",
     "/recuperar-contrasena?entrypoint=panel",
     "/cuenta",
+    "/cuenta/perfil",
+    "/cuenta/pedidos/example",
     "/worker",
     "/admin",
     "/super-admin",

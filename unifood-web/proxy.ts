@@ -114,7 +114,7 @@ export const config = {
     "/registro",
     "/recuperar-contrasena",
     "/worker/:path*",
-    "/cuenta",
+    "/cuenta/:path*",
     "/admin/:path*",
     "/super-admin/:path*",
     "/api/orders/:path*",
