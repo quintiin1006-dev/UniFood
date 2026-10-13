@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
+import { createRequire } from "node:module";
+const { unstable_rethrow } = createRequire(import.meta.url)("next/navigation");
 function load(file, mocks = {}, cache = new Map()) {
   const resolved = path.resolve(file);
   if (cache.has(resolved)) return cache.get(resolved).exports;
@@ -41,12 +43,15 @@ function session(
     userError = null,
     profileError = null,
     authSession = { access_token: "server-only-token" },
+    sessionError = null,
+    userThrow = null,
   } = {},
 ) {
   let tokenReads = 0;
   const auth = load("features/auth/server/session.ts", {
     react: { cache: (fn) => fn },
     "next/navigation": {
+      unstable_rethrow,
       redirect: (location) => {
         throw new Error(location);
       },
@@ -55,15 +60,18 @@ function session(
     "./client": {
       authClient: async () => ({
         auth: {
-          getUser: async () => ({
-            data: {
-              user,
-            },
-            error: userError,
-          }),
+          getUser: async () => {
+            if (userThrow) throw userThrow;
+            return {
+              data: {
+                user,
+              },
+              error: userError,
+            };
+          },
           getSession: async () => {
             tokenReads++;
-            return { data: { session: authSession } };
+            return { data: { session: authSession }, error: sessionError };
           },
         },
         rpc: async (name) => {
@@ -88,13 +96,12 @@ test("verified session loads each single current business role", async () => {
   }
 });
 
-test("identity errors, unconfirmed email, missing session and profile RPC errors deny access", async () => {
+test("definitive identity errors, unconfirmed email and missing sessions deny access", async () => {
   const profile = { id: "verified-user", active: true, roles: ["WORKER"] };
   for (const [options, tokenReads] of [
     [{ user: null }, 0],
     [{ userError: { status: 401 } }, 0],
     [{ user: { id: "verified-user", email_confirmed_at: null } }, 0],
-    [{ profileError: { status: 503 } }, 0],
     [{ authSession: null }, 1],
   ]) {
     const fixture = session(profile, options);
@@ -104,6 +111,42 @@ test("identity errors, unconfirmed email, missing session and profile RPC errors
       fixture.auth.requireAuth("panel"),
       /^Error: \/panel\/login$/,
     );
+  }
+});
+
+test("framework dynamic-rendering signals are rethrown instead of becoming auth outages", async () => {
+  const control = Object.assign(new Error("Framework rendering signal"), {
+    digest: "DYNAMIC_SERVER_USAGE",
+  });
+  const fixture = session(
+    { active: true, roles: ["CLIENT"] },
+    { userThrow: control },
+  );
+  await assert.rejects(fixture.auth.getAuth(), (error) => error === control);
+  assert.equal(fixture.tokenReads(), 0);
+});
+
+test("temporary failures during the server verification never become anonymous login redirects", async () => {
+  const profile = { id: "verified-user", active: true, roles: ["CLIENT"] };
+  for (const [options, reads] of [
+    [{ userError: { name: "AuthRetryableFetchError", status: 503 } }, 0],
+    [{ userThrow: new TypeError("PRIVATE_FETCH_DETAIL") }, 0],
+    [
+      { userThrow: new DOMException("PRIVATE_TIMEOUT_DETAIL", "TimeoutError") },
+      0,
+    ],
+    [{ profileError: { status: 503, message: "PRIVATE_RPC_DETAIL" } }, 0],
+    [{ sessionError: { name: "AuthRetryableFetchError", status: 0 } }, 1],
+  ]) {
+    const fixture = session(profile, options);
+    const unavailable = (error) =>
+      error.code === "AUTH_TEMPORARILY_UNAVAILABLE" &&
+      !error.message.includes("PRIVATE") &&
+      !error.message.includes("/login");
+    await assert.rejects(fixture.auth.getAuth(), unavailable);
+    assert.equal(fixture.tokenReads(), reads);
+    await assert.rejects(fixture.auth.requireAuth("client"), unavailable);
+    await assert.rejects(fixture.auth.requireAuth("panel"), unavailable);
   }
 });
 test("invalid role profiles never load an access token and redirect protected pages to login", async () => {

@@ -42,6 +42,19 @@ const statuses = new Map();
 const confirmed = new Set();
 const passwords = new Map();
 const refreshTokens = new Map();
+const failures = new Map();
+function temporaryFailure(request, response, profile, scope) {
+  const mode = failures.get(profile.id);
+  if (
+    !mode ||
+    mode === "concurrent" ||
+    (mode === "profile" && scope !== "profile")
+  )
+    return false;
+  if (mode === "disconnect") request.socket.destroy();
+  else json(response, 503, { message: "PRIVATE_PROVIDER_OUTAGE" });
+  return true;
+}
 const clientOrderId = "00000000-0000-0000-0000-000000000010";
 const foreignClientOrderId = "00000000-0000-0000-0000-000000000011";
 const unlinkedClientOrderId = "00000000-0000-0000-0000-000000000013";
@@ -87,6 +100,21 @@ createServer(async (request, response) => {
   try {
     const url = new URL(request.url, "http://127.0.0.1:3101");
     if (url.pathname === "/health") return json(response, 200, { ok: true });
+    if (url.pathname === "/__test/auth-failure" && request.method === "POST") {
+      let raw = "";
+      for await (const chunk of request) raw += chunk;
+      const { email, mode } = JSON.parse(raw);
+      const target = fixtures.find((fixture) => fixture.email === email);
+      if (
+        !target ||
+        (mode !== null &&
+          !["503", "disconnect", "profile", "concurrent"].includes(mode))
+      )
+        return json(response, 400, {});
+      if (mode === null) failures.delete(target.id);
+      else failures.set(target.id, mode);
+      return json(response, 200, { ok: true });
+    }
     if (
       ["/auth/v1/resend", "/auth/v1/recover"].includes(url.pathname) &&
       request.method === "POST"
@@ -121,6 +149,8 @@ createServer(async (request, response) => {
             code: "refresh_token_not_found",
             msg: "Invalid fixture refresh",
           });
+        if (temporaryFailure(request, response, refreshProfile, "identity"))
+          return;
         return json(response, 200, session(refreshProfile));
       }
       const profile = fixtures.find(({ email }) => email === body.email);
@@ -175,9 +205,19 @@ createServer(async (request, response) => {
       passwords.set(profile.id, password);
       return json(response, 200, user(profile));
     }
+    if (
+      url.pathname === "/auth/v1/user" &&
+      temporaryFailure(request, response, profile, "identity")
+    )
+      return;
     if (url.pathname === "/auth/v1/user")
       return json(response, 200, user(profile));
     if (url.pathname === "/auth/v1/logout") return json(response, 200, {});
+    if (
+      url.pathname === "/rest/v1/rpc/current_auth_profile" &&
+      temporaryFailure(request, response, profile, "profile")
+    )
+      return;
     if (url.pathname === "/rest/v1/rpc/current_auth_profile")
       return json(response, 200, profile);
     if (
@@ -200,6 +240,12 @@ createServer(async (request, response) => {
         });
       if (url.pathname !== `/api/me/orders/${clientOrderId}/cancel`)
         return json(response, 404, { message: "Missing provider-secret" });
+      if (failures.get(profile.id) === "concurrent")
+        return json(response, 409, {
+          code: "ORDER_CONCURRENT_MODIFICATION",
+          message: "PRIVATE_JPA_LOCK_DETAIL",
+          version: 55,
+        });
       if (clientStatuses.get(profile.id) !== "PENDING")
         return json(response, 409, {
           message: "Invalid state provider-secret",

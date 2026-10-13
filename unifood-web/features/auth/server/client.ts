@@ -1,7 +1,13 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { authConfig, rememberCookie, sessionCookieOptions } from "./config";
+import {
+  authConfig,
+  authCookieName,
+  authCookieNames,
+  rememberCookie,
+  sessionCookieOptions,
+} from "./config";
 
 export async function authClient(
   remember?: boolean,
@@ -12,6 +18,7 @@ export async function authClient(
   const jar = await cookies();
   const persistent = remember ?? jar.get(rememberCookie)?.value === "1";
   return createServerClient(config.url, config.key, {
+    cookieOptions: { name: authCookieName(config.url) },
     global: {
       fetch: (input, init) =>
         fetch(input, {
@@ -39,4 +46,17 @@ export async function authClient(
       },
     },
   });
+}
+
+export async function clearAuthCookies(extraNames: Iterable<string> = []) {
+  const config = authConfig();
+  if (!config) return;
+  const jar = await cookies();
+  for (const name of new Set([
+    ...authCookieNames(jar.getAll(), config.url),
+    ...extraNames,
+    rememberCookie,
+  ])) {
+    jar.set(name, "", sessionCookieOptions(false, true));
+  }
 }

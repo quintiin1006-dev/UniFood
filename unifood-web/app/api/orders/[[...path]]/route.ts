@@ -1,6 +1,10 @@
 import { getAuth } from "@/features/auth/server/session";
 import { isWorker, sameOrigin } from "@/features/auth/validation";
 import { serverApiUrl } from "@/config/server";
+import {
+  isAuthServiceUnavailable,
+  temporaryAuthResponse,
+} from "@/features/auth/server/failures";
 
 const actions = new Set(["prepare", "ready", "call", "deliver", "cancel"]);
 
@@ -26,7 +30,13 @@ async function forward(
   if (isAction && !sameOrigin(request)) {
     return Response.json({ message: "Origen no permitido." }, { status: 403 });
   }
-  const auth = await getAuth();
+  let auth: Awaited<ReturnType<typeof getAuth>>;
+  try {
+    auth = await getAuth();
+  } catch (cause) {
+    if (isAuthServiceUnavailable(cause)) return temporaryAuthResponse();
+    throw cause;
+  }
   if (!auth)
     return Response.json(
       { message: "Inicia sesión para consultar los pedidos." },

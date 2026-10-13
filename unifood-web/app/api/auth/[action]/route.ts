@@ -1,5 +1,9 @@
 import { cookies } from "next/headers";
-import { authClient } from "@/features/auth/server/client";
+import { authClient, clearAuthCookies } from "@/features/auth/server/client";
+import {
+  isTemporaryAuthFailure,
+  temporaryAuthResponse,
+} from "@/features/auth/server/failures";
 import {
   authConfig,
   rememberCookie,
@@ -89,9 +93,7 @@ export async function POST(
     } catch {
       /* Still erase this attempt's cookies when the provider is unavailable. */
     }
-    const jar = await cookies();
-    for (const name of cookiesWritten) jar.delete(name);
-    jar.delete(rememberCookie);
+    await clearAuthCookies(cookiesWritten);
     authenticated = false;
   }
   try {
@@ -131,9 +133,9 @@ export async function POST(
 
     if (action === "logout") {
       const { error } = await client.auth.signOut({ scope: "local" });
+      await clearAuthCookies(cookiesWritten);
       if (error && error.status !== 403 && error.code !== "session_not_found")
         return providerError(error);
-      (await cookies()).delete(rememberCookie);
       return json({ redirect: loginPath(entrypoint) });
     }
     if (action === "reset") {
@@ -145,12 +147,16 @@ export async function POST(
         data: { user },
         error: userError,
       } = await client.auth.getUser();
-      if (userError || !user)
+      if (userError && isTemporaryAuthFailure(userError))
+        return temporaryAuthResponse();
+      if (userError || !user) {
+        await clearAuthCookies(cookiesWritten);
         return fail("Verifica el código para cambiar tu contraseña.", 401);
+      }
       const { error } = await client.auth.updateUser({ password });
       if (error) return providerError(error);
       await client.auth.signOut({ scope: "global" });
-      (await cookies()).delete(rememberCookie);
+      await clearAuthCookies(cookiesWritten);
       return json({ redirect: loginPath(entrypoint) });
     }
     if (!value("email").trim() || !validEmail(email))

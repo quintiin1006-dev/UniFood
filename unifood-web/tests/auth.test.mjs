@@ -124,6 +124,7 @@ function fixture(rpc) {
     providerError: null,
     institutional: true,
     user: { id: "student" },
+    userError: null,
     profile: { active: true, roles: ["CLIENT"] },
   };
   const result = async (name, input) => {
@@ -147,7 +148,10 @@ function fixture(rpc) {
       resetPasswordForEmail: (input) => result("recover", input),
       updateUser: (input) => result("reset", input),
       signOut: (input) => result("logout", input),
-      getUser: async () => ({ data: { user: state.user } }),
+      getUser: async () => ({
+        data: { user: state.user },
+        error: state.userError,
+      }),
     },
     rpc: async (name, params) => {
       calls.push([name, params]);
@@ -166,6 +170,10 @@ function fixture(rpc) {
   const route = load("app/api/auth/[action]/route.ts", {
     "next/headers": { cookies: async () => jar },
     "@/features/auth/server/client": {
+      clearAuthCookies: async (names = []) => {
+        for (const name of names) jar.delete(name);
+        jar.delete("remember");
+      },
       authClient: async (remember, onCookiesWritten) => {
         state.onCookiesWritten = onCookiesWritten;
         calls.push(["client", remember]);
@@ -341,6 +349,24 @@ test("login preserves provider failures and routes users using database roles", 
     403,
   );
   assert.ok(calls.some(([name]) => name === "logout"));
+});
+
+test("password reset preserves its verified recovery cookies during a temporary provider failure", async () => {
+  const { post, state, calls } = fixture();
+  state.userError = {
+    name: "AuthRetryableFetchError",
+    status: 503,
+    message: "PRIVATE_PROVIDER_DETAIL",
+  };
+  const response = await post("reset", { password: "UnaClave8" });
+  assert.equal(response.status, 503);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal((await response.json()).code, "AUTH_TEMPORARILY_UNAVAILABLE");
+  assert.ok(
+    !calls.some(([name]) =>
+      ["delete-cookie", "reset", "logout"].includes(name),
+    ),
+  );
 });
 
 test("provider rate limits and service failures return safe statuses without establishing remember", async () => {
