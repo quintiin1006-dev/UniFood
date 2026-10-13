@@ -34,7 +34,31 @@ public class GlobalExceptionHandler {
       DomainException exception, HttpServletRequest request) {
 
     return buildResponse(
-        HttpStatus.CONFLICT, exception.getCode().name(), exception.getMessage(), request);
+        HttpStatus.CONFLICT,
+        exception.getCode().name(),
+        switch (exception.getCode()) {
+          case ORDER_CANCELLED_BY_CLIENT -> "El cliente canceló este pedido.";
+          case ORDER_ALREADY_PREPARING -> "La orden ya está en preparación y no puede cancelarse.";
+          case ORDER_CONCURRENT_MODIFICATION ->
+              "El pedido cambió mientras lo procesabas. Actualiza y vuelve a intentarlo.";
+          default -> exception.getMessage();
+        },
+        request);
+  }
+
+  @ExceptionHandler({
+    org.springframework.dao.ConcurrencyFailureException.class,
+    jakarta.persistence.OptimisticLockException.class,
+    jakarta.persistence.PessimisticLockException.class,
+    jakarta.persistence.LockTimeoutException.class
+  })
+  public ResponseEntity<ApiErrorResponse> handleConcurrentModification(
+      Exception exception, HttpServletRequest request) {
+    return buildResponse(
+        HttpStatus.CONFLICT,
+        "ORDER_CONCURRENT_MODIFICATION",
+        "El pedido cambió mientras lo procesabas. Actualiza y vuelve a intentarlo.",
+        request);
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)

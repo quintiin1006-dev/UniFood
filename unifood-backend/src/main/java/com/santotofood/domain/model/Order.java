@@ -3,8 +3,10 @@ package com.santotofood.domain.model;
 import com.santotofood.domain.exception.CancellationDeadlineExpiredException;
 import com.santotofood.domain.exception.InvalidOrderStateException;
 import com.santotofood.domain.exception.NotCollectedRequirementsException;
+import com.santotofood.domain.exception.OrderConflictException;
 import com.santotofood.domain.exception.ReminderLimitReachedException;
 import com.santotofood.domain.exception.ReminderTooEarlyException;
+import com.santotofood.shared.error.ErrorCode;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
@@ -15,6 +17,15 @@ import lombok.Getter;
 
 @Getter
 public class Order {
+
+  private Long revision;
+  private boolean cancelledByClient;
+
+  /** Restore only when reconstituting an aggregate from persistence. */
+  public void restoreConcurrencyState(Long revision, boolean cancelledByClient) {
+    this.revision = revision;
+    this.cancelledByClient = cancelledByClient;
+  }
 
   private static final int MAX_REMINDERS = 3;
 
@@ -79,6 +90,9 @@ public class Order {
   public void prepare(Instant now) {
     requireInstant(now);
 
+    if (status == OrderStatus.CANCELLED && cancelledByClient) {
+      throw new OrderConflictException(ErrorCode.ORDER_CANCELLED_BY_CLIENT);
+    }
     if (status != OrderStatus.PENDING) {
       throw new InvalidOrderStateException("Solo un pedido pendiente puede pasar a preparación");
     }
@@ -190,11 +204,15 @@ public class Order {
   /** Client cancellation has no additional deadline. */
   public void cancelByClient(Instant now) {
     cancelPending(now, false);
+    cancelledByClient = true;
   }
 
   private void cancelPending(Instant now, boolean enforceDeadline) {
     requireInstant(now);
 
+    if (!enforceDeadline && status == OrderStatus.PREPARING) {
+      throw new OrderConflictException(ErrorCode.ORDER_ALREADY_PREPARING);
+    }
     if (status != OrderStatus.PENDING) {
       throw new InvalidOrderStateException("Solo un pedido pendiente puede cancelarse");
     }

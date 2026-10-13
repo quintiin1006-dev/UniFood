@@ -57,6 +57,32 @@ const list = (handler, query = "") =>
     { params: Promise.resolve({}) },
   );
 
+test("worker BFF blocks temporary session verification without querying context or orders", async () => {
+  const handler = load(
+    "app/api/orders/[[...path]]/route.ts",
+    environment,
+    async () => {
+      assert.fail("No token may be forwarded");
+    },
+    {
+      "@/features/auth/server/session": {
+        getAuth: async () => {
+          throw Object.assign(new Error("PRIVATE_SESSION_DETAIL"), {
+            code: "AUTH_TEMPORARILY_UNAVAILABLE",
+          });
+        },
+      },
+    },
+  );
+  const response = await list(handler);
+  assert.equal(response.status, 503);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(response.headers.get("set-cookie"), null);
+  const body = await response.json();
+  assert.equal(body.code, "AUTH_TEMPORARILY_UNAVAILABLE");
+  assert.ok(!body.message.includes("PRIVATE"));
+});
+
 test("browser orders requests have no cafeteria parameter or environment fallback", async () => {
   for (const legacy of [undefined, "", "client-selected-cafeteria"]) {
     const calls = [];

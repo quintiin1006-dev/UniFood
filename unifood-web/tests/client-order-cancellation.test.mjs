@@ -178,6 +178,66 @@ test("upstream errors keep public statuses but discard bodies and sensitive head
   }
 });
 
+for (const [code, message] of [
+  [
+    "ORDER_ALREADY_PREPARING",
+    "La orden ya está en preparación y no puede cancelarse.",
+  ],
+  [
+    "ORDER_CONCURRENT_MODIFICATION",
+    "La orden cambió mientras intentábamos cancelarla. Actualiza e inténtalo de nuevo.",
+  ],
+])
+  test(`${code} keeps its structured conflict and translates a safe actionable message`, async () => {
+    const response = await cancel(
+      route(async () =>
+        Response.json(
+          {
+            code,
+            message: "PRIVATE_DETAILS",
+            version: 123,
+            lock: "PRIVATE_LOCK",
+          },
+          { status: 409, headers: { "set-cookie": "PRIVATE_UPSTREAM_COOKIE" } },
+        ),
+      ),
+    );
+    assert.equal(response.status, 409);
+    const result = await response.json();
+    assert.equal(result.code, code);
+    assert.equal(result.message, message);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal(response.headers.get("set-cookie"), null);
+    assert.ok(!JSON.stringify(result).includes("PRIVATE"));
+    assert.equal(result.version, undefined);
+  });
+
+test("client BFF blocks temporary session verification without forwarding a token", async () => {
+  const handler = load(
+    "app/api/me/orders/[orderId]/cancel/route.ts",
+    { API_URL: "http://backend.test:8080" },
+    async () => {
+      assert.fail("Must not reach the backend");
+    },
+    {
+      "@/features/auth/server/session": {
+        getAuth: async () => {
+          throw Object.assign(new Error("PRIVATE_SESSION_DETAIL"), {
+            code: "AUTH_TEMPORARILY_UNAVAILABLE",
+          });
+        },
+      },
+    },
+  );
+  const response = await cancel(handler);
+  assert.equal(response.status, 503);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(response.headers.get("set-cookie"), null);
+  const body = await response.json();
+  assert.equal(body.code, "AUTH_TEMPORARILY_UNAVAILABLE");
+  assert.ok(!body.message.includes("PRIVATE"));
+});
+
 test("foreign, unlinked and missing orders expose the same sanitized 404", async () => {
   const bodies = [];
   for (const detail of ["foreign owner", "unlinked client", "missing order"]) {

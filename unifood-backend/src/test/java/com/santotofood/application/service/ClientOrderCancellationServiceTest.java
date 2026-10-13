@@ -38,7 +38,7 @@ class ClientOrderCancellationServiceTest {
             created.plusSeconds(1),
             created,
             created);
-    when(orders.findById(id)).thenReturn(Optional.of(order));
+    when(orders.findByIdForUpdate(id)).thenReturn(Optional.of(order));
     when(clock.now()).thenReturn(now);
     return order;
   }

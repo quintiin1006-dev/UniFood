@@ -6,57 +6,63 @@ import com.santotofood.adapter.out.persistence.repository.SpringDataOrderReposit
 import com.santotofood.domain.model.Order;
 import com.santotofood.domain.model.OrderStatus;
 import com.santotofood.domain.port.out.OrderRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 public class OrderPersistenceAdapter implements OrderRepository {
 
-    private final SpringDataOrderRepository repository;
-    private final OrderMapper mapper;
+  private final SpringDataOrderRepository repository;
+  private final OrderMapper mapper;
 
-    @Override
-    public Order save(Order order) {
+  @Override
+  public Order save(Order order) {
 
-        OrderEntity entity = mapper.toEntity(order);
+    OrderEntity entity = mapper.toEntity(order);
 
-        OrderEntity savedEntity = repository.save(entity);
+    OrderEntity savedEntity = repository.saveAndFlush(entity);
 
-        return mapper.toDomain(savedEntity);
-    }
+    return mapper.toDomain(savedEntity);
+  }
 
-    @Override
-    public Optional<Order> findById(UUID orderId) {
+  @Override
+  public Optional<Order> findById(UUID orderId) {
 
-        return repository.findById(orderId)
-                .map(mapper::toDomain);
-    }
+    return repository.findById(orderId).map(mapper::toDomain);
+  }
 
-    @Override
-    public List<Order> findByCafeteriaId(UUID cafeteriaId) {
+  @Override
+  public Optional<UUID> findCafeteriaId(UUID orderId) {
+    return repository.findCafeteriaId(orderId);
+  }
 
-        return repository
-                .findByCafeteriaIdOrderByCreatedAtAscIdAsc(cafeteriaId)
-                .stream()
-                .map(mapper::toDomain)
-                .toList();
-    }
+  @Override
+  public Optional<Order> findByIdForUpdate(UUID orderId) {
+    return repository.findByIdForUpdate(orderId).map(mapper::toDomain);
+  }
 
-    @Override
-    public Optional<Order> findFirstPendingByCafeteriaId(
-            UUID cafeteriaId
-    ) {
+  @Override
+  public void lockCafeteriaQueue(UUID cafeteriaId) {
+    repository.lockCafeteriaQueue(cafeteriaId);
+  }
 
-        return repository
-                .findFirstByCafeteriaIdAndStatusOrderByCreatedAtAscIdAsc(
-                        cafeteriaId,
-                        OrderStatus.PENDING
-                )
-                .map(mapper::toDomain);
-    }
+  @Override
+  public List<Order> findByCafeteriaId(UUID cafeteriaId) {
+
+    return repository.findByCafeteriaIdOrderByCreatedAtAscIdAsc(cafeteriaId).stream()
+        .map(mapper::toDomain)
+        .toList();
+  }
+
+  @Override
+  public Optional<Order> findFirstPendingByCafeteriaId(UUID cafeteriaId) {
+
+    return repository
+        .findFirstByCafeteriaIdAndStatusOrderByCreatedAtAscIdAsc(cafeteriaId, OrderStatus.PENDING)
+        .map(mapper::toDomain);
+  }
 }
