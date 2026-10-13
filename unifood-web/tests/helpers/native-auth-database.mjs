@@ -68,7 +68,10 @@ export async function postgresBinaries() {
   return null;
 }
 
-export async function createNativeAuthDatabase(directory) {
+export async function createNativeAuthDatabase(
+  directory,
+  { throughMigration = "999" } = {},
+) {
   const root = await mkdtemp(join(tmpdir(), "unifood-role-cardinality-"));
   const data = join(root, "data");
   const server = createServer();
@@ -169,7 +172,9 @@ export async function createNativeAuthDatabase(directory) {
       import.meta.url,
     );
     for (const file of (await readdir(migrations))
-      .filter((name) => name.endsWith(".sql"))
+      .filter(
+        (name) => name.endsWith(".sql") && name.slice(0, 3) <= throughMigration,
+      )
       .sort()) {
       await query(await readFile(new URL(file, migrations), "utf8"));
     }

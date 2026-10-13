@@ -53,6 +53,27 @@ const fixture = {
   items: [],
 };
 
+test("worker order actions expose the structured cancellation conflict as a functional message", async (t) => {
+  const original = global.fetch;
+  t.after(() => {
+    global.fetch = original;
+  });
+  global.fetch = async () =>
+    Response.json(
+      {
+        code: "ORDER_CANCELLED_BY_CLIENT",
+        message: "El cliente canceló este pedido.",
+      },
+      { status: 409 },
+    );
+  await assert.rejects(
+    api.advanceOrder(mapper.mapBackendOrder(fixture)),
+    (error) =>
+      error.status === 409 &&
+      error.message === "El cliente canceló este pedido.",
+  );
+});
+
 test("complete API flow, backend priority rejection, cancellation and terminal states", async () => {
   const original = global.fetch;
   const requests = [];

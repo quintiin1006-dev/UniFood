@@ -4,7 +4,9 @@ import { readFile } from "node:fs/promises";
 import { createAuthDatabase } from "./helpers/auth-database.mjs";
 
 test("authorization persistence SQL reads current database facts without trusting metadata", async (t) => {
-  const db = await createAuthDatabase();
+  // Deliberately incompatible legacy profiles verify fail-closed authorization.
+  // Latest-schema constraints reject these profiles in business-integrity tests.
+  const db = await createAuthDatabase({ throughMigration: "008" });
   t.after(() => db.close());
   // These are the resources executed by AuthorizationPersistenceAdapter;
   // JDBC uses ?, while PGlite's query API uses $1 for the same bound value.

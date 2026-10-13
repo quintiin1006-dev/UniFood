@@ -1,246 +1,186 @@
 package com.santotofood.adapter.in.web.error;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.santotofood.application.exception.OrderNotFoundException;
 import com.santotofood.application.exception.OrderProcessingSequenceException;
 import com.santotofood.domain.exception.ReminderTooEarlyException;
 import com.santotofood.shared.error.ErrorCode;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-
 class GlobalExceptionHandlerTest {
 
-    private GlobalExceptionHandler handler;
-    private MockHttpServletRequest request;
-
-    @BeforeEach
-    void setUp() {
-        handler = new GlobalExceptionHandler();
-
-        request = new MockHttpServletRequest();
-        request.setMethod("PATCH");
-        request.setRequestURI(
-                "/api/orders/11111111-1111-1111-1111-111111111111/remind"
-        );
+  @Test
+  void structuredCancellationConflictsHaveFunctionalMessagesAndNoInternalDetails() {
+    GlobalExceptionHandler errors = new GlobalExceptionHandler();
+    MockHttpServletRequest req = new MockHttpServletRequest("PATCH", "/api/orders/id/prepare");
+    for (var entry :
+        java.util.Map.of(
+                ErrorCode.ORDER_CANCELLED_BY_CLIENT, "El cliente canceló este pedido.",
+                ErrorCode.ORDER_ALREADY_PREPARING,
+                    "La orden ya está en preparación y no puede cancelarse.")
+            .entrySet()) {
+      var response =
+          errors.handleDomainException(
+              new com.santotofood.domain.exception.OrderConflictException(entry.getKey()), req);
+      assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+      assertEquals(entry.getKey().name(), response.getBody().code());
+      assertEquals(entry.getValue(), response.getBody().message());
     }
+    var conflict =
+        errors.handleConcurrentModification(
+            new org.springframework.orm.ObjectOptimisticLockingFailureException(
+                "PRIVATE_ENTITY", "PRIVATE_ID"),
+            req);
+    assertEquals(HttpStatus.CONFLICT, conflict.getStatusCode());
+    assertEquals("ORDER_CONCURRENT_MODIFICATION", conflict.getBody().code());
+    assertFalse(conflict.getBody().message().contains("PRIVATE"));
+  }
 
-    @Test
-    void shouldReturnNotFoundWhenOrderDoesNotExist() {
+  private GlobalExceptionHandler handler;
+  private MockHttpServletRequest request;
 
-        UUID orderId =
-                UUID.fromString(
-                        "11111111-1111-1111-1111-111111111111"
-                );
+  @BeforeEach
+  void setUp() {
+    handler = new GlobalExceptionHandler();
 
-        OrderNotFoundException exception =
-                new OrderNotFoundException(orderId);
+    request = new MockHttpServletRequest();
+    request.setMethod("PATCH");
+    request.setRequestURI("/api/orders/11111111-1111-1111-1111-111111111111/remind");
+  }
 
-        ResponseEntity<ApiErrorResponse> response =
-                handler.handleOrderNotFoundException(
-                        exception,
-                        request
-                );
+  @Test
+  void shouldReturnNotFoundWhenOrderDoesNotExist() {
 
-        assertEquals(
-                HttpStatus.NOT_FOUND,
-                response.getStatusCode()
-        );
+    UUID orderId = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
-        assertNotNull(response.getBody());
+    OrderNotFoundException exception = new OrderNotFoundException(orderId);
 
-        ApiErrorResponse body = response.getBody();
+    ResponseEntity<ApiErrorResponse> response =
+        handler.handleOrderNotFoundException(exception, request);
 
-        assertEquals(404, body.status());
+    assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
 
-        assertEquals(
-                ErrorCode.ORDER_NOT_FOUND.name(),
-                body.code()
-        );
+    assertNotNull(response.getBody());
 
-        assertEquals(
-                "No existe un pedido con id " + orderId,
-                body.message()
-        );
+    ApiErrorResponse body = response.getBody();
 
-        assertEquals(
-                "/api/orders/11111111-1111-1111-1111-111111111111/remind",
-                body.path()
-        );
+    assertEquals(404, body.status());
 
-        assertNotNull(body.timestamp());
-    }
+    assertEquals(ErrorCode.ORDER_NOT_FOUND.name(), body.code());
 
-    @Test
-    void shouldReturnConflictForDomainException() {
+    assertEquals("No existe un pedido con id " + orderId, body.message());
 
-        ReminderTooEarlyException exception =
-                new ReminderTooEarlyException();
+    assertEquals("/api/orders/11111111-1111-1111-1111-111111111111/remind", body.path());
 
-        ResponseEntity<ApiErrorResponse> response =
-                handler.handleDomainException(
-                        exception,
-                        request
-                );
+    assertNotNull(body.timestamp());
+  }
 
-        assertEquals(
-                HttpStatus.CONFLICT,
-                response.getStatusCode()
-        );
+  @Test
+  void shouldReturnConflictForDomainException() {
 
-        assertNotNull(response.getBody());
+    ReminderTooEarlyException exception = new ReminderTooEarlyException();
 
-        ApiErrorResponse body = response.getBody();
+    ResponseEntity<ApiErrorResponse> response = handler.handleDomainException(exception, request);
 
-        assertEquals(409, body.status());
+    assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
 
-        assertEquals(
-                ErrorCode.REMINDER_TOO_EARLY.name(),
-                body.code()
-        );
+    assertNotNull(response.getBody());
 
-        assertEquals(
-                "Debes esperar al menos 5 minutos antes de enviar otro recordatorio",
-                body.message()
-        );
+    ApiErrorResponse body = response.getBody();
 
-        assertEquals(
-                "/api/orders/11111111-1111-1111-1111-111111111111/remind",
-                body.path()
-        );
+    assertEquals(409, body.status());
 
-        assertNotNull(body.timestamp());
-    }
+    assertEquals(ErrorCode.REMINDER_TOO_EARLY.name(), body.code());
 
-    @Test
-    void shouldReturnConflictWhenOrderProcessingSequenceIsViolated() {
+    assertEquals(
+        "Debes esperar al menos 5 minutos antes de enviar otro recordatorio", body.message());
 
-        OrderProcessingSequenceException exception =
-                new OrderProcessingSequenceException();
+    assertEquals("/api/orders/11111111-1111-1111-1111-111111111111/remind", body.path());
 
-        ResponseEntity<ApiErrorResponse> response =
-                handler.handleOrderProcessingSequenceException(
-                        exception,
-                        request
-                );
+    assertNotNull(body.timestamp());
+  }
 
-        assertEquals(
-                HttpStatus.CONFLICT,
-                response.getStatusCode()
-        );
+  @Test
+  void shouldReturnConflictWhenOrderProcessingSequenceIsViolated() {
 
-        assertNotNull(response.getBody());
+    OrderProcessingSequenceException exception = new OrderProcessingSequenceException();
 
-        ApiErrorResponse body = response.getBody();
+    ResponseEntity<ApiErrorResponse> response =
+        handler.handleOrderProcessingSequenceException(exception, request);
 
-        assertEquals(409, body.status());
+    assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
 
-        assertEquals(
-                ErrorCode.ORDER_PROCESSING_SEQUENCE_VIOLATION.name(),
-                body.code()
-        );
+    assertNotNull(response.getBody());
 
-        assertEquals(
-                "No puedes preparar este pedido todavía. " +
-                        "El pedido anterior debe ser procesado primero.",
-                body.message()
-        );
+    ApiErrorResponse body = response.getBody();
 
-        assertEquals(
-                "/api/orders/11111111-1111-1111-1111-111111111111/remind",
-                body.path()
-        );
+    assertEquals(409, body.status());
 
-        assertNotNull(body.timestamp());
-    }
+    assertEquals(ErrorCode.ORDER_PROCESSING_SEQUENCE_VIOLATION.name(), body.code());
 
-    @Test
-    void shouldReturnInternalServerErrorForIllegalStateException() {
+    assertEquals(
+        "No puedes preparar este pedido todavía. "
+            + "El pedido anterior debe ser procesado primero.",
+        body.message());
 
-        IllegalStateException exception =
-                new IllegalStateException(
-                        "Internal state inconsistency"
-                );
+    assertEquals("/api/orders/11111111-1111-1111-1111-111111111111/remind", body.path());
 
-        ResponseEntity<ApiErrorResponse> response =
-                handler.handleIllegalStateException(
-                        exception,
-                        request
-                );
+    assertNotNull(body.timestamp());
+  }
 
-        assertEquals(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                response.getStatusCode()
-        );
+  @Test
+  void shouldReturnInternalServerErrorForIllegalStateException() {
 
-        assertNotNull(response.getBody());
+    IllegalStateException exception = new IllegalStateException("Internal state inconsistency");
 
-        ApiErrorResponse body = response.getBody();
+    ResponseEntity<ApiErrorResponse> response =
+        handler.handleIllegalStateException(exception, request);
 
-        assertEquals(500, body.status());
-        assertEquals("INTERNAL_ERROR", body.code());
+    assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
 
-        assertEquals(
-                "Ocurrió un error interno al procesar la solicitud",
-                body.message()
-        );
+    assertNotNull(response.getBody());
 
-        assertEquals(
-                "/api/orders/11111111-1111-1111-1111-111111111111/remind",
-                body.path()
-        );
+    ApiErrorResponse body = response.getBody();
 
-        assertNotNull(body.timestamp());
+    assertEquals(500, body.status());
+    assertEquals("INTERNAL_ERROR", body.code());
 
-        assertFalse(
-                body.message().contains(
-                        "Internal state inconsistency"
-                )
-        );
-    }
+    assertEquals("Ocurrió un error interno al procesar la solicitud", body.message());
 
-    @Test
-    void shouldReturnInternalServerErrorForUnexpectedException() {
+    assertEquals("/api/orders/11111111-1111-1111-1111-111111111111/remind", body.path());
 
-        RuntimeException exception =
-                new RuntimeException(
-                        "Database credentials or internal details"
-                );
+    assertNotNull(body.timestamp());
 
-        ResponseEntity<ApiErrorResponse> response =
-                handler.handleUnexpectedException(
-                        exception,
-                        request
-                );
+    assertFalse(body.message().contains("Internal state inconsistency"));
+  }
 
-        assertEquals(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                response.getStatusCode()
-        );
+  @Test
+  void shouldReturnInternalServerErrorForUnexpectedException() {
 
-        assertNotNull(response.getBody());
+    RuntimeException exception = new RuntimeException("Database credentials or internal details");
 
-        ApiErrorResponse body = response.getBody();
+    ResponseEntity<ApiErrorResponse> response =
+        handler.handleUnexpectedException(exception, request);
 
-        assertEquals(500, body.status());
-        assertEquals("INTERNAL_ERROR", body.code());
+    assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
 
-        assertEquals(
-                "Ocurrió un error interno al procesar la solicitud",
-                body.message()
-        );
+    assertNotNull(response.getBody());
 
-        assertFalse(
-                body.message().contains(
-                        "Database credentials"
-                )
-        );
+    ApiErrorResponse body = response.getBody();
 
-        assertNotNull(body.timestamp());
-    }
+    assertEquals(500, body.status());
+    assertEquals("INTERNAL_ERROR", body.code());
+
+    assertEquals("Ocurrió un error interno al procesar la solicitud", body.message());
+
+    assertFalse(body.message().contains("Database credentials"));
+
+    assertNotNull(body.timestamp());
+  }
 }

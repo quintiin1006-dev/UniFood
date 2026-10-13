@@ -1,6 +1,17 @@
 import { getAuth } from "@/features/auth/server/session";
 import { isClient, sameOrigin } from "@/features/auth/validation";
 import { serverApiUrl } from "@/config/server";
+import {
+  isAuthServiceUnavailable,
+  temporaryAuthResponse,
+} from "@/features/auth/server/failures";
+
+const conflicts: Record<string, string> = {
+  ORDER_ALREADY_PREPARING:
+    "La orden ya está en preparación y no puede cancelarse.",
+  ORDER_CONCURRENT_MODIFICATION:
+    "La orden cambió mientras intentábamos cancelarla. Actualiza e inténtalo de nuevo.",
+};
 
 const errors: Record<number, { code: string; message: string }> = {
   400: { code: "INVALID_REQUEST", message: "Pedido no válido." },
@@ -17,10 +28,16 @@ const errors: Record<number, { code: string; message: string }> = {
   502: { code: "BAD_GATEWAY", message: "No se pudo cancelar el pedido." },
 };
 
-function error(request: Request, status: number) {
+function error(request: Request, status: number, conflict?: string) {
   return Response.json(
     {
       ...errors[status],
+      ...(status === 409 && conflict && Object.hasOwn(conflicts, conflict)
+        ? {
+            code: conflict,
+            message: conflicts[conflict],
+          }
+        : {}),
       status,
       path: new URL(request.url).pathname,
       timestamp: new Date().toISOString(),
@@ -34,7 +51,13 @@ export async function PATCH(
   context: { params: Promise<{ orderId: string }> },
 ) {
   if (!sameOrigin(request)) return error(request, 403);
-  const auth = await getAuth();
+  let auth: Awaited<ReturnType<typeof getAuth>>;
+  try {
+    auth = await getAuth();
+  } catch (cause) {
+    if (isAuthServiceUnavailable(cause)) return temporaryAuthResponse();
+    throw cause;
+  }
   if (!auth) return error(request, 401);
   if (
     !isClient(auth.profile) ||
@@ -60,6 +83,14 @@ export async function PATCH(
       signal: AbortSignal.timeout(15000),
       redirect: "error",
     });
+    if (response.status === 409) {
+      const result = await response.json().catch(() => null);
+      return error(
+        request,
+        409,
+        typeof result?.code === "string" ? result.code : undefined,
+      );
+    }
     if (response.status !== 200)
       return error(request, response.status in errors ? response.status : 502);
 

@@ -125,7 +125,7 @@ class ClientOrderCancellationApiTest {
             created.plusSeconds(1),
             created,
             created);
-    when(orders.findById(orderId)).thenReturn(Optional.of(order));
+    when(orders.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
     when(orders.save(order)).thenReturn(order);
     when(items.findByOrderId(orderId)).thenReturn(List.of());
     when(clock.now()).thenReturn(created.plusSeconds(3600));
@@ -182,7 +182,12 @@ class ClientOrderCancellationApiTest {
     storedOrder(status);
     mvc.perform(patch(path).with(identity()))
         .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.code").value("INVALID_ORDER_STATE"))
+        .andExpect(
+            jsonPath("$.code")
+                .value(
+                    status == OrderStatus.PREPARING
+                        ? "ORDER_ALREADY_PREPARING"
+                        : "INVALID_ORDER_STATE"))
         .andExpect(jsonPath("$.status").value(409));
     verify(orders, never()).save(any());
     verifyNoInteractions(items);

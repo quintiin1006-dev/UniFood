@@ -10,11 +10,13 @@ import com.santotofood.application.port.in.MarkOrderNotCollectedUseCase;
 import com.santotofood.application.port.in.MarkOrderReadyUseCase;
 import com.santotofood.application.port.in.PrepareOrderUseCase;
 import com.santotofood.application.port.in.RemindStudentUseCase;
+import com.santotofood.domain.exception.OrderConflictException;
 import com.santotofood.domain.model.Order;
 import com.santotofood.domain.model.OrderItem;
 import com.santotofood.domain.port.out.OrderItemRepository;
 import com.santotofood.domain.port.out.OrderRepository;
 import com.santotofood.domain.port.out.TimeProvider;
+import com.santotofood.shared.error.ErrorCode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -51,23 +53,28 @@ public class OrderService
   @Transactional
   public Order prepareOrder(UUID orderId) {
 
+    // The projection deliberately avoids caching an unlocked JPA entity.
+    UUID cafeteriaId =
+        orderRepository
+            .findCafeteriaId(orderId)
+            .orElseThrow(() -> new OrderNotFoundException(orderId));
+    orderRepository.lockCafeteriaQueue(cafeteriaId);
     Order order = findOrder(orderId);
+    if (!cafeteriaId.equals(order.getCafeteriaId())) {
+      throw new OrderConflictException(ErrorCode.ORDER_CONCURRENT_MODIFICATION);
+    }
+    Instant now = timeProvider.now();
+    // Validate the authoritative state before FIFO; a cancelled queue is a domain conflict.
+    order.prepare(now);
 
     Order firstPendingOrder =
         orderRepository
             .findFirstPendingByCafeteriaId(order.getCafeteriaId())
-            .orElseThrow(
-                () ->
-                    new IllegalStateException(
-                        "No hay pedidos pendientes para una orden en estado PENDING"));
+            .orElseThrow(() -> new OrderProcessingSequenceException());
 
     if (!firstPendingOrder.getId().equals(order.getId())) {
       throw new OrderProcessingSequenceException();
     }
-
-    Instant now = timeProvider.now();
-
-    order.prepare(now);
 
     Order savedOrder = orderRepository.save(order);
 
@@ -205,6 +212,8 @@ public class OrderService
 
   private Order findOrder(UUID orderId) {
 
-    return orderRepository.findById(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
+    return orderRepository
+        .findByIdForUpdate(orderId)
+        .orElseThrow(() -> new OrderNotFoundException(orderId));
   }
 }

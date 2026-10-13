@@ -7,223 +7,239 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "orders", schema = "public")
 public class OrderEntity {
 
-    @Id
-    @Column(name = "id", nullable = false)
-    private UUID id;
+  @jakarta.persistence.Version
+  @Column(name = "version", nullable = false)
+  private Long version;
 
-    @Column(name = "cafeteria_id", nullable = false)
-    private UUID cafeteriaId;
+  @Column(name = "cancelled_by_client", nullable = false)
+  private boolean cancelledByClient;
 
-    @Column(name = "client_id")
-    private UUID clientId;
+  public Long getVersion() {
+    return version;
+  }
 
-    @Column(name = "client_name", nullable = false)
-    private String clientName;
+  public void setVersion(Long version) {
+    this.version = version;
+  }
 
-    @Column(name = "client_document")
-    private String clientDocument;
+  public boolean isCancelledByClient() {
+    return cancelledByClient;
+  }
 
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(
-            name = "status",
-            nullable = false,
-            columnDefinition = "order_status"
-    )
-    private OrderStatus status;
+  public void setCancelledByClient(boolean value) {
+    this.cancelledByClient = value;
+  }
 
-    @Column(name = "total", nullable = false)
-    private BigDecimal total;
+  @Id
+  @Column(name = "id", nullable = false)
+  private UUID id;
 
-    @Column(name = "cancellation_deadline")
-    private Instant cancellationDeadline;
+  @Column(name = "cafeteria_id", nullable = false)
+  private UUID cafeteriaId;
 
-    @Column(name = "called_at")
-    private Instant calledAt;
+  @Column(name = "client_id")
+  private UUID clientId;
 
-    @Column(name = "reminder_count", nullable = false)
-    private int reminderCount;
+  @Column(name = "client_name", nullable = false)
+  private String clientName;
 
-    @Column(name = "last_reminded_at")
-    private Instant lastRemindedAt;
+  @Column(name = "client_document")
+  private String clientDocument;
 
-    @Column(name = "delivered_at")
-    private Instant deliveredAt;
+  @Enumerated(EnumType.STRING)
+  @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+  @Column(name = "status", nullable = false, columnDefinition = "order_status")
+  private OrderStatus status;
 
-    @Column(name = "not_collected_at")
-    private Instant notCollectedAt;
+  @Column(name = "total", nullable = false)
+  private BigDecimal total;
 
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt;
+  @Column(name = "cancellation_deadline")
+  private Instant cancellationDeadline;
 
-    @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
+  @Column(name = "called_at")
+  private Instant calledAt;
 
-    public OrderEntity() {
-    }
+  @Column(name = "reminder_count", nullable = false)
+  private int reminderCount;
 
-    public OrderEntity(
-            UUID id,
-            UUID cafeteriaId,
-            UUID clientId,
-            String clientName,
-            String clientDocument,
-            OrderStatus status,
-            BigDecimal total,
-            Instant cancellationDeadline,
-            Instant calledAt,
-            int reminderCount,
-            Instant lastRemindedAt,
-            Instant deliveredAt,
-            Instant notCollectedAt,
-            Instant createdAt,
-            Instant updatedAt
-    ) {
-        this.id = id;
-        this.cafeteriaId = cafeteriaId;
-        this.clientId = clientId;
-        this.clientName = clientName;
-        this.clientDocument = clientDocument;
-        this.status = status;
-        this.total = total;
-        this.cancellationDeadline = cancellationDeadline;
-        this.calledAt = calledAt;
-        this.reminderCount = reminderCount;
-        this.lastRemindedAt = lastRemindedAt;
-        this.deliveredAt = deliveredAt;
-        this.notCollectedAt = notCollectedAt;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-    }
+  @Column(name = "last_reminded_at")
+  private Instant lastRemindedAt;
 
-    public UUID getId() {
-        return id;
-    }
+  @Column(name = "delivered_at")
+  private Instant deliveredAt;
 
-    public void setId(UUID id) {
-        this.id = id;
-    }
+  @Column(name = "not_collected_at")
+  private Instant notCollectedAt;
 
-    public UUID getCafeteriaId() {
-        return cafeteriaId;
-    }
+  @Column(name = "created_at", nullable = false)
+  private Instant createdAt;
 
-    public void setCafeteriaId(UUID cafeteriaId) {
-        this.cafeteriaId = cafeteriaId;
-    }
+  @Column(name = "updated_at", nullable = false)
+  private Instant updatedAt;
 
-    public UUID getClientId() {
-        return clientId;
-    }
+  public OrderEntity() {}
 
-    public void setClientId(UUID clientId) {
-        this.clientId = clientId;
-    }
+  public OrderEntity(
+      UUID id,
+      UUID cafeteriaId,
+      UUID clientId,
+      String clientName,
+      String clientDocument,
+      OrderStatus status,
+      BigDecimal total,
+      Instant cancellationDeadline,
+      Instant calledAt,
+      int reminderCount,
+      Instant lastRemindedAt,
+      Instant deliveredAt,
+      Instant notCollectedAt,
+      Instant createdAt,
+      Instant updatedAt) {
+    this.id = id;
+    this.cafeteriaId = cafeteriaId;
+    this.clientId = clientId;
+    this.clientName = clientName;
+    this.clientDocument = clientDocument;
+    this.status = status;
+    this.total = total;
+    this.cancellationDeadline = cancellationDeadline;
+    this.calledAt = calledAt;
+    this.reminderCount = reminderCount;
+    this.lastRemindedAt = lastRemindedAt;
+    this.deliveredAt = deliveredAt;
+    this.notCollectedAt = notCollectedAt;
+    this.createdAt = createdAt;
+    this.updatedAt = updatedAt;
+  }
 
-    public String getClientName() {
-        return clientName;
-    }
+  public UUID getId() {
+    return id;
+  }
 
-    public void setClientName(String clientName) {
-        this.clientName = clientName;
-    }
+  public void setId(UUID id) {
+    this.id = id;
+  }
 
-    public String getClientDocument() {
-        return clientDocument;
-    }
+  public UUID getCafeteriaId() {
+    return cafeteriaId;
+  }
 
-    public void setClientDocument(String clientDocument) {
-        this.clientDocument = clientDocument;
-    }
+  public void setCafeteriaId(UUID cafeteriaId) {
+    this.cafeteriaId = cafeteriaId;
+  }
 
-    public OrderStatus getStatus() {
-        return status;
-    }
+  public UUID getClientId() {
+    return clientId;
+  }
 
-    public void setStatus(OrderStatus status) {
-        this.status = status;
-    }
+  public void setClientId(UUID clientId) {
+    this.clientId = clientId;
+  }
 
-    public BigDecimal getTotal() {
-        return total;
-    }
+  public String getClientName() {
+    return clientName;
+  }
 
-    public void setTotal(BigDecimal total) {
-        this.total = total;
-    }
+  public void setClientName(String clientName) {
+    this.clientName = clientName;
+  }
 
-    public Instant getCancellationDeadline() {
-        return cancellationDeadline;
-    }
+  public String getClientDocument() {
+    return clientDocument;
+  }
 
-    public void setCancellationDeadline(Instant cancellationDeadline) {
-        this.cancellationDeadline = cancellationDeadline;
-    }
+  public void setClientDocument(String clientDocument) {
+    this.clientDocument = clientDocument;
+  }
 
-    public Instant getCalledAt() {
-        return calledAt;
-    }
+  public OrderStatus getStatus() {
+    return status;
+  }
 
-    public void setCalledAt(Instant calledAt) {
-        this.calledAt = calledAt;
-    }
+  public void setStatus(OrderStatus status) {
+    this.status = status;
+  }
 
-    public int getReminderCount() {
-        return reminderCount;
-    }
+  public BigDecimal getTotal() {
+    return total;
+  }
 
-    public void setReminderCount(int reminderCount) {
-        this.reminderCount = reminderCount;
-    }
+  public void setTotal(BigDecimal total) {
+    this.total = total;
+  }
 
-    public Instant getLastRemindedAt() {
-        return lastRemindedAt;
-    }
+  public Instant getCancellationDeadline() {
+    return cancellationDeadline;
+  }
 
-    public void setLastRemindedAt(Instant lastRemindedAt) {
-        this.lastRemindedAt = lastRemindedAt;
-    }
+  public void setCancellationDeadline(Instant cancellationDeadline) {
+    this.cancellationDeadline = cancellationDeadline;
+  }
 
-    public Instant getDeliveredAt() {
-        return deliveredAt;
-    }
+  public Instant getCalledAt() {
+    return calledAt;
+  }
 
-    public void setDeliveredAt(Instant deliveredAt) {
-        this.deliveredAt = deliveredAt;
-    }
+  public void setCalledAt(Instant calledAt) {
+    this.calledAt = calledAt;
+  }
 
-    public Instant getNotCollectedAt() {
-        return notCollectedAt;
-    }
+  public int getReminderCount() {
+    return reminderCount;
+  }
 
-    public void setNotCollectedAt(Instant notCollectedAt) {
-        this.notCollectedAt = notCollectedAt;
-    }
+  public void setReminderCount(int reminderCount) {
+    this.reminderCount = reminderCount;
+  }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
+  public Instant getLastRemindedAt() {
+    return lastRemindedAt;
+  }
 
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
+  public void setLastRemindedAt(Instant lastRemindedAt) {
+    this.lastRemindedAt = lastRemindedAt;
+  }
 
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
+  public Instant getDeliveredAt() {
+    return deliveredAt;
+  }
 
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+  public void setDeliveredAt(Instant deliveredAt) {
+    this.deliveredAt = deliveredAt;
+  }
+
+  public Instant getNotCollectedAt() {
+    return notCollectedAt;
+  }
+
+  public void setNotCollectedAt(Instant notCollectedAt) {
+    this.notCollectedAt = notCollectedAt;
+  }
+
+  public Instant getCreatedAt() {
+    return createdAt;
+  }
+
+  public void setCreatedAt(Instant createdAt) {
+    this.createdAt = createdAt;
+  }
+
+  public Instant getUpdatedAt() {
+    return updatedAt;
+  }
+
+  public void setUpdatedAt(Instant updatedAt) {
+    this.updatedAt = updatedAt;
+  }
 }

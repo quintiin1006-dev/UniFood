@@ -63,6 +63,7 @@ test("proxy matcher covers public session readers and protected routes without g
     "/admin",
     "/super-admin",
     "/api/orders",
+    "/api/me/orders/00000000-0000-0000-0000-000000000001/cancel",
   ])
     assert.equal(
       unstable_doesProxyMatch({ config, nextConfig: {}, url }),
@@ -80,6 +81,273 @@ test("proxy matcher covers public session readers and protected routes without g
       false,
       url,
     );
+});
+
+test("rejected refresh deletes all project chunks/PKCE cookies on the contextual redirect or API response", async () => {
+  const { NextRequest } = require("next/server");
+  const key = "sb-configuration-test-auth-token";
+  for (const [path, status, login] of [
+    ["/worker", 307, "/panel/login"],
+    ["/cuenta", 307, "/login"],
+    ["/panel/login", 200, null],
+    ["/login", 200, null],
+    ["/api/orders", 401, null],
+    ["/api/me/orders/id/cancel", 401, null],
+  ]) {
+    const route = load("proxy.ts", {
+      "@/config/server": { serverAuthConfig: () => fixtureConfig },
+      "@supabase/ssr": {
+        createServerClient: (_url, _key, options) => ({
+          auth: {
+            getUser: async () => {
+              // Reproduce two SDK callbacks and a partially deleted request, before redirect.
+              options.cookies.setAll([
+                { name: `${key}.0`, value: "", options: { maxAge: 0 } },
+              ]);
+              options.cookies.setAll([
+                { name: `${key}-user`, value: "", options: { maxAge: 0 } },
+              ]);
+              return {
+                data: { user: null },
+                error: { code: "refresh_token_not_found" },
+              };
+            },
+          },
+        }),
+      },
+    });
+    const names = [
+      `${key}.0`,
+      `${key}.1`,
+      `${key}-user`,
+      `${key}-code-verifier`,
+      `${key}-flow-abcdefgh-code-verifier`,
+      "unifood-remember",
+    ];
+    const request = new NextRequest(`http://localhost:3100${path}`, {
+      headers: {
+        cookie: [
+          ...names.map((name) => `${name}=1`),
+          "sb-other-auth-token=keep",
+          "theme=keep",
+        ].join("; "),
+      },
+    });
+    const response = await route.proxy(request);
+    assert.equal(response.status, status);
+    assert.equal(
+      response.headers.get("location"),
+      login ? `http://localhost:3100${login}` : null,
+    );
+    for (const name of names) {
+      assert.equal(response.cookies.get(name)?.maxAge, 0, name);
+      assert.equal(request.cookies.get(name), undefined, name);
+    }
+    assert.equal(response.cookies.get("sb-other-auth-token"), undefined);
+    assert.equal(request.cookies.get("sb-other-auth-token").value, "keep");
+    assert.equal(
+      response.headers.get("cache-control"),
+      path.startsWith("/api/") ? "no-store" : "private, no-store",
+    );
+  }
+});
+
+test("expired or revoked refresh tokens clear all relevant cookies and redirect contextually", async () => {
+  const { NextRequest } = require("next/server");
+  const key = "sb-configuration-test-auth-token";
+  for (const code of [
+    "refresh_token_expired",
+    "refresh_token_revoked",
+    "session_expired",
+  ]) {
+    const route = load("proxy.ts", {
+      "@/config/server": { serverAuthConfig: () => fixtureConfig },
+      "@supabase/ssr": {
+        createServerClient: () => ({
+          auth: {
+            getUser: async () => ({
+              data: { user: null },
+              error: { status: 400, code },
+            }),
+          },
+        }),
+      },
+    });
+    for (const [path, login] of [
+      ["/worker", "/panel/login"],
+      ["/cuenta", "/login"],
+    ]) {
+      const names = [
+        `${key}.0`,
+        `${key}.1`,
+        `${key}-code-verifier`,
+        "unifood-remember",
+      ];
+      const response = await route.proxy(
+        new NextRequest(`http://localhost:3100${path}`, {
+          headers: {
+            cookie: names.map((name) => `${name}=expired`).join("; "),
+          },
+        }),
+      );
+      assert.equal(response.status, 307);
+      assert.equal(
+        response.headers.get("location"),
+        `http://localhost:3100${login}`,
+      );
+      assert.ok(
+        names.every((name) => response.cookies.get(name)?.maxAge === 0),
+      );
+    }
+  }
+});
+
+test("multiple refresh callbacks retain all response writes", async () => {
+  const { NextRequest } = require("next/server");
+  const route = load("proxy.ts", {
+    "@/config/server": { serverAuthConfig: () => fixtureConfig },
+    "@supabase/ssr": {
+      createServerClient: (_url, _key, options) => ({
+        auth: {
+          getUser: async () => {
+            options.cookies.setAll([
+              { name: "first", value: "value", options: {} },
+            ]);
+            options.cookies.setAll([
+              { name: "second", value: "value", options: {} },
+            ]);
+            return { data: { user: { id: "verified" } }, error: null };
+          },
+        },
+      }),
+    },
+  });
+  const response = await route.proxy(
+    new NextRequest("http://localhost:3100/worker"),
+  );
+  assert.equal(response.cookies.get("first").value, "value");
+  assert.equal(response.cookies.get("second").value, "value");
+});
+
+for (const [label, failure, thrown] of [
+  [
+    "AuthRetryableFetchError 503",
+    new (require("@supabase/auth-js").AuthRetryableFetchError)(
+      "PRIVATE_PROVIDER_DETAIL",
+      503,
+    ),
+    false,
+  ],
+  [
+    "502 provider response",
+    { status: 502, message: "PRIVATE_PROVIDER_DETAIL" },
+    false,
+  ],
+  [
+    "timeout",
+    new DOMException("PRIVATE_PROVIDER_DETAIL", "TimeoutError"),
+    true,
+  ],
+  ["network failure", new TypeError("PRIVATE_PROVIDER_DETAIL"), true],
+  [
+    "unknown provider failure",
+    {
+      status: 400,
+      code: "unknown_failure",
+      message: "PRIVATE_PROVIDER_DETAIL",
+    },
+    false,
+  ],
+]) {
+  test(`${label} preserves cookies, blocks access safely and recovers without login loops`, async () => {
+    const { NextRequest } = require("next/server");
+    const key = "sb-configuration-test-auth-token";
+    const cookies = `${key}.0=original; ${key}.1=chunk; ${key}-code-verifier=pkce; unifood-remember=1; theme=keep`;
+    for (const path of [
+      "/worker",
+      "/cuenta",
+      "/panel/login",
+      "/login",
+      "/api/orders",
+      "/api/me/orders/id/cancel",
+    ]) {
+      let unavailable = true;
+      const route = load("proxy.ts", {
+        "@/config/server": { serverAuthConfig: () => fixtureConfig },
+        "@supabase/ssr": {
+          createServerClient: (_url, _key, options) => ({
+            auth: {
+              getUser: async () => {
+                if (!unavailable)
+                  return { data: { user: { id: "verified" } }, error: null };
+                // Even an SDK deletion callback must not invalidate the browser on a transient failure.
+                options.cookies.setAll([
+                  { name: `${key}.0`, value: "", options: { maxAge: 0 } },
+                ]);
+                if (thrown) throw failure;
+                return { data: { user: null }, error: failure };
+              },
+            },
+          }),
+        },
+      });
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const response = await route.proxy(
+          new NextRequest(`http://localhost:3100${path}`, {
+            headers: { cookie: cookies },
+          }),
+        );
+        assert.equal(response.status, 503);
+        assert.equal(response.headers.get("location"), null);
+        assert.equal(response.headers.get("set-cookie"), null);
+        assert.equal(response.headers.get("retry-after"), "5");
+        assert.equal(
+          response.headers.get("cache-control"),
+          path.startsWith("/api/") ? "no-store" : "private, no-store",
+        );
+        const body = await response.text();
+        assert.ok(!body.includes("PRIVATE_PROVIDER_DETAIL"));
+        if (path.startsWith("/api/"))
+          assert.equal(JSON.parse(body).code, "AUTH_TEMPORARILY_UNAVAILABLE");
+        else assert.ok(body.includes("Volver a intentar"));
+      }
+      unavailable = false;
+      const response = await route.proxy(
+        new NextRequest(`http://localhost:3100${path}`, {
+          headers: { cookie: cookies },
+        }),
+      );
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("location"), null);
+      assert.equal(response.headers.get("set-cookie"), null);
+    }
+  });
+}
+
+test("explicit route-handler cleanup erases existing chunks and SDK writes even without provider sign-out", async () => {
+  const key = "sb-configuration-test-auth-token",
+    writes = [];
+  const client = load("features/auth/server/client.ts", {
+    "@/config/server": { serverAuthConfig: () => fixtureConfig },
+    "@supabase/ssr": {},
+    "next/headers": {
+      cookies: async () => ({
+        getAll: () => [{ name: `${key}.1` }, { name: "unrelated" }],
+        set: (...args) => writes.push(args),
+      }),
+    },
+  });
+  await client.clearAuthCookies([`${key}.0`]);
+  assert.deepEqual(
+    new Set(writes.map(([name]) => name)),
+    new Set([`${key}.0`, `${key}.1`, "unifood-remember"]),
+  );
+  assert.ok(
+    writes.every(
+      ([, value, options]) =>
+        value === "" && options.maxAge === 0 && options.httpOnly,
+    ),
+  );
 });
 test("proxy refreshes request and response cookies with existing session options, without role queries", async () => {
   const { NextRequest } = require("next/server");

@@ -7,45 +7,50 @@ import org.springframework.stereotype.Component;
 @Component
 public class OrderMapper {
 
-    public OrderEntity toEntity(Order order) {
+  public OrderEntity toEntity(Order order) {
 
-        return new OrderEntity(
-                order.getId(),
-                order.getCafeteriaId(),
-                order.getClientId(),
-                order.getClientName(),
-                order.getClientDocument(),
-                order.getStatus(),
-                order.getTotal(),
-                order.getCancellationDeadline(),
-                order.getCalledAt(),
-                order.getReminderCount(),
-                order.getLastRemindedAt(),
-                order.getDeliveredAt(),
-                order.getNotCollectedAt(),
-                order.getCreatedAt(),
-                order.getUpdatedAt()
-        );
-    }
+    OrderEntity entity =
+        new OrderEntity(
+            order.getId(),
+            order.getCafeteriaId(),
+            order.getClientId(),
+            order.getClientName(),
+            order.getClientDocument(),
+            order.getStatus(),
+            order.getTotal(),
+            order.getCancellationDeadline(),
+            order.getCalledAt(),
+            order.getReminderCount(),
+            order.getLastRemindedAt(),
+            order.getDeliveredAt(),
+            order.getNotCollectedAt(),
+            order.getCreatedAt(),
+            order.getUpdatedAt());
+    entity.setVersion(order.getRevision());
+    entity.setCancelledByClient(order.isCancelledByClient());
+    return entity;
+  }
 
-    public Order toDomain(OrderEntity entity) {
+  public Order toDomain(OrderEntity entity) {
 
-        return Order.reconstitute(
-                entity.getId(),
-                entity.getCafeteriaId(),
-                entity.getClientId(),
-                entity.getClientName(),
-                entity.getClientDocument(),
-                entity.getStatus(),
-                entity.getTotal(),
-                entity.getCancellationDeadline(),
-                entity.getCalledAt(),
-                entity.getReminderCount(),
-                entity.getLastRemindedAt(),
-                entity.getDeliveredAt(),
-                entity.getNotCollectedAt(),
-                entity.getCreatedAt(),
-                entity.getUpdatedAt()
-        );
-    }
+    Order order =
+        Order.reconstitute(
+            entity.getId(),
+            entity.getCafeteriaId(),
+            entity.getClientId(),
+            entity.getClientName(),
+            entity.getClientDocument(),
+            entity.getStatus(),
+            entity.getTotal(),
+            entity.getCancellationDeadline(),
+            entity.getCalledAt(),
+            entity.getReminderCount(),
+            entity.getLastRemindedAt(),
+            entity.getDeliveredAt(),
+            entity.getNotCollectedAt(),
+            entity.getCreatedAt(),
+            entity.getUpdatedAt());
+    order.restoreConcurrencyState(entity.getVersion(), entity.isCancelledByClient());
+    return order;
+  }
 }

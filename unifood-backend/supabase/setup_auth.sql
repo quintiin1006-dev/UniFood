@@ -4,7 +4,8 @@ BEGIN;
 
 ALTER TABLE public.clients ALTER COLUMN phone DROP NOT NULL;
 REVOKE UPDATE ON public.clients FROM authenticated;
-GRANT UPDATE (full_name, phone) ON public.clients TO authenticated;
+-- Business writes belong to Spring, including when this Auth setup is rerun.
+REVOKE UPDATE (full_name, phone) ON public.clients FROM authenticated;
 
 CREATE OR REPLACE FUNCTION public.canonical_institution_email_domain(email_domain text)
 RETURNS text LANGUAGE sql IMMUTABLE STRICT SET search_path = '' AS $$
