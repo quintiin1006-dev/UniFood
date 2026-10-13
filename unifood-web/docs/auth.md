@@ -22,7 +22,7 @@ el mismo error temporal y las páginas muestran una pantalla segura con reintent
 - `features/auth/server`: cliente Supabase exclusivamente en el servidor y consulta del usuario/perfil real. El navegador no recibe tokens por JSON ni los guarda en localStorage.
 - `proxy.ts`: renueva la sesión en las páginas públicas que la consultan, panel, cuenta y proxy de pedidos; no autoriza roles.
 - `app/worker/page.tsx`: comprueba la sesión y los roles antes de renderizar `components/worker/WorkerDashboard.tsx`.
-- `app/cuenta`: Inicio móvil exclusivamente CLIENT con cuenta verificada; `/cuenta/perfil` muestra nombre, correo y datos propios leídos con RLS; conserva logout y enlaza la recuperación por correo desde `/cuenta/perfil/contrasena`. Layout y páginas comprueban el rol en el servidor; `proxy.ts` renueva la sesión en `/cuenta/:path*`. WORKER/ADMIN/SUPER_ADMIN se redirigen a su destino. El catálogo es una vista previa identificada con datos de ejemplo; ver [frontend del estudiante](client-frontend.md).
+- `app/cuenta`: Inicio móvil exclusivamente CLIENT con cuenta verificada; `/cuenta/perfil` muestra nombre/correo del contrato de identidad y datos propios leídos mediante Spring; conserva logout y enlaza la recuperación por correo desde `/cuenta/perfil/contrasena`. Layout y páginas comprueban el rol en el servidor; `proxy.ts` renueva la sesión en `/cuenta/:path*`. WORKER/ADMIN/SUPER_ADMIN se redirigen a su destino. El catálogo es una vista previa identificada con datos de ejemplo; ver [frontend del estudiante](client-frontend.md).
 - Spring conserva los casos de uso y verifica JWT, usuario activo, rol y asignación a cafetería antes de cada lectura o mutación de pedidos.
 
 ## Configuración local
@@ -128,6 +128,33 @@ Los destinos son `/cuenta` para CLIENT, `/worker` para WORKER, `/admin` para ADM
 Brand, logout y la navegación de AuthScreen reciben contexto explícito. La variante panel presenta una composición desktop y no ofrece registro estudiantil. La recuperación conserva su sesión temporal durante OTP/reset, no tiene redirección automática por una sesión válida ni admite returnTo arbitrario. Tras reset mantiene el login contextual en la misma pantalla y conserva el aviso de éxito; logout y los enlaces de retorno usan el login correspondiente. La comprobación del rol se repite al iniciar sesión.
 
 Hallazgo pendiente fuera de esta fase: `InstitutionController` exige autenticación, pero sus consultas por dominio o ID no filtran por rol ni pertenencia institucional. La política de visibilidad de instituciones debe definirse antes de cambiar esos endpoints.
+
+## Perfil CLIENT y autoridad de negocio
+
+`GET /api/me/profile` devuelve únicamente `document`, `phone` e `institution` (nombre).
+Spring toma el UUID del subject JWT verificado y aplica la misma política CLIENT que
+la cancelación propia: usuario activo y rol exclusivo CLIENT, leídos de PostgreSQL.
+Los IDs de usuario, cliente o institución enviados por navegador no seleccionan datos.
+Nombre y correo continúan usando el contrato aprobado de `current_auth_profile()`;
+no se amplía esa RPC para consultar más datos de negocio.
+
+La página `/cuenta/perfil` ya se renderiza en Next servidor. Su helper `server-only`
+consulta Spring con el token de la sesión verificada, `no-store`, timeout y sin seguir
+redirecciones. No necesita un endpoint Next adicional ni consulta PostgREST de negocio.
+Spring devuelve 401 para identidad no autenticada, 403 para un usuario no elegible,
+404 `CLIENT_PROFILE_NOT_FOUND` si falta el registro CLIENT y 503 seguro para un fallo
+temporal de persistencia. Las respuestas del perfil son `no-store`.
+
+El teléfono nulo conserva «Sin registrar». Una institución inactiva conserva documento
+y teléfono y devuelve su nombre como nulo, manteniendo el fallback previo. Ante errores
+del backend, la página conserva nombre/correo y ofrece recargar sin borrar cookies,
+cerrar sesión ni mostrar mensajes internos. La recuperación posterior reutiliza la sesión.
+Las migraciones y grants de 010 permanecen intactos.
+
+Los tests HTTP del perfil ejecutan los adaptadores JDBC y el caso de uso sobre PostgreSQL
+nativo con 001–011, incluyendo permisos de tabla/columna cerrados, subject frente a IDs
+manipulados, roles y revocación. El proveedor E2E rechaza las lecturas directas de
+`clients`/`institutions` y registra que la pantalla usa el endpoint de negocio.
 
 ## Verificación
 

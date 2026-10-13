@@ -50,11 +50,13 @@ const confirmed = new Set();
 const passwords = new Map();
 const refreshTokens = new Map();
 const failures = new Map();
+const profileAudit = { directBusinessReads: 0, backendProfileReads: 0 };
 function temporaryFailure(request, response, profile, scope) {
   const mode = failures.get(profile.id);
   if (
     !mode ||
     mode === "concurrent" ||
+    mode === "backend-profile" ||
     (mode === "profile" && scope !== "profile")
   )
     return false;
@@ -107,6 +109,15 @@ createServer(async (request, response) => {
   try {
     const url = new URL(request.url, "http://127.0.0.1:3101");
     if (url.pathname === "/health") return json(response, 200, { ok: true });
+    if (url.pathname === "/__test/profile-audit" && request.method === "GET")
+      return json(response, 200, profileAudit);
+    // Model the post-010 permissions instead of granting fake business REST reads.
+    if (["/rest/v1/clients", "/rest/v1/institutions"].includes(url.pathname)) {
+      profileAudit.directBusinessReads++;
+      return json(response, 403, {
+        message: "Direct business access is disabled",
+      });
+    }
     if (url.pathname === "/__test/auth-failure" && request.method === "POST") {
       let raw = "";
       for await (const chunk of request) raw += chunk;
@@ -115,7 +126,13 @@ createServer(async (request, response) => {
       if (
         !target ||
         (mode !== null &&
-          !["503", "disconnect", "profile", "concurrent"].includes(mode))
+          ![
+            "503",
+            "disconnect",
+            "profile",
+            "concurrent",
+            "backend-profile",
+          ].includes(mode))
       )
         return json(response, 400, {});
       if (mode === null) failures.delete(target.id);
@@ -227,17 +244,25 @@ createServer(async (request, response) => {
       return;
     if (url.pathname === "/rest/v1/rpc/current_auth_profile")
       return json(response, 200, profile);
-    if (url.pathname === "/rest/v1/clients") {
-      if (url.searchParams.get("user_id") !== `eq.${profile.id}`)
-        return json(response, 403, { message: "Own profile only" });
+    if (url.pathname === "/api/me/profile" && request.method === "GET") {
+      profileAudit.backendProfileReads++;
+      if (
+        !profile.active ||
+        profile.roles.length !== 1 ||
+        profile.roles[0] !== "CLIENT"
+      )
+        return json(response, 403, { code: "FORBIDDEN" });
+      if (failures.get(profile.id) === "backend-profile")
+        return json(response, 503, {
+          code: "CLIENT_PROFILE_TEMPORARILY_UNAVAILABLE",
+          message: "PRIVATE_BACKEND_PROFILE_DETAIL",
+        });
       return json(response, 200, {
         document: "1234567890",
         phone: null,
-        institution_id: "00000000-0000-0000-0000-000000000020",
+        institution: "Universidad de prueba",
       });
     }
-    if (url.pathname === "/rest/v1/institutions")
-      return json(response, 200, { name: "Universidad de prueba" });
     if (
       url.pathname.startsWith("/api/me/orders/") &&
       request.method === "PATCH"

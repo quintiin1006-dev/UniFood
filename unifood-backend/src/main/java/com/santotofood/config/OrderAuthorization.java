@@ -24,7 +24,7 @@ public class OrderAuthorization {
     return authenticatedUser(authentication).flatMap(authorization::workerCafeteria);
   }
 
-  private Optional<UUID> authenticatedUser(Authentication authentication) {
+  public Optional<UUID> authenticatedUser(Authentication authentication) {
     if (!(authentication instanceof JwtAuthenticationToken token)) return Optional.empty();
     if (token.getToken().getSubject() == null) return Optional.empty();
     try {
@@ -32,6 +32,10 @@ public class OrderAuthorization {
     } catch (IllegalArgumentException exception) {
       return Optional.empty();
     }
+  }
+
+  public boolean client(Authentication authentication) {
+    return authenticatedUser(authentication).map(authorization::client).orElse(false);
   }
 
   public boolean clientOrder(Authentication authentication, UUID orderId) {

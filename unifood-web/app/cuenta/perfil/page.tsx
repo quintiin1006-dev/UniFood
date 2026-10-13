@@ -7,9 +7,9 @@ import { getClientDetails } from "@/features/client/server/profile";
 export const metadata = { title: "Mi perfil | UniFood" };
 
 export default async function ClientProfilePage() {
-  const { profile } = await requireAuth();
+  const { profile, accessToken } = await requireAuth();
   if (!isClient(profile)) redirect(destination(profile));
-  const details = await getClientDetails(profile.id);
+  const details = await getClientDetails(accessToken);
   return (
     <ClientProfile
       fullName={profile.fullName}
