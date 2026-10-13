@@ -151,16 +151,13 @@ async function expireSession(page: Page, invalidRefresh = false) {
   session.access_token = parts.join(".");
   session.expires_at = claims.exp;
   if (invalidRefresh) session.refresh_token = "invalid-synthetic-refresh";
-  await page
-    .context()
-    .addCookies([
-      {
-        ...cookie,
-        value:
-          "base64-" +
-          Buffer.from(JSON.stringify(session)).toString("base64url"),
-      },
-    ]);
+  await page.context().addCookies([
+    {
+      ...cookie,
+      value:
+        "base64-" + Buffer.from(JSON.stringify(session)).toString("base64url"),
+    },
+  ]);
 }
 
 for (const [name, login, destination, remember] of [
@@ -201,22 +198,173 @@ for (const [name, login, destination, remember] of [
   });
 }
 
-test("an expired worker session with a rejected refresh returns to panel login", async ({
+for (const [name, login, destination, api] of [
+  ["worker", "/panel/login", "/worker", "/api/orders"],
+  [
+    "client",
+    "/login",
+    "/cuenta",
+    "/api/me/orders/00000000-0000-0000-0000-000000000001/cancel",
+  ],
+] as const) {
+  test(`an expired ${name} session with a rejected refresh erases cookies and supports a subsequent login`, async ({
+    page,
+  }) => {
+    expect((await submitLogin(page, login, name)).status()).toBe(200);
+    await expect(page).toHaveURL(new URL(destination, page.url()).href);
+    await expireSession(page, true);
+    // Exercise competing navigation/API requests with the same rejected refresh.
+    const denied =
+      name === "worker"
+        ? page.request.get(api)
+        : page.request.patch(api, {
+            headers: { origin: new URL(page.url()).origin },
+          });
+    await page.reload();
+    await expect(page).toHaveURL(new URL(login, page.url()).href);
+    expect(
+      (await page.context().cookies()).filter(({ name }) =>
+        name.startsWith("sb-"),
+      ).length,
+    ).toBe(0);
+    expect((await denied).status()).toBe(401);
+    await page.reload();
+    await expect(page).toHaveURL(new URL(login, page.url()).href);
+    expect((await submitLogin(page, login, name)).status()).toBe(200);
+    await expect(page).toHaveURL(new URL(destination, page.url()).href);
+  });
+}
+
+async function providerFailure(page: Page, name: string, mode: string | null) {
+  const response = await page.request.post(
+    "http://127.0.0.1:3101/__test/auth-failure",
+    { data: { email: `${name}@example.invalid`, mode } },
+  );
+  expect(response.status()).toBe(200);
+}
+
+for (const [name, login, destination, api] of [
+  ["worker", "/panel/login", "/worker", "/api/orders"],
+  [
+    "client",
+    "/login",
+    "/cuenta",
+    "/api/me/orders/00000000-0000-0000-0000-000000000010/cancel",
+  ],
+] as const) {
+  for (const mode of ["503", "disconnect"] as const) {
+    test(`${name} preserves an expired session during retryable ${mode} and recovers without login`, async ({
+      page,
+    }) => {
+      // The real SDK keeps its production retry/backoff window; no sleep is used as evidence.
+      test.setTimeout(90_000);
+      expect((await submitLogin(page, login, name)).status()).toBe(200);
+      await expect(page).toHaveURL(new URL(destination, page.url()).href);
+      await expireSession(page);
+      const before = await page.context().cookies();
+      await providerFailure(page, name, mode);
+      try {
+        const denied =
+          name === "worker"
+            ? page.request.get(api, { timeout: 60_000 })
+            : page.request.patch(api, {
+                timeout: 60_000,
+                headers: { origin: new URL(page.url()).origin },
+              });
+        const navigation = await page.reload({ timeout: 60_000 });
+        expect(navigation?.status()).toBe(503);
+        await expect(page).toHaveURL(new URL(destination, page.url()).href);
+        await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+          "No pudimos verificar tu sesión en este momento. Inténtalo nuevamente.",
+        );
+        expect(await page.content()).not.toContain("PRIVATE_PROVIDER_OUTAGE");
+        const apiResponse = await denied;
+        expect(apiResponse.status()).toBe(503);
+        expect(apiResponse.headers()["cache-control"]).toBe("no-store");
+        expect(apiResponse.headers()["set-cookie"]).toBeUndefined();
+        expect((await apiResponse.json()).code).toBe(
+          "AUTH_TEMPORARILY_UNAVAILABLE",
+        );
+        expect(await page.context().cookies()).toEqual(before);
+      } finally {
+        await providerFailure(page, name, null);
+      }
+      await page.getByRole("link", { name: "Volver a intentar" }).click();
+      await expect(page).toHaveURL(new URL(destination, page.url()).href);
+      await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+      expect(
+        (await page.context().cookies()).some(({ name }) =>
+          name.startsWith("sb-"),
+        ),
+      ).toBe(true);
+      const recovered =
+        name === "worker"
+          ? await page.request.get(api)
+          : await page.request.patch(api, {
+              headers: { origin: new URL(page.url()).origin },
+            });
+      expect(recovered.status()).toBe(200);
+      await page.reload();
+      await expect(page).toHaveURL(new URL(destination, page.url()).href);
+    });
+  }
+
+  test(`${name} preserves its session if profile verification fails after proxy and retries safely`, async ({
+    page,
+  }) => {
+    expect((await submitLogin(page, login, name)).status()).toBe(200);
+    await expect(page).toHaveURL(new URL(destination, page.url()).href);
+    const before = await page.context().cookies();
+    await providerFailure(page, name, "profile");
+    try {
+      await page.reload();
+      await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+        "No pudimos cargar esta página. Inténtalo nuevamente.",
+      );
+      await expect(page).toHaveURL(new URL(destination, page.url()).href);
+      expect(await page.content()).not.toContain("PRIVATE_PROVIDER_OUTAGE");
+      expect(await page.context().cookies()).toEqual(before);
+      const denied =
+        name === "worker"
+          ? await page.request.get(api)
+          : await page.request.patch(api, {
+              headers: { origin: new URL(page.url()).origin },
+            });
+      expect(denied.status()).toBe(503);
+      expect((await denied.json()).code).toBe("AUTH_TEMPORARILY_UNAVAILABLE");
+    } finally {
+      await providerFailure(page, name, null);
+    }
+    await page.getByRole("button", { name: "Volver a intentar" }).click();
+    await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+    await expect(page).toHaveURL(new URL(destination, page.url()).href);
+  });
+}
+
+test("CLIENT concurrency 409 keeps its actionable sanitized contract through the real BFF", async ({
   page,
 }) => {
-  expect((await submitLogin(page, "/panel/login", "worker")).status()).toBe(
-    200,
-  );
-  await expect(page).toHaveURL(new URL("/worker", page.url()).href);
-  await expireSession(page, true);
-  await page.reload();
-  await expect(page).toHaveURL(new URL("/panel/login", page.url()).href);
-  expect(
-    (await page.context().cookies()).filter(({ name }) =>
-      name.startsWith("sb-"),
-    ).length,
-  ).toBe(0);
-  expect((await page.request.get("/api/orders")).status()).toBe(401);
+  expect((await submitLogin(page, "/login", "client")).status()).toBe(200);
+  await expect(page).toHaveURL(new URL("/cuenta", page.url()).href);
+  await providerFailure(page, "client", "concurrent");
+  try {
+    const response = await page.request.patch(
+      "/api/me/orders/00000000-0000-0000-0000-000000000010/cancel",
+      { headers: { origin: new URL(page.url()).origin } },
+    );
+    expect(response.status()).toBe(409);
+    expect(response.headers()["cache-control"]).toBe("no-store");
+    expect(response.headers()["set-cookie"]).toBeUndefined();
+    const body = await response.json();
+    expect(body.code).toBe("ORDER_CONCURRENT_MODIFICATION");
+    expect(body.message).toBe(
+      "La orden cambió mientras intentábamos cancelarla. Actualiza e inténtalo de nuevo.",
+    );
+    expect(JSON.stringify(body)).not.toContain("PRIVATE");
+    expect(body.version).toBeUndefined();
+  } finally {
+    await providerFailure(page, "client", null);
+  }
 });
 
 for (const [name, status] of [
