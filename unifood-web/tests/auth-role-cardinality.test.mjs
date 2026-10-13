@@ -16,7 +16,8 @@ const invariantError = (error) =>
   error.constraint === "active_user_single_business_role";
 
 test("role cardinality is enforced by the real schema at transaction boundaries", async (t) => {
-  const db = await createAuthDatabase();
+  // Isolate migration 007's role invariant; 009's combined profile rules have their own tests.
+  const db = await createAuthDatabase({ throughMigration: "007" });
   t.after(() => db.close());
   let sequence = 0;
   async function pending() {

@@ -27,7 +27,7 @@ test("client ownership SQL follows actual PostgreSQL links and current roles, ne
   ).rows[0].id;
   const cafeteria = (
     await db.query(
-      "INSERT INTO public.cafeterias(site_id,name,lunch_order_start,lunch_order_end) VALUES ($1,'Fixture','07:00','08:00') RETURNING id",
+      "INSERT INTO public.cafeterias(site_id,name,is_active,lunch_order_start,lunch_order_end) VALUES ($1,'Fixture',false,'07:00','08:00') RETURNING id",
       [site],
     )
   ).rows[0].id;
@@ -131,6 +131,10 @@ test("client ownership SQL follows actual PostgreSQL links and current roles, ne
         [first.user],
       );
       assert.deepEqual((await facts()).roles, ["ADMIN"]);
+      await db.query(
+        "INSERT INTO public.cafeteria_users(user_id,cafeteria_id) VALUES ($1,$2)",
+        [first.user, cafeteria],
+      );
       await db.query("UPDATE public.users SET is_active=true WHERE id=$1", [
         first.user,
       ]);

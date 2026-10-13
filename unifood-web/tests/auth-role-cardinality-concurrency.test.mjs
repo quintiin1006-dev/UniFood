@@ -24,7 +24,9 @@ test(
       return t.skip(
         "Native PostgreSQL not installed; PGlite transaction-boundary tests still run",
       );
-    const db = await createNativeAuthDatabase(binaries);
+    const db = await createNativeAuthDatabase(binaries, {
+      throughMigration: "007",
+    });
     t.after(() => db.close());
     let number = 0;
     async function fixture() {
