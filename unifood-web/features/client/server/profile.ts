@@ -1,9 +1,12 @@
 import "server-only";
-import { authClient } from "@/features/auth/server/client";
+import { unstable_rethrow } from "next/navigation";
+import { serverApiUrl } from "@/config/server";
 import type { ClientDetails } from "../types";
 
-/** Called only with the verified user ID. The session JWT and database RLS scope reads. */
-export async function getClientDetails(userId: string): Promise<ClientDetails> {
+/** The caller supplies its verified session token; Spring resolves identity and business access. */
+export async function getClientDetails(
+  accessToken: string,
+): Promise<ClientDetails> {
   const empty: ClientDetails = {
     document: null,
     phone: null,
@@ -11,35 +14,29 @@ export async function getClientDetails(userId: string): Promise<ClientDetails> {
     unavailable: true,
   };
   try {
-    const client = await authClient();
-    const { data, error } = await client
-      .from("clients")
-      .select("document, phone, institution_id")
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (error || !data) return empty;
-    const details: ClientDetails = {
-      document: typeof data.document === "string" ? data.document : null,
-      phone: typeof data.phone === "string" ? data.phone : null,
-      institution: null,
-      unavailable: false,
-    };
-    if (typeof data.institution_id !== "string")
-      return { ...details, unavailable: true };
-    const institution = await client
-      .from("institutions")
-      .select("name")
-      .eq("id", data.institution_id)
-      .maybeSingle();
+    const response = await fetch(`${serverApiUrl()}/api/me/profile`, {
+      headers: { authorization: `Bearer ${accessToken}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(15000),
+      redirect: "error",
+    });
+    if (response.status !== 200) return empty;
+    const data = await response.json();
+    if (
+      !data ||
+      typeof data.document !== "string" ||
+      !(data.phone === null || typeof data.phone === "string") ||
+      !(data.institution === null || typeof data.institution === "string")
+    )
+      return empty;
     return {
-      ...details,
-      institution:
-        typeof institution.data?.name === "string"
-          ? institution.data.name
-          : null,
-      unavailable: !!institution.error || !institution.data,
+      document: data.document,
+      phone: data.phone,
+      institution: data.institution,
+      unavailable: data.institution === null,
     };
-  } catch {
+  } catch (error) {
+    unstable_rethrow(error);
     return empty;
   }
 }

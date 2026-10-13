@@ -9,6 +9,9 @@ package com.santotofood.shared.error;
  * concretas permanecen en la capa a la que conceptualmente pertenecen.
  */
 public enum ErrorCode {
+  CLIENT_PROFILE_NOT_FOUND,
+  CLIENT_PROFILE_TEMPORARILY_UNAVAILABLE,
+
   ORDER_NOT_FOUND,
 
   INVALID_ORDER_STATE,

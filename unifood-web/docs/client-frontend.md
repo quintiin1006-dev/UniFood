@@ -113,12 +113,10 @@ sigue siendo una limitación documentada del backend existente.
 
 El dominio SQL es institución → sede → cafetería → almuerzo. `cafeterias` tiene
 nombre, sede, actividad, habilitación de servicio y horario de pedidos;
-`lunches` tiene nombre, descripción, precio, imagen, stock y actividad. Hay RLS
-para catálogo de la institución del cliente y pedidos propios. Eso demuestra
-soporte en el esquema, no que las migraciones estén desplegadas ni que existan
-endpoints Spring de catálogo. La integración de catálogo espera un contrato
-explícito. La lectura del perfil propio sí utiliza PostgREST desde el servidor
-con el cliente Supabase y las políticas RLS existentes; se detalla a continuación.
+`lunches` tiene nombre, descripción, precio, imagen, stock y actividad. La migración
+010 retira el acceso directo de negocio para anon/authenticated. La integración de
+catálogo espera un contrato Spring explícito. La lectura del perfil propio usa el
+endpoint Spring autenticado `GET /api/me/profile`; se detalla a continuación.
 
 `order_items` admite cantidad, bebida y nota, pero no existe catálogo de opciones
 ni validación de creación expuesta. No hay categorías, valoraciones, popularidad
@@ -157,10 +155,10 @@ catálogo de ejemplo; su selección se conserva en los enlaces mediante query pa
 No se persiste información entre cuentas. Un menú con parámetros ausentes,
 desconocidos o duplicados vuelve al selector.
 
-`server/profile.ts` consulta `clients` con `user_id` del perfil verificado y después
-la institución referenciada. Usa `authClient()` con la sesión y RLS existentes
-(`clients_select_own`, `institutions_select_active`); no usa service role ni modifica
-filas. El teléfono puede ser nulo: se muestra «Sin registrar». Ante errores o datos
+`server/profile.ts` consulta Spring con el token de la sesión verificada. El backend
+resuelve el subject, exige CLIENT activo y devuelve documento, teléfono y universidad
+propios. No consulta tablas Supabase ni utiliza service role. Nombre/correo conservan
+el contrato de identidad aprobado. El teléfono puede ser nulo: se muestra «Sin registrar». Ante errores o datos
 inaccesibles se mantiene nombre/correo y se muestra un aviso, sin exponer errores
 internos. El perfil es de lectura: editar teléfono y subir avatar quedan pendientes.
 

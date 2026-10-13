@@ -32,13 +32,15 @@ public class OrderAuthorizationService {
     return workerCafeteria(userId).filter(id -> id.equals(cafeteriaId)).isPresent();
   }
 
+  public boolean client(UUID userId) {
+    return queries
+        .findUserAuthorization(userId)
+        .filter(user -> user.active() && user.roles().equals(Set.of("CLIENT")))
+        .isPresent();
+  }
+
   public boolean clientOrder(UUID userId, UUID orderId) {
-    boolean eligible =
-        queries
-            .findUserAuthorization(userId)
-            .filter(user -> user.active() && user.roles().equals(Set.of("CLIENT")))
-            .isPresent();
-    if (!eligible) return false;
+    if (!client(userId)) return false;
     var owner =
         queries.findOrderOwner(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
     if (!userId.equals(owner.userId())) throw new OrderNotFoundException(orderId);
