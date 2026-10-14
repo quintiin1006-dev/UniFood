@@ -77,6 +77,81 @@ guardar snapshots en una transacción; nunca aceptar unit_price/subtotal del nav
 La DB comprueba consistencia aritmética y pertenencia; no compara snapshots históricos
 con el precio actual. No existe un nuevo endpoint de creación ni checkout.
 
+## Clasificación del catálogo (012)
+
+`012_catalog_categories.sql` añade `lunches.category` como enum PostgreSQL
+`public.catalog_category`, con exactamente estos valores:
+
+- `DEL_DIA`: producto o plato de la oferta definida como «del día».
+- `CORRIENTE`: almuerzo corriente.
+- `EJECUTIVO`: almuerzo ejecutivo.
+- `ESPECIAL`: producto o plato especial.
+- `DESAYUNO`: producto de desayuno.
+
+La columna permite NULL y no tiene DEFAULT ni backfill. Un NULL significa
+**pendiente de clasificación administrativa**, no una categoría funcional.
+Los productos existentes y las nuevas inserciones que omitan categoría permanecen
+sin clasificar; no se infiere por nombre, precio, stock ni horario. La clasificación
+requiere una decisión humana explícita por producto.
+
+Aplicar 012 después de 011 y antes de desplegar el backend que mapea la nueva columna:
+Hibernate valida el esquema y requiere que `category` exista. El modelo Java conserva
+la compatibilidad temporal con NULL, incluido el constructor anterior de `Lunch`.
+El nombre físico sigue siendo `public.lunches`; `CatalogItem` queda como terminología
+de dominio para una fase posterior. No existe una segunda tabla de catálogo.
+
+La migración no modifica stock, actividad administrativa, `service_available`, IDs,
+FK ni snapshots históricos de `order_items`. Sigue el patrón de enums del esquema
+y revoca explícitamente `USAGE` de `public.catalog_category` para `PUBLIC`, `anon` y
+`authenticated`, dentro de la misma transacción. No añade grants de tabla o columna.
+
+La auditoría conserva sus comprobaciones de columnas y añade `unexpected_type_usage`
+para los tres actores: todos deben devolver `false` después de 012. Para `PUBLIC`
+inspecciona la ACL del tipo (incluidos los defaults); para `anon`/`authenticated` usa
+`has_type_privilege`, que incluye permisos heredados. Antes de 012 ese listado está
+vacío porque el tipo no existe. La auditoría sigue siendo de solo lectura.
+
+Las pruebas nativas conectan como `postgres`, propietario del tipo y superusuario
+del clúster temporal: conserva `USAGE` sin GRANT adicional y Hibernate prueba los
+cinco valores y NULL después de la revocación. El rol productivo no está fijado en el
+repositorio: procede de `SUPABASE_DB_URL`. Verificar su identidad y permisos efectivos
+antes de desplegar; no inferir que sea `postgres` ni conceder permisos a roles de
+navegador para resolver una configuración del servidor. El permiso USAGE del tipo
+controla la creación de objetos dependientes, no concede acceso a los productos.
+
+La secuencia es **012 → clasificación humana explícita → 013**. La migración
+`013_daily_availability.sql` aborta si queda cualquier producto sin categoría y
+solo entonces hace la columna obligatoria. No clasifica ni repara productos.
+Introduce estado diario de cafetería y disponibilidad diaria por producto, con
+permisos de navegador cerrados. Aplicarla antes de desplegar los endpoints Spring.
+El contrato y la coordinación de escrituras se describen en
+[Disponibilidad diaria](../docs/availability.md). No hay BFF, UI ni integración de pedidos.
+`Lunch.isAvailable()` conserva la regla histórica `active && stock > 0`; no se usa
+como fuente de disponibilidad diaria.
+
+Después de aplicar 012, esta consulta de solo lectura permite revisar los pendientes:
+
+```sql
+SELECT l.id,
+       l.name AS nombre,
+       l.description AS descripcion,
+       l.price AS precio,
+       c.id AS cafeteria_id,
+       c.name AS cafeteria,
+       s.name AS sede,
+       i.name AS institucion,
+       l.category AS categoria_actual,
+       l.is_active AS activo_administrativamente
+FROM public.lunches l
+JOIN public.cafeterias c ON c.id = l.cafeteria_id
+JOIN public.sites s ON s.id = c.site_id
+JOIN public.institutions i ON i.id = s.institution_id
+WHERE l.category IS NULL
+ORDER BY i.name, s.name, c.name, l.name, l.id;
+```
+
+Ejecutarla con una conexión administrativa autorizada; no clasifica ni modifica datos.
+
 ## Pruebas locales
 
 Instalar dependencias del monorepo, Java 21, Node y binarios nativos PostgreSQL (initdb,

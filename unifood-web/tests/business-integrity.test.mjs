@@ -466,7 +466,7 @@ test("011 enforces cafeteria relationships and amounts without changing historic
     lunches.push(
       (
         await db.query(
-          "INSERT INTO public.lunches(cafeteria_id,name,price) VALUES ($1,'Original',100) RETURNING id",
+          "INSERT INTO public.lunches(cafeteria_id,name,price,category) VALUES ($1,'Original',100,'CORRIENTE') RETURNING id",
           [cafe],
         )
       ).rows[0].id,

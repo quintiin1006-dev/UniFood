@@ -1,6 +1,7 @@
 // Loopback-only provider/backend fixture for browser tests. Never used by the app runtime.
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
+import { browserAvailabilityFixture } from "./availability-fixture.mjs";
 
 const fixtures = Object.entries({
   client: ["CLIENT"],
@@ -51,6 +52,14 @@ const passwords = new Map();
 const refreshTokens = new Map();
 const failures = new Map();
 const profileAudit = { directBusinessReads: 0, backendProfileReads: 0 };
+const availabilityStates = new Map();
+const availabilityAudit = { directBusinessReads: 0 };
+function availabilityState(profile) {
+  if (!availabilityStates.has(profile.id)) availabilityStates.set(profile.id, {
+    data: browserAvailabilityFixture(), mode: null, gets: 0, puts: [],
+  });
+  return availabilityStates.get(profile.id);
+}
 function temporaryFailure(request, response, profile, scope) {
   const mode = failures.get(profile.id);
   if (
@@ -109,6 +118,29 @@ createServer(async (request, response) => {
   try {
     const url = new URL(request.url, "http://127.0.0.1:3101");
     if (url.pathname === "/health") return json(response, 200, { ok: true });
+    if (url.pathname === "/__test/availability") {
+      if (request.method === "POST") {
+        let raw = ""; for await (const chunk of request) raw += chunk;
+        const config = JSON.parse(raw);
+        const target = fixtures.find((entry) => entry.email === config.email);
+        if (!target) return json(response, 400, {});
+        if (config.reset) availabilityStates.delete(target.id);
+        const state = availabilityState(target);
+        if (typeof config.active === "boolean") state.data.cafeteria.active = config.active;
+        if (typeof config.open === "boolean") state.data.cafeteria.open = config.open;
+        if (typeof config.available === "boolean") state.data.categories[1].items[0].available = config.available;
+        if (Object.hasOwn(config, "mode")) state.mode = config.mode;
+        return json(response, 200, { ok: true });
+      }
+      const target = fixtures.find((entry) => entry.email === url.searchParams.get("email"));
+      if (!target) return json(response, 400, {});
+      const state = availabilityState(target);
+      return json(response, 200, { gets: state.gets, puts: state.puts, directBusinessReads: availabilityAudit.directBusinessReads });
+    }
+    if (["/rest/v1/lunches", "/rest/v1/cafeteria_daily_states", "/rest/v1/daily_item_availability"].includes(url.pathname)) {
+      availabilityAudit.directBusinessReads++;
+      return json(response, 403, { message: "Direct business access is disabled" });
+    }
     if (url.pathname === "/__test/profile-audit" && request.method === "GET")
       return json(response, 200, profileAudit);
     // Model the post-010 permissions instead of granting fake business REST reads.
@@ -244,6 +276,49 @@ createServer(async (request, response) => {
       return;
     if (url.pathname === "/rest/v1/rpc/current_auth_profile")
       return json(response, 200, profile);
+    if (url.pathname.startsWith("/api/worker/availability/today")) {
+      if (!profile.active || profile.assignments !== 1 || profile.roles.length !== 1 || profile.roles[0] !== "WORKER")
+        return json(response, 403, { code: "AVAILABILITY_FORBIDDEN", message: "PRIVATE" });
+      const state = availabilityState(profile);
+      if (request.method === "GET") {
+        state.gets++;
+        if (state.mode === "get503") {
+          response.setHeader("Retry-After", "5");
+          return json(response, 503, { code: "AVAILABILITY_TEMPORARILY_UNAVAILABLE", message: "PRIVATE" });
+        }
+        return json(response, 200, state.data);
+      }
+      if (request.method !== "PUT") return json(response, 405, {});
+      let raw = ""; for await (const chunk of request) raw += chunk;
+      const body = JSON.parse(raw);
+      const day = request.headers["x-business-date"];
+      state.puts.push({ path: url.pathname, day, body });
+      if (state.mode === "put503") return json(response, 503, { code: "AVAILABILITY_TEMPORARILY_UNAVAILABLE", message: "PRIVATE" });
+      if (state.mode === "stale") {
+        state.mode = null; state.data.businessDate = "2026-10-14"; state.data.cafeteria.open = false;
+        state.data.categories.forEach((group) => group.items.forEach((item) => { item.available = false; }));
+      }
+      if (day !== state.data.businessDate) return json(response, 409, { code: "AVAILABILITY_DAY_EXPIRED", message: "PRIVATE" });
+      const cafeOperation = url.pathname.endsWith("/cafeteria-state");
+      const id = url.pathname.split("/").at(-1);
+      if (["iteminactive", "notfound"].includes(state.mode) && !cafeOperation) {
+        const code = state.mode === "notfound" ? "AVAILABILITY_ITEM_NOT_FOUND" : "AVAILABILITY_ITEM_INACTIVE";
+        state.mode = null;
+        state.data.categories.forEach((group) => { group.items = group.items.filter((item) => item.id !== id); });
+        return json(response, code === "AVAILABILITY_ITEM_NOT_FOUND" ? 404 : 409, { code, message: "PRIVATE" });
+      }
+      if (state.mode === "cafinactive") { state.mode = null; state.data.cafeteria.active = false; }
+      if (!state.data.cafeteria.active && (body.available === true || body.open === true))
+        return json(response, 409, { code: "AVAILABILITY_CAFETERIA_INACTIVE", message: "PRIVATE" });
+      if (cafeOperation) {
+        state.data.cafeteria.open = body.open;
+        return json(response, 200, { businessDate: state.data.businessDate, open: body.open });
+      }
+      const item = state.data.categories.flatMap((group) => group.items).find((entry) => entry.id === id);
+      if (!item) return json(response, 404, { code: "AVAILABILITY_ITEM_NOT_FOUND", message: "PRIVATE" });
+      item.available = body.available;
+      return json(response, 200, { businessDate: state.data.businessDate, itemId: item.id, available: item.available });
+    }
     if (url.pathname === "/api/me/profile" && request.method === "GET") {
       profileAudit.backendProfileReads++;
       if (

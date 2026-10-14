@@ -15,8 +15,10 @@ import {
 
 import styles from "./Header.module.css";
 import LogoutButton from "@/features/auth/components/LogoutButton";
+import type { WorkerModule } from "./BottomNav";
 
 interface HeaderProps {
+  activeModule?: WorkerModule;
   search: string;
   onSearchChange: (value: string) => void;
 }
@@ -24,9 +26,15 @@ interface HeaderProps {
 const searchInputId = "worker-search-input";
 
 export default function Header({
+  activeModule = "orders",
   search,
   onSearchChange,
 }: HeaderProps) {
+  const titles: Record<WorkerModule, string> = {
+    orders: "Gestión de pedidos", calls: "Llamadas", history: "Historial",
+    availability: "Disponibilidad", profile: "Mi perfil",
+  };
+  const showSearch = activeModule === "orders" || activeModule === "calls";
   const [
     mobileSearchOpen,
     setMobileSearchOpen,
@@ -60,12 +68,12 @@ export default function Header({
             Uni<span>Food</span>
           </h1>
 
-          <p>Gestión de pedidos</p>
+          <p>{titles[activeModule]}</p>
         </div>
       </div>
 
       <div className={styles.actions}>
-        <div
+        {showSearch && <div
           className={`${styles.search} ${
             mobileSearchOpen
               ? styles.searchOpen
@@ -139,7 +147,7 @@ export default function Header({
               />
             </button>
           )}
-        </div>
+        </div>}
 
         <div className={styles.status}>
           <span className={styles.statusDot} />

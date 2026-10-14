@@ -14,7 +14,7 @@ export type WorkerModule =
   | "orders"
   | "calls"
   | "history"
-  | "inventory"
+  | "availability"
   | "profile";
 
 interface BottomNavProps {
@@ -41,8 +41,8 @@ const modules = [
     icon: History,
   },
   {
-    id: "inventory" as const,
-    label: "Inventario",
+    id: "availability" as const,
+    label: "Disponibilidad",
     icon: Package,
   },
   {
