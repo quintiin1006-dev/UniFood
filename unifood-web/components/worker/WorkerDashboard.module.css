@@ -1,0 +1,41 @@
+/* The availability controls keep their real touch size; existing order layout is unchanged. */
+.availabilityPage:global(.worker-page) {
+  width: 100%;
+  height: 100dvh;
+  min-height: 100svh;
+  transform: none;
+  overflow: hidden;
+  background: #f3f6fb;
+}
+.availabilityPage::before,
+.availabilityPage :global(.worker-main)::before {
+  display: none;
+}
+.availabilityPage > header,
+.availabilityPage > nav {
+  flex-shrink: 0;
+}
+.availabilityPage > nav button span {
+  font-size: 10px;
+  white-space: nowrap;
+}
+.availabilityPage > nav button {
+  padding-inline: 0;
+}
+.availabilityPage :global(.worker-main) {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
+  padding: 22px 24px 8px;
+}
+@media (max-width: 760px) {
+  .availabilityPage :global(.worker-main) {
+    padding: 16px 12px 6px;
+  }
+  .availabilityPage > nav {
+    margin-bottom: max(9px, env(safe-area-inset-bottom));
+  }
+}

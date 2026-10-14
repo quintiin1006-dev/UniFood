@@ -17,6 +17,8 @@ import BottomNav, {
 import { useOrders } from "@/features/orders/hooks/useOrders";
 
 import type { Order } from "@/types/order";
+import { AvailabilityPanel } from "@/features/availability/components/AvailabilityPanel";
+import styles from "./WorkerDashboard.module.css";
 
 export default function WorkerDashboard() {
   const {
@@ -283,6 +285,7 @@ export default function WorkerDashboard() {
       setSearch("");
 
       clearActionError();
+      setOrderToCancel(null);
     };
 
   /* =========================================================
@@ -291,6 +294,7 @@ export default function WorkerDashboard() {
 
   const renderModule =
     () => {
+      if (activeModule === "availability") return <AvailabilityPanel />;
       /* =====================================================
          PEDIDOS
          ===================================================== */
@@ -426,9 +430,10 @@ export default function WorkerDashboard() {
 
   return (
     <main
-      className="worker-page"
+      className={`worker-page${activeModule === "availability" ? ` ${styles.availabilityPage}` : ""}`}
     >
       <Header
+        activeModule={activeModule}
         search={search}
         onSearchChange={
           setSearch
@@ -650,7 +655,7 @@ export default function WorkerDashboard() {
           ERROR DE ACCIÓN
           ===================================================== */}
 
-      {actionError && (
+      {actionError && (activeModule === "orders" || activeModule === "calls") && (
         <div
           role="alert"
           onClick={
