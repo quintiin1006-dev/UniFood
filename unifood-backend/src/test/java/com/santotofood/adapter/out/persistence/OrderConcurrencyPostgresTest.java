@@ -18,6 +18,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.*;
 import org.hibernate.SessionFactory;
@@ -128,6 +129,21 @@ class OrderConcurrencyPostgresTest {
 
   static String state(UUID id) {
     return tx.execute(s -> orders.findById(id).orElseThrow().getStatus().name());
+  }
+
+  static void assertCancelledAt(UUID id, Instant expected) throws SQLException {
+    Order saved = tx.execute(s -> orders.findById(id).orElseThrow());
+    assertEquals(expected, saved.getCancelledAt(), "Hibernate must round-trip the terminal instant");
+    try (Connection connection = DriverManager.getConnection(url, "postgres", "");
+        PreparedStatement query =
+            connection.prepareStatement("SELECT cancelled_at FROM public.orders WHERE id=?")) {
+      query.setObject(1, id);
+      try (ResultSet result = query.executeQuery()) {
+        assertTrue(result.next());
+        OffsetDateTime timestamp = result.getObject(1, OffsetDateTime.class);
+        assertEquals(expected, timestamp == null ? null : timestamp.toInstant());
+      }
+    }
   }
 
   static Order mutate(UUID id, String action) {
@@ -299,6 +315,7 @@ class OrderConcurrencyPostgresTest {
     assertEquals(1L, saved.getRevision());
     assertEquals(winner.equals("deliver") ? NOW : null, saved.getDeliveredAt());
     assertEquals(winner.equals("not-collected") ? NOW : null, saved.getNotCollectedAt());
+    assertCancelledAt(id, null);
     assertThrows(DomainException.class, () -> mutate(id, loser));
     assertEquals(saved.getStatus().name(), state(id));
   }
@@ -344,11 +361,13 @@ class OrderConcurrencyPostgresTest {
           waiting, "Prepare must be competing while the authoritative order remains PENDING");
       mutate(id, "cancel");
       assertEquals("CANCELLED", state(id));
+      assertCancelledAt(id, NOW);
       gate.commit();
       DomainException conflict =
           assertInstanceOf(DomainException.class, worker.get(10, TimeUnit.SECONDS));
       assertEquals(ErrorCode.ORDER_CANCELLED_BY_CLIENT, conflict.getCode());
       assertEquals("CANCELLED", state(id));
+      assertCancelledAt(id, NOW);
     }
   }
 
@@ -359,6 +378,29 @@ class OrderConcurrencyPostgresTest {
     DomainException error = assertThrows(DomainException.class, () -> mutate(id, "cancel"));
     assertEquals(ErrorCode.ORDER_ALREADY_PREPARING, error.getCode());
     assertEquals("PREPARING", state(id));
+    assertCancelledAt(id, null);
+  }
+
+  @Test
+  @Timeout(60)
+  void preparationWinnerLeavesNoCancellationTimestampWhenTheBlockedClientLoses() throws Exception {
+    UUID id = order(cafeteria(), "PENDING", 0);
+    List<Object> results =
+        race(
+            id,
+            "prepare",
+            id,
+            "cancel",
+            "orders",
+            () -> assertEquals("PENDING", state(id)));
+    assertEquals("PREPARING", assertInstanceOf(Order.class, results.getFirst()).getStatus().name());
+    assertEquals(
+        ErrorCode.ORDER_ALREADY_PREPARING,
+        assertInstanceOf(DomainException.class, results.get(1)).getCode());
+    assertEquals("PREPARING", state(id));
+    assertCancelledAt(id, null);
+    Long revision = tx.execute(s -> orders.findById(id).orElseThrow().getRevision());
+    assertEquals(1L, revision.longValue());
   }
 
   @Test
@@ -436,6 +478,7 @@ class OrderConcurrencyPostgresTest {
       assertEquals(1, results.stream().filter(Order.class::isInstance).count());
       assertEquals(1, results.stream().filter(DomainException.class::isInstance).count());
       assertEquals(after, state(id));
+      assertCancelledAt(id, after.equals("CANCELLED") ? NOW : null);
     }
   }
 
@@ -460,6 +503,7 @@ class OrderConcurrencyPostgresTest {
         jakarta.persistence.OptimisticLockException.class,
         () -> tx.execute(s -> orders.save(stale)));
     assertEquals("PREPARING", state(id));
+    assertCancelledAt(id, null);
   }
 
   @Test
@@ -472,6 +516,24 @@ class OrderConcurrencyPostgresTest {
         jakarta.persistence.OptimisticLockException.class,
         () -> tx.execute(s -> orders.save(stale)));
     assertEquals("PREPARING", state(id));
+    assertCancelledAt(id, null);
+  }
+
+  @Test
+  void staleCopiesAndLaterUpdatesCannotReplaceTheWinningCancellationInstant() throws Exception {
+    UUID id = order(cafeteria(), "PENDING", 0);
+    Order stale = tx.execute(s -> orders.findById(id).orElseThrow());
+    Order cancelled = mutate(id, "worker-cancel");
+    assertEquals(NOW, cancelled.getCancelledAt());
+    assertCancelledAt(id, NOW);
+    stale.cancelByClient(NOW.plusSeconds(60));
+    assertThrows(
+        jakarta.persistence.OptimisticLockException.class,
+        () -> tx.execute(s -> orders.save(stale)));
+    assertThrows(DomainException.class, () -> mutate(id, "cancel"));
+    sql("UPDATE public.orders SET total=2 WHERE id='" + id + "'");
+    assertEquals("CANCELLED", state(id));
+    assertCancelledAt(id, NOW);
   }
 
   @Test
@@ -483,5 +545,7 @@ class OrderConcurrencyPostgresTest {
     mutate(second, "prepare");
     assertEquals("CANCELLED", state(first));
     assertEquals("PREPARING", state(second));
+    assertCancelledAt(first, NOW);
+    assertCancelledAt(second, null);
   }
 }

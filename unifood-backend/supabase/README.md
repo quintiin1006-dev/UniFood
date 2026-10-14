@@ -125,7 +125,8 @@ solo entonces hace la columna obligatoria. No clasifica ni repara productos.
 Introduce estado diario de cafetería y disponibilidad diaria por producto, con
 permisos de navegador cerrados. Aplicarla antes de desplegar los endpoints Spring.
 El contrato y la coordinación de escrituras se describen en
-[Disponibilidad diaria](../docs/availability.md). No hay BFF, UI ni integración de pedidos.
+[Disponibilidad diaria](../docs/availability.md). El módulo dispone de BFF y UI WORKER;
+la disponibilidad diaria no participa en la creación ni el procesamiento de pedidos.
 `Lunch.isAvailable()` conserva la regla histórica `active && stock > 0`; no se usa
 como fuente de disponibilidad diaria.
 
@@ -151,6 +152,62 @@ ORDER BY i.name, s.name, c.name, l.name, l.id;
 ```
 
 Ejecutarla con una conexión administrativa autorizada; no clasifica ni modifica datos.
+
+## Fecha de cancelación (014)
+
+`014_order_cancellation_timestamp.sql` añade `orders.cancelled_at` como TIMESTAMPTZ
+nullable, sin DEFAULT, backfill ni índices adicionales. No actualiza las órdenes
+existentes ni modifica las migraciones 001–013.
+
+Spring es la fuente temporal: las cancelaciones CLIENT y WORKER comparten
+`Order.cancelPending` y guardan el instante recibido de `TimeProvider` junto al
+estado, actor y versión, mediante el mismo `saveAndFlush` transaccional. El reloj
+se consulta después de obtener el lock de la orden. La fecha representa la
+operación aceptada por el dominio, igual que `delivered_at` y `not_collected_at`;
+no pretende representar el instante exacto de COMMIT. Los plazos, el arbitraje
+contra PREPARING, FIFO, locks y versionado conservan sus reglas anteriores.
+
+La DB valida el dato, sin producir otra fecha: nuevas inserciones CANCELLED y
+nuevas transiciones a CANCELLED requieren un timestamp explícito; una fecha
+registrada no puede cambiar ni eliminarse y solo puede acompañar a CANCELLED.
+El guard es SECURITY INVOKER con search_path vacío, no realiza escrituras
+adicionales y no modifica `version`. Sus permisos EXECUTE y los privilegios de
+la nueva columna se revocan a PUBLIC, anon y authenticated. Los escritores
+internos autorizados deben proporcionar una fecha verificable, no omitirla.
+
+Los terminales heredados sin su timestamp correspondiente conservan fecha
+**desconocida**: `delivered_at`, `not_collected_at` o `cancelled_at` NULL. No se
+infieren desde `created_at`, `updated_at` ni `cancellation_deadline`. Una cancelada
+heredada con NULL puede recibir cambios permitidos en otros campos sin inventar
+una fecha; tampoco puede adquirirla mediante una actualización ordinaria.
+Esos registros se conservan y quedarán fuera de la futura consulta de terminales
+del día. El endpoint, BFF y UI de Historial aún no están implementados.
+
+### Aplicación manual y coordinada
+
+1. Auditar el esquema y los datos con una conexión administrativa autorizada.
+   Confirmar que 001–013 están instaladas, `cancelled_at` aún no existe y el
+   backend nuevo ha pasado sus pruebas. No asignar fechas al legado.
+2. Pausar las escrituras de órdenes, drenar las transacciones y retirar todas las
+   instancias antiguas. El backend antiguo no suministra `cancelled_at` y sus
+   cancelaciones serían rechazadas por el nuevo guard.
+3. Ejecutar manualmente el contenido completo de
+   `014_order_cancellation_timestamp.sql` una sola vez en Supabase SQL Editor,
+   con el propietario administrativo autorizado. La migración es transaccional;
+   no arrancar el backend nuevo antes de crear la columna que Hibernate valida.
+4. Repetir `audit_business_integrity.sql`. El bloque de cancelación debe mostrar
+   columna nullable sin default, CHECK validado, función sin SECURITY DEFINER y
+   search_path vacío, trigger de fila BEFORE INSERT/UPDATE habilitado (tipo 23)
+   asociado al guard y todos los privilegios inesperados en false. Antes de 014
+   esos bloques están vacíos; la auditoría también funciona sin la columna.
+5. Desplegar la versión nueva y verificar, con datos de prueba autorizados, las
+   dos cancelaciones y el conflicto con PREPARING. Confirmar fecha del backend,
+   misma escritura y permisos cerrados antes de reabrir las operaciones.
+
+La migración toma locks DDL; dimensionar la ventana con los datos auditados.
+No añadir índices por la nueva columna sin medir la futura consulta. Si falla
+el despliegue, mantener las escrituras pausadas y resolver la incompatibilidad;
+no desactivar el guard ni fabricar fechas para hacer funcionar una versión antigua.
 
 ## Pruebas locales
 

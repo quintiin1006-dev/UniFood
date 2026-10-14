@@ -24,6 +24,7 @@ public class OrderMapper {
             order.getLastRemindedAt(),
             order.getDeliveredAt(),
             order.getNotCollectedAt(),
+            order.getCancelledAt(),
             order.getCreatedAt(),
             order.getUpdatedAt());
     entity.setVersion(order.getRevision());
@@ -48,6 +49,7 @@ public class OrderMapper {
             entity.getLastRemindedAt(),
             entity.getDeliveredAt(),
             entity.getNotCollectedAt(),
+            entity.getCancelledAt(),
             entity.getCreatedAt(),
             entity.getUpdatedAt());
     order.restoreConcurrencyState(entity.getVersion(), entity.isCancelledByClient());
