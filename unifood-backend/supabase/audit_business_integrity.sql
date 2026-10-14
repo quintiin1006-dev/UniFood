@@ -1,4 +1,4 @@
--- Read-only preflight after 007, usable before/after 008-012. No secrets or data repair.
+-- Read-only preflight after 007, usable before/after 008-013. No secrets or data repair.
 BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY;
 
 SELECT 'invalid_user_assignment' AS reason, u.id AS subject,
@@ -58,7 +58,8 @@ WITH business_tables AS (
   JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
   WHERE n.nspname='public' AND c.relkind IN ('r','p') AND c.relname=ANY(ARRAY[
     'users','roles','user_roles','clients','institutions','sites','cafeterias','cafeteria_users',
-    'lunches','orders','order_items','payments','notifications','notification_preferences','cafeteria_profile_guard'])
+    'lunches','orders','order_items','payments','notifications','notification_preferences','cafeteria_profile_guard',
+    'cafeteria_daily_states','daily_item_availability'])
 )
 SELECT actor,relname AS unexpected_business_table_grant,privilege
 FROM business_tables
@@ -74,7 +75,8 @@ CROSS JOIN (VALUES ('anon'),('authenticated')) actors(actor)
 CROSS JOIN (VALUES ('SELECT'),('INSERT'),('UPDATE'),('REFERENCES')) privileges(privilege)
 WHERE n.nspname='public' AND c.relkind IN ('r','p') AND c.relname=ANY(ARRAY[
   'users','roles','user_roles','clients','institutions','sites','cafeterias','cafeteria_users',
-  'lunches','orders','order_items','payments','notifications','notification_preferences','cafeteria_profile_guard'])
+  'lunches','orders','order_items','payments','notifications','notification_preferences','cafeteria_profile_guard',
+  'cafeteria_daily_states','daily_item_availability'])
   AND has_column_privilege(actor,c.oid,a.attnum,privilege)
 ORDER BY actor,c.relname,a.attnum,privilege;
 

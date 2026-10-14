@@ -119,11 +119,15 @@ antes de desplegar; no inferir que sea `postgres` ni conceder permisos a roles d
 navegador para resolver una configuración del servidor. El permiso USAGE del tipo
 controla la creación de objetos dependientes, no concede acceso a los productos.
 
-La migración 013 todavía no existe. La categoría obligatoria y la disponibilidad
-diaria quedan para una fase posterior, después de completar la clasificación explícita.
-No hay apertura diaria, toggles, endpoints de disponibilidad ni integración nueva de UI.
-`Lunch.isAvailable()` conserva la regla histórica `active && stock > 0`; revisar esa
-deuda cuando se implemente disponibilidad diaria, sin tratar stock como estado diario.
+La secuencia es **012 → clasificación humana explícita → 013**. La migración
+`013_daily_availability.sql` aborta si queda cualquier producto sin categoría y
+solo entonces hace la columna obligatoria. No clasifica ni repara productos.
+Introduce estado diario de cafetería y disponibilidad diaria por producto, con
+permisos de navegador cerrados. Aplicarla antes de desplegar los endpoints Spring.
+El contrato y la coordinación de escrituras se describen en
+[Disponibilidad diaria](../docs/availability.md). No hay BFF, UI ni integración de pedidos.
+`Lunch.isAvailable()` conserva la regla histórica `active && stock > 0`; no se usa
+como fuente de disponibilidad diaria.
 
 Después de aplicar 012, esta consulta de solo lectura permite revisar los pendientes:
 

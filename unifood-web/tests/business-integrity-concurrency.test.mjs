@@ -182,7 +182,7 @@ test(
           lunch = randomUUID(),
           order = randomUUID();
         await db.query(
-          `INSERT INTO public.lunches(id,cafeteria_id,name,price) VALUES ('${lunch}','${a}','fixture',100); INSERT INTO public.orders(id,cafeteria_id,client_name,total) VALUES ('${order}','${a}','fixture',100);`,
+          `INSERT INTO public.lunches(id,cafeteria_id,name,price,category) VALUES ('${lunch}','${a}','fixture',100,'CORRIENTE'); INSERT INTO public.orders(id,cafeteria_id,client_name,total) VALUES ('${order}','${a}','fixture',100);`,
         );
         await race(
           "READ COMMITTED",
