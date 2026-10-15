@@ -65,6 +65,7 @@ class OrderTest {
         assertNull(order.getLastRemindedAt());
         assertNull(order.getDeliveredAt());
         assertNull(order.getNotCollectedAt());
+        assertNull(order.getCancelledAt());
 
         assertNotNull(order.getItems());
         assertTrue(order.getItems().isEmpty());
@@ -411,6 +412,8 @@ class OrderTest {
 
         assertEquals(OrderStatus.CANCELLED, order.getStatus());
         assertEquals(cancelledAt, order.getUpdatedAt());
+        assertEquals(cancelledAt, order.getCancelledAt());
+        assertFalse(order.isCancelledByClient());
     }
 
     @Test
@@ -424,6 +427,7 @@ class OrderTest {
 
         assertEquals(OrderStatus.CANCELLED, order.getStatus());
         assertEquals(deadline, order.getUpdatedAt());
+        assertEquals(deadline, order.getCancelledAt());
     }
 
     @Test
@@ -450,6 +454,7 @@ class OrderTest {
         );
 
         assertEquals(OrderStatus.PENDING, order.getStatus());
+        assertNull(order.getCancelledAt());
     }
 
     @Test
@@ -468,6 +473,68 @@ class OrderTest {
                 ErrorCode.INVALID_ORDER_STATE,
                 exception.getCode()
         );
+        assertNull(order.getCancelledAt());
+    }
+
+    @Test
+    void shouldRecordClientCancellationAfterDeadlineAndPreserveItsFirstTime() {
+        Order order = createPendingOrder();
+        Instant cancelledAt = order.getCancellationDeadline().plusSeconds(60);
+
+        order.cancelByClient(cancelledAt);
+
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
+        assertTrue(order.isCancelledByClient());
+        assertEquals(cancelledAt, order.getCancelledAt());
+        assertEquals(cancelledAt, order.getUpdatedAt());
+        assertThrows(
+                InvalidOrderStateException.class,
+                () -> order.cancelByClient(cancelledAt.plusSeconds(60))
+        );
+        assertEquals(cancelledAt, order.getCancelledAt());
+        assertEquals(cancelledAt, order.getUpdatedAt());
+    }
+
+    @Test
+    void shouldReconstituteKnownCancellationTimeWithoutUsingLastUpdate() {
+        Instant cancelledAt = CREATED_AT.plusSeconds(300);
+        Instant laterUpdate = cancelledAt.plusSeconds(3600);
+        Order order = Order.reconstitute(
+                ORDER_ID, CAFETERIA_ID, CLIENT_ID, "Juan Pérez", "1234567890",
+                OrderStatus.CANCELLED, new BigDecimal("15000.00"), null,
+                null, 0, null, null, null, cancelledAt, CREATED_AT, laterUpdate
+        );
+
+        assertEquals(cancelledAt, order.getCancelledAt());
+        assertEquals(laterUpdate, order.getUpdatedAt());
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
+    }
+
+    @Test
+    void shouldKeepUnknownLegacyCancellationTimeAcrossReconstitutionOverloads() {
+        Instant laterUpdate = CREATED_AT.plusSeconds(3600);
+        Order explicitUnknown = Order.reconstitute(
+                ORDER_ID, CAFETERIA_ID, CLIENT_ID, "Juan Pérez", "1234567890",
+                OrderStatus.CANCELLED, new BigDecimal("15000.00"), null,
+                null, 0, null, null, null, null, CREATED_AT, laterUpdate
+        );
+        Order legacyComplete = Order.reconstitute(
+                ORDER_ID, CAFETERIA_ID, CLIENT_ID, "Juan Pérez", "1234567890",
+                OrderStatus.CANCELLED, new BigDecimal("15000.00"), null,
+                null, 0, null, null, null, CREATED_AT, laterUpdate
+        );
+        Order legacyShort = Order.reconstitute(
+                ORDER_ID, CAFETERIA_ID, CLIENT_ID, "Juan Pérez", "1234567890",
+                OrderStatus.CANCELLED, new BigDecimal("15000.00"), null,
+                CREATED_AT, laterUpdate
+        );
+
+        assertNull(explicitUnknown.getCancelledAt());
+        assertNull(legacyComplete.getCancelledAt());
+        assertNull(legacyShort.getCancelledAt());
+        assertEquals(laterUpdate, explicitUnknown.getUpdatedAt());
+        assertEquals(laterUpdate, legacyComplete.getUpdatedAt());
+        assertEquals(laterUpdate, legacyShort.getUpdatedAt());
     }
 
     @Test

@@ -82,6 +82,9 @@ public class OrderEntity {
   @Column(name = "not_collected_at")
   private Instant notCollectedAt;
 
+  @Column(name = "cancelled_at")
+  private Instant cancelledAt;
+
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 
@@ -106,6 +109,42 @@ public class OrderEntity {
       Instant notCollectedAt,
       Instant createdAt,
       Instant updatedAt) {
+    this(
+        id,
+        cafeteriaId,
+        clientId,
+        clientName,
+        clientDocument,
+        status,
+        total,
+        cancellationDeadline,
+        calledAt,
+        reminderCount,
+        lastRemindedAt,
+        deliveredAt,
+        notCollectedAt,
+        null,
+        createdAt,
+        updatedAt);
+  }
+
+  public OrderEntity(
+      UUID id,
+      UUID cafeteriaId,
+      UUID clientId,
+      String clientName,
+      String clientDocument,
+      OrderStatus status,
+      BigDecimal total,
+      Instant cancellationDeadline,
+      Instant calledAt,
+      int reminderCount,
+      Instant lastRemindedAt,
+      Instant deliveredAt,
+      Instant notCollectedAt,
+      Instant cancelledAt,
+      Instant createdAt,
+      Instant updatedAt) {
     this.id = id;
     this.cafeteriaId = cafeteriaId;
     this.clientId = clientId;
@@ -119,6 +158,7 @@ public class OrderEntity {
     this.lastRemindedAt = lastRemindedAt;
     this.deliveredAt = deliveredAt;
     this.notCollectedAt = notCollectedAt;
+    this.cancelledAt = cancelledAt;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }
@@ -225,6 +265,14 @@ public class OrderEntity {
 
   public void setNotCollectedAt(Instant notCollectedAt) {
     this.notCollectedAt = notCollectedAt;
+  }
+
+  public Instant getCancelledAt() {
+    return cancelledAt;
+  }
+
+  public void setCancelledAt(Instant cancelledAt) {
+    this.cancelledAt = cancelledAt;
   }
 
   public Instant getCreatedAt() {

@@ -49,6 +49,7 @@ public class Order {
   private Instant lastRemindedAt;
   private Instant deliveredAt;
   private Instant notCollectedAt;
+  private Instant cancelledAt;
 
   private Instant createdAt;
   private Instant updatedAt;
@@ -80,6 +81,7 @@ public class Order {
     this.lastRemindedAt = null;
     this.deliveredAt = null;
     this.notCollectedAt = null;
+    this.cancelledAt = null;
 
     this.createdAt = createdAt;
     this.updatedAt = createdAt;
@@ -223,6 +225,7 @@ public class Order {
     }
 
     status = OrderStatus.CANCELLED;
+    cancelledAt = now;
     updatedAt = now;
   }
 
@@ -270,6 +273,42 @@ public class Order {
       Instant notCollectedAt,
       Instant createdAt,
       Instant updatedAt) {
+    return reconstitute(
+        id,
+        cafeteriaId,
+        clientId,
+        clientName,
+        clientDocument,
+        status,
+        total,
+        cancellationDeadline,
+        calledAt,
+        reminderCount,
+        lastRemindedAt,
+        deliveredAt,
+        notCollectedAt,
+        null,
+        createdAt,
+        updatedAt);
+  }
+
+  public static Order reconstitute(
+      UUID id,
+      UUID cafeteriaId,
+      UUID clientId,
+      String clientName,
+      String clientDocument,
+      OrderStatus status,
+      BigDecimal total,
+      Instant cancellationDeadline,
+      Instant calledAt,
+      int reminderCount,
+      Instant lastRemindedAt,
+      Instant deliveredAt,
+      Instant notCollectedAt,
+      Instant cancelledAt,
+      Instant createdAt,
+      Instant updatedAt) {
     Order order =
         new Order(
             id,
@@ -287,6 +326,7 @@ public class Order {
     order.lastRemindedAt = lastRemindedAt;
     order.deliveredAt = deliveredAt;
     order.notCollectedAt = notCollectedAt;
+    order.cancelledAt = cancelledAt;
     order.updatedAt = updatedAt;
 
     return order;

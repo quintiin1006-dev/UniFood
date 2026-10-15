@@ -2,6 +2,7 @@
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
 import { browserAvailabilityFixture } from "./availability-fixture.mjs";
+import { workerHistoryFixture } from "./worker-history-fixture.mjs";
 
 const fixtures = Object.entries({
   client: ["CLIENT"],
@@ -54,6 +55,11 @@ const failures = new Map();
 const profileAudit = { directBusinessReads: 0, backendProfileReads: 0 };
 const availabilityStates = new Map();
 const availabilityAudit = { directBusinessReads: 0 };
+const historyStates = new Map();
+function historyState(profile) {
+  if (!historyStates.has(profile.id)) historyStates.set(profile.id, {data: workerHistoryFixture(), mode: null, gets: 0});
+  return historyStates.get(profile.id);
+}
 function availabilityState(profile) {
   if (!availabilityStates.has(profile.id)) availabilityStates.set(profile.id, {
     data: browserAvailabilityFixture(), mode: null, gets: 0, puts: [],
@@ -118,6 +124,20 @@ createServer(async (request, response) => {
   try {
     const url = new URL(request.url, "http://127.0.0.1:3101");
     if (url.pathname === "/health") return json(response, 200, { ok: true });
+    if (url.pathname === "/__test/worker-history") {
+      let config;
+      if (request.method === "POST") {
+        let raw = ""; for await (const chunk of request) raw += chunk;
+        config = JSON.parse(raw);
+      } else config = {email: url.searchParams.get("email")};
+      const target = fixtures.find(entry => entry.email === config.email);
+      if (!target) return json(response, 400, {});
+      if (config.reset) historyStates.delete(target.id);
+      const state = historyState(target);
+      if (Object.hasOwn(config, "mode")) state.mode = config.mode;
+      if (config.data) state.data = config.data;
+      return json(response, 200, {gets: state.gets});
+    }
     if (url.pathname === "/__test/availability") {
       if (request.method === "POST") {
         let raw = ""; for await (const chunk of request) raw += chunk;
@@ -318,6 +338,17 @@ createServer(async (request, response) => {
       if (!item) return json(response, 404, { code: "AVAILABILITY_ITEM_NOT_FOUND", message: "PRIVATE" });
       item.available = body.available;
       return json(response, 200, { businessDate: state.data.businessDate, itemId: item.id, available: item.available });
+    }
+    if (url.pathname === "/api/worker/orders/history/today" && request.method === "GET") {
+      if (!profile.active || profile.assignments !== 1 || profile.roles.length !== 1 || profile.roles[0] !== "WORKER")
+        return json(response, 403, {code: "WORKER_HISTORY_FORBIDDEN", message: "PRIVATE"});
+      const state = historyState(profile); state.gets++;
+      if (state.mode === "503") {
+        response.setHeader("Retry-After", "5");
+        return json(response, 503, {code: "WORKER_HISTORY_TEMPORARILY_UNAVAILABLE", message: "PRIVATE_SQL_DETAIL"});
+      }
+      if (state.mode === "403" || state.mode === "401") return json(response, Number(state.mode), {message: "PRIVATE"});
+      return json(response, 200, state.data);
     }
     if (url.pathname === "/api/me/profile" && request.method === "GET") {
       profileAudit.backendProfileReads++;

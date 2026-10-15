@@ -1,4 +1,4 @@
--- Read-only preflight after 007, usable before/after 008-013. No secrets or data repair.
+-- Read-only preflight after 007, usable before/after 008-014. No secrets or data repair.
 BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY;
 
 SELECT 'invalid_user_assignment' AS reason, u.id AS subject,
@@ -80,6 +80,70 @@ WHERE n.nspname='public' AND c.relkind IN ('r','p') AND c.relname=ANY(ARRAY[
   AND has_column_privilege(actor,c.oid,a.attnum,privilege)
 ORDER BY actor,c.relname,a.attnum,privilege;
 
+-- Optional before 014. After 014, the column must be nullable without a default,
+-- with a validated state constraint and an enabled BEFORE INSERT/UPDATE row guard.
+WITH cancellation_column AS (
+  SELECT c.oid AS table_oid,a.attnum,a.attnotnull
+  FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid
+  WHERE n.nspname='public' AND c.relname='orders'
+    AND a.attname='cancelled_at' AND a.attnum>0 AND NOT a.attisdropped
+), cancellation_guard AS (
+  SELECT oid,prosecdef,proconfig FROM pg_catalog.pg_proc
+  WHERE oid=to_regprocedure('public.guard_order_cancellation_timestamp()')
+)
+SELECT 'public.orders.cancelled_at' AS cancelled_at_column,
+       NOT column_info.attnotnull AS cancelled_at_nullable,
+       EXISTS(SELECT 1 FROM pg_catalog.pg_attrdef d
+         WHERE d.adrelid=column_info.table_oid AND d.adnum=column_info.attnum) AS cancelled_at_has_default,
+       pg_get_constraintdef(state_check.oid) AS cancellation_state_constraint,
+       state_check.convalidated AS cancellation_state_constraint_validated,
+       guard.oid::regprocedure::text AS cancellation_guard_signature,
+       guard.prosecdef AS cancellation_guard_security_definer,
+       guard.proconfig AS cancellation_guard_settings,
+       trigger_info.tgname AS cancellation_guard_trigger,
+       trigger_info.tgtype AS cancellation_guard_trigger_type,
+       trigger_info.tgenabled AS cancellation_guard_trigger_enabled,
+       trigger_info.tgfoid=guard.oid AS cancellation_guard_trigger_function_matches
+FROM cancellation_column column_info
+LEFT JOIN pg_catalog.pg_constraint state_check
+  ON state_check.conrelid=column_info.table_oid AND state_check.conname='orders_cancelled_at_state'
+LEFT JOIN cancellation_guard guard ON true
+LEFT JOIN pg_catalog.pg_trigger trigger_info
+  ON trigger_info.tgrelid=column_info.table_oid AND trigger_info.tgname='trg_orders_cancelled_at_guard'
+  AND NOT trigger_info.tgisinternal;
+
+-- Explicit effective access to the new column, including PUBLIC table/column ACLs.
+SELECT actor,'public.orders.cancelled_at' AS cancellation_column,privilege,
+       CASE WHEN actor='PUBLIC' THEN EXISTS (
+         SELECT 1 FROM (
+           SELECT grantee,privilege_type FROM aclexplode(
+             CASE WHEN c.relacl IS NULL THEN acldefault('r',c.relowner)
+               WHEN cardinality(c.relacl)>0 THEN c.relacl END)
+           UNION ALL
+           SELECT grantee,privilege_type FROM aclexplode(
+             CASE WHEN cardinality(a.attacl)>0 THEN a.attacl END)
+         ) permission WHERE permission.grantee=0 AND permission.privilege_type=privilege
+       ) ELSE has_column_privilege(actor,c.oid,a.attnum,privilege) END AS unexpected_cancellation_column_privilege
+FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+JOIN pg_catalog.pg_attribute a ON a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped
+CROSS JOIN (VALUES ('PUBLIC'),('anon'),('authenticated')) actors(actor)
+CROSS JOIN (VALUES ('SELECT'),('INSERT'),('UPDATE'),('REFERENCES')) privileges(privilege)
+WHERE n.nspname='public' AND c.relname='orders' AND a.attname='cancelled_at'
+ORDER BY actor,privilege;
+
+SELECT actor,p.oid::regprocedure::text AS cancellation_guard_signature,
+       CASE WHEN actor='PUBLIC' THEN EXISTS (
+         SELECT 1 FROM aclexplode(
+           CASE WHEN p.proacl IS NULL THEN acldefault('f',p.proowner)
+             WHEN cardinality(p.proacl)>0 THEN p.proacl END) permission
+         WHERE permission.grantee=0 AND permission.privilege_type='EXECUTE'
+       ) ELSE has_function_privilege(actor,p.oid,'EXECUTE') END AS unexpected_cancellation_guard_execute
+FROM pg_catalog.pg_proc p
+CROSS JOIN (VALUES ('PUBLIC'),('anon'),('authenticated')) actors(actor)
+WHERE p.oid=to_regprocedure('public.guard_order_cancellation_timestamp()')
+ORDER BY actor;
+
 -- The category type is optional before 012. After 012, every reported value
 -- must be false: even USAGE without business table access is unexpected here.
 -- PUBLIC is a pseudo-role (ACL grantee 0); role checks include inherited grants.
@@ -122,7 +186,7 @@ WHERE n.nspname='public' AND p.proname=ANY(ARRAY[
   'decrease_lunch_stock','set_updated_at','create_auth_profile','canonical_institution_email_domain',
   'auth_role_lock_key','lock_auth_role_user','check_auth_role_cardinality','prevent_auth_roles_truncate',
   'advance_order_version','cafeteria_profile_violations','lock_cafeteria_profiles','check_cafeteria_profiles',
-  'derive_order_item_cafeteria','is_institutional_email','current_auth_profile'])
+  'derive_order_item_cafeteria','guard_order_cancellation_timestamp','is_institutional_email','current_auth_profile'])
   AND p.oid<>COALESCE(to_regprocedure('public.is_institutional_email(text)')::oid,0::oid)
   AND p.oid<>COALESCE(to_regprocedure('public.current_auth_profile()')::oid,0::oid)
 ORDER BY actor,helper_signature;

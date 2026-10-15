@@ -18,9 +18,11 @@ import { useOrders } from "@/features/orders/hooks/useOrders";
 
 import type { Order } from "@/types/order";
 import { AvailabilityPanel } from "@/features/availability/components/AvailabilityPanel";
+import { WorkerHistoryPanel } from "@/features/worker-history/components/WorkerHistoryPanel";
 import styles from "./WorkerDashboard.module.css";
 
 export default function WorkerDashboard() {
+  const [activeModule, setActiveModule] = useState<WorkerModule>("orders");
   const {
     orders,
     busyOrderIds,
@@ -31,7 +33,7 @@ export default function WorkerDashboard() {
     handleOrderAction,
     handleOrderCancel,
     clearActionError,
-  } = useOrders();
+  } = useOrders(activeModule === "orders" || activeModule === "calls");
 
   const [
     selectedOrder,
@@ -49,13 +51,6 @@ export default function WorkerDashboard() {
 
   const [search, setSearch] =
     useState("");
-
-  const [
-    activeModule,
-    setActiveModule,
-  ] = useState<WorkerModule>(
-    "orders"
-  );
 
   const [, setNow] =
     useState(0);
@@ -295,6 +290,7 @@ export default function WorkerDashboard() {
   const renderModule =
     () => {
       if (activeModule === "availability") return <AvailabilityPanel />;
+      if (activeModule === "history") return <WorkerHistoryPanel />;
       /* =====================================================
          PEDIDOS
          ===================================================== */
@@ -430,7 +426,7 @@ export default function WorkerDashboard() {
 
   return (
     <main
-      className={`worker-page${activeModule === "availability" ? ` ${styles.availabilityPage}` : ""}`}
+      className={`worker-page${activeModule === "availability" ? ` ${styles.availabilityPage}` : activeModule === "history" ? ` ${styles.historyPage}` : ""}`}
     >
       <Header
         activeModule={activeModule}
