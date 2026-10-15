@@ -4,7 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 
-function setup() {
+function setup(enabled = true) {
   const states = [];
   const requests = [];
   const effects = [];
@@ -32,11 +32,18 @@ function setup() {
     clearTimeout() {}, clearInterval() {},
     window: { addEventListener: (_, callback) => { focus = callback; }, removeEventListener() {} },
   });
-  loaded.exports.useOrders();
+  loaded.exports.useOrders(enabled);
   const cleanup = effects[0]();
-  start();
+  start?.();
   return { states, requests, tick, focus, cleanup, remount() { effects[0](); start(); } };
 }
+
+test("inactive order modules install no polling or focus listener", () => {
+  const app = setup(false);
+  assert.equal(app.requests.length, 0);
+  assert.equal(app.tick, undefined);
+  assert.equal(app.focus, undefined);
+});
 
 test("slow order responses survive polling ticks and focus events", async () => {
   const app = setup();

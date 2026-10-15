@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { advanceOrder, cancelOrder, getOrders } from "@/features/orders/api/orderApi";
 import type { Order } from "@/types/order";
 
-export function useOrders() {
+export function useOrders(enabled = true) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -15,6 +15,7 @@ export function useOrders() {
   const revision = useRef(0);
   const activeRefresh = useRef<number | null>(null);
   const latestOrders = useRef<Order[]>([]);
+  const subscribed = useRef(false);
 
   const replaceOrders = useCallback((next: Order[]) => {
     latestOrders.current = next;
@@ -23,7 +24,7 @@ export function useOrders() {
 
   const refresh = useCallback(async () => {
     // A slow response must not be invalidated by every polling tick or focus.
-    if (pending.current.size || activeRefresh.current === revision.current) return;
+    if (!subscribed.current || pending.current.size || activeRefresh.current === revision.current) return;
     const version = ++revision.current;
     activeRefresh.current = version;
     try {
@@ -44,17 +45,20 @@ export function useOrders() {
   const invalidate = useCallback(() => { ++revision.current; }, []);
 
   useEffect(() => {
+    subscribed.current = enabled;
+    if (!enabled) return;
     const initial = setTimeout(() => { void refresh(); }, 0);
     const interval = setInterval(() => { void refresh(); }, 10000);
     const onFocus = () => { void refresh(); };
     window.addEventListener("focus", onFocus);
     return () => {
+      subscribed.current = false;
       invalidate();
       clearTimeout(initial);
       clearInterval(interval);
       window.removeEventListener("focus", onFocus);
     };
-  }, [refresh, invalidate]);
+  }, [refresh, invalidate, enabled]);
 
   const clearActionError = useCallback(() => {
     setActionError(null);
