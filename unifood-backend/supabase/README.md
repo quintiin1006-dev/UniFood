@@ -181,8 +181,10 @@ infieren desde `created_at`, `updated_at` ni `cancellation_deadline`. Una cancel
 heredada con NULL puede recibir cambios permitidos en otros campos sin inventar
 una fecha; tampoco puede adquirirla mediante una actualización ordinaria.
 Esos registros se conservan y quedan fuera de la consulta de terminales del día.
-El [endpoint Spring de Historial WORKER](../docs/worker-history.md) es de solo
-lectura; el BFF y la UI de Historial aún no están implementados.
+El [endpoint Spring de Historial WORKER](../docs/worker-history.md),
+`GET /api/worker/orders/history/today`, es de solo lectura. El BFF Next y la UI
+WORKER de Historial dentro de `/worker` están implementados: Browser → Next/BFF
+→ Spring → PostgreSQL, sin acceso directo del frontend a tablas de negocio Supabase.
 
 ### Aplicación manual y coordinada
 
@@ -206,7 +208,7 @@ lectura; el BFF y la UI de Historial aún no están implementados.
    misma escritura y permisos cerrados antes de reabrir las operaciones.
 
 La migración toma locks DDL; dimensionar la ventana con los datos auditados.
-No añadir índices por la nueva columna sin medir la futura consulta. Si falla
+No añadir índices por la nueva columna sin medir la consulta de Historial. Si falla
 el despliegue, mantener las escrituras pausadas y resolver la incompatibilidad;
 no desactivar el guard ni fabricar fechas para hacer funcionar una versión antigua.
 

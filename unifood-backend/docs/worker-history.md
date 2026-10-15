@@ -2,7 +2,9 @@
 
 `GET /api/worker/orders/history/today` consulta únicamente los pedidos terminales de
 la cafetería autorizada del WORKER durante el día de negocio actual. El endpoint
-Spring está implementado; el BFF y la UI se incorporarán en una fase posterior.
+Spring, el BFF Next y la UI WORKER dentro de `/worker` están implementados.
+El recorrido es Browser → Next/BFF → Spring → PostgreSQL, sin acceso directo del
+frontend a tablas de negocio Supabase.
 
 ## Identidad y fecha
 
@@ -16,9 +18,14 @@ El caso de uso captura `TimeProvider.now()` una vez y reutiliza `BusinessDate`
 en `America/Bogota`. Calcula inicio incluido y siguiente inicio excluido desde
 el calendario local; no usa la zona del host, `CURRENT_DATE` ni una fecha del
 navegador. La respuesta incluye `businessDate` y `nextBusinessDateAt` como instante
-ISO para que el futuro frontend solicite una nueva lectura al cambiar el día.
+ISO que el frontend usa para solicitar una nueva lectura al cambiar el día.
 Si una petición cruza medianoche, su respuesta conserva una fotografía coherente
 con el instante capturado; la siguiente petición obtiene el nuevo día.
+
+La UI muestra la fecha suministrada por Spring y las horas en `America/Bogota`.
+Consulta al entrar en Historial y al recuperar foco o visibilidad, con polling
+cada 30 segundos mientras Historial está visible y refresh mediante
+`nextBusinessDateAt`.
 
 ## Selección y snapshots
 
