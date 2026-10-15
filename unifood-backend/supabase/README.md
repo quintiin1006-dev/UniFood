@@ -180,8 +180,9 @@ Los terminales heredados sin su timestamp correspondiente conservan fecha
 infieren desde `created_at`, `updated_at` ni `cancellation_deadline`. Una cancelada
 heredada con NULL puede recibir cambios permitidos en otros campos sin inventar
 una fecha; tampoco puede adquirirla mediante una actualización ordinaria.
-Esos registros se conservan y quedarán fuera de la futura consulta de terminales
-del día. El endpoint, BFF y UI de Historial aún no están implementados.
+Esos registros se conservan y quedan fuera de la consulta de terminales del día.
+El [endpoint Spring de Historial WORKER](../docs/worker-history.md) es de solo
+lectura; el BFF y la UI de Historial aún no están implementados.
 
 ### Aplicación manual y coordinada
 

@@ -9,6 +9,10 @@ package com.santotofood.shared.error;
  * concretas permanecen en la capa a la que conceptualmente pertenecen.
  */
 public enum ErrorCode {
+  WORKER_HISTORY_FORBIDDEN,
+  WORKER_HISTORY_TEMPORARILY_UNAVAILABLE,
+  WORKER_HISTORY_INTERNAL_ERROR,
+
   AVAILABILITY_FORBIDDEN,
   AVAILABILITY_INVALID_REQUEST,
   AVAILABILITY_ITEM_NOT_FOUND,

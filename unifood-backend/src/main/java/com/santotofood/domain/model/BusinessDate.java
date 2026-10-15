@@ -16,4 +16,12 @@ public record BusinessDate(LocalDate value) {
   public static BusinessDate from(Instant instant) {
     return new BusinessDate(Objects.requireNonNull(instant).atZone(ZONE).toLocalDate());
   }
+
+  public Instant dayStartInstant() {
+    return value.atStartOfDay(ZONE).toInstant();
+  }
+
+  public Instant nextDayStartInstant() {
+    return value.plusDays(1).atStartOfDay(ZONE).toInstant();
+  }
 }
