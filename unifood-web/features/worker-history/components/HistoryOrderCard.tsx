@@ -25,6 +25,12 @@ export function HistoryOrderCard({ order }: { order: HistoryOrder }) {
         <Icon size={14} aria-hidden="true" />
         {HISTORY_LABELS[order.status]}
       </span>
+      {order.clientName && (
+        <p className={styles.clientName}>
+          <span>Cliente</span>
+          <strong>{order.clientName}</strong>
+        </p>
+      )}
       {order.items.length > 0 ? (
         <ul
           className={styles.items}

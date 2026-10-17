@@ -1,12 +1,21 @@
 "use client";
-import { CircleAlert, History, RefreshCw } from "lucide-react";
+import { useRef } from "react";
+import { CircleAlert, History, RefreshCw, Search, X } from "lucide-react";
 import { useWorkerHistory } from "../useWorkerHistory";
 import { formatBusinessDate } from "../presentation";
 import { HistoryOrderCard } from "./HistoryOrderCard";
+import { filterHistoryOrders, normalizeHistoryQuery } from "../search";
 import styles from "./WorkerHistory.module.css";
 
 export function WorkerHistoryPanel() {
   const state = useWorkerHistory();
+  const searchInput = useRef<HTMLInputElement>(null);
+  const filtered = filterHistoryOrders(state.data?.orders ?? [], state.query);
+  const searching = normalizeHistoryQuery(state.query).length > 0;
+  const clearSearch = () => {
+    state.setQuery("");
+    searchInput.current?.focus();
+  };
   const denied = state.error?.status === 401 || state.error?.status === 403;
   return (
     <section className={styles.panel} aria-labelledby="worker-history-title">
@@ -32,6 +41,34 @@ export function WorkerHistoryPanel() {
           >
             <RefreshCw size={17} aria-hidden="true" />
             <span>{state.refreshing ? "Actualizando…" : "Actualizar"}</span>
+          </button>
+        )}
+      </div>
+      <div
+        className={styles.search}
+        role="search"
+        aria-label="Buscar en el historial del día"
+      >
+        <label htmlFor="worker-history-search" className={styles.srOnly}>
+          Buscar por pedido, cliente o estado
+        </label>
+        <Search size={18} aria-hidden="true" />
+        <input
+          id="worker-history-search"
+          ref={searchInput}
+          type="search"
+          placeholder="Buscar por pedido, cliente o estado"
+          autoComplete="off"
+          value={state.query}
+          onChange={(event) => state.setQuery(event.target.value)}
+        />
+        {state.query.length > 0 && (
+          <button
+            type="button"
+            aria-label="Limpiar búsqueda"
+            onClick={clearSearch}
+          >
+            <X size={17} aria-hidden="true" />
           </button>
         )}
       </div>
@@ -77,8 +114,10 @@ export function WorkerHistoryPanel() {
       {state.data && (
         <>
           <div className={styles.summary}>
-            <span>
-              {state.data.orders.length}{" "}
+            <span role="status" aria-live="polite" aria-atomic="true">
+              {searching
+                ? `${filtered.length} de ${state.data.orders.length}`
+                : state.data.orders.length}{" "}
               {state.data.orders.length === 1
                 ? "pedido finalizado"
                 : "pedidos finalizados"}
@@ -96,13 +135,27 @@ export function WorkerHistoryPanel() {
                 aquí.
               </p>
             </div>
+          ) : !state.loading && filtered.length === 0 ? (
+            <div className={styles.empty} role="status">
+              <span className={styles.emptyIcon}>
+                <Search size={26} aria-hidden="true" />
+              </span>
+              <h3>No encontramos pedidos que coincidan con tu búsqueda.</h3>
+              <button
+                className={styles.refresh}
+                type="button"
+                onClick={clearSearch}
+              >
+                Ver todos los pedidos
+              </button>
+            </div>
           ) : (
             <div
               className={styles.cards}
               aria-label="Pedidos finalizados"
               aria-busy={state.refreshing}
             >
-              {state.data.orders.map((order) => (
+              {filtered.map((order) => (
                 <HistoryOrderCard key={order.id} order={order} />
               ))}
             </div>

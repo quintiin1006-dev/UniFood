@@ -4,6 +4,50 @@ import { availabilityLoader } from "./helpers/load-availability.mjs";
 import { workerHistoryFixture } from "./helpers/worker-history-fixture.mjs";
 const tick = () => new Promise(setImmediate);
 
+test("query persists across polling, rollover and a transient failure, and filters every new snapshot", async () => {
+  const app = setup();
+  const { filterHistoryOrders } = availabilityLoader()(
+    "features/worker-history/search.ts",
+  );
+  app.start();
+  await app.resolve();
+  app.store.setQuery("perez");
+  assert.equal(app.requests.length, 1, "Typing never makes a request");
+  assert.equal(
+    filterHistoryOrders(
+      app.store.getSnapshot().data.orders,
+      app.store.getSnapshot().query,
+    ).length,
+    1,
+  );
+  app.advance(30000);
+  const updated = workerHistoryFixture();
+  updated.orders[2].clientName = "Ana Pérez";
+  await app.resolve(1, updated);
+  assert.equal(app.store.getSnapshot().query, "perez");
+  assert.equal(
+    filterHistoryOrders(
+      app.store.getSnapshot().data.orders,
+      app.store.getSnapshot().query,
+    ).length,
+    2,
+  );
+  app.advance(30000);
+  app.requests[2].reject(new app.WorkerHistoryError(503));
+  await tick();
+  assert.equal(app.store.getSnapshot().query, "perez");
+  app.advance(Date.parse(updated.nextBusinessDateAt) - app.runtime.now());
+  await app.resolve(app.requests.length - 1, {
+    ...updated,
+    businessDate: "2026-10-15",
+    nextBusinessDateAt: "2026-10-16T05:00:00Z",
+    orders: [],
+  });
+  assert.equal(app.store.getSnapshot().query, "perez");
+  assert.deepEqual(app.store.getSnapshot().data.orders, []);
+  app.store.dispose();
+});
+
 function setup() {
   const load = availabilityLoader();
   const { WorkerHistoryStore } = load("features/worker-history/state.ts");
