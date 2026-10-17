@@ -14,6 +14,8 @@ function render(overrides = {}) {
           loading: false,
           refreshing: false,
           error: null,
+          query: "",
+          setQuery() {},
           refresh() {},
           ...overrides,
         }),
@@ -31,6 +33,7 @@ test("history UI renders terminal labels, historical items/quantity, totals and 
   const markup = render();
   for (const text of [
     "Historial",
+    "Juan Pérez",
     "Entregado",
     "No recogido",
     "Cancelado",
@@ -53,6 +56,32 @@ test("history UI renders terminal labels, historical items/quantity, totals and 
   const fractions = render({ data: fractional });
   assert.match(fractions, /19\.000,50/);
   assert.match(fractions, /15\.000,50/);
+});
+
+test("search has an accessible label and distinct no-match state with clear actions", () => {
+  const html = render({ query: "nadie coincide" });
+  assert.match(html, /type="search"/);
+  assert.match(
+    html,
+    /<label[^>]*for="worker-history-search"[^>]*>Buscar por pedido, cliente o estado<\/label>/,
+  );
+  assert.match(html, /No encontramos pedidos que coincidan con tu búsqueda/);
+  assert.match(html, /aria-label="Limpiar búsqueda"/);
+  assert.match(html, /Ver todos los pedidos/);
+  assert.doesNotMatch(html, /<article/);
+  const empty = render({
+    query: "nadie",
+    data: { ...workerHistoryFixture(), orders: [] },
+  });
+  assert.match(empty, /Aún no hay pedidos finalizados hoy/);
+  assert.doesNotMatch(empty, /No encontramos pedidos/);
+  const loading = render({ query: "nadie", data: null, loading: true });
+  assert.match(loading, /Cargando historial/);
+  assert.doesNotMatch(loading, /No encontramos pedidos/);
+  const withoutName = workerHistoryFixture();
+  withoutName.orders[0].clientName = null;
+  const unknown = render({ query: "a91c", data: withoutName });
+  assert.doesNotMatch(unknown, /Juan|Usuario|<p class="clientName"/);
 });
 test("history clock is Bogota even when the process timezone is Tokyo", () => {
   const previous = process.env.TZ;

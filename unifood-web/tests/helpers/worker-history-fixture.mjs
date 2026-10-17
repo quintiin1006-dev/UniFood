@@ -7,6 +7,7 @@ export function workerHistoryFixture() {
       {
         id: "a91c6f2d-0000-0000-0000-000000000003",
         reference: "Pedido · A91C6F2D",
+        clientName: "Juan Pérez",
         status: "DELIVERED",
         completedAt: "2026-10-14T17:43:00Z",
         total: 19000,
@@ -23,6 +24,7 @@ export function workerHistoryFixture() {
       {
         id: "b72d5a10-0000-0000-0000-000000000002",
         reference: "Pedido · B72D5A10",
+        clientName: "María Gómez",
         status: "NOT_COLLECTED",
         completedAt: "2026-10-14T17:20:00Z",
         total: 30000,
@@ -38,6 +40,7 @@ export function workerHistoryFixture() {
       {
         id: "c83e6b21-0000-0000-0000-000000000001",
         reference: "Pedido · C83E6B21",
+        clientName: "Juan Rodríguez",
         status: "CANCELLED",
         completedAt: "2026-10-14T16:10:00Z",
         total: 18000,

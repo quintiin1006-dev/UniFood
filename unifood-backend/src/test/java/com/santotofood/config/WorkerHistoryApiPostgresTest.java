@@ -313,7 +313,7 @@ class WorkerHistoryApiPostgresTest {
     Instant notCollected = status.equals("NOT_COLLECTED") ? completed : null;
     Instant cancelled = status.equals("CANCELLED") ? completed : null;
     jdbc.update(
-        "INSERT INTO public.orders(id,cafeteria_id,client_name,client_document,total,status,delivered_at,not_collected_at,cancelled_at,created_at,updated_at) VALUES (?,?,'PRIVATE_CLIENT_DETAIL','PRIVATE_DOCUMENT_DETAIL',10000,?::public.order_status,?,?,?,?,?)",
+        "INSERT INTO public.orders(id,cafeteria_id,client_name,client_document,total,status,delivered_at,not_collected_at,cancelled_at,created_at,updated_at) VALUES (?,?,'Cliente de prueba','PRIVATE_DOCUMENT_DETAIL',10000,?::public.order_status,?,?,?,?,?)",
         id,
         cafe,
         status,
@@ -428,7 +428,8 @@ class WorkerHistoryApiPostgresTest {
   }
 
   @Test
-  void stableOrderAndSnapshotsUseOneReadQueryWithoutClientDataOrCatalogLookups() throws Exception {
+  void stableOrderAndSnapshotsUseOneReadQueryWithoutPrivateClientDataOrCatalogLookups()
+      throws Exception {
     UUID older = order("CANCELLED", START);
     UUID low =
         order(
@@ -462,7 +463,8 @@ class WorkerHistoryApiPostgresTest {
             .andExpect(jsonPath("$.orders[1].id").value(low.toString()))
             .andExpect(jsonPath("$.orders[2].id").value(older.toString()))
             .andExpect(jsonPath("$.orders[0].reference").value("Pedido · FFFFFFFF"))
-            .andExpect(jsonPath("$.orders[0].length()").value(6))
+            .andExpect(jsonPath("$.orders[0].length()").value(7))
+            .andExpect(jsonPath("$.orders[0].clientName").value("Cliente de prueba"))
             .andExpect(jsonPath("$.orders[0].total").value(10000))
             .andExpect(jsonPath("$.orders[0].items", hasSize(2)))
             .andExpect(jsonPath("$.orders[0].items[0].length()").value(4))
@@ -484,6 +486,45 @@ class WorkerHistoryApiPostgresTest {
     assertFalse(result.getResponse().getContentAsString().contains("PRIVATE_"));
     assertFalse(result.getResponse().getContentAsString().contains("CURRENT_CATALOG_DETAIL"));
     assertEquals(before, snapshots());
+  }
+
+  @Test
+  void namesComeFromTheirOwnOrderWithoutExposingOtherCafeteriasOrPrivateClientData()
+      throws Exception {
+    UUID own = order("DELIVERED", START);
+    UUID unnamed = order("CANCELLED", START.plusSeconds(1));
+    UUID foreign = order(UUID.randomUUID(), OTHER, "NOT_COLLECTED", START.plusSeconds(2));
+    jdbc.update("UPDATE public.orders SET client_name=? WHERE id=?", "Juan Pérez", own);
+    jdbc.update("UPDATE public.orders SET client_name=' ' WHERE id=?", unnamed);
+    jdbc.update(
+        "UPDATE public.orders SET client_name=? WHERE id=?", "Cliente de otra cafetería", foreign);
+    source.statements.clear();
+    var response =
+        mvc.perform(get(ENDPOINT).with(as(WORKER)).param("clientId", foreign.toString()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.orders", hasSize(2)))
+            .andExpect(jsonPath("$.orders[0].id").value(unnamed.toString()))
+            .andExpect(jsonPath("$.orders[0].clientName").value(nullValue()))
+            .andExpect(jsonPath("$.orders[1].id").value(own.toString()))
+            .andExpect(jsonPath("$.orders[1].clientName").value("Juan Pérez"))
+            .andExpect(jsonPath("$.orders[1].clientId").doesNotExist())
+            .andExpect(jsonPath("$.orders[1].clientDocument").doesNotExist())
+            .andExpect(jsonPath("$.orders[1].email").doesNotExist())
+            .andExpect(jsonPath("$.orders[1].phone").doesNotExist())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    assertFalse(response.contains("Cliente de otra cafetería"));
+    assertFalse(response.contains("PRIVATE_"));
+    assertFalse(response.contains(WORKER.toString()));
+    assertEquals(2, source.statements.size());
+    assertTrue(
+        source.statements.stream()
+            .noneMatch(sql -> sql.contains("public.clients") || sql.contains("auth.users")));
+    mvc.perform(get(ENDPOINT).with(as(SECOND_WORKER)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.orders", hasSize(1)))
+        .andExpect(jsonPath("$.orders[0].clientName").value("Cliente de otra cafetería"));
   }
 
   @Test

@@ -19,6 +19,10 @@ test("history BFF forwards only verified WORKER identity and picks the no-store 
   const payload = workerHistoryFixture();
   payload.privateToken = "PRIVATE";
   payload.orders[0].clientDocument = "PRIVATE";
+  payload.orders[0].email = "PRIVATE";
+  payload.orders[0].phone = "PRIVATE";
+  payload.orders[0].clientId = "PRIVATE";
+  payload.orders[0].authMetadata = "PRIVATE";
   payload.orders[0].items[0].lunchId = "PRIVATE";
   const response = await route(async (url, options) => {
     calls.push({ url, options });
@@ -147,6 +151,10 @@ test("history BFF rejects malformed success JSON instead of presenting an empty 
     null,
     {},
     [],
+    {
+      ...workerHistoryFixture(),
+      orders: [{ ...workerHistoryFixture().orders[0], clientName: 42 }],
+    },
     {
       ...workerHistoryFixture(),
       orders: [{ ...workerHistoryFixture().orders[0], status: "PENDING" }],

@@ -12,6 +12,11 @@ se ocultan entradas defectuosas como si el historial estuviese vacío. Se conser
 el orden recibido y los nombres/importes de los snapshots, sin recalcular totales.
 La referencia corta es visual; la identidad de cada tarjeta sigue siendo su UUID.
 Las órdenes históricas sin detalle de items siguen siendo representables.
+`clientName` es el nombre almacenado en `orders.client_name`, la misma fuente que
+usan los pedidos operativos WORKER. Se muestra discretamente en la tarjeta y se
+usa para buscar; null representa un nombre desconocido. El parser admite snapshots
+anteriores sin ese campo como null y rechaza nombres de tipo inválido o vacíos.
+No se añaden email, documento, teléfono, IDs de usuario ni metadatos Auth.
 Los importes COP conservan los centavos cuando un snapshot `NUMERIC(12,2)` los
 contiene; el formato habitual sin decimales se reutiliza para pesos enteros.
 
@@ -35,6 +40,14 @@ La superficie clara se limita a Historial, con el ancho máximo de Disponibilida
 tarjetas de tres/dos/una columnas, etiquetas e iconos de estado, foco visible y
 estados de carga/error/vacío accesibles. El polling de pedidos activos se habilita
 solo en Pedidos y Llamadas, sin cambiar las transiciones ni sus reglas.
+
+El buscador controlado filtra el snapshot en memoria por referencia visible,
+nombre del cliente, estado técnico y `HISTORY_LABELS`, sin nuevas peticiones.
+`search.ts` concentra la normalización de mayúsculas, acentos y espacios y conserva
+el orden de Spring. La query vive en el store, permanece tras polling/refetch y
+rollover y se aplica a cada snapshot nuevo. El vacío real del día conserva su UI;
+una búsqueda sin coincidencias muestra un mensaje distinto y permite limpiar,
+devolviendo el foco al campo. No hay una ruta ni búsqueda SQL nueva.
 
 Pruebas: `tests/worker-history-*.test.mjs` cubren contrato, BFF, API, estado y
 presentación. `tests/e2e/worker-history.spec.ts` usa exclusivamente el proveedor

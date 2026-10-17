@@ -14,6 +14,7 @@ public record TodayWorkerHistoryResponse(
   public record Entry(
       UUID id,
       String reference,
+      String clientName,
       OrderStatus status,
       Instant completedAt,
       BigDecimal total,
@@ -31,6 +32,7 @@ public record TodayWorkerHistoryResponse(
                     new Entry(
                         order.id(),
                         visualReference(order.id()),
+                        order.clientName(),
                         order.status(),
                         order.completedAt(),
                         order.total(),

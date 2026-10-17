@@ -27,5 +27,5 @@ export function useWorkerHistory() {
     });
     return store.dispose;
   }, [store]);
-  return { ...state, refresh: store.refresh };
+  return { ...state, refresh: store.refresh, setQuery: store.setQuery };
 }

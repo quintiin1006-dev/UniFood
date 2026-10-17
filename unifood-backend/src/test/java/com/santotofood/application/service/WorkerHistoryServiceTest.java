@@ -58,6 +58,7 @@ class WorkerHistoryServiceTest {
   static TodayWorkerHistory.Entry entry(String id, Instant completedAt) {
     return new TodayWorkerHistory.Entry(
         UUID.fromString(id),
+        "Juan Pérez",
         OrderStatus.DELIVERED,
         completedAt,
         new BigDecimal("11000.00"),

@@ -46,6 +46,11 @@ export function parseWorkerHistory(value: unknown): TodayWorkerHistory | null {
       ids.has(entry.id.toLowerCase()) ||
       typeof entry.reference !== "string" ||
       !/^Pedido · [0-9A-F]{8}$/.test(entry.reference) ||
+      !(
+        entry.clientName == null ||
+        (typeof entry.clientName === "string" &&
+          entry.clientName.trim().length > 0)
+      ) ||
       typeof entry.status !== "string" ||
       !["DELIVERED", "NOT_COLLECTED", "CANCELLED"].includes(entry.status) ||
       !instant(entry.completedAt) ||
@@ -77,6 +82,9 @@ export function parseWorkerHistory(value: unknown): TodayWorkerHistory | null {
     orders.push({
       id: entry.id,
       reference: entry.reference,
+      // Additive compatibility: older Spring snapshots have no customer display name.
+      clientName:
+        entry.clientName == null ? null : (entry.clientName as string),
       status: entry.status as HistoryOrder["status"],
       completedAt: entry.completedAt,
       total: entry.total,

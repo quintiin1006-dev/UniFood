@@ -64,6 +64,74 @@
   color: #52627a;
   font-size: 12px;
 }
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px 4px 14px;
+  margin-bottom: 18px;
+  border: 1px solid #c8d8f1;
+  border-radius: 12px;
+  background: #fff;
+  color: #52627a;
+}
+.search > svg {
+  flex-shrink: 0;
+}
+.search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  font: inherit;
+  font-size: 14px;
+  color: #192a45;
+  background: transparent;
+  border: 0;
+}
+.search input::placeholder {
+  color: #52627a;
+  opacity: 1;
+}
+.search input::-webkit-search-cancel-button {
+  appearance: none;
+}
+.search input:focus-visible {
+  outline: 2px solid #0868e9;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.search button {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #1455ad;
+  cursor: pointer;
+}
+.clientName {
+  display: grid;
+  gap: 4px;
+  margin: 16px 0 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.clientName > span {
+  font-size: 11px;
+  color: #52627a;
+}
+.clientName > strong {
+  font-weight: 550;
+}
+.empty > button {
+  margin-top: 20px;
+}
 .cards,
 .skeletons {
   display: grid;

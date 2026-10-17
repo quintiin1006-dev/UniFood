@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-/** Minimal read projection; names and amounts come from historical order item snapshots. */
+/** Minimal read projection; customer and item names come from stored order snapshots. */
 public record TodayWorkerHistory(
     BusinessDate businessDate, Instant nextBusinessDateAt, List<Entry> orders) {
   public TodayWorkerHistory {
@@ -18,9 +18,16 @@ public record TodayWorkerHistory(
   }
 
   public record Entry(
-      UUID id, OrderStatus status, Instant completedAt, BigDecimal total, List<Item> items) {
+      UUID id,
+      String clientName,
+      OrderStatus status,
+      Instant completedAt,
+      BigDecimal total,
+      List<Item> items) {
     public Entry {
       Objects.requireNonNull(id);
+      // Preserve older orders without a usable name; never invent a customer identity.
+      if (clientName != null && clientName.isBlank()) clientName = null;
       Objects.requireNonNull(status);
       Objects.requireNonNull(completedAt);
       requireAmount(total);

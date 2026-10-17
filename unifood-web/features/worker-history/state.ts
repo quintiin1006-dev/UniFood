@@ -11,6 +11,7 @@ export type HistoryRuntime = {
   onVisibility(callback: () => void): () => void;
 };
 type HistoryState = {
+  query: string;
   data: TodayWorkerHistory | null;
   loading: boolean;
   refreshing: boolean;
@@ -19,6 +20,7 @@ type HistoryState = {
 
 export class WorkerHistoryStore {
   private state: HistoryState = {
+    query: "",
     data: null,
     loading: true,
     refreshing: false,
@@ -44,6 +46,9 @@ export class WorkerHistoryStore {
     this.state = { ...this.state, ...patch };
     this.listeners.forEach((listener) => listener());
   }
+  setQuery = (query: string) => {
+    this.update({ query });
+  };
   private denied() {
     return this.state.error?.status === 401 || this.state.error?.status === 403;
   }

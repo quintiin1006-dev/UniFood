@@ -47,6 +47,67 @@ test.beforeEach(async ({ page }) => {
   await configure(page, { reset: true });
 });
 
+test("local search filters reference, state and customer, clears with keyboard, and survives fresh snapshots", async ({
+  page,
+}) => {
+  await login(page);
+  await page.clock.install();
+  await enter(page);
+  await loaded(page);
+  const search = panel(page).getByRole("searchbox", {
+    name: "Buscar por pedido, cliente o estado",
+  });
+  let reads = 0;
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === root) reads++;
+  });
+  for (const [query, expected] of [
+    ["a91c", 1],
+    ["NOT_COLLECTED", 1],
+    ["No recogido", 1],
+    ["cancel", 1],
+    ["juan", 2],
+    [" PEREZ ", 1],
+  ] as const) {
+    await search.fill(query);
+    await expect(panel(page).getByRole("article")).toHaveCount(expected);
+    await panel(page)
+      .getByRole("button", { name: "Limpiar búsqueda", exact: true })
+      .click();
+    await expect(search).toBeFocused();
+    await expect(panel(page).getByRole("article")).toHaveCount(3);
+  }
+  expect(reads).toBe(0);
+  await search.fill("nadie coincide");
+  await expect(
+    panel(page).getByRole("heading", {
+      name: "No encontramos pedidos que coincidan con tu búsqueda.",
+    }),
+  ).toBeVisible();
+  await panel(page)
+    .getByRole("button", { name: "Ver todos los pedidos" })
+    .click();
+  await expect(search).toBeFocused();
+  await expect(panel(page).getByRole("article")).toHaveCount(3);
+  await search.fill("perez");
+  const updated = workerHistoryFixture();
+  updated.orders[2].clientName = "Ana Pérez";
+  await configure(page, { data: updated });
+  await page.clock.fastForward(30000);
+  await expect(search).toHaveValue("perez");
+  await expect(panel(page).getByRole("article")).toHaveCount(2);
+  await expect(panel(page).getByRole("article").first()).toContainText(
+    "Juan Pérez",
+  );
+  await search.press("Tab");
+  await expect(
+    panel(page).getByRole("button", { name: "Limpiar búsqueda", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(search).toHaveValue("");
+  await expect(panel(page).getByRole("article")).toHaveCount(3);
+});
+
 test("WORKER history shows only ordered terminal snapshots and survives reload/re-entry", async ({
   page,
 }) => {
@@ -297,6 +358,17 @@ for (const width of [390, 768, 1366]) {
     await enter(page);
     await loaded(page);
     await expect(panel(page).getByRole("article").first()).toBeVisible();
+    const search = panel(page).getByRole("searchbox", {
+      name: "Buscar por pedido, cliente o estado",
+    });
+    await expect(search).toBeVisible();
+    await search.fill("cancelado");
+    await expect(panel(page).getByRole("article")).toHaveCount(1);
+    await panel(page)
+      .getByRole("button", { name: "Limpiar búsqueda", exact: true })
+      .click();
+    await expect(search).toBeFocused();
+    await expect(panel(page).getByRole("article")).toHaveCount(3);
     const dimensions = await page.evaluate(() => ({
       viewport: innerWidth,
       width: document.documentElement.scrollWidth,

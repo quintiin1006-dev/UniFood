@@ -14,6 +14,9 @@ test("history contract preserves backend order, exact amounts, empty orders and 
 });
 test("history contract rejects an entire snapshot on any malformed field or active status", () => {
   const changes = [
+    (x) => (x.orders[0].clientName = 42),
+    (x) => (x.orders[0].clientName = " "),
+    (x) => (x.orders[0].clientName = {}),
     (x) => (x.businessDate = "2026-02-30"),
     (x) => (x.businessDate = "2026-13-14"),
     (x) => (x.nextBusinessDateAt = "tomorrow"),
@@ -48,6 +51,23 @@ test("history contract rejects an entire snapshot on any malformed field or acti
     change(data);
     assert.equal(parseWorkerHistory(data), null);
   }
+});
+
+test("customer display names are additive, nullable and never broaden the business DTO", () => {
+  const legacy = workerHistoryFixture();
+  delete legacy.orders[0].clientName;
+  assert.equal(parseWorkerHistory(legacy).orders[0].clientName, null);
+  legacy.orders[0].clientName = null;
+  assert.equal(parseWorkerHistory(legacy).orders[0].clientName, null);
+  const data = workerHistoryFixture();
+  Object.assign(data.orders[0], {
+    email: "PRIVATE",
+    phone: "PRIVATE",
+    clientId: "PRIVATE",
+    clientDocument: "PRIVATE",
+    authMetadata: "PRIVATE",
+  });
+  assert.deepEqual(parseWorkerHistory(data), workerHistoryFixture());
 });
 test("browser history API validates again and uses only its fixed no-store BFF path", async () => {
   let call;

@@ -10,6 +10,7 @@ export type HistoryItem = {
 export type HistoryOrder = {
   id: string;
   reference: string;
+  clientName: string | null;
   status: HistoryStatus;
   completedAt: string;
   total: number;
