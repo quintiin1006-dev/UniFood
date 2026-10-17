@@ -12,6 +12,7 @@ import {
 export async function authClient(
   remember?: boolean,
   onCookiesWritten?: (names: string[]) => void,
+  deferCookieWrite?: (write: () => void) => void,
 ) {
   const config = authConfig();
   if (!config) throw new Error("AUTH_NOT_CONFIGURED");
@@ -32,17 +33,21 @@ export async function authClient(
       setAll: (values) => {
         // Admission failures erase exactly the SDK's writes, without guessing cookie formats.
         onCookiesWritten?.(values.map(({ name }) => name));
-        try {
-          for (const { name, value, options } of values) {
-            jar.set(
-              name,
-              value,
-              sessionCookieOptions(persistent, options.maxAge === 0),
-            );
+        const write = () => {
+          try {
+            for (const { name, value, options } of values) {
+              jar.set(
+                name,
+                value,
+                sessionCookieOptions(persistent, options.maxAge === 0),
+              );
+            }
+          } catch {
+            // Server Components are read-only; proxy.ts already refreshed the session.
           }
-        } catch {
-          // Server Components are read-only; proxy.ts already refreshed the session.
-        }
+        };
+        if (deferCookieWrite) deferCookieWrite(write);
+        else write();
       },
     },
   });

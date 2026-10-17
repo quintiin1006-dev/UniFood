@@ -19,6 +19,7 @@ import { useOrders } from "@/features/orders/hooks/useOrders";
 import type { Order } from "@/types/order";
 import { AvailabilityPanel } from "@/features/availability/components/AvailabilityPanel";
 import { WorkerHistoryPanel } from "@/features/worker-history/components/WorkerHistoryPanel";
+import { WorkerProfilePanel } from "@/features/worker-profile/components/WorkerProfilePanel";
 import styles from "./WorkerDashboard.module.css";
 
 export default function WorkerDashboard() {
@@ -291,6 +292,7 @@ export default function WorkerDashboard() {
     () => {
       if (activeModule === "availability") return <AvailabilityPanel />;
       if (activeModule === "history") return <WorkerHistoryPanel />;
+      if (activeModule === "profile") return <WorkerProfilePanel />;
       /* =====================================================
          PEDIDOS
          ===================================================== */
@@ -426,7 +428,7 @@ export default function WorkerDashboard() {
 
   return (
     <main
-      className={`worker-page${activeModule === "availability" ? ` ${styles.availabilityPage}` : activeModule === "history" ? ` ${styles.historyPage}` : ""}`}
+      className={`worker-page${activeModule === "availability" ? ` ${styles.availabilityPage}` : activeModule === "history" ? ` ${styles.historyPage}` : activeModule === "profile" ? ` ${styles.profilePage}` : ""}`}
     >
       <Header
         activeModule={activeModule}
