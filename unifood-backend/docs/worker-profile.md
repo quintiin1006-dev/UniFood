@@ -1,9 +1,12 @@
 # Perfil WORKER de solo lectura
 
-`GET /api/worker/profile` devuelve el contexto de negocio del propio WORKER. El
-backend Spring está implementado; BFF y UI se incorporarán en una fase posterior.
-El correo corresponderá a la identidad Auth verificada en el BFF y no forma parte
-del DTO Spring. No hay edición de perfil ni cambios de contraseña o asignación.
+`GET /api/worker/profile` en Spring devuelve el contexto de negocio del propio WORKER.
+El BFF Next también expone `GET /api/worker/profile` y la UI de solo lectura está
+integrada dentro de `/worker`. El flujo es Browser → Next/BFF → Spring → PostgreSQL.
+El BFF añade el correo desde la identidad Supabase Auth verificada en servidor;
+el correo no forma parte del DTO Spring. El contrato existente de `getAuth()` se conserva.
+No hay edición de perfil ni cambios de contraseña o asignación, ni Storage o carga
+de avatar. El logout sigue únicamente en Header.
 
 ## Identidad y autorización
 
@@ -15,21 +18,27 @@ la política de Orders, Availability ni Historial.
 
 La cafetería puede estar administrativamente inactiva: la consulta sigue permitida
 y `cafeteria.active` refleja ese estado, sin confundirlo con apertura o disponibilidad
-diaria. Las entidades site/institution inactivas conservan sus nombres de contexto;
+diaria. La UI mantiene visible el perfil y muestra una advertencia textual cuando
+la cafetería está administrativamente inactiva.
+Las entidades site/institution inactivas conservan sus nombres de contexto;
 este endpoint no introduce condiciones operativas adicionales.
 
 ## Contrato
 
-La respuesta contiene exclusivamente:
+La respuesta de Spring contiene exclusivamente:
 
 - `role`: `WORKER`, después de validar la política de negocio.
 - `cafeteria`: `name` y `active` (actividad administrativa).
 - `site`: `name`.
 - `institution`: `name`.
 
-No devuelve email, nombre personal, documento, teléfono, UUIDs, metadatos Auth,
+Spring no devuelve email, nombre personal, documento, teléfono, UUIDs, metadatos Auth,
 timestamps ni información de otros usuarios. No consulta `clients`, `auth.users`
 ni el endpoint de perfil CLIENT.
+
+El BFF añade `email` a ese contrato. La UI muestra correo, rol «Trabajador», cafetería,
+sede e institución. No muestra nombre personal, documento, teléfono, UUIDs ni
+metadatos Auth, y no presenta formularios de edición.
 
 ## Persistencia
 
@@ -43,7 +52,7 @@ arbitrariamente la primera fila.
 La autorización y la proyección comparten una transacción read-only REPEATABLE READ
 con timeout de 15 segundos. Hay una SELECT de autorización y una SELECT de contexto,
 sin N+1, bloqueos de escritura ni nuevas entidades JPA. GET no modifica datos.
-No requiere migraciones, grants nuevos, RPC ni acceso a Supabase remoto.
+Esta lectura de Spring no requiere migraciones, grants nuevos ni RPC de Supabase.
 
 ## Errores y privacidad
 
