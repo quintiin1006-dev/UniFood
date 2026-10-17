@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
 import { browserAvailabilityFixture } from "./availability-fixture.mjs";
 import { workerHistoryFixture } from "./worker-history-fixture.mjs";
+import { workerProfileBusinessFixture } from "./worker-profile-fixture.mjs";
 
 const fixtures = Object.entries({
   client: ["CLIENT"],
@@ -40,7 +41,7 @@ const fixtures = Object.entries({
   fullName:
     name === "clientlong"
       ? "MaríaAlejandraConUnNombreMuyLargoParaComprobarElAjusteDelContenido Torres Quintín"
-      : "Usuario de prueba",
+      : roles.includes("WORKER") ? null : "Usuario de prueba",
   active: name !== "inactive",
   roles,
   assignments: name === "unassigned" ? 0 : name === "multiassigned" ? 2 : 1,
@@ -56,6 +57,13 @@ const profileAudit = { directBusinessReads: 0, backendProfileReads: 0 };
 const availabilityStates = new Map();
 const availabilityAudit = { directBusinessReads: 0 };
 const historyStates = new Map();
+const workerProfileStates = new Map();
+function workerProfileState(profile) {
+  if (!workerProfileStates.has(profile.id)) workerProfileStates.set(profile.id, {
+    data: workerProfileBusinessFixture(), mode: null, gets: 0, inactive: false,
+  });
+  return workerProfileStates.get(profile.id);
+}
 function historyState(profile) {
   if (!historyStates.has(profile.id)) historyStates.set(profile.id, {data: workerHistoryFixture(), mode: null, gets: 0});
   return historyStates.get(profile.id);
@@ -124,6 +132,21 @@ createServer(async (request, response) => {
   try {
     const url = new URL(request.url, "http://127.0.0.1:3101");
     if (url.pathname === "/health") return json(response, 200, { ok: true });
+    if (url.pathname === "/__test/worker-profile") {
+      let config;
+      if (request.method === "POST") {
+        let raw = ""; for await (const chunk of request) raw += chunk;
+        config = JSON.parse(raw);
+      } else config = { email: url.searchParams.get("email") };
+      const target = fixtures.find(entry => entry.email === config.email);
+      if (!target) return json(response, 400, {});
+      if (config.reset) workerProfileStates.delete(target.id);
+      const state = workerProfileState(target);
+      if (Object.hasOwn(config, "mode")) state.mode = config.mode;
+      if (Object.hasOwn(config, "inactive")) state.inactive = config.inactive;
+      if (config.data) state.data = config.data;
+      return json(response, 200, { gets: state.gets });
+    }
     if (url.pathname === "/__test/worker-history") {
       let config;
       if (request.method === "POST") {
@@ -164,7 +187,7 @@ createServer(async (request, response) => {
     if (url.pathname === "/__test/profile-audit" && request.method === "GET")
       return json(response, 200, profileAudit);
     // Model the post-010 permissions instead of granting fake business REST reads.
-    if (["/rest/v1/clients", "/rest/v1/institutions"].includes(url.pathname)) {
+    if (["/rest/v1/clients", "/rest/v1/institutions", "/rest/v1/users", "/rest/v1/cafeteria_users", "/rest/v1/cafeterias", "/rest/v1/sites"].includes(url.pathname)) {
       profileAudit.directBusinessReads++;
       return json(response, 403, {
         message: "Direct business access is disabled",
@@ -295,7 +318,25 @@ createServer(async (request, response) => {
     )
       return;
     if (url.pathname === "/rest/v1/rpc/current_auth_profile")
-      return json(response, 200, profile);
+      return json(response, 200, profile.roles.includes("WORKER") ? {
+        ...profile,
+        active: profile.active && !workerProfileState(profile).inactive,
+        email: "business-email-is-not-auth@example.invalid",
+      } : profile);
+    if (url.pathname === "/api/worker/profile" && request.method === "GET") {
+      const state = workerProfileState(profile); state.gets++;
+      if (!profile.active || state.inactive || profile.assignments !== 1 || profile.roles.length !== 1 || profile.roles[0] !== "WORKER")
+        return json(response, 403, { code: "WORKER_PROFILE_FORBIDDEN", message: "PRIVATE" });
+      if (["401", "403", "500", "503"].includes(state.mode)) {
+        if (state.mode === "503") response.setHeader("Retry-After", "9");
+        return json(response, Number(state.mode), { message: "PRIVATE_SQL_DETAIL" });
+      }
+      if (state.mode === "redirect") {
+        response.writeHead(302, { location: "/api/me/profile" });
+        return response.end();
+      }
+      return json(response, 200, state.data);
+    }
     if (url.pathname.startsWith("/api/worker/availability/today")) {
       if (!profile.active || profile.assignments !== 1 || profile.roles.length !== 1 || profile.roles[0] !== "WORKER")
         return json(response, 403, { code: "AVAILABILITY_FORBIDDEN", message: "PRIVATE" });
