@@ -52,9 +52,12 @@ items devuelve una lista vacía, sin desaparecer por el JOIN.
 ## Contrato y errores
 
 La respuesta contiene `businessDate`, `nextBusinessDateAt` y `orders`. Cada orden
-incluye `id`, `reference`, `status`, `completedAt`, `total` e `items` con `name`,
-`quantity`, `unitPrice` y `subtotal`. No incluye cliente, documento, notas, IDs de
-cafetería, IDs de productos ni otros datos operativos innecesarios.
+incluye `id`, `reference`, `clientName`, `status`, `completedAt`, `total` e `items` con `name`,
+`quantity`, `unitPrice` y `subtotal`. `clientName` procede de `orders.client_name`,
+el nombre almacenado del pedido usado también por las operaciones WORKER; un nombre
+vacío se representa como null, sin inventar identidad. No requiere JOIN a `clients`
+ni consultas adicionales. No incluye email, teléfono, documento, notas, IDs de usuario,
+de cafetería, IDs de productos ni otros datos operativos innecesarios.
 
 `reference`, por ejemplo `Pedido · A91C6F2D`, deriva de los primeros ocho caracteres
 hexadecimales del UUID. Es solo una etiqueta visual: puede colisionar, no es un
@@ -71,3 +74,8 @@ La lectura es transaccional read-only y no cambia estados, cancelaciones, FIFO,
 locks ni Availability. No añade migraciones, índices o escrituras remotas. El
 conjunto diario aún no está paginado: medir volumen y plan de ejecución antes de
 introducir índices o paginación si la escala futura lo requiere.
+
+El buscador de la UI filtra en memoria el snapshot diario por referencia, nombre
+de cliente y estado técnico o etiqueta española, ignorando mayúsculas, acentos y
+espacios exteriores. No envía consultas por pulsación ni cambia cafetería, fecha
+o estados del endpoint. El texto se conserva al refrescar el snapshot.

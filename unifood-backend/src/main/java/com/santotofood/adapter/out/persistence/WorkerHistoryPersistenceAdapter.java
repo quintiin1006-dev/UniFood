@@ -58,11 +58,13 @@ public class WorkerHistoryPersistenceAdapter implements WorkerHistoryQueryPort {
       var status = OrderStatus.valueOf(rows.getString("status"));
       var completedAt = rows.getObject("completed_at", OffsetDateTime.class).toInstant();
       var total = Objects.requireNonNull(rows.getBigDecimal("total"));
+      String clientName = rows.getString("client_name");
       var entry = orders.get(id);
       if (entry == null) {
-        entry = new EntryBuilder(id, status, completedAt, total);
+        entry = new EntryBuilder(id, clientName, status, completedAt, total);
         orders.put(id, entry);
       } else if (entry.status != status
+          || !Objects.equals(entry.clientName, clientName)
           || !entry.completedAt.equals(completedAt)
           || entry.total.compareTo(total) != 0) {
         throw new IllegalStateException("Inconsistent worker history projection");
@@ -85,20 +87,23 @@ public class WorkerHistoryPersistenceAdapter implements WorkerHistoryQueryPort {
 
   private static final class EntryBuilder {
     final UUID id;
+    final String clientName;
     final OrderStatus status;
     final Instant completedAt;
     final BigDecimal total;
     final List<TodayWorkerHistory.Item> items = new ArrayList<>();
 
-    EntryBuilder(UUID id, OrderStatus status, Instant completedAt, BigDecimal total) {
+    EntryBuilder(
+        UUID id, String clientName, OrderStatus status, Instant completedAt, BigDecimal total) {
       this.id = id;
+      this.clientName = clientName;
       this.status = status;
       this.completedAt = completedAt;
       this.total = total;
     }
 
     TodayWorkerHistory.Entry build() {
-      return new TodayWorkerHistory.Entry(id, status, completedAt, total, items);
+      return new TodayWorkerHistory.Entry(id, clientName, status, completedAt, total, items);
     }
   }
 

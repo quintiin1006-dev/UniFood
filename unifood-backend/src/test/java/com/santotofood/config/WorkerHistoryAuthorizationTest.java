@@ -95,6 +95,7 @@ class WorkerHistoryAuthorizationTest {
   static TodayWorkerHistory.Entry entry(String id) {
     return new TodayWorkerHistory.Entry(
         UUID.fromString(id),
+        "Juan Pérez",
         OrderStatus.CANCELLED,
         Instant.parse("2026-10-13T12:00:00Z"),
         BigDecimal.TEN,
