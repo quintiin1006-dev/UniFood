@@ -665,25 +665,33 @@
 .panelLogin .panelIntro {
   border: 1px solid #ffffff14;
   border-radius: 28px;
-  background:
-    radial-gradient(ellipse at 62% 88%, #6ba8ff1f, transparent 64%),
-    linear-gradient(150deg, #0b3da3, #07359c 52%, #092f88);
+  background: #07359c;
   box-shadow: 0 16px 48px #123b7b14;
 }
 .panelLogin .panelIntro::before {
   content: "";
   position: absolute;
-  width: 560px;
-  height: 560px;
-  top: -310px;
-  right: -280px;
-  border: 1px solid #ffffff0d;
-  border-radius: 50%;
+  z-index: 1;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      #052968a6,
+      #07358324 20%,
+      #07359c0d 42%,
+      #073583b3 72%,
+      #052968eb
+    ),
+    linear-gradient(90deg, #05296826, transparent 80%);
   pointer-events: none;
 }
 .panelLogin .panelCopy {
   position: relative;
-  padding-top: 42px;
+  z-index: 2;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 42px 44px 40px;
 }
 .panelLogin .panelCopy .panelLabel {
   display: flex;
@@ -698,8 +706,8 @@
   background: #dfebff80;
 }
 .panelLogin .panelCopy h2 {
-  max-width: 510px;
-  margin: 18px 0 14px;
+  max-width: 430px;
+  margin: auto 0 14px;
   font-size: clamp(36px, 3.2vw, 46px);
   line-height: 1.12;
   letter-spacing: -1.4px;
@@ -708,11 +716,18 @@
   color: #e1ebff;
 }
 .panelLogin .panelIllustration {
-  min-height: 260px;
-  margin: 0 14px 20px;
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  min-height: 0;
+  margin: 0;
 }
 .panelLogin .panelIllustration img {
-  opacity: 0.84;
+  object-fit: cover;
+  object-position: 55% center;
+  filter: none;
+  mix-blend-mode: normal;
+  opacity: 1;
 }
 .panelLogin .panelContent {
   padding: 40px 32px;

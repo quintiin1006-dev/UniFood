@@ -57,6 +57,16 @@ for (const viewport of [
                 (img: HTMLImageElement) => img.complete && img.naturalWidth > 0,
               ),
           ).toBe(true);
+          const imageBox = (await hero.locator("img").boundingBox())!;
+          expect(Math.abs(imageBox.x - heroBox.x)).toBeLessThanOrEqual(1);
+          expect(Math.abs(imageBox.y - heroBox.y)).toBeLessThanOrEqual(1);
+          expect(Math.abs(imageBox.width - heroBox.width)).toBeLessThanOrEqual(
+            2,
+          );
+          expect(
+            Math.abs(imageBox.height - heroBox.height),
+          ).toBeLessThanOrEqual(2);
+          await expect(hero.locator("img")).toHaveCSS("object-fit", "cover");
         } else await expect(hero).toBeHidden(); // The approved mobile layout hides the decorative hero.
       }
       await page.addStyleTag({

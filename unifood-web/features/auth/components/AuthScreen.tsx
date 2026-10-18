@@ -516,11 +516,17 @@ export default function AuthScreen({
             </div>
             <div className={styles.panelIllustration} aria-hidden="true">
               <Image
-                src="/panel-cafeteria.png"
+                src={
+                  isLogin ? "/images/client/Topos.png" : "/panel-cafeteria.png"
+                }
                 alt=""
                 fill
-                sizes="(min-width: 960px) 700px, 100vw"
-                unoptimized
+                sizes={
+                  isLogin
+                    ? "(min-width: 1316px) 706px, (min-width: 960px) 56vw, 100vw"
+                    : "(min-width: 960px) 460px, 100vw"
+                }
+                unoptimized={!isLogin}
               />
             </div>
           </aside>
