@@ -57,7 +57,7 @@ for (const viewport of [
                 (img: HTMLImageElement) => img.complete && img.naturalWidth > 0,
               ),
           ).toBe(true);
-        } else await expect(hero).toBeHidden(); // The approved mobile layout hides the photo.
+        } else await expect(hero).toBeHidden(); // The approved mobile layout hides the decorative hero.
       }
       await page.addStyleTag({
         content: "nextjs-portal { visibility: hidden !important; }",

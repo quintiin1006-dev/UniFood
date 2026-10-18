@@ -159,34 +159,58 @@ for (const [entrypoint, path] of [
   test(`${entrypoint} waits for hydration before enabling credentials, submit and the eye`, async ({
     page,
   }) => {
-    let releaseScripts!: () => void;
-    const scriptsReady = new Promise<void>((resolve) => {
-      releaseScripts = resolve;
+    const hydrationErrors: string[] = [];
+    page.on("console", (message) => {
+      if (
+        (message.type() === "error" || message.type() === "warning") &&
+        /hydration|hydrated|didn't match|react error #418/i.test(message.text())
+      )
+        hydrationErrors.push(message.text());
     });
+    page.on("pageerror", (error) => hydrationErrors.push(error.message));
+    let scriptsReady: Promise<void>;
     await page.route("**/_next/**/*.js*", async (route) => {
       await scriptsReady;
       await route.continue();
     });
-    const navigation = page.goto(path, { waitUntil: "load" });
-    try {
-      const identifier = page.locator('input[name="username"]');
-      const password = page.locator('input[name="password"]');
-      await expect(identifier).toBeVisible();
-      await expect(identifier).toBeDisabled();
-      await expect(password).toBeDisabled();
-      await expect(
-        page.getByRole("button", { name: "Mostrar contraseña", exact: true }),
-      ).toBeDisabled();
+    for (let round = 0; round < (entrypoint === "panel" ? 3 : 1); round++) {
+      let releaseScripts!: () => void;
+      scriptsReady = new Promise<void>((resolve) => {
+        releaseScripts = resolve;
+      });
+      const navigation =
+        round === 0
+          ? page.goto(path, { waitUntil: "load" })
+          : page.reload({ waitUntil: "load" });
+      try {
+        const identifier = page.locator('input[name="username"]');
+        const password = page.locator('input[name="password"]');
+        await expect(identifier).toBeVisible();
+        await expect(identifier).toBeDisabled();
+        await expect(password).toBeDisabled();
+        await expect(page.getByRole("checkbox")).toBeDisabled();
+        await expect(
+          page.getByRole("button", { name: "Mostrar contraseña", exact: true }),
+        ).toBeDisabled();
+        await expect(
+          page.getByRole("button", { name: "Iniciar sesión", exact: true }),
+        ).toBeDisabled();
+        await expect(page.locator("form")).toHaveAttribute("method", "post");
+        if (entrypoint === "panel")
+          await expect(page.locator("form")).toHaveAttribute(
+            "autocomplete",
+            "off",
+          );
+        expect(new URL(page.url()).search).toBe("");
+      } finally {
+        releaseScripts();
+        await navigation;
+      }
+      await expect(page.locator('input[name="username"]')).toBeEnabled();
       await expect(
         page.getByRole("button", { name: "Iniciar sesión", exact: true }),
-      ).toBeDisabled();
-      await expect(page.locator("form")).toHaveAttribute("method", "post");
-      expect(new URL(page.url()).search).toBe("");
-    } finally {
-      releaseScripts();
-      await navigation;
+      ).toBeEnabled();
     }
-    await expect(page.locator('input[name="username"]')).toBeEnabled();
     const password = page.locator('input[name="password"]');
     await password.fill("SyntheticPassword8");
     await page
@@ -197,6 +221,65 @@ for (const [entrypoint, path] of [
       .getByRole("button", { name: "Ocultar contraseña", exact: true })
       .click();
     await expect(password).toHaveAttribute("type", "password");
+    expect(hydrationErrors).toEqual([]);
+  });
+
+  test(`${entrypoint} keeps pending controls disabled, blocks duplicate submit and preserves remember choice`, async ({
+    page,
+  }) => {
+    let releaseResponse!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      releaseResponse = resolve;
+    });
+    const requests: unknown[] = [];
+    await page.route("**/api/auth/login", async (route) => {
+      requests.push(route.request().postDataJSON());
+      await pending;
+      await route.fulfill({
+        status: 401,
+        json: { message: "Error de prueba" },
+      });
+    });
+    await page.goto(path);
+    await page
+      .locator('input[name="username"]')
+      .fill("pending@example.invalid");
+    await page.locator('input[name="password"]').fill("SyntheticPassword8");
+    await page.getByRole("checkbox").uncheck();
+    try {
+      await page
+        .getByRole("button", { name: "Iniciar sesión", exact: true })
+        .click();
+      await expect(page.locator("form")).toHaveAttribute("aria-busy", "true");
+      await expect(page.locator('input[name="username"]')).toBeDisabled();
+      await expect(page.locator('input[name="password"]')).toBeDisabled();
+      await expect(page.getByRole("checkbox")).toBeDisabled();
+      await expect(
+        page.getByRole("button", { name: "Mostrar contraseña", exact: true }),
+      ).toBeDisabled();
+      await expect.poll(() => requests.length).toBe(1);
+      await page.locator("form").evaluate((form) => {
+        form.dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        );
+      });
+      expect(requests).toEqual([
+        {
+          email: "pending@example.invalid",
+          password: "SyntheticPassword8",
+          remember: false,
+          entrypoint,
+        },
+      ]);
+    } finally {
+      releaseResponse();
+    }
+    await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+      "Error de prueba",
+    );
+    await expect(page.locator('input[name="password"]')).toBeEnabled();
+    await expect(page.getByRole("checkbox")).not.toBeChecked();
+    await expect(page.locator("form")).toHaveAttribute("aria-busy", "false");
   });
 
   test(`${entrypoint} cannot expose credentials in a native GET when JavaScript is unavailable`, async ({

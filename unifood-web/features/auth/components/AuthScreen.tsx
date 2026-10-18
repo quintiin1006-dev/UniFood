@@ -11,7 +11,6 @@ import {
 } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import panelLoginHero from "@/public/images/Topos.png";
 import {
   ArrowLeft,
   ArrowRight,
@@ -502,7 +501,7 @@ export default function AuthScreen({
 
   return (
     <main
-      className={`${styles.screen} ${entrypoint === "panel" ? styles.panelScreen : ""}`}
+      className={`${styles.screen} ${entrypoint === "panel" ? `${styles.panelScreen} ${isLogin ? styles.panelLogin : ""}` : ""}`}
       lang={language}
     >
       <div
@@ -510,19 +509,19 @@ export default function AuthScreen({
       >
         {entrypoint === "panel" && (
           <aside className={styles.panelIntro}>
-            <div className={styles.panelPhoto}>
-              <Image
-                src={panelLoginHero}
-                alt=""
-                fill
-                sizes="(min-width: 960px) 700px, 100vw"
-                preload
-              />
-            </div>
             <div className={styles.panelCopy}>
               <p className={styles.panelLabel}>{t.panelLabel}</p>
               <h2>{t.panelHeading}</h2>
               <p>{t.panelDescription}</p>
+            </div>
+            <div className={styles.panelIllustration} aria-hidden="true">
+              <Image
+                src="/panel-cafeteria.png"
+                alt=""
+                fill
+                sizes="(min-width: 960px) 700px, 100vw"
+                unoptimized
+              />
             </div>
           </aside>
         )}
@@ -571,8 +570,10 @@ export default function AuthScreen({
             {title}
           </h1>
           <p className={styles.description}>{description}</p>
+          {/* Firefox must not restore disabled attributes before panel hydration. */}
           <form
             method="post"
+            autoComplete={isLogin && entrypoint === "panel" ? "off" : undefined}
             onSubmit={submit}
             className={`${styles.form} ${isLogin ? styles.loginForm : ""}`}
             aria-busy={busy}
