@@ -555,29 +555,19 @@
   background: #07359c;
   box-shadow: 0 18px 60px #123b7b18;
 }
-.panelPhoto {
-  position: absolute;
-  inset: 176px 0 0;
-  z-index: -2;
+.panelIllustration {
+  position: relative;
+  flex: 1;
+  min-height: 240px;
+  margin: 12px 24px 24px;
 }
-.panelPhoto img {
-  object-fit: cover;
-  object-position: center;
-}
-.panelIntro::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(
-    180deg,
-    #07359c 0%,
-    #07359c 32%,
-    #07359c59 44%,
-    #0840aa0d 65%,
-    #062e8708 100%
-  );
-  pointer-events: none;
+.panelIllustration img {
+  object-fit: contain;
+  object-position: center bottom;
+  /* Lift the white drawing off the PNG's pale opaque background. */
+  filter: grayscale(1) brightness(0.507) contrast(64);
+  mix-blend-mode: screen;
+  opacity: 0.72;
 }
 .panelCopy {
   padding: 44px 44px 0;
@@ -618,7 +608,8 @@
     margin: 0;
   }
   .panelIntro {
-    display: block;
+    display: flex;
+    flex-direction: column;
   }
 }
 @media (min-width: 720px) {
@@ -662,4 +653,128 @@
     width: 65px;
     height: 65px;
   }
+}
+.panelLogin {
+  background:
+    radial-gradient(ellipse at 12% 8%, #fff9, transparent 55%),
+    radial-gradient(ellipse at 90% 95%, #dbe7f580, transparent 55%), #eef3f9;
+}
+.panelLogin .panelCanvas {
+  gap: 28px;
+}
+.panelLogin .panelIntro {
+  border: 1px solid #ffffff14;
+  border-radius: 28px;
+  background: #07359c;
+  box-shadow: 0 16px 48px #123b7b14;
+}
+.panelLogin .panelIntro::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      #052968a6,
+      #07358324 20%,
+      #07359c0d 42%,
+      #073583b3 72%,
+      #052968eb
+    ),
+    linear-gradient(90deg, #05296826, transparent 80%);
+  pointer-events: none;
+}
+.panelLogin .panelCopy {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 42px 44px 40px;
+}
+.panelLogin .panelCopy .panelLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #dfebff;
+}
+.panelLogin .panelLabel::before {
+  content: "";
+  width: 22px;
+  height: 1px;
+  background: #dfebff80;
+}
+.panelLogin .panelCopy h2 {
+  max-width: 430px;
+  margin: auto 0 14px;
+  font-size: clamp(36px, 3.2vw, 46px);
+  line-height: 1.12;
+  letter-spacing: -1.4px;
+}
+.panelLogin .panelCopy > p:last-child {
+  color: #e1ebff;
+}
+.panelLogin .panelIllustration {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  min-height: 0;
+  margin: 0;
+}
+.panelLogin .panelIllustration img {
+  object-fit: cover;
+  object-position: 55% center;
+  filter: none;
+  mix-blend-mode: normal;
+  opacity: 1;
+}
+.panelLogin .panelContent {
+  padding: 40px 32px;
+  border-color: #dce5f0;
+  box-shadow:
+    0 16px 48px #1b38610b,
+    inset 0 1px 0 #fff;
+}
+.panelLogin .brand {
+  margin-bottom: 32px;
+  font-size: 32px;
+}
+.panelLogin .heading {
+  margin-bottom: 9px;
+  font-size: 30px;
+}
+.panelLogin .description {
+  color: #6d7b98;
+  line-height: 1.6;
+}
+.panelLogin .loginForm {
+  margin-top: 30px;
+}
+.panelLogin .field {
+  min-height: 60px;
+  border-color: #d9e2f0;
+  background: #fbfcff;
+  box-shadow: inset 0 1px 2px #17376603;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background-color 0.15s;
+}
+.panelLogin .field:focus-within {
+  border-color: #6a98ed;
+  background: #fff;
+  box-shadow: 0 0 0 3px #0863f71a;
+}
+.panelLogin .field input {
+  height: 57px;
+}
+.panelLogin .options {
+  margin: 4px 0 8px;
+}
+.panelLogin .primary {
+  min-height: 58px;
+  box-shadow:
+    0 5px 14px #0863f724,
+    inset 0 1px 0 #ffffff14;
 }
