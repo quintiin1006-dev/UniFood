@@ -9,40 +9,34 @@ import org.springframework.stereotype.Component;
 @Component
 public class OrderResponseMapper {
 
-    public OrderResponse toResponse(Order order) {
+  public OrderResponse toResponse(Order order) {
 
-        return new OrderResponse(
-                order.getId(),
-                order.getCafeteriaId(),
-                order.getClientId(),
-                order.getClientName(),
-                order.getClientDocument(),
-                order.getStatus(),
-                order.getTotal(),
-                order.getCancellationDeadline(),
-                order.getCreatedAt(),
-                order.getUpdatedAt(),
-                order.getItems()
-                        .stream()
-                        .map(this::toItemResponse)
-                        .toList()
-        );
-    }
+    return new OrderResponse(
+        order.getId(),
+        order.getCafeteriaId(),
+        order.getClientId(),
+        order.getClientName(),
+        order.getClientDocument(),
+        order.getStatus(),
+        order.getTotal(),
+        order.getCancellationDeadline(),
+        order.getCreatedAt(),
+        order.getUpdatedAt(),
+        order.getDeliveredAt(),
+        order.getItems().stream().map(this::toItemResponse).toList());
+  }
 
-    private OrderItemResponse toItemResponse(
-            OrderItem item
-    ) {
+  private OrderItemResponse toItemResponse(OrderItem item) {
 
-        return new OrderItemResponse(
-                item.getId(),
-                item.getOrderId(),
-                item.getLunchId(),
-                item.getLunchName(),
-                item.getUnitPrice(),
-                item.getQuantity(),
-                item.getBeverageChoice(),
-                item.getNote(),
-                item.getSubtotal()
-        );
-    }
+    return new OrderItemResponse(
+        item.getId(),
+        item.getOrderId(),
+        item.getLunchId(),
+        item.getLunchName(),
+        item.getUnitPrice(),
+        item.getQuantity(),
+        item.getBeverageChoice(),
+        item.getNote(),
+        item.getSubtotal());
+  }
 }

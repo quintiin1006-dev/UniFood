@@ -9,120 +9,83 @@ import com.santotofood.application.port.in.GetOrdersByCafeteriaUseCase;
 import com.santotofood.application.port.in.MarkOrderReadyUseCase;
 import com.santotofood.application.port.in.PrepareOrderUseCase;
 import com.santotofood.domain.model.Order;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
 public class OrderController {
 
-    private final PrepareOrderUseCase prepareOrderUseCase;
-    private final MarkOrderReadyUseCase markOrderReadyUseCase;
-    private final CallStudentUseCase callStudentUseCase;
-    private final DeliverOrderUseCase deliverOrderUseCase;
-    private final CancelOrderUseCase cancelOrderUseCase;
-    private final GetOrdersByCafeteriaUseCase getOrdersByCafeteriaUseCase;
-    private final OrderResponseMapper orderResponseMapper;
+  private final PrepareOrderUseCase prepareOrderUseCase;
+  private final MarkOrderReadyUseCase markOrderReadyUseCase;
+  private final CallStudentUseCase callStudentUseCase;
+  private final DeliverOrderUseCase deliverOrderUseCase;
+  private final CancelOrderUseCase cancelOrderUseCase;
+  private final GetOrdersByCafeteriaUseCase getOrdersByCafeteriaUseCase;
+  private final OrderResponseMapper orderResponseMapper;
 
-    @GetMapping
-    @PreAuthorize("@orderAuthorization.cafeteria(authentication, #cafeteriaId)")
-    public ResponseEntity<List<OrderResponse>> getOrdersByCafeteria(
-            @RequestParam UUID cafeteriaId
-    ) {
+  @GetMapping
+  @PreAuthorize("@orderAuthorization.cafeteria(authentication, #cafeteriaId)")
+  public ResponseEntity<List<OrderResponse>> getOrdersByCafeteria(@RequestParam UUID cafeteriaId) {
 
-        List<OrderResponse> response =
-                getOrdersByCafeteriaUseCase
-                        .getOrdersByCafeteria(cafeteriaId)
-                        .stream()
-                        .map(orderResponseMapper::toResponse)
-                        .toList();
+    var listing = getOrdersByCafeteriaUseCase.getOperationalOrders(cafeteriaId);
+    List<OrderResponse> response =
+        listing.orders().stream().map(orderResponseMapper::toResponse).toList();
 
-        return ResponseEntity.ok(response);
-    }
+    return ResponseEntity.ok()
+        .header("Cache-Control", "no-store")
+        .header("X-Business-Date", listing.businessDate().value().toString())
+        .header("X-Next-Business-Date-At", listing.businessDate().nextDayStartInstant().toString())
+        .body(response);
+  }
 
-    @PatchMapping("/{orderId}/prepare")
-    @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
-    public ResponseEntity<OrderResponse> prepareOrder(
-            @PathVariable UUID orderId
-    ) {
+  @PatchMapping("/{orderId}/prepare")
+  @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
+  public ResponseEntity<OrderResponse> prepareOrder(@PathVariable UUID orderId) {
 
-        Order updatedOrder =
-                prepareOrderUseCase.prepareOrder(orderId);
+    Order updatedOrder = prepareOrderUseCase.prepareOrder(orderId);
 
-        return ResponseEntity.ok(
-                orderResponseMapper.toResponse(
-                        updatedOrder
-                )
-        );
-    }
+    return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
+  }
 
-    @PatchMapping("/{orderId}/ready")
-    @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
-    public ResponseEntity<OrderResponse> markOrderReady(
-            @PathVariable UUID orderId
-    ) {
+  @PatchMapping("/{orderId}/ready")
+  @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
+  public ResponseEntity<OrderResponse> markOrderReady(@PathVariable UUID orderId) {
 
-        Order updatedOrder =
-                markOrderReadyUseCase.markOrderReady(orderId);
+    Order updatedOrder = markOrderReadyUseCase.markOrderReady(orderId);
 
-        return ResponseEntity.ok(
-                orderResponseMapper.toResponse(
-                        updatedOrder
-                )
-        );
-    }
+    return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
+  }
 
-    @PatchMapping("/{orderId}/call")
-    @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
-    public ResponseEntity<OrderResponse> callStudent(
-            @PathVariable UUID orderId
-    ) {
+  @PatchMapping("/{orderId}/call")
+  @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
+  public ResponseEntity<OrderResponse> callStudent(@PathVariable UUID orderId) {
 
-        Order updatedOrder =
-                callStudentUseCase.callStudent(orderId);
+    Order updatedOrder = callStudentUseCase.callStudent(orderId);
 
-        return ResponseEntity.ok(
-                orderResponseMapper.toResponse(
-                        updatedOrder
-                )
-        );
-    }
+    return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
+  }
 
-    @PatchMapping("/{orderId}/deliver")
-    @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
-    public ResponseEntity<OrderResponse> deliverOrder(
-            @PathVariable UUID orderId
-    ) {
+  @PatchMapping("/{orderId}/deliver")
+  @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
+  public ResponseEntity<OrderResponse> deliverOrder(@PathVariable UUID orderId) {
 
-        Order updatedOrder =
-                deliverOrderUseCase.deliverOrder(orderId);
+    Order updatedOrder = deliverOrderUseCase.deliverOrder(orderId);
 
-        return ResponseEntity.ok(
-                orderResponseMapper.toResponse(
-                        updatedOrder
-                )
-        );
-    }
+    return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
+  }
 
-    @PatchMapping("/{orderId}/cancel")
-    @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
-    public ResponseEntity<OrderResponse> cancelOrder(
-            @PathVariable UUID orderId
-    ) {
+  @PatchMapping("/{orderId}/cancel")
+  @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
+  public ResponseEntity<OrderResponse> cancelOrder(@PathVariable UUID orderId) {
 
-        Order updatedOrder =
-                cancelOrderUseCase.cancelOrder(orderId);
+    Order updatedOrder = cancelOrderUseCase.cancelOrder(orderId);
 
-        return ResponseEntity.ok(
-                orderResponseMapper.toResponse(
-                        updatedOrder
-                )
-        );
-    }
+    return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
+  }
 }

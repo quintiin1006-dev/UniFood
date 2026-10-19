@@ -77,10 +77,10 @@ export default function KanbanBoard({
                 .sort(
                   (a, b) =>
                     new Date(
-                      b.updatedAt
+                      b.deliveredAt ?? ""
                     ).getTime() -
                     new Date(
-                      a.updatedAt
+                      a.deliveredAt ?? ""
                     ).getTime()
                 )
                 .slice(0, 5)

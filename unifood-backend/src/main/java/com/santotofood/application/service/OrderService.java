@@ -2,6 +2,7 @@ package com.santotofood.application.service;
 
 import com.santotofood.application.exception.OrderNotFoundException;
 import com.santotofood.application.exception.OrderProcessingSequenceException;
+import com.santotofood.application.model.OperationalOrders;
 import com.santotofood.application.port.in.CallStudentUseCase;
 import com.santotofood.application.port.in.CancelOrderUseCase;
 import com.santotofood.application.port.in.DeliverOrderUseCase;
@@ -11,6 +12,7 @@ import com.santotofood.application.port.in.MarkOrderReadyUseCase;
 import com.santotofood.application.port.in.PrepareOrderUseCase;
 import com.santotofood.application.port.in.RemindStudentUseCase;
 import com.santotofood.domain.exception.OrderConflictException;
+import com.santotofood.domain.model.BusinessDate;
 import com.santotofood.domain.model.Order;
 import com.santotofood.domain.model.OrderItem;
 import com.santotofood.domain.port.out.OrderItemRepository;
@@ -182,11 +184,20 @@ public class OrderService
   @Override
   @Transactional(readOnly = true)
   public List<Order> getOrdersByCafeteria(UUID cafeteriaId) {
+    return getOperationalOrders(cafeteriaId).orders();
+  }
 
-    List<Order> orders = orderRepository.findByCafeteriaId(cafeteriaId);
+  @Override
+  @Transactional(readOnly = true)
+  public OperationalOrders getOperationalOrders(UUID cafeteriaId) {
+    var date = BusinessDate.from(timeProvider.now());
+
+    List<Order> orders =
+        orderRepository.findOperational(
+            cafeteriaId, date.dayStartInstant(), date.nextDayStartInstant());
 
     if (orders.isEmpty()) {
-      return orders;
+      return new OperationalOrders(date, orders);
     }
 
     List<UUID> orderIds = orders.stream().map(Order::getId).toList();
@@ -198,7 +209,7 @@ public class OrderService
 
     orders.forEach(order -> order.setItems(itemsByOrderId.getOrDefault(order.getId(), List.of())));
 
-    return orders;
+    return new OperationalOrders(date, orders);
   }
 
   private Order loadOrderItems(Order order) {

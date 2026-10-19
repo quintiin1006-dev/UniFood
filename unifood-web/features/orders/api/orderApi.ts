@@ -38,7 +38,10 @@ async function readErrorMessage(
   }
 }
 
-export async function getOrders(): Promise<Order[]> {
+export async function getOperationalOrders(): Promise<{
+  orders: Order[];
+  nextBusinessDateAt: string | null;
+}> {
   const response = await fetch("/api/orders", {
     method: "GET",
     cache: "no-store",
@@ -56,7 +59,17 @@ export async function getOrders(): Promise<Order[]> {
 
   const data: BackendOrder[] = await response.json();
 
-  return data.map(mapBackendOrder);
+  const nextBusinessDateAt = response.headers.get("x-next-business-date-at");
+  if (
+    nextBusinessDateAt !== null &&
+    !Number.isFinite(Date.parse(nextBusinessDateAt))
+  )
+    throw new Error("La fecha de negocio no es válida.");
+  return { orders: data.map(mapBackendOrder), nextBusinessDateAt };
+}
+
+export async function getOrders(): Promise<Order[]> {
+  return (await getOperationalOrders()).orders;
 }
 
 export async function advanceOrder(order: Order): Promise<Order> {

@@ -25,7 +25,7 @@ function setup(enabled = true) {
   vm.runInNewContext(source, {
     module: loaded, exports: loaded.exports, Error,
     require: (name) => name === "react" ? react : {
-      getOrders: () => new Promise((resolve, reject) => requests.push({ resolve, reject })),
+      getOperationalOrders: () => new Promise((resolve, reject) => requests.push({ resolve: (orders) => resolve({orders,nextBusinessDateAt:null}), reject })),
     },
     setTimeout: (callback) => { start = callback; },
     setInterval: (callback) => { tick = callback; },

@@ -43,6 +43,7 @@ export function mapBackendOrder(
     studentId: backendOrder.clientDocument ?? "",
     createdAt: backendOrder.createdAt,
     updatedAt: backendOrder.updatedAt,
+    deliveredAt: backendOrder.deliveredAt ?? undefined,
     items: backendOrder.items.map((item) => ({
       id: item.id,
       name: item.lunchName,

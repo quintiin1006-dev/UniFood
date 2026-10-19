@@ -6,6 +6,7 @@ import com.santotofood.adapter.out.persistence.repository.SpringDataOrderReposit
 import com.santotofood.domain.model.Order;
 import com.santotofood.domain.model.OrderStatus;
 import com.santotofood.domain.port.out.OrderRepository;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -54,6 +55,21 @@ public class OrderPersistenceAdapter implements OrderRepository {
   public List<Order> findByCafeteriaId(UUID cafeteriaId) {
 
     return repository.findByCafeteriaIdOrderByCreatedAtAscIdAsc(cafeteriaId).stream()
+        .map(mapper::toDomain)
+        .toList();
+  }
+
+  @Override
+  public List<Order> findOperational(UUID cafeteriaId, Instant start, Instant end) {
+    return repository
+        .findOperational(
+            cafeteriaId,
+            OrderStatus.DELIVERED,
+            List.of(
+                OrderStatus.PENDING, OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.CALLED),
+            start,
+            end)
+        .stream()
         .map(mapper::toDomain)
         .toList();
   }
