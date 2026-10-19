@@ -9,7 +9,7 @@ test.skip(
   !!process.env.PLAYWRIGHT_BASE_URL,
   "Requires controlled local provider/backend fixtures.",
 );
-const root = "/api/worker/orders/history/today";
+const root = "/api/worker/orders/history";
 const panel = (page: Page) =>
   page.getByRole("region", { name: "Historial", exact: true });
 async function configure(page: Page, config: Record<string, unknown>) {
@@ -44,18 +44,124 @@ async function loaded(page: Page) {
   await expect(panel(page).getByRole("article")).toHaveCount(3);
 }
 test.beforeEach(async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-10-14T18:00:00Z") });
   await configure(page, { reset: true });
 });
 
-test("local search filters reference, state and customer, clears with keyboard, and survives fresh snapshots", async ({
+test("monthly paging and temporal filters retain snapshots without exposing other months or metrics", async ({
+  page,
+}) => {
+  const data = workerHistoryFixture();
+  data.orders = Array.from({ length: 35 }, (_, i) => {
+    const prefix = (i + 1).toString(16).padStart(8, "0");
+    return {
+      ...data.orders[0],
+      id: prefix + "-0000-0000-0000-000000000001",
+      reference: "Pedido · " + prefix.toUpperCase(),
+      clientName: i === 34 ? null : "Cliente histórico " + i,
+      completedAt:
+        i < 10
+          ? "2026-10-01T17:00:00Z"
+          : i < 30
+            ? "2026-10-13T17:00:00Z"
+            : "2026-10-14T17:00:00Z",
+      items: [
+        {
+          name: "Producto histórico " + i,
+          quantity: 1,
+          unitPrice: 10000,
+          subtotal: 10000,
+        },
+      ],
+    };
+  });
+  data.orders.push({
+    ...data.orders[0],
+    id: "eeeeeeee-0000-0000-0000-000000000001",
+    reference: "Pedido · EEEEEEEE",
+    clientName: "Mes anterior privado",
+    completedAt: "2026-09-30T17:00:00Z",
+  });
+  data.orders.push({
+    ...data.orders[0],
+    id: "dddddddd-0000-0000-0000-000000000001",
+    reference: "Pedido · DDDDDDDD",
+    clientName: "Mes futuro privado",
+    completedAt: "2026-11-01T17:00:00Z",
+  });
+  await configure(page, { data });
+  await login(page);
+  await enter(page);
+  await expect(panel(page).getByRole("article")).toHaveCount(30);
+  await expect(panel(page).getByText("Cliente no disponible")).toBeVisible();
+  await expect(panel(page)).not.toContainText(
+    /Mes anterior privado|Mes futuro privado|pedidos finalizados|ventas|ingresos|KPIs/i,
+  );
+  await panel(page)
+    .getByRole("button", { name: "Cargar más", exact: true })
+    .click();
+  await expect(panel(page).getByRole("article")).toHaveCount(35);
+  await expect(
+    panel(page).getByRole("button", { name: "Cargar más", exact: true }),
+  ).toHaveCount(0);
+  await panel(page).getByLabel("Período del historial").selectOption("TODAY");
+  await expect(panel(page).getByRole("article")).toHaveCount(5);
+  await panel(page).getByLabel("Período del historial").selectOption("WEEK");
+  await expect(panel(page).getByRole("article")).toHaveCount(25);
+  await panel(page)
+    .getByLabel("Estado del historial")
+    .selectOption("CANCELLED");
+  await expect(
+    panel(page).getByText(
+      "No encontramos pedidos que coincidan con los filtros.",
+    ),
+  ).toBeVisible();
+  await panel(page)
+    .getByRole("button", { name: "Limpiar filtros", exact: true })
+    .click();
+  await expect(panel(page).getByRole("article")).toHaveCount(30);
+  await expect(panel(page).getByLabel("Período del historial")).toHaveValue(
+    "MONTH",
+  );
+});
+
+test("search debounce sends one request for rapid input and server results preserve the query", async ({
   page,
 }) => {
   await login(page);
-  await page.clock.install();
+  await enter(page);
+  await loaded(page);
+  await page.clock.pauseAt(new Date("2026-10-14T18:00:15Z"));
+  let reads = 0;
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === root) reads++;
+  });
+  const input = panel(page).getByRole("searchbox");
+  await input.fill("J");
+  await input.fill("Ju");
+  await input.fill("Juan");
+  expect(reads).toBe(0);
+  await page.clock.fastForward(299);
+  expect(reads).toBe(0);
+  const result = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === root,
+  );
+  await page.clock.fastForward(1);
+  await result;
+  await expect(panel(page).getByRole("article")).toHaveCount(2);
+  expect(reads).toBe(1);
+  await expect(input).toHaveValue("Juan");
+});
+
+test("server search filters reference, state, customer and products, clears with keyboard and survives refresh", async ({
+  page,
+}) => {
+  await login(page);
+
   await enter(page);
   await loaded(page);
   const search = panel(page).getByRole("searchbox", {
-    name: "Buscar por pedido, cliente o estado",
+    name: "Buscar por pedido, cliente, estado o producto",
   });
   let reads = 0;
   page.on("request", (request) => {
@@ -67,6 +173,7 @@ test("local search filters reference, state and customer, clears with keyboard, 
     ["No recogido", 1],
     ["cancel", 1],
     ["juan", 2],
+    ["ejecutivo", 1],
     [" PEREZ ", 1],
   ] as const) {
     await search.fill(query);
@@ -77,16 +184,14 @@ test("local search filters reference, state and customer, clears with keyboard, 
     await expect(search).toBeFocused();
     await expect(panel(page).getByRole("article")).toHaveCount(3);
   }
-  expect(reads).toBe(0);
+  expect(reads).toBeGreaterThan(0);
   await search.fill("nadie coincide");
   await expect(
     panel(page).getByRole("heading", {
-      name: "No encontramos pedidos que coincidan con tu búsqueda.",
+      name: "No encontramos pedidos que coincidan con los filtros.",
     }),
   ).toBeVisible();
-  await panel(page)
-    .getByRole("button", { name: "Ver todos los pedidos" })
-    .click();
+  await panel(page).getByRole("button", { name: "Limpiar filtros" }).click();
   await expect(search).toBeFocused();
   await expect(panel(page).getByRole("article")).toHaveCount(3);
   await search.fill("perez");
@@ -121,7 +226,9 @@ test("WORKER history shows only ordered terminal snapshots and survives reload/r
     "Almuerzo del día",
     "Especial histórico",
   ])
-    await expect(panel(page).getByText(label)).toBeVisible();
+    await expect(
+      panel(page).getByLabel("Pedidos finalizados").getByText(label),
+    ).toBeVisible();
   await expect(panel(page).getByRole("heading", { level: 3 })).toHaveText([
     "Pedido · A91C6F2D",
     "Pedido · B72D5A10",
@@ -134,9 +241,9 @@ test("WORKER history shows only ordered terminal snapshots and survives reload/r
   const response = await page.request.get(
     `${root}?cafeteriaId=FOREIGN&date=1900-01-01&status=PENDING`,
   );
-  expect(response.status()).toBe(200);
+  expect(response.status()).toBe(400);
   expect(response.headers()["cache-control"]).toBe("no-store");
-  expect((await response.json()).orders).toHaveLength(3);
+  expect((await response.json()).code).toBe("WORKER_HISTORY_INVALID_REQUEST");
   const fractional = workerHistoryFixture();
   fractional.orders[0].total = 19000.5;
   fractional.orders[0].items[0].unitPrice = 15000.5;
@@ -193,12 +300,14 @@ test("503 preserves cookies and recovers through retry without login or raw erro
 });
 
 test("empty history is a normal accessible state", async ({ page }) => {
-  await configure(page, { data: { ...workerHistoryFixture(), orders: [] } });
+  await configure(page, {
+    data: { ...workerHistoryFixture(), orders: [], hasHistory: false },
+  });
   await login(page);
   await enter(page);
   await expect(
     panel(page).getByRole("heading", {
-      name: "Aún no hay pedidos finalizados hoy.",
+      name: "Aún no hay pedidos finalizados este mes.",
     }),
   ).toBeVisible();
   await expect(panel(page).getByRole("alert")).toHaveCount(0);
@@ -225,7 +334,7 @@ test("a malformed upstream terminal contract fails safely and can recover", asyn
 }) => {
   const data = workerHistoryFixture();
   data.orders[0].status = "PENDING";
-  await configure(page, { data });
+  await configure(page, { data, mode: "raw" });
   await login(page);
   await enter(page);
   await expect(panel(page).getByRole("alert")).toContainText(
@@ -241,7 +350,7 @@ test("polls every 30 seconds with no active-order traffic, then resumes Pedidos"
   page,
 }) => {
   await login(page);
-  await page.clock.install();
+
   await enter(page);
   await loaded(page);
   let historyReads = 0,
@@ -276,34 +385,33 @@ test("polls every 30 seconds with no active-order traffic, then resumes Pedidos"
   expect(historyReads).toBe(before);
 });
 
-test("uses the server deadline to replace the whole day with an empty new snapshot", async ({
+test("month rollover hides October before the November request completes", async ({
   page,
 }) => {
+  await page.clock.setSystemTime(new Date("2026-11-01T04:59:55Z"));
+  const old = workerHistoryFixture();
+  old.businessDate = "2026-10-31";
+  old.rangeEnd = "2026-11-01";
+  old.nextBusinessDateAt = "2026-11-01T05:00:00Z";
+  await configure(page, { data: old });
   await login(page);
-  await page.clock.install();
-  const now = await page.evaluate(() => Date.now());
-  await configure(page, {
-    data: {
-      ...workerHistoryFixture(),
-      nextBusinessDateAt: new Date(now + 5000).toISOString(),
-    },
-  });
   await enter(page);
   await loaded(page);
-  await configure(page, {
-    data: {
-      businessDate: "2026-10-15",
-      nextBusinessDateAt: "2026-10-16T05:00:00Z",
-      orders: [],
-    },
-  });
-  const refresh = page.waitForResponse(
-    (response) => new URL(response.url()).pathname === root,
-  );
+  const next = {
+    ...old,
+    businessDate: "2026-11-01",
+    monthStart: "2026-11-01",
+    rangeStart: "2026-11-01",
+    rangeEnd: "2026-11-02",
+    nextBusinessDateAt: "2026-11-02T05:00:00Z",
+  };
+  await configure(page, { data: next });
   await page.clock.fastForward(5000);
-  await refresh;
-  await expect(panel(page).getByText(/15 de octubre de 2026/)).toBeVisible();
   await expect(panel(page).getByRole("article")).toHaveCount(0);
+  await expect(
+    panel(page).getByText("Aún no hay pedidos finalizados este mes."),
+  ).toBeVisible();
+  await expect(panel(page)).not.toContainText("Juan Pérez");
 });
 
 test("late response after exit cannot replace a new history snapshot", async ({
@@ -319,7 +427,7 @@ test("late response after exit cannot replace a new history snapshot", async ({
     arrived = resolve;
   });
   let first = true;
-  await page.route(`**${root}`, async (route) => {
+  await page.route(`**${root}*`, async (route) => {
     if (!first) {
       await route.continue();
       return;
@@ -335,16 +443,18 @@ test("late response after exit cannot replace a new history snapshot", async ({
     await requestArrived;
     await expect(panel(page).getByText("Cargando historial…")).toBeVisible();
     await page.getByRole("button", { name: "Pedidos", exact: true }).click();
-    await configure(page, { data: { ...workerHistoryFixture(), orders: [] } });
+    await configure(page, {
+      data: { ...workerHistoryFixture(), orders: [], hasHistory: false },
+    });
     await enter(page);
     await expect(
-      panel(page).getByText("Aún no hay pedidos finalizados hoy."),
+      panel(page).getByText("Aún no hay pedidos finalizados este mes."),
     ).toBeVisible();
     release();
     await expect(panel(page).getByRole("article")).toHaveCount(0);
   } finally {
     release();
-    await page.unroute(`**${root}`);
+    await page.unroute(`**${root}*`);
   }
 });
 
@@ -359,7 +469,7 @@ for (const width of [390, 768, 1366]) {
     await loaded(page);
     await expect(panel(page).getByRole("article").first()).toBeVisible();
     const search = panel(page).getByRole("searchbox", {
-      name: "Buscar por pedido, cliente o estado",
+      name: "Buscar por pedido, cliente, estado o producto",
     });
     await expect(search).toBeVisible();
     await search.fill("cancelado");

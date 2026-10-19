@@ -4,6 +4,7 @@ import {
   HISTORY_LABELS,
   formatHistoryPrice,
   formatHistoryTime,
+  formatHistoryDate,
 } from "../presentation";
 import styles from "./WorkerHistory.module.css";
 
@@ -18,6 +19,7 @@ export function HistoryOrderCard({ order }: { order: HistoryOrder }) {
       <div className={styles.cardHeading}>
         <h3 id={`history-order-${order.id}`}>{order.reference}</h3>
         <time dateTime={order.completedAt} title="Hora de Bogotá">
+          {formatHistoryDate(order.completedAt)} ·{" "}
           {formatHistoryTime(order.completedAt)}
         </time>
       </div>
@@ -25,12 +27,10 @@ export function HistoryOrderCard({ order }: { order: HistoryOrder }) {
         <Icon size={14} aria-hidden="true" />
         {HISTORY_LABELS[order.status]}
       </span>
-      {order.clientName && (
-        <p className={styles.clientName}>
-          <span>Cliente</span>
-          <strong>{order.clientName}</strong>
-        </p>
-      )}
+      <p className={styles.clientName}>
+        <span>Cliente</span>
+        <strong>{order.clientName || "Cliente no disponible"}</strong>
+      </p>
       {order.items.length > 0 ? (
         <ul
           className={styles.items}

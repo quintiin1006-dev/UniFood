@@ -21,7 +21,7 @@ function failure(status: number, retry?: string | null) {
   );
 }
 
-export async function forwardWorkerHistory() {
+export async function forwardWorkerHistory(request: Request) {
   let auth: Awaited<ReturnType<typeof getAuth>>;
   try {
     auth = await getAuth();
@@ -31,10 +31,21 @@ export async function forwardWorkerHistory() {
   }
   if (!auth) return failure(401);
   if (!isWorker(auth.profile)) return failure(403);
+  const params = new URL(request.url).searchParams;
+  const allowed = new Set(["q", "range", "status", "cursor", "limit"]);
+  for (const [key, value] of params) {
+    if (
+      !allowed.has(key) ||
+      params.getAll(key).length !== 1 ||
+      value.length > (key === "cursor" ? 512 : 120)
+    )
+      return failure(400);
+  }
+  const query = params.toString();
   try {
-    // Fixed path, verified token only: no browser headers, query parameters or IDs.
+    // Only allowlisted criteria; no browser identity headers or cafeteria selector.
     const upstream = await fetch(
-      `${serverApiUrl()}/api/worker/orders/history/today`,
+      `${serverApiUrl()}/api/worker/orders/history${query ? `?${query}` : ""}`,
       {
         method: "GET",
         headers: {
@@ -47,7 +58,7 @@ export async function forwardWorkerHistory() {
       },
     );
     if (upstream.status !== 200) {
-      const status = [401, 403, 500, 503].includes(upstream.status)
+      const status = [400, 401, 403, 500, 503].includes(upstream.status)
         ? upstream.status
         : upstream.status >= 502
           ? 503

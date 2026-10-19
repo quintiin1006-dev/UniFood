@@ -2,7 +2,10 @@
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
 import { browserAvailabilityFixture } from "./availability-fixture.mjs";
-import { workerHistoryFixture } from "./worker-history-fixture.mjs";
+import {
+  workerHistoryFixture,
+  workerHistoryPageFixture,
+} from "./worker-history-fixture.mjs";
 import { workerProfileBusinessFixture } from "./worker-profile-fixture.mjs";
 
 const fixtures = Object.entries({
@@ -41,7 +44,9 @@ const fixtures = Object.entries({
   fullName:
     name === "clientlong"
       ? "MaríaAlejandraConUnNombreMuyLargoParaComprobarElAjusteDelContenido Torres Quintín"
-      : roles.includes("WORKER") ? null : "Usuario de prueba",
+      : roles.includes("WORKER")
+        ? null
+        : "Usuario de prueba",
   active: name !== "inactive",
   roles,
   assignments: name === "unassigned" ? 0 : name === "multiassigned" ? 2 : 1,
@@ -57,21 +62,35 @@ const profileAudit = { directBusinessReads: 0, backendProfileReads: 0 };
 const availabilityStates = new Map();
 const availabilityAudit = { directBusinessReads: 0 };
 const historyStates = new Map();
+const operationalStates = new Map();
 const workerProfileStates = new Map();
 function workerProfileState(profile) {
-  if (!workerProfileStates.has(profile.id)) workerProfileStates.set(profile.id, {
-    data: workerProfileBusinessFixture(), mode: null, gets: 0, inactive: false,
-  });
+  if (!workerProfileStates.has(profile.id))
+    workerProfileStates.set(profile.id, {
+      data: workerProfileBusinessFixture(),
+      mode: null,
+      gets: 0,
+      inactive: false,
+    });
   return workerProfileStates.get(profile.id);
 }
 function historyState(profile) {
-  if (!historyStates.has(profile.id)) historyStates.set(profile.id, {data: workerHistoryFixture(), mode: null, gets: 0});
+  if (!historyStates.has(profile.id))
+    historyStates.set(profile.id, {
+      data: workerHistoryFixture(),
+      mode: null,
+      gets: 0,
+    });
   return historyStates.get(profile.id);
 }
 function availabilityState(profile) {
-  if (!availabilityStates.has(profile.id)) availabilityStates.set(profile.id, {
-    data: browserAvailabilityFixture(), mode: null, gets: 0, puts: [],
-  });
+  if (!availabilityStates.has(profile.id))
+    availabilityStates.set(profile.id, {
+      data: browserAvailabilityFixture(),
+      mode: null,
+      gets: 0,
+      puts: [],
+    });
   return availabilityStates.get(profile.id);
 }
 function temporaryFailure(request, response, profile, scope) {
@@ -135,10 +154,11 @@ createServer(async (request, response) => {
     if (url.pathname === "/__test/worker-profile") {
       let config;
       if (request.method === "POST") {
-        let raw = ""; for await (const chunk of request) raw += chunk;
+        let raw = "";
+        for await (const chunk of request) raw += chunk;
         config = JSON.parse(raw);
       } else config = { email: url.searchParams.get("email") };
-      const target = fixtures.find(entry => entry.email === config.email);
+      const target = fixtures.find((entry) => entry.email === config.email);
       if (!target) return json(response, 400, {});
       if (config.reset) workerProfileStates.delete(target.id);
       const state = workerProfileState(target);
@@ -150,44 +170,82 @@ createServer(async (request, response) => {
     if (url.pathname === "/__test/worker-history") {
       let config;
       if (request.method === "POST") {
-        let raw = ""; for await (const chunk of request) raw += chunk;
+        let raw = "";
+        for await (const chunk of request) raw += chunk;
         config = JSON.parse(raw);
-      } else config = {email: url.searchParams.get("email")};
-      const target = fixtures.find(entry => entry.email === config.email);
+      } else config = { email: url.searchParams.get("email") };
+      const target = fixtures.find((entry) => entry.email === config.email);
       if (!target) return json(response, 400, {});
       if (config.reset) historyStates.delete(target.id);
       const state = historyState(target);
       if (Object.hasOwn(config, "mode")) state.mode = config.mode;
       if (config.data) state.data = config.data;
-      return json(response, 200, {gets: state.gets});
+      return json(response, 200, { gets: state.gets });
+    }
+    if (url.pathname === "/__test/worker-orders" && request.method === "POST") {
+      let raw = "";
+      for await (const chunk of request) raw += chunk;
+      const config = JSON.parse(raw),
+        target = fixtures.find((entry) => entry.email === config.email);
+      if (!target) return json(response, 400, {});
+      if (config.reset) operationalStates.delete(target.id);
+      if (config.data) operationalStates.set(target.id, config.data);
+      return json(response, 200, {});
     }
     if (url.pathname === "/__test/availability") {
       if (request.method === "POST") {
-        let raw = ""; for await (const chunk of request) raw += chunk;
+        let raw = "";
+        for await (const chunk of request) raw += chunk;
         const config = JSON.parse(raw);
         const target = fixtures.find((entry) => entry.email === config.email);
         if (!target) return json(response, 400, {});
         if (config.reset) availabilityStates.delete(target.id);
         const state = availabilityState(target);
-        if (typeof config.active === "boolean") state.data.cafeteria.active = config.active;
-        if (typeof config.open === "boolean") state.data.cafeteria.open = config.open;
-        if (typeof config.available === "boolean") state.data.categories[1].items[0].available = config.available;
+        if (typeof config.active === "boolean")
+          state.data.cafeteria.active = config.active;
+        if (typeof config.open === "boolean")
+          state.data.cafeteria.open = config.open;
+        if (typeof config.available === "boolean")
+          state.data.categories[1].items[0].available = config.available;
         if (Object.hasOwn(config, "mode")) state.mode = config.mode;
         return json(response, 200, { ok: true });
       }
-      const target = fixtures.find((entry) => entry.email === url.searchParams.get("email"));
+      const target = fixtures.find(
+        (entry) => entry.email === url.searchParams.get("email"),
+      );
       if (!target) return json(response, 400, {});
       const state = availabilityState(target);
-      return json(response, 200, { gets: state.gets, puts: state.puts, directBusinessReads: availabilityAudit.directBusinessReads });
+      return json(response, 200, {
+        gets: state.gets,
+        puts: state.puts,
+        directBusinessReads: availabilityAudit.directBusinessReads,
+      });
     }
-    if (["/rest/v1/lunches", "/rest/v1/cafeteria_daily_states", "/rest/v1/daily_item_availability"].includes(url.pathname)) {
+    if (
+      [
+        "/rest/v1/lunches",
+        "/rest/v1/cafeteria_daily_states",
+        "/rest/v1/daily_item_availability",
+      ].includes(url.pathname)
+    ) {
       availabilityAudit.directBusinessReads++;
-      return json(response, 403, { message: "Direct business access is disabled" });
+      return json(response, 403, {
+        message: "Direct business access is disabled",
+      });
     }
     if (url.pathname === "/__test/profile-audit" && request.method === "GET")
       return json(response, 200, profileAudit);
     // Model the post-010 permissions instead of granting fake business REST reads.
-    if (["/rest/v1/clients", "/rest/v1/institutions", "/rest/v1/users", "/rest/v1/cafeteria_users", "/rest/v1/cafeterias", "/rest/v1/sites"].includes(url.pathname)) {
+    if (
+      [
+        "/rest/v1/clients",
+        "/rest/v1/institutions",
+        "/rest/v1/users",
+        "/rest/v1/cafeteria_users",
+        "/rest/v1/cafeterias",
+        "/rest/v1/sites",
+      ].includes(url.pathname)
+    ) {
       profileAudit.directBusinessReads++;
       return json(response, 403, {
         message: "Direct business access is disabled",
@@ -318,18 +376,36 @@ createServer(async (request, response) => {
     )
       return;
     if (url.pathname === "/rest/v1/rpc/current_auth_profile")
-      return json(response, 200, profile.roles.includes("WORKER") ? {
-        ...profile,
-        active: profile.active && !workerProfileState(profile).inactive,
-        email: "business-email-is-not-auth@example.invalid",
-      } : profile);
+      return json(
+        response,
+        200,
+        profile.roles.includes("WORKER")
+          ? {
+              ...profile,
+              active: profile.active && !workerProfileState(profile).inactive,
+              email: "business-email-is-not-auth@example.invalid",
+            }
+          : profile,
+      );
     if (url.pathname === "/api/worker/profile" && request.method === "GET") {
-      const state = workerProfileState(profile); state.gets++;
-      if (!profile.active || state.inactive || profile.assignments !== 1 || profile.roles.length !== 1 || profile.roles[0] !== "WORKER")
-        return json(response, 403, { code: "WORKER_PROFILE_FORBIDDEN", message: "PRIVATE" });
+      const state = workerProfileState(profile);
+      state.gets++;
+      if (
+        !profile.active ||
+        state.inactive ||
+        profile.assignments !== 1 ||
+        profile.roles.length !== 1 ||
+        profile.roles[0] !== "WORKER"
+      )
+        return json(response, 403, {
+          code: "WORKER_PROFILE_FORBIDDEN",
+          message: "PRIVATE",
+        });
       if (["401", "403", "500", "503"].includes(state.mode)) {
         if (state.mode === "503") response.setHeader("Retry-After", "9");
-        return json(response, Number(state.mode), { message: "PRIVATE_SQL_DETAIL" });
+        return json(response, Number(state.mode), {
+          message: "PRIVATE_SQL_DETAIL",
+        });
       }
       if (state.mode === "redirect") {
         response.writeHead(302, { location: "/api/me/profile" });
@@ -338,58 +414,143 @@ createServer(async (request, response) => {
       return json(response, 200, state.data);
     }
     if (url.pathname.startsWith("/api/worker/availability/today")) {
-      if (!profile.active || profile.assignments !== 1 || profile.roles.length !== 1 || profile.roles[0] !== "WORKER")
-        return json(response, 403, { code: "AVAILABILITY_FORBIDDEN", message: "PRIVATE" });
+      if (
+        !profile.active ||
+        profile.assignments !== 1 ||
+        profile.roles.length !== 1 ||
+        profile.roles[0] !== "WORKER"
+      )
+        return json(response, 403, {
+          code: "AVAILABILITY_FORBIDDEN",
+          message: "PRIVATE",
+        });
       const state = availabilityState(profile);
       if (request.method === "GET") {
         state.gets++;
         if (state.mode === "get503") {
           response.setHeader("Retry-After", "5");
-          return json(response, 503, { code: "AVAILABILITY_TEMPORARILY_UNAVAILABLE", message: "PRIVATE" });
+          return json(response, 503, {
+            code: "AVAILABILITY_TEMPORARILY_UNAVAILABLE",
+            message: "PRIVATE",
+          });
         }
         return json(response, 200, state.data);
       }
       if (request.method !== "PUT") return json(response, 405, {});
-      let raw = ""; for await (const chunk of request) raw += chunk;
+      let raw = "";
+      for await (const chunk of request) raw += chunk;
       const body = JSON.parse(raw);
       const day = request.headers["x-business-date"];
       state.puts.push({ path: url.pathname, day, body });
-      if (state.mode === "put503") return json(response, 503, { code: "AVAILABILITY_TEMPORARILY_UNAVAILABLE", message: "PRIVATE" });
+      if (state.mode === "put503")
+        return json(response, 503, {
+          code: "AVAILABILITY_TEMPORARILY_UNAVAILABLE",
+          message: "PRIVATE",
+        });
       if (state.mode === "stale") {
-        state.mode = null; state.data.businessDate = "2026-10-14"; state.data.cafeteria.open = false;
-        state.data.categories.forEach((group) => group.items.forEach((item) => { item.available = false; }));
+        state.mode = null;
+        state.data.businessDate = "2026-10-14";
+        state.data.cafeteria.open = false;
+        state.data.categories.forEach((group) =>
+          group.items.forEach((item) => {
+            item.available = false;
+          }),
+        );
       }
-      if (day !== state.data.businessDate) return json(response, 409, { code: "AVAILABILITY_DAY_EXPIRED", message: "PRIVATE" });
+      if (day !== state.data.businessDate)
+        return json(response, 409, {
+          code: "AVAILABILITY_DAY_EXPIRED",
+          message: "PRIVATE",
+        });
       const cafeOperation = url.pathname.endsWith("/cafeteria-state");
       const id = url.pathname.split("/").at(-1);
       if (["iteminactive", "notfound"].includes(state.mode) && !cafeOperation) {
-        const code = state.mode === "notfound" ? "AVAILABILITY_ITEM_NOT_FOUND" : "AVAILABILITY_ITEM_INACTIVE";
+        const code =
+          state.mode === "notfound"
+            ? "AVAILABILITY_ITEM_NOT_FOUND"
+            : "AVAILABILITY_ITEM_INACTIVE";
         state.mode = null;
-        state.data.categories.forEach((group) => { group.items = group.items.filter((item) => item.id !== id); });
-        return json(response, code === "AVAILABILITY_ITEM_NOT_FOUND" ? 404 : 409, { code, message: "PRIVATE" });
+        state.data.categories.forEach((group) => {
+          group.items = group.items.filter((item) => item.id !== id);
+        });
+        return json(
+          response,
+          code === "AVAILABILITY_ITEM_NOT_FOUND" ? 404 : 409,
+          { code, message: "PRIVATE" },
+        );
       }
-      if (state.mode === "cafinactive") { state.mode = null; state.data.cafeteria.active = false; }
-      if (!state.data.cafeteria.active && (body.available === true || body.open === true))
-        return json(response, 409, { code: "AVAILABILITY_CAFETERIA_INACTIVE", message: "PRIVATE" });
+      if (state.mode === "cafinactive") {
+        state.mode = null;
+        state.data.cafeteria.active = false;
+      }
+      if (
+        !state.data.cafeteria.active &&
+        (body.available === true || body.open === true)
+      )
+        return json(response, 409, {
+          code: "AVAILABILITY_CAFETERIA_INACTIVE",
+          message: "PRIVATE",
+        });
       if (cafeOperation) {
         state.data.cafeteria.open = body.open;
-        return json(response, 200, { businessDate: state.data.businessDate, open: body.open });
+        return json(response, 200, {
+          businessDate: state.data.businessDate,
+          open: body.open,
+        });
       }
-      const item = state.data.categories.flatMap((group) => group.items).find((entry) => entry.id === id);
-      if (!item) return json(response, 404, { code: "AVAILABILITY_ITEM_NOT_FOUND", message: "PRIVATE" });
+      const item = state.data.categories
+        .flatMap((group) => group.items)
+        .find((entry) => entry.id === id);
+      if (!item)
+        return json(response, 404, {
+          code: "AVAILABILITY_ITEM_NOT_FOUND",
+          message: "PRIVATE",
+        });
       item.available = body.available;
-      return json(response, 200, { businessDate: state.data.businessDate, itemId: item.id, available: item.available });
+      return json(response, 200, {
+        businessDate: state.data.businessDate,
+        itemId: item.id,
+        available: item.available,
+      });
     }
-    if (url.pathname === "/api/worker/orders/history/today" && request.method === "GET") {
-      if (!profile.active || profile.assignments !== 1 || profile.roles.length !== 1 || profile.roles[0] !== "WORKER")
-        return json(response, 403, {code: "WORKER_HISTORY_FORBIDDEN", message: "PRIVATE"});
-      const state = historyState(profile); state.gets++;
+    if (
+      url.pathname === "/api/worker/orders/history" &&
+      request.method === "GET"
+    ) {
+      if (
+        !profile.active ||
+        profile.assignments !== 1 ||
+        profile.roles.length !== 1 ||
+        profile.roles[0] !== "WORKER"
+      )
+        return json(response, 403, {
+          code: "WORKER_HISTORY_FORBIDDEN",
+          message: "PRIVATE",
+        });
+      const state = historyState(profile);
+      state.gets++;
       if (state.mode === "503") {
         response.setHeader("Retry-After", "5");
-        return json(response, 503, {code: "WORKER_HISTORY_TEMPORARILY_UNAVAILABLE", message: "PRIVATE_SQL_DETAIL"});
+        return json(response, 503, {
+          code: "WORKER_HISTORY_TEMPORARILY_UNAVAILABLE",
+          message: "PRIVATE_SQL_DETAIL",
+        });
       }
-      if (state.mode === "403" || state.mode === "401") return json(response, Number(state.mode), {message: "PRIVATE"});
-      return json(response, 200, state.data);
+      if (state.mode === "403" || state.mode === "401")
+        return json(response, Number(state.mode), { message: "PRIVATE" });
+      if (state.mode === "raw") return json(response, 200, state.data);
+      try {
+        return json(
+          response,
+          200,
+          workerHistoryPageFixture(state.data, url.searchParams),
+        );
+      } catch {
+        return json(response, 400, {
+          code: "WORKER_HISTORY_INVALID_REQUEST",
+          message: "PRIVATE",
+        });
+      }
     }
     if (url.pathname === "/api/me/profile" && request.method === "GET") {
       profileAudit.backendProfileReads++;
@@ -493,7 +654,31 @@ createServer(async (request, response) => {
         updatedAt: new Date().toISOString(),
         items: [],
       };
-      return json(response, 200, request.method === "GET" ? [order] : order);
+      if (request.method === "GET") {
+        const configured = operationalStates.get(profile.id);
+        const businessDate =
+          configured?.businessDate ||
+          new Date(Date.now() - 5 * 3600000).toISOString().slice(0, 10);
+        const start = Date.parse(businessDate + "T05:00:00Z"),
+          end = start + 86400000;
+        response.setHeader("X-Business-Date", businessDate);
+        response.setHeader(
+          "X-Next-Business-Date-At",
+          new Date(end).toISOString(),
+        );
+        const orders = (configured?.orders || [order]).filter(
+          (entry) =>
+            ["PENDING", "PREPARING", "READY", "CALLED"].includes(
+              entry.status,
+            ) ||
+            (entry.status === "DELIVERED" &&
+              entry.deliveredAt &&
+              Date.parse(entry.deliveredAt) >= start &&
+              Date.parse(entry.deliveredAt) < end),
+        );
+        return json(response, 200, orders);
+      }
+      return json(response, 200, order);
     }
     return json(response, 404, {});
   } catch {

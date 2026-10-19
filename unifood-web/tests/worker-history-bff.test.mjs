@@ -3,16 +3,58 @@ import assert from "node:assert/strict";
 import { availabilityLoader } from "./helpers/load-availability.mjs";
 import { workerHistoryFixture } from "./helpers/worker-history-fixture.mjs";
 
-const root = "/api/worker/orders/history/today";
+const root = "/api/worker/orders/history";
 const worker = {
   profile: { active: true, roles: ["WORKER"] },
   accessToken: "verified-session-token",
 };
+
+test("history BFF allowlists criteria, rejects duplicate/foreign selectors and preserves safe 400", async () => {
+  let call;
+  const handler = route(async (url, options) => {
+    call = { url, options };
+    return Response.json(workerHistoryFixture());
+  });
+  const params = new URLSearchParams({
+    q: "Pérez & café",
+    range: "WEEK",
+    status: "DELIVERED",
+    limit: "20",
+    cursor: "opaque",
+  });
+  assert.equal(
+    (await handler(new Request(`http://localhost${root}?${params}`))).status,
+    200,
+  );
+  assert.equal(new URL(call.url).searchParams.get("q"), "Pérez & café");
+  assert.equal(new URL(call.url).searchParams.get("cursor"), "opaque");
+  for (const query of [
+    "cafeteriaId=FOREIGN",
+    "date=2026-09-01",
+    "range=MONTH&range=TODAY",
+    "q=" + "x".repeat(121),
+    "cursor=" + "x".repeat(513),
+  ]) {
+    const result = await route(async () =>
+      assert.fail("Must not reach business API"),
+    )(new Request(`http://localhost${root}?${query}`));
+    assert.equal(result.status, 400);
+    assert.equal(result.headers.get("cache-control"), "no-store");
+    assert.equal(result.headers.get("retry-after"), null);
+  }
+  const invalid = await route(async () =>
+    Response.json({ message: "SQL PRIVATE" }, { status: 400 }),
+  )();
+  assert.equal(invalid.status, 400);
+  assert.equal((await invalid.json()).code, "WORKER_HISTORY_INVALID_REQUEST");
+});
 function route(fetchMock, auth = worker, getAuth = async () => auth) {
-  return availabilityLoader({
+  const handler = availabilityLoader({
     fetchMock,
     mocks: { "@/features/auth/server/session": { getAuth } },
   })(`app${root}/route.ts`).GET;
+  return (request = new Request(`http://localhost:3100${root}`)) =>
+    handler(request);
 }
 test("history BFF forwards only verified WORKER identity and picks the no-store DTO", async () => {
   const calls = [];
@@ -28,15 +70,12 @@ test("history BFF forwards only verified WORKER identity and picks the no-store 
     calls.push({ url, options });
     return Response.json(payload, { headers: { "set-cookie": "PRIVATE" } });
   })(
-    new Request(
-      `http://localhost:3100${root}?cafeteriaId=FOREIGN&date=1900-01-01&status=PENDING`,
-      {
-        headers: {
-          authorization: "Bearer forged",
-          "x-cafeteria-id": "FOREIGN",
-        },
+    new Request(`http://localhost:3100${root}`, {
+      headers: {
+        authorization: "Bearer forged",
+        "x-cafeteria-id": "FOREIGN",
       },
-    ),
+    }),
   );
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), workerHistoryFixture());

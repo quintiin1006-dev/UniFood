@@ -56,13 +56,39 @@
   outline: 3px solid #0868e9;
   outline-offset: 3px;
 }
-.summary {
+.filters {
   display: flex;
+  flex-wrap: wrap;
+  align-items: end;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
   color: #52627a;
   font-size: 12px;
+}
+.filters label {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 160px;
+}
+.filters select {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #c8d8f1;
+  border-radius: 10px;
+  color: #192a45;
+  background: #fff;
+  font: inherit;
+}
+.filters select:focus-visible {
+  outline: 3px solid #0868e9;
+  outline-offset: 3px;
+}
+.pagination {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 4px;
 }
 .search {
   display: flex;
@@ -149,12 +175,14 @@
 }
 .cardHeading {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 12px;
 }
 .cardHeading h3 {
+  flex: 1 0 auto;
   min-width: 0;
   margin: 0;
   font-size: 14px;

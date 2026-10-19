@@ -27,5 +27,13 @@ export function useWorkerHistory() {
     });
     return store.dispose;
   }, [store]);
-  return { ...state, refresh: store.refresh, setQuery: store.setQuery };
+  return {
+    ...state,
+    refresh: store.refresh,
+    loadMore: store.loadMore,
+    setQuery: store.setQuery,
+    setRange: store.setRange,
+    setStatus: store.setStatus,
+    clearFilters: store.clearFilters,
+  };
 }

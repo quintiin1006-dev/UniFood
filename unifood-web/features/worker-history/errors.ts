@@ -1,4 +1,6 @@
 export const HISTORY_MESSAGES = {
+  WORKER_HISTORY_INVALID_REQUEST:
+    "Los filtros o la página ya no son válidos. Actualiza el historial.",
   WORKER_HISTORY_UNAUTHORIZED:
     "Tu sesión no está disponible. Inicia sesión para consultar el historial.",
   WORKER_HISTORY_FORBIDDEN: "No tienes permisos para consultar este historial.",
@@ -16,6 +18,7 @@ export function historyErrorCode(
   status: number,
   code?: unknown,
 ): HistoryErrorCode {
+  if (status === 400) return "WORKER_HISTORY_INVALID_REQUEST";
   if (status === 401) return "WORKER_HISTORY_UNAUTHORIZED";
   if (status === 403) return "WORKER_HISTORY_FORBIDDEN";
   if (status === 503)
