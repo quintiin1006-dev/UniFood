@@ -4,10 +4,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.santotofood.adapter.in.web.WorkerHistoryController;
-import com.santotofood.adapter.in.web.dto.TodayWorkerHistoryResponse;
-import com.santotofood.application.model.TodayWorkerHistory;
+import com.santotofood.adapter.in.web.dto.WorkerHistoryResponse;
 import com.santotofood.application.model.UserAuthorization;
-import com.santotofood.application.port.in.GetTodayWorkerHistoryUseCase;
+import com.santotofood.application.model.WorkerHistory;
+import com.santotofood.application.port.in.GetWorkerHistoryUseCase;
 import com.santotofood.application.port.out.AuthorizationQueryPort;
 import com.santotofood.application.service.OrderAuthorizationService;
 import com.santotofood.domain.model.BusinessDate;
@@ -59,7 +59,7 @@ class WorkerHistoryAuthorizationTest {
                 ? Optional.empty()
                 : Optional.of(
                     new UserAuthorization(!scenario.equals("INACTIVE"), roles, assignments)));
-    var history = mock(GetTodayWorkerHistoryUseCase.class);
+    var history = mock(GetWorkerHistoryUseCase.class);
     var controller =
         new WorkerHistoryController(
             new OrderAuthorization(new OrderAuthorizationService(queries)), history);
@@ -71,7 +71,9 @@ class WorkerHistoryAuthorizationTest {
                 .claim("role", "WORKER")
                 .claim("cafeteriaId", cafe.toString())
                 .build());
-    assertThrows(AccessDeniedException.class, () -> controller.today(jwt));
+    assertThrows(
+        AccessDeniedException.class,
+        () -> controller.history(jwt, new org.springframework.util.LinkedMultiValueMap<>()));
     verifyNoInteractions(history);
   }
 
@@ -81,19 +83,35 @@ class WorkerHistoryAuthorizationTest {
     var first = entry("a91c6f2d-0000-0000-0000-000000000001");
     var second = entry("a91c6f2d-0000-0000-0000-000000000002");
     var response =
-        TodayWorkerHistoryResponse.from(
-            new TodayWorkerHistory(date, date.nextDayStartInstant(), List.of(first, second)));
+        WorkerHistoryResponse.from(
+            new WorkerHistory(
+                date,
+                date.nextDayStartInstant(),
+                date.value().withDayOfMonth(1),
+                date.value(),
+                date.value().plusDays(1),
+                List.of(first, second),
+                null,
+                true));
     assertEquals("Pedido · A91C6F2D", response.orders().getFirst().reference());
     assertEquals(response.orders().getFirst().reference(), response.orders().getLast().reference());
     assertNotEquals(response.orders().getFirst().id(), response.orders().getLast().id());
     var reordered =
-        TodayWorkerHistoryResponse.from(
-            new TodayWorkerHistory(date, date.nextDayStartInstant(), List.of(second, first)));
+        WorkerHistoryResponse.from(
+            new WorkerHistory(
+                date,
+                date.nextDayStartInstant(),
+                date.value().withDayOfMonth(1),
+                date.value(),
+                date.value().plusDays(1),
+                List.of(second, first),
+                null,
+                true));
     assertEquals(response.orders().getFirst(), reordered.orders().getLast());
   }
 
-  static TodayWorkerHistory.Entry entry(String id) {
-    return new TodayWorkerHistory.Entry(
+  static WorkerHistory.Entry entry(String id) {
+    return new WorkerHistory.Entry(
         UUID.fromString(id),
         "Juan Pérez",
         OrderStatus.CANCELLED,
