@@ -180,9 +180,10 @@ Los terminales heredados sin su timestamp correspondiente conservan fecha
 infieren desde `created_at`, `updated_at` ni `cancellation_deadline`. Una cancelada
 heredada con NULL puede recibir cambios permitidos en otros campos sin inventar
 una fecha; tampoco puede adquirirla mediante una actualización ordinaria.
-Esos registros se conservan y quedan fuera de la consulta de terminales del día.
+Esos registros se conservan y quedan fuera de la consulta de terminales del mes.
 El [endpoint Spring de Historial WORKER](../docs/worker-history.md),
-`GET /api/worker/orders/history/today`, es de solo lectura. El BFF Next y la UI
+`GET /api/worker/orders/history`, es de solo lectura y limita WORKER al mes actual
+en America/Bogota, con búsqueda server-side y paginación por cursor. El BFF Next y la UI
 WORKER de Historial dentro de `/worker` están implementados: Browser → Next/BFF
 → Spring → PostgreSQL, sin acceso directo del frontend a tablas de negocio Supabase.
 
@@ -208,9 +209,25 @@ WORKER de Historial dentro de `/worker` están implementados: Browser → Next/B
    misma escritura y permisos cerrados antes de reabrir las operaciones.
 
 La migración toma locks DDL; dimensionar la ventana con los datos auditados.
-No añadir índices por la nueva columna sin medir la consulta de Historial. Si falla
+La medición de Historial mensual motivó los índices específicos de 015. Si falla
 el despliegue, mantener las escrituras pausadas y resolver la incompatibilidad;
 no desactivar el guard ni fabricar fechas para hacer funcionar una versión antigua.
+
+## Índices de Historial WORKER (015)
+
+`015_worker_history_indexes.sql` crea solo dos índices parciales, uno para
+DELIVERED por `(cafeteria_id, delivered_at DESC, id DESC)` y otro para CANCELLED
+por `(cafeteria_id, cancelled_at DESC, id DESC)`. Excluyen timestamps desconocidos.
+Se conserva el índice existente de NOT_COLLECTED. EXPLAIN ANALYZE confirmó que
+sin ellos las páginas pequeñas recorrían pedidos anteriores a la ventana permitida.
+No se añaden extensiones, tablas, columnas, grants ni cambios de históricos.
+
+Aplicar después de 014, una sola vez, con una ventana dimensionada para los locks
+de CREATE INDEX normal. No se usa CONCURRENTLY dentro de la migración transaccional.
+El backend, BFF y UI publican el contrato mensual coordinadamente. Pedidos →
+Entregados sigue limitado al día de negocio mediante delivered_at; Historial usa
+timestamps terminales del mes actual. No hay métricas WORKER, endpoints ADMIN,
+borrado físico, cron ni reinicio mensual de datos.
 
 ## Pruebas locales
 

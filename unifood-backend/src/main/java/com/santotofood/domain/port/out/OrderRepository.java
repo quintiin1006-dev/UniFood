@@ -1,6 +1,7 @@
 package com.santotofood.domain.port.out;
 
 import com.santotofood.domain.model.Order;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,6 +21,8 @@ public interface OrderRepository {
   void lockCafeteriaQueue(UUID cafeteriaId);
 
   List<Order> findByCafeteriaId(UUID cafeteriaId);
+
+  List<Order> findOperational(UUID cafeteriaId, Instant start, Instant end);
 
   Optional<Order> findFirstPendingByCafeteriaId(UUID cafeteriaId);
 }

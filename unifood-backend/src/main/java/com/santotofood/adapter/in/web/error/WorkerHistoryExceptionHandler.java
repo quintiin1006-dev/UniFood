@@ -1,6 +1,7 @@
 package com.santotofood.adapter.in.web.error;
 
 import com.santotofood.adapter.in.web.WorkerHistoryController;
+import com.santotofood.application.exception.InvalidWorkerHistoryRequestException;
 import com.santotofood.shared.error.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
@@ -23,6 +24,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice(assignableTypes = WorkerHistoryController.class)
 public class WorkerHistoryExceptionHandler {
   private static final Logger LOG = LoggerFactory.getLogger(WorkerHistoryExceptionHandler.class);
+
+  @ExceptionHandler(InvalidWorkerHistoryRequestException.class)
+  public ResponseEntity<ApiErrorResponse> invalid(HttpServletRequest request) {
+    return response(
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.WORKER_HISTORY_INVALID_REQUEST,
+        "Los filtros o la página del historial ya no son válidos. Actualiza el historial e inténtalo nuevamente.",
+        request);
+  }
 
   @ExceptionHandler(AccessDeniedException.class)
   public ResponseEntity<ApiErrorResponse> denied(HttpServletRequest request) {

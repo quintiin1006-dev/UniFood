@@ -1,6 +1,6 @@
 package com.santotofood.adapter.in.web.dto;
 
-import com.santotofood.application.model.TodayWorkerHistory;
+import com.santotofood.application.model.WorkerHistory;
 import com.santotofood.domain.model.OrderStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -9,8 +9,15 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
-public record TodayWorkerHistoryResponse(
-    LocalDate businessDate, Instant nextBusinessDateAt, List<Entry> orders) {
+public record WorkerHistoryResponse(
+    LocalDate businessDate,
+    Instant nextBusinessDateAt,
+    LocalDate monthStart,
+    LocalDate rangeStart,
+    LocalDate rangeEnd,
+    List<Entry> orders,
+    String nextCursor,
+    boolean hasHistory) {
   public record Entry(
       UUID id,
       String reference,
@@ -22,10 +29,13 @@ public record TodayWorkerHistoryResponse(
 
   public record Item(String name, int quantity, BigDecimal unitPrice, BigDecimal subtotal) {}
 
-  public static TodayWorkerHistoryResponse from(TodayWorkerHistory history) {
-    return new TodayWorkerHistoryResponse(
+  public static WorkerHistoryResponse from(WorkerHistory history) {
+    return new WorkerHistoryResponse(
         history.businessDate().value(),
         history.nextBusinessDateAt(),
+        history.monthStart(),
+        history.rangeStart(),
+        history.rangeEnd(),
         history.orders().stream()
             .map(
                 order ->
@@ -45,7 +55,9 @@ public record TodayWorkerHistoryResponse(
                                         item.unitPrice(),
                                         item.subtotal()))
                             .toList()))
-            .toList());
+            .toList(),
+        history.nextCursor(),
+        history.hasHistory());
   }
 
   /** Display label only: collisions are possible; UUID is identity, not authorization. */

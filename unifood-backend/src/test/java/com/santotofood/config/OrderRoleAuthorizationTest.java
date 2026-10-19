@@ -130,7 +130,11 @@ class OrderRoleAuthorizationTest {
   @Test
   void assignedActiveWorkerCanListAndUseEveryExistingOperation() throws Exception {
     when(queries.findUserAuthorization(userId)).thenReturn(worker(List.of(cafeteriaId)));
-    when(list.getOrdersByCafeteria(cafeteriaId)).thenReturn(List.of());
+    when(list.getOperationalOrders(cafeteriaId))
+        .thenReturn(
+            new com.santotofood.application.model.OperationalOrders(
+                new com.santotofood.domain.model.BusinessDate(java.time.LocalDate.of(2026, 10, 14)),
+                List.of()));
     mvc.perform(
             get("/api/orders")
                 .param("cafeteriaId", cafeteriaId.toString())
@@ -141,7 +145,7 @@ class OrderRoleAuthorizationTest {
       mvc.perform(patch("/api/orders/" + orderId + "/" + action).with(identity("CLIENT")))
           .andExpect(status().isOk());
     }
-    verify(list).getOrdersByCafeteria(cafeteriaId);
+    verify(list).getOperationalOrders(cafeteriaId);
     verify(prepare).prepareOrder(orderId);
     verify(ready).markOrderReady(orderId);
     verify(call).callStudent(orderId);

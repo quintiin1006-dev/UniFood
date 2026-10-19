@@ -1,56 +1,43 @@
-# Historial WORKER del día
+# Historial WORKER del mes actual
 
-`WorkerHistoryPanel` se monta exclusivamente en Historial dentro de `/worker`.
-El navegador consulta el BFF `GET /api/worker/orders/history/today`; este verifica
-la sesión y el rol WORKER exclusivo y reenvía únicamente el Bearer verificado al
-endpoint homónimo de Spring. Spring resuelve cafetería, día y estados terminales.
-No se consultan tablas de negocio por Supabase REST ni el catálogo actual.
+La UI en `/worker` usa `GET /api/worker/orders/history` a través de Next/BFF.
+Spring verifica identidad, rol WORKER exclusivo, cafetería y mes en America/Bogota.
+No se consulta Supabase REST ni se envían IDs de cafetería como autoridad.
 
-`contracts.ts` valida y selecciona el DTO publicado tanto en BFF como en browser.
-Un pedido activo, UUID duplicado o dato inválido invalida toda la respuesta; no
-se ocultan entradas defectuosas como si el historial estuviese vacío. Se conserva
-el orden recibido y los nombres/importes de los snapshots, sin recalcular totales.
-La referencia corta es visual; la identidad de cada tarjeta sigue siendo su UUID.
-Las órdenes históricas sin detalle de items siguen siendo representables.
-`clientName` es el nombre almacenado en `orders.client_name`, la misma fuente que
-usan los pedidos operativos WORKER. Se muestra discretamente en la tarjeta y se
-usa para buscar; null representa un nombre desconocido. El parser admite snapshots
-anteriores sin ese campo como null y rechaza nombres de tipo inválido o vacíos.
-No se añaden email, documento, teléfono, IDs de usuario ni metadatos Auth.
-Los importes COP conservan los centavos cuando un snapshot `NUMERIC(12,2)` los
-contiene; el formato habitual sin decimales se reutiliza para pesos enteros.
+El DTO incluye businessDate, nextBusinessDateAt, monthStart, rangeStart, rangeEnd,
+orders, nextCursor y hasHistory. El parser selecciona solo campos publicados,
+valida terminales, ventana, orden, UUIDs únicos, snapshots e importes. No añade PII.
+clientName viene de orders.client_name; null/vacío muestra «Cliente no disponible».
+Cada tarjeta muestra fecha y hora de Bogotá y productos históricos, sin catálogo actual.
 
-`WorkerHistoryStore` concentra el estado y el ciclo de consultas, con un runtime
-inyectable para probar los timers sin esperas reales. Consulta al entrar, al volver
-el foco/visibilidad, cada 30 segundos visible y al alcanzar `nextBusinessDateAt`.
-Una petición en vuelo agrupa los disparadores repetidos. Al salir se aborta y se
-invalidan respuestas tardías; se eliminan timers y listeners. Un nuevo día reemplaza
-el snapshot completo. La fecha mostrada procede de `businessDate`; el reloj usa
-explícitamente `America/Bogota`. El reloj del browser solo agenda la siguiente
-consulta. Si está desajustado o Spring aún devuelve un límite pasado, se evita
-un bucle inmediato reintentando mediante la cadencia de 30 segundos.
+La búsqueda es server-side por referencia, cliente, estado y productos. No hay
+filtrado local del dataset ni un segundo motor de normalización/búsqueda.
+El campo controlado limita 120 caracteres y aplica debounce de 300 ms.
+Filtros MONTH/WEEK/TODAY y estado se combinan con q. Las fechas libres y meses
+anteriores/futuros no están disponibles. La página tiene límite server-side
+(default 30, máximo 100) y cursor opaco, con acción «Cargar más».
 
-Todas las consultas/respuestas usan `no-store`, timeout y redirects bloqueados.
-Un 503 mantiene la sesión; permite reintento y muestra explícitamente si se
-conserva una consulta previa. Un 401 oculta datos y ofrece `/panel/login`; un 403
-oculta datos y deniega acceso. Ambos detienen las consultas automáticas. El módulo
-no borra cookies ni redirige automáticamente. Los mensajes upstream nunca se muestran.
+WorkerHistoryStore invalida/aborta respuestas al cambiar criterios o desmontar.
+Cambiar criterios oculta tarjetas anteriores y reinicia paginación. Al entrar,
+recuperar foco/visibilidad y cada 30 segundos visible se refresca la primera página
+con los filtros conservados. Al deadline del backend retira datos antes del refetch;
+un fallo no permite volver a mostrar el mes vencido. Un 400 durante carga de otra
+página reinicia sin cursor; no se inventan fechas a partir del reloj local.
 
-La superficie clara se limita a Historial, con el ancho máximo de Disponibilidad,
-tarjetas de tres/dos/una columnas, etiquetas e iconos de estado, foco visible y
-estados de carga/error/vacío accesibles. El polling de pedidos activos se habilita
-solo en Pedidos y Llamadas, sin cambiar las transiciones ni sus reglas.
+Loading, vacío real del mes y filtros sin resultados tienen estados diferenciados.
+hasHistory solo distingue los dos vacíos: no se muestran cantidades, KPIs, ventas,
+gráficos ni métricas WORKER. El total de una tarjeta pertenece a ese pedido.
 
-El buscador controlado filtra el snapshot en memoria por referencia visible,
-nombre del cliente, estado técnico y `HISTORY_LABELS`, sin nuevas peticiones.
-`search.ts` concentra la normalización de mayúsculas, acentos y espacios y conserva
-el orden de Spring. La query vive en el store, permanece tras polling/refetch y
-rollover y se aplica a cada snapshot nuevo. El vacío real del día conserva su UI;
-una búsqueda sin coincidencias muestra un mensaje distinto y permite limpiar,
-devolviendo el foco al campo. No hay una ruta ni búsqueda SQL nueva.
+Browser y BFF usan no-store, timeout y redirects bloqueados. El BFF solo reenvía
+criterios permitidos y el Bearer verificado. Un 503 conserva cookies y recuperación;
+401/403 ocultan datos y detienen consultas automáticas sin loops ni logout propio.
 
-Pruebas: `tests/worker-history-*.test.mjs` cubren contrato, BFF, API, estado y
-presentación. `tests/e2e/worker-history.spec.ts` usa exclusivamente el proveedor
-loopback de pruebas y comprueba integración y tamaños 390/768/1366. La captura
-opcional `WORKER_HISTORY_VISUAL_AUDIT=1` escribe imágenes en el directorio temporal
-del sistema, nunca dentro del repositorio.
+Pedidos → Entregados recibe solo delivered_at del business day actual. Su BFF
+conserva los headers X-Business-Date y X-Next-Business-Date-At; el hook retira
+entregados vencidos y solicita un listado nuevo sin afectar los otros estados.
+
+Pruebas: worker-history-*.test.mjs, pruebas de pedidos, SQL/Hibernate nativo y E2E
+worker-history.spec.ts / worker-orders-business-day.spec.ts. Los fixtures HTTP son
+solo dobles loopback: las reglas SQL se verifican en PostgreSQL real.
+Las capturas opcionales WORKER_HISTORY_VISUAL_AUDIT=1 se guardan en TEMP.
+Ver [contrato backend](../../../unifood-backend/docs/worker-history.md).

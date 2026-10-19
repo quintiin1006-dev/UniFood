@@ -58,7 +58,185 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 /** Real migrated PostgreSQL, HTTP security, transaction, JDBC projection and snapshots. */
 @Timeout(60)
 class WorkerHistoryApiPostgresTest {
-  static final String ENDPOINT = "/api/worker/orders/history/today";
+
+  @ParameterizedTest
+  @ValueSource(strings = {"DELIVERED", "NOT_COLLECTED", "CANCELLED"})
+  void monthlyWindowUsesTerminalDatesAndRetainsEveryOlderRow(String state) throws Exception {
+    var month = Instant.parse("2026-10-01T05:00:00Z");
+    order(state, month);
+    order(state, START.minusSeconds(86400));
+    order(state, START);
+    order(state, month.minusNanos(1000));
+    order(state, NEXT);
+    order(UUID.randomUUID(), OTHER, state, START);
+    var before = snapshots();
+    mvc.perform(get(ENDPOINT).with(as(WORKER)))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Cache-Control", "no-store"))
+        .andExpect(jsonPath("$.monthStart").value("2026-10-01"))
+        .andExpect(jsonPath("$.rangeStart").value("2026-10-01"))
+        .andExpect(jsonPath("$.rangeEnd").value("2026-10-14"))
+        .andExpect(jsonPath("$.orders", hasSize(3)))
+        .andExpect(jsonPath("$.hasHistory").value(true));
+    assertEquals(before, snapshots(), "Monthly authorization never deletes history");
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "a91c,DELIVERED",
+    "Pedido · A91C6F2D,DELIVERED",
+    "Juan,DELIVERED",
+    "Pérez,DELIVERED",
+    "Perez,DELIVERED",
+    "  JUAN   PEREZ  ,DELIVERED",
+    "hamburguesa,DELIVERED",
+    "historica,DELIVERED",
+    "DELIVERED,DELIVERED",
+    "Entregado,DELIVERED",
+    "No recogido,NOT_COLLECTED",
+    "NOT_COLLECTED,NOT_COLLECTED",
+    "Cancelado,CANCELLED",
+    "cancel,CANCELLED"
+  })
+  void serverSearchFindsOwnSnapshotsAndAcceptsAccentsAndAliases(String text, String state)
+      throws Exception {
+    UUID id = order(UUID.fromString("a91c6f2d-0000-0000-0000-000000000001"), CAFE, state, START);
+    jdbc.update("UPDATE public.orders SET client_name='JUAN PÉREZ' WHERE id=?", id);
+    item(UUID.randomUUID(), id, "HAMBURGUESA HISTÓRICA", 1, 10000);
+    item(UUID.randomUUID(), id, "HAMBURGUESA HISTÓRICA", 1, 10000);
+    var foreign = order(UUID.randomUUID(), OTHER, state, START);
+    jdbc.update("UPDATE public.orders SET client_name='JUAN PÉREZ' WHERE id=?", foreign);
+    jdbc.update(
+        "INSERT INTO public.order_items(order_id,lunch_id,cafeteria_id,lunch_name,quantity,unit_price,subtotal) VALUES (?,?,?,'HAMBURGUESA HISTÓRICA',1,10000,10000)",
+        foreign,
+        OTHER_LUNCH,
+        OTHER);
+    source.statements.clear();
+    mvc.perform(get(ENDPOINT).param("q", text).with(as(WORKER)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.orders", hasSize(1)))
+        .andExpect(jsonPath("$.orders[0].id").value(id.toString()))
+        .andExpect(jsonPath("$.orders[0].items", hasSize(2)));
+    assertEquals(2, source.statements.size(), "Product EXISTS and item details stay in one SELECT");
+  }
+
+  @Test
+  void filtersCombineWithoutConfusingNoHistoryAndNoMatches() throws Exception {
+    order("DELIVERED", Instant.parse("2026-10-01T06:00:00Z"));
+    order("CANCELLED", START);
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").param("q", "impossible").with(as(WORKER)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.orders", hasSize(0)))
+        .andExpect(jsonPath("$.hasHistory").value(true));
+    mvc.perform(get(ENDPOINT).param("range", "WEEK").param("status", "CANCELLED").with(as(WORKER)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.rangeStart").value("2026-10-12"))
+        .andExpect(jsonPath("$.orders", hasSize(1)));
+  }
+
+  @Test
+  void keysetPagesTieBreakWithoutDuplicatesOrSplittingItemsAndRejectOtherScopes() throws Exception {
+    var expected = new ArrayList<String>();
+    for (int i = 0; i < 7; i++) {
+      UUID id = order("DELIVERED", START);
+      expected.add(id.toString());
+      item(UUID.randomUUID(), id, "Item A", 1, 5000);
+      item(UUID.randomUUID(), id, "Item B", 1, 5000);
+    }
+    expected.sort(Comparator.reverseOrder());
+    var actual = new ArrayList<String>();
+    String cursor = null, firstCursor = null;
+    do {
+      var request = get(ENDPOINT).param("limit", "2").with(as(WORKER));
+      if (cursor != null) request.param("cursor", cursor);
+      source.statements.clear();
+      String json =
+          mvc.perform(request)
+              .andExpect(status().isOk())
+              .andReturn()
+              .getResponse()
+              .getContentAsString();
+      assertEquals(2, source.statements.size());
+      List<Map<String, Object>> entries = com.jayway.jsonpath.JsonPath.read(json, "$.orders");
+      assertTrue(entries.size() <= 2);
+      for (var entry : entries) {
+        actual.add((String) entry.get("id"));
+        assertEquals(2, ((List<?>) entry.get("items")).size());
+      }
+      cursor = com.jayway.jsonpath.JsonPath.read(json, "$.nextCursor");
+      if (firstCursor == null) firstCursor = cursor;
+    } while (cursor != null);
+    assertEquals(expected, actual);
+    mvc.perform(
+            get(ENDPOINT)
+                .param("limit", "2")
+                .param("q", "different")
+                .param("cursor", firstCursor)
+                .with(as(WORKER)))
+        .andExpect(status().isBadRequest());
+    mvc.perform(
+            get(ENDPOINT).param("limit", "2").param("cursor", firstCursor).with(as(SECOND_WORKER)))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void boundedLimitsAndBogotaMonthRolloverInvalidatePreviousCursors() throws Exception {
+    for (int i = 0; i < 105; i++) order("DELIVERED", START.plusSeconds(i));
+    String json =
+        mvc.perform(get(ENDPOINT).with(as(WORKER)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.orders", hasSize(30)))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String cursor = com.jayway.jsonpath.JsonPath.read(json, "$.nextCursor");
+    assertNotNull(cursor);
+    mvc.perform(get(ENDPOINT).param("limit", "100").with(as(WORKER)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.orders", hasSize(100)));
+    clock.set(Instant.parse("2026-11-01T04:59:59Z"));
+    mvc.perform(get(ENDPOINT).with(as(WORKER)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.monthStart").value("2026-10-01"));
+    clock.set(Instant.parse("2026-11-01T05:00:00Z"));
+    mvc.perform(get(ENDPOINT).param("cursor", cursor).with(as(WORKER)))
+        .andExpect(status().isBadRequest());
+    mvc.perform(get(ENDPOINT).with(as(WORKER)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.monthStart").value("2026-11-01"))
+        .andExpect(jsonPath("$.orders", hasSize(0)))
+        .andExpect(jsonPath("$.hasHistory").value(false));
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "limit,0",
+    "limit,101",
+    "limit,-1",
+    "limit,bad",
+    "range,LAST_MONTH",
+    "range,2026-09",
+    "status,PENDING",
+    "cursor,bad",
+    "from,2026-09-01",
+    "to,2026-11-01",
+    "cafeteriaId,foreign"
+  })
+  void invalidCriteriaFailSafely(String name, String value) throws Exception {
+    var json =
+        mvc.perform(get(ENDPOINT).param(name, value).with(as(WORKER)))
+            .andExpect(status().isBadRequest())
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andExpect(header().doesNotExist("Retry-After"))
+            .andExpect(jsonPath("$.code").value("WORKER_HISTORY_INVALID_REQUEST"))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    assertFalse(json.contains("SELECT"));
+    assertFalse(json.contains("IllegalArgumentException"));
+  }
+
+  static final String ENDPOINT = "/api/worker/orders/history";
   static final Instant START = Instant.parse("2026-10-13T05:00:00Z");
   static final Instant NEXT = Instant.parse("2026-10-14T05:00:00Z");
   static final UUID CAFE = UUID.randomUUID(), OTHER = UUID.randomUUID();
@@ -352,7 +530,7 @@ class WorkerHistoryApiPostgresTest {
   @ValueSource(strings = {"DELIVERED", "NOT_COLLECTED", "CANCELLED"})
   void includesEachTerminalCreatedYesterdayButCompletedToday(String status) throws Exception {
     UUID id = order(status, START.plusSeconds(123));
-    mvc.perform(get(ENDPOINT).with(as(WORKER)))
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
         .andExpect(status().isOk())
         .andExpect(header().string("Cache-Control", "no-store"))
         .andExpect(jsonPath("$.businessDate").value("2026-10-13"))
@@ -372,7 +550,7 @@ class WorkerHistoryApiPostgresTest {
         offset(START),
         offset(START),
         id);
-    mvc.perform(get(ENDPOINT).with(as(WORKER)))
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.orders", hasSize(0)));
   }
@@ -383,7 +561,7 @@ class WorkerHistoryApiPostgresTest {
     order(state, START.minusNanos(1000));
     order(state, NEXT);
     order(UUID.randomUUID(), OTHER, state, START.plusSeconds(5));
-    mvc.perform(get(ENDPOINT).with(as(WORKER)))
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.orders", hasSize(0)));
   }
@@ -395,7 +573,7 @@ class WorkerHistoryApiPostgresTest {
     UUID upper = order(state, NEXT.minusNanos(1000));
     order(state, START.minusNanos(1000));
     order(state, NEXT);
-    mvc.perform(get(ENDPOINT).with(as(WORKER)))
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.orders", hasSize(2)))
         .andExpect(jsonPath("$.orders[0].id").value(upper.toString()))
@@ -405,7 +583,7 @@ class WorkerHistoryApiPostgresTest {
   @Test
   void unknownLegacyTimestampsRemainStoredAndExcludedWithoutFallback() throws Exception {
     String before = snapshots();
-    mvc.perform(get(ENDPOINT).with(as(WORKER)))
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.orders", hasSize(0)));
     assertEquals(before, snapshots());
@@ -422,7 +600,7 @@ class WorkerHistoryApiPostgresTest {
         "UPDATE public.orders SET " + unrelated + "=? WHERE id=?",
         offset(START.plusSeconds(30)),
         id);
-    mvc.perform(get(ENDPOINT).with(as(WORKER)))
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.orders", hasSize(0)));
   }
@@ -455,9 +633,9 @@ class WorkerHistoryApiPostgresTest {
     String before = snapshots();
     source.statements.clear();
     var result =
-        mvc.perform(get(ENDPOINT).with(as(WORKER)))
+        mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.length()").value(3))
+            .andExpect(jsonPath("$.length()").value(8))
             .andExpect(jsonPath("$.orders", hasSize(3)))
             .andExpect(jsonPath("$.orders[0].id").value(high.toString()))
             .andExpect(jsonPath("$.orders[1].id").value(low.toString()))
@@ -500,7 +678,7 @@ class WorkerHistoryApiPostgresTest {
         "UPDATE public.orders SET client_name=? WHERE id=?", "Cliente de otra cafetería", foreign);
     source.statements.clear();
     var response =
-        mvc.perform(get(ENDPOINT).with(as(WORKER)).param("clientId", foreign.toString()))
+        mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.orders", hasSize(2)))
             .andExpect(jsonPath("$.orders[0].id").value(unnamed.toString()))
@@ -521,7 +699,7 @@ class WorkerHistoryApiPostgresTest {
     assertTrue(
         source.statements.stream()
             .noneMatch(sql -> sql.contains("public.clients") || sql.contains("auth.users")));
-    mvc.perform(get(ENDPOINT).with(as(SECOND_WORKER)))
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(SECOND_WORKER)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.orders", hasSize(1)))
         .andExpect(jsonPath("$.orders[0].clientName").value("Cliente de otra cafetería"));
@@ -534,7 +712,7 @@ class WorkerHistoryApiPostgresTest {
       item(UUID.randomUUID(), id, "Snapshot", 2, 5000);
     }
     source.statements.clear();
-    mvc.perform(get(ENDPOINT).with(as(WORKER)))
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.orders", hasSize(12)));
     assertEquals(2, source.statements.size());
@@ -546,11 +724,14 @@ class WorkerHistoryApiPostgresTest {
     order(UUID.randomUUID(), OTHER, "DELIVERED", START.plusSeconds(1));
     mvc.perform(
             get(ENDPOINT)
+                .param("range", "TODAY")
                 .with(as(WORKER))
                 .param("cafeteriaId", OTHER.toString())
                 .param("userId", SECOND_WORKER.toString())
                 .param("date", "2026-10-12")
                 .param("states", "PENDING"))
+        .andExpect(status().isBadRequest());
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.businessDate").value("2026-10-13"))
         .andExpect(jsonPath("$.orders", hasSize(1)))
@@ -572,6 +753,7 @@ class WorkerHistoryApiPostgresTest {
         };
     mvc.perform(
             get(ENDPOINT)
+                .param("range", "TODAY")
                 .with(jwt().jwt(token -> token.subject(user.toString()).claim("role", "WORKER"))))
         .andExpect(status().isForbidden())
         .andExpect(header().string("Cache-Control", "no-store"))
@@ -581,16 +763,17 @@ class WorkerHistoryApiPostgresTest {
 
   @Test
   void authorizationReadsCurrentDatabaseFactsOnEveryRequest() throws Exception {
-    mvc.perform(get(ENDPOINT).with(as(WORKER))).andExpect(status().isOk());
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER))).andExpect(status().isOk());
     jdbc.update("UPDATE public.users SET is_active=false WHERE id=?", WORKER);
-    mvc.perform(get(ENDPOINT).with(as(WORKER))).andExpect(status().isForbidden());
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
+        .andExpect(status().isForbidden());
   }
 
   @Test
   void anotherWorkerSeesOnlyTheirOwnCafeteria() throws Exception {
     order("DELIVERED", START);
     UUID foreign = order(UUID.randomUUID(), OTHER, "CANCELLED", START);
-    mvc.perform(get(ENDPOINT).with(as(SECOND_WORKER)))
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(SECOND_WORKER)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.orders", hasSize(1)))
         .andExpect(jsonPath("$.orders[0].id").value(foreign.toString()));
@@ -598,8 +781,8 @@ class WorkerHistoryApiPostgresTest {
 
   @Test
   void absentOrInvalidBearerAuthenticationIsUnauthorized() throws Exception {
-    mvc.perform(get(ENDPOINT)).andExpect(status().isUnauthorized());
-    mvc.perform(get(ENDPOINT).header("Authorization", "Bearer invalid"))
+    mvc.perform(get(ENDPOINT).param("range", "TODAY")).andExpect(status().isUnauthorized());
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").header("Authorization", "Bearer invalid"))
         .andExpect(status().isUnauthorized());
   }
 
@@ -609,12 +792,12 @@ class WorkerHistoryApiPostgresTest {
     UUID today = order("DELIVERED", NEXT);
     String before = snapshots();
     clock.set(NEXT.minusNanos(1));
-    mvc.perform(get(ENDPOINT).with(as(WORKER)))
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.businessDate").value("2026-10-13"))
         .andExpect(jsonPath("$.orders[0].id").value(yesterday.toString()));
     clock.set(NEXT);
-    mvc.perform(get(ENDPOINT).with(as(WORKER)))
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.businessDate").value("2026-10-14"))
         .andExpect(jsonPath("$.nextBusinessDateAt").value("2026-10-15T05:00:00Z"))
@@ -632,7 +815,7 @@ class WorkerHistoryApiPostgresTest {
       source.sessionZone = zone;
       UUID id = order("NOT_COLLECTED", START);
       clock.set(START);
-      mvc.perform(get(ENDPOINT).with(as(WORKER)))
+      mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.businessDate").value("2026-10-13"))
           .andExpect(jsonPath("$.nextBusinessDateAt").value(NEXT.toString()))
@@ -651,7 +834,7 @@ class WorkerHistoryApiPostgresTest {
     if (afterAuthorization) source.connectionsBeforeFailure = 1;
     else source.unavailable = true;
     var failed =
-        mvc.perform(get(ENDPOINT).with(as(WORKER)))
+        mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
             .andExpect(status().isServiceUnavailable())
             .andExpect(header().string("Cache-Control", "no-store"))
             .andExpect(header().string("Retry-After", "5"))
@@ -662,7 +845,7 @@ class WorkerHistoryApiPostgresTest {
     assertFalse(failed.getResponse().getContentAsString().contains("SELECT"));
     source.unavailable = false;
     source.connectionsBeforeFailure = -1;
-    mvc.perform(get(ENDPOINT).with(as(WORKER)))
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.orders[0].id").value(id.toString()));
   }
@@ -670,7 +853,7 @@ class WorkerHistoryApiPostgresTest {
   @Test
   void unexpectedSqlFailureIsSafe500() throws Exception {
     source.unexpectedFailure = true;
-    mvc.perform(get(ENDPOINT).with(as(WORKER)))
+    mvc.perform(get(ENDPOINT).param("range", "TODAY").with(as(WORKER)))
         .andExpect(status().isInternalServerError())
         .andExpect(header().string("Cache-Control", "no-store"))
         .andExpect(header().doesNotExist("Retry-After"))

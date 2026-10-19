@@ -101,6 +101,16 @@ async function forward(
         "Content-Type":
           response.headers.get("content-type") || "text/plain; charset=utf-8",
         "Cache-Control": "no-store",
+        ...(isList && response.headers.get("x-business-date")
+          ? { "X-Business-Date": response.headers.get("x-business-date")! }
+          : {}),
+        ...(isList && response.headers.get("x-next-business-date-at")
+          ? {
+              "X-Next-Business-Date-At": response.headers.get(
+                "x-next-business-date-at",
+              )!,
+            }
+          : {}),
       },
     });
   } catch {

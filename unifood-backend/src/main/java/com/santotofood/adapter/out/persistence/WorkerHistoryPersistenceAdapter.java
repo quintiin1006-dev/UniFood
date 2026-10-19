@@ -1,6 +1,6 @@
 package com.santotofood.adapter.out.persistence;
 
-import com.santotofood.application.model.TodayWorkerHistory;
+import com.santotofood.application.model.WorkerHistory;
 import com.santotofood.application.port.out.WorkerHistoryQueryPort;
 import com.santotofood.domain.model.OrderStatus;
 import java.io.IOException;
@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class WorkerHistoryPersistenceAdapter implements WorkerHistoryQueryPort {
-  private static final String TODAY = querySql();
+  private static final String HISTORY = querySql();
   private final NamedParameterJdbcTemplate jdbc;
 
   public WorkerHistoryPersistenceAdapter(JdbcTemplate jdbc) {
@@ -33,27 +33,54 @@ public class WorkerHistoryPersistenceAdapter implements WorkerHistoryQueryPort {
   }
 
   @Override
-  public List<TodayWorkerHistory.Entry> findCompleted(
-      UUID authorizedCafeteriaId, Instant dayStart, Instant nextDayStart) {
-    Objects.requireNonNull(authorizedCafeteriaId);
-    Objects.requireNonNull(dayStart);
-    Objects.requireNonNull(nextDayStart);
-    if (!dayStart.isBefore(nextDayStart))
+  public Result findCompleted(Query query) {
+    Objects.requireNonNull(query.cafeteriaId());
+    if (!query.start().isBefore(query.end()))
       throw new IllegalArgumentException("Invalid worker history interval");
+    var after = query.after();
     var parameters =
         new MapSqlParameterSource()
-            .addValue("cafeteriaId", authorizedCafeteriaId, Types.OTHER)
-            .addValue("dayStart", dayStart.atOffset(ZoneOffset.UTC), Types.TIMESTAMP_WITH_TIMEZONE)
+            .addValue("cafeteriaId", query.cafeteriaId(), Types.OTHER)
             .addValue(
-                "nextDayStart",
-                nextDayStart.atOffset(ZoneOffset.UTC),
-                Types.TIMESTAMP_WITH_TIMEZONE);
-    return jdbc.query(TODAY, parameters, WorkerHistoryPersistenceAdapter::read);
+                "dayStart", query.start().atOffset(ZoneOffset.UTC), Types.TIMESTAMP_WITH_TIMEZONE)
+            .addValue(
+                "monthStart",
+                query.monthStart().atOffset(ZoneOffset.UTC),
+                Types.TIMESTAMP_WITH_TIMEZONE)
+            .addValue(
+                "nextDayStart", query.end().atOffset(ZoneOffset.UTC), Types.TIMESTAMP_WITH_TIMEZONE)
+            .addValue(
+                "status", query.status() == null ? null : query.status().name(), Types.VARCHAR)
+            .addValue("search", query.search(), Types.VARCHAR)
+            .addValue(
+                "searchStates",
+                query.searchStatuses().isEmpty() ? List.of("") : query.searchStatuses())
+            .addValue(
+                "cursorAt",
+                (after == null ? query.end() : after.completedAt()).atOffset(ZoneOffset.UTC),
+                Types.TIMESTAMP_WITH_TIMEZONE)
+            .addValue(
+                "cursorId",
+                after == null
+                    ? UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff")
+                    : after.id(),
+                Types.OTHER)
+            .addValue("limit", query.limit(), Types.INTEGER);
+    return jdbc.query(
+        HISTORY,
+        parameters,
+        rows -> {
+          // The metadata LEFT JOIN guarantees a row even for an empty filtered page.
+          if (!rows.next()) throw new IllegalStateException("Missing history metadata");
+          boolean hasHistory = rows.getBoolean("has_history");
+          return new Result(read(rows), hasHistory);
+        });
   }
 
-  private static List<TodayWorkerHistory.Entry> read(ResultSet rows) throws SQLException {
+  private static List<WorkerHistory.Entry> read(ResultSet rows) throws SQLException {
     var orders = new LinkedHashMap<UUID, EntryBuilder>();
-    while (rows.next()) {
+    do {
+      if (rows.getObject("id") == null) continue;
       UUID id = Objects.requireNonNull(rows.getObject("id", UUID.class));
       var status = OrderStatus.valueOf(rows.getString("status"));
       var completedAt = rows.getObject("completed_at", OffsetDateTime.class).toInstant();
@@ -79,9 +106,9 @@ public class WorkerHistoryPersistenceAdapter implements WorkerHistoryQueryPort {
           throw new IllegalStateException("Incomplete worker history item");
       } else {
         entry.items.add(
-            new TodayWorkerHistory.Item(name, Objects.requireNonNull(quantity), price, subtotal));
+            new WorkerHistory.Item(name, Objects.requireNonNull(quantity), price, subtotal));
       }
-    }
+    } while (rows.next());
     return orders.values().stream().map(EntryBuilder::build).toList();
   }
 
@@ -91,7 +118,7 @@ public class WorkerHistoryPersistenceAdapter implements WorkerHistoryQueryPort {
     final OrderStatus status;
     final Instant completedAt;
     final BigDecimal total;
-    final List<TodayWorkerHistory.Item> items = new ArrayList<>();
+    final List<WorkerHistory.Item> items = new ArrayList<>();
 
     EntryBuilder(
         UUID id, String clientName, OrderStatus status, Instant completedAt, BigDecimal total) {
@@ -102,14 +129,14 @@ public class WorkerHistoryPersistenceAdapter implements WorkerHistoryQueryPort {
       this.total = total;
     }
 
-    TodayWorkerHistory.Entry build() {
-      return new TodayWorkerHistory.Entry(id, clientName, status, completedAt, total, items);
+    WorkerHistory.Entry build() {
+      return new WorkerHistory.Entry(id, clientName, status, completedAt, total, items);
     }
   }
 
   private static String querySql() {
     try {
-      return new ClassPathResource("sql/worker-history/today.sql")
+      return new ClassPathResource("sql/worker-history/history.sql")
           .getContentAsString(StandardCharsets.UTF_8);
     } catch (IOException exception) {
       throw new IllegalStateException("Worker history query unavailable", exception);

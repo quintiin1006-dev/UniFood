@@ -1,12 +1,22 @@
 import { parseWorkerHistory } from "./contracts";
 import { WorkerHistoryError, historyErrorCode } from "./errors";
-import type { TodayWorkerHistory } from "./types";
+import type { WorkerHistoryPage, HistoryCriteria } from "./types";
 
 export const workerHistoryApi = {
-  async today(signal?: AbortSignal): Promise<TodayWorkerHistory> {
+  async page(
+    criteria: HistoryCriteria,
+    signal?: AbortSignal,
+  ): Promise<WorkerHistoryPage> {
     let response: Response;
     try {
-      response = await fetch("/api/worker/orders/history/today", {
+      const params = new URLSearchParams({
+        q: criteria.q,
+        range: criteria.range,
+      });
+      if (criteria.status) params.set("status", criteria.status);
+      if (criteria.cursor) params.set("cursor", criteria.cursor);
+      if (criteria.limit) params.set("limit", String(criteria.limit));
+      response = await fetch(`/api/worker/orders/history?${params}`, {
         method: "GET",
         cache: "no-store",
         credentials: "same-origin",

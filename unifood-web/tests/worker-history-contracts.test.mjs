@@ -5,9 +5,37 @@ import { workerHistoryFixture } from "./helpers/worker-history-fixture.mjs";
 const load = availabilityLoader();
 const { parseWorkerHistory } = load("features/worker-history/contracts.ts");
 
+test("monthly DTO rejects foreign windows, future timestamps and unsafe cursors without leaking fields", () => {
+  for (const mutate of [
+    (x) => (x.monthStart = "2026-09-01"),
+    (x) => (x.rangeStart = "2026-09-30"),
+    (x) => (x.rangeEnd = "2026-11-01"),
+    (x) => (x.nextCursor = "?private"),
+    (x) => (x.hasHistory = 0),
+    (x) => (x.orders[0].completedAt = "2026-09-30T17:43:00Z"),
+    (x) => (x.orders[0].completedAt = "2026-10-15T05:00:00Z"),
+    (x) => x.orders.reverse(),
+  ]) {
+    const data = workerHistoryFixture();
+    mutate(data);
+    assert.equal(parseWorkerHistory(data), null);
+  }
+  const blank = workerHistoryFixture();
+  blank.orders[0].clientName = " ";
+  assert.equal(parseWorkerHistory(blank).orders[0].clientName, null);
+  const micros = workerHistoryFixture();
+  micros.orders = micros.orders.slice(0, 2);
+  micros.orders[0].completedAt = "2026-10-14T17:43:00.000002Z";
+  micros.orders[1].completedAt = "2026-10-14T17:43:00.000001Z";
+  assert.notEqual(
+    parseWorkerHistory(micros),
+    null,
+    "Microseconds preserve PostgreSQL ordering rather than milliseconds or lexical timestamp ordering",
+  );
+});
+
 test("history contract preserves backend order, exact amounts, empty orders and snapshots", () => {
   const data = workerHistoryFixture();
-  data.orders.reverse();
   data.orders[0].items = [];
   assert.deepEqual(parseWorkerHistory(data), data);
   assert.deepEqual(parseWorkerHistory({ ...data, orders: [] }).orders, []);
@@ -15,7 +43,6 @@ test("history contract preserves backend order, exact amounts, empty orders and 
 test("history contract rejects an entire snapshot on any malformed field or active status", () => {
   const changes = [
     (x) => (x.orders[0].clientName = 42),
-    (x) => (x.orders[0].clientName = " "),
     (x) => (x.orders[0].clientName = {}),
     (x) => (x.businessDate = "2026-02-30"),
     (x) => (x.businessDate = "2026-13-14"),
@@ -78,17 +105,19 @@ test("browser history API validates again and uses only its fixed no-store BFF p
     },
   })("features/worker-history/api.ts");
   assert.deepEqual(
-    await browser.workerHistoryApi.today(),
+    await browser.workerHistoryApi.page({ q: "", range: "MONTH" }),
     workerHistoryFixture(),
   );
-  assert.equal(call.url, "/api/worker/orders/history/today");
+  assert.equal(call.url, "/api/worker/orders/history?q=&range=MONTH");
   assert.equal(call.options.cache, "no-store");
   assert.equal(call.options.redirect, "error");
   assert.equal(call.options.credentials, "same-origin");
   const bad = availabilityLoader({
     fetchMock: async () => Response.json({ orders: [] }),
   })("features/worker-history/api.ts");
-  await assert.rejects(bad.workerHistoryApi.today(), { status: 502 });
+  await assert.rejects(bad.workerHistoryApi.page({ q: "", range: "MONTH" }), {
+    status: 502,
+  });
 });
 test("browser API sanitizes failures and keeps recoverable timeouts distinct from login", async () => {
   for (const status of [401, 403, 503]) {
@@ -96,7 +125,7 @@ test("browser API sanitizes failures and keeps recoverable timeouts distinct fro
       fetchMock: async () => Response.json({ message: "PRIVATE" }, { status }),
     })("features/worker-history/api.ts").workerHistoryApi;
     await assert.rejects(
-      api.today(),
+      api.page({ q: "", range: "MONTH" }),
       (error) => error.status === status && !error.message.includes("PRIVATE"),
     );
   }
@@ -105,7 +134,7 @@ test("browser API sanitizes failures and keeps recoverable timeouts distinct fro
       throw new DOMException("PRIVATE", "TimeoutError");
     },
   })("features/worker-history/api.ts").workerHistoryApi;
-  await assert.rejects(api.today(), {
+  await assert.rejects(api.page({ q: "", range: "MONTH" }), {
     status: 503,
     message: "No pudimos cargar el historial en este momento.",
   });

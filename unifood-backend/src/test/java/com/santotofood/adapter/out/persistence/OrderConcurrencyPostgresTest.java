@@ -42,6 +42,52 @@ class OrderConcurrencyPostgresTest {
   static OrderService service;
   static final Instant NOW = Instant.parse("2026-10-10T12:00:00Z");
 
+  @Test
+  void deliveredListingUsesItsTerminalBusinessDayAndRolloverPreservesHistory() throws Exception {
+    UUID cafe = cafeteria();
+    UUID today = order(cafe, "DELIVERED", 0),
+        old = order(cafe, "DELIVERED", 1),
+        future = order(cafe, "DELIVERED", 2),
+        legacy = order(cafe, "DELIVERED", 3),
+        pending = order(cafe, "PENDING", 4);
+    UUID preparing = order(cafe, "PREPARING", 5),
+        ready = order(cafe, "READY", 6),
+        called = order(cafe, "CALLED", 7);
+    UUID notCollected = order(cafe, "NOT_COLLECTED", 8), cancelled = order(cafe, "PENDING", 9);
+    sql(
+        "UPDATE public.orders SET not_collected_at='2026-09-13T12:00:00Z' WHERE id='"
+            + notCollected
+            + "'");
+    sql(
+        "UPDATE public.orders SET status='CANCELLED',cancelled_at='2026-09-13T12:00:00Z' WHERE id='"
+            + cancelled
+            + "'");
+    sql(
+        "UPDATE public.orders SET delivered_at='2026-10-10T05:00:00Z', created_at='2025-01-01',updated_at='2026-09-01' WHERE id='"
+            + today
+            + "'");
+    sql("UPDATE public.orders SET delivered_at='2026-09-13T12:00:00Z' WHERE id='" + old + "'");
+    sql("UPDATE public.orders SET delivered_at='2026-10-11T05:00:00Z' WHERE id='" + future + "'");
+    var listing = tx.execute(s -> service.getOperationalOrders(cafe));
+    assertNotNull(listing);
+    assertEquals(java.time.LocalDate.of(2026, 10, 10), listing.businessDate().value());
+    assertEquals(
+        Set.of(today, pending, preparing, ready, called),
+        listing.orders().stream().map(Order::getId).collect(java.util.stream.Collectors.toSet()));
+    var newDay =
+        tx.execute(
+            s ->
+                orders.findOperational(
+                    cafe,
+                    Instant.parse("2026-10-11T05:00:00Z"),
+                    Instant.parse("2026-10-12T05:00:00Z")));
+    assertEquals(
+        Set.of(future, pending, preparing, ready, called),
+        newDay.stream().map(Order::getId).collect(java.util.stream.Collectors.toSet()));
+    assertNotNull(tx.execute(s -> orders.findById(old).orElseThrow()));
+    assertNotNull(tx.execute(s -> orders.findById(legacy).orElseThrow()));
+  }
+
   @BeforeAll
   static void start() throws Exception {
     database =
@@ -133,7 +179,8 @@ class OrderConcurrencyPostgresTest {
 
   static void assertCancelledAt(UUID id, Instant expected) throws SQLException {
     Order saved = tx.execute(s -> orders.findById(id).orElseThrow());
-    assertEquals(expected, saved.getCancelledAt(), "Hibernate must round-trip the terminal instant");
+    assertEquals(
+        expected, saved.getCancelledAt(), "Hibernate must round-trip the terminal instant");
     try (Connection connection = DriverManager.getConnection(url, "postgres", "");
         PreparedStatement query =
             connection.prepareStatement("SELECT cancelled_at FROM public.orders WHERE id=?")) {
@@ -386,13 +433,7 @@ class OrderConcurrencyPostgresTest {
   void preparationWinnerLeavesNoCancellationTimestampWhenTheBlockedClientLoses() throws Exception {
     UUID id = order(cafeteria(), "PENDING", 0);
     List<Object> results =
-        race(
-            id,
-            "prepare",
-            id,
-            "cancel",
-            "orders",
-            () -> assertEquals("PENDING", state(id)));
+        race(id, "prepare", id, "cancel", "orders", () -> assertEquals("PENDING", state(id)));
     assertEquals("PREPARING", assertInstanceOf(Order.class, results.getFirst()).getStatus().name());
     assertEquals(
         ErrorCode.ORDER_ALREADY_PREPARING,

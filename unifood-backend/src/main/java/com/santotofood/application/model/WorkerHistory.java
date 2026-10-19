@@ -4,14 +4,22 @@ import com.santotofood.domain.model.BusinessDate;
 import com.santotofood.domain.model.OrderStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
 /** Minimal read projection; customer and item names come from stored order snapshots. */
-public record TodayWorkerHistory(
-    BusinessDate businessDate, Instant nextBusinessDateAt, List<Entry> orders) {
-  public TodayWorkerHistory {
+public record WorkerHistory(
+    BusinessDate businessDate,
+    Instant nextBusinessDateAt,
+    LocalDate monthStart,
+    LocalDate rangeStart,
+    LocalDate rangeEnd,
+    List<Entry> orders,
+    String nextCursor,
+    boolean hasHistory) {
+  public WorkerHistory {
     Objects.requireNonNull(businessDate);
     Objects.requireNonNull(nextBusinessDateAt);
     orders = List.copyOf(orders);

@@ -23,6 +23,14 @@ const clock = new Intl.DateTimeFormat("es-CO", {
 });
 export const formatHistoryTime = (instant: string) =>
   clock.format(new Date(instant));
+const completedDate = new Intl.DateTimeFormat("es-CO", {
+  timeZone: "America/Bogota",
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
+export const formatHistoryDate = (instant: string) =>
+  completedDate.format(new Date(instant));
 export const HISTORY_LABELS: Record<HistoryStatus, string> = {
   DELIVERED: "Entregado",
   NOT_COLLECTED: "No recogido",

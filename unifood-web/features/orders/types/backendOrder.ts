@@ -30,5 +30,6 @@ export interface BackendOrder {
   cancellationDeadline: string | null;
   createdAt: string;
   updatedAt: string;
+  deliveredAt?: string | null;
   items: BackendOrderItem[];
 }
