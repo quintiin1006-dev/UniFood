@@ -52,7 +52,7 @@ for (const [name, target] of [
         )
       ).status(),
     ).toBe(403);
-    if (target !== "/cuenta")
+    if (target === "/super-admin")
       await expect(
         page.getByText(
           "El panel de administración estará disponible más adelante.",
