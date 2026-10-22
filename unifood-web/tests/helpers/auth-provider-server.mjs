@@ -7,6 +7,7 @@ import {
   workerHistoryPageFixture,
 } from "./worker-history-fixture.mjs";
 import { adminProfileBusinessFixture } from "./admin-profile-fixture.mjs";
+import { adminCatalogFixture } from "./admin-catalog-fixture.mjs";
 import { workerProfileBusinessFixture } from "./worker-profile-fixture.mjs";
 
 const fixtures = Object.entries({
@@ -26,6 +27,7 @@ const fixtures = Object.entries({
   backendunavailable: ["WORKER"],
   backenddisconnect: ["WORKER"],
   admin: ["ADMIN"],
+  adminother: ["ADMIN"],
   superadmin: ["SUPER_ADMIN"],
   workeradmin: ["WORKER", "ADMIN"],
   workersuperadmin: ["WORKER", "SUPER_ADMIN"],
@@ -89,6 +91,16 @@ function workerProfileState(profile) {
   return workerProfileStates.get(profile.id);
 }
 const adminProfileStates = new Map();
+const adminCatalogStates = new Map();
+function adminCatalogState(profile) {
+  if (!adminCatalogStates.has(profile.id))
+    adminCatalogStates.set(profile.id, {
+      data: adminCatalogFixture(profile.email.startsWith("adminother@")),
+      mode: null,
+      gets: 0,
+    });
+  return adminCatalogStates.get(profile.id);
+}
 function adminProfileState(profile) {
   if (!adminProfileStates.has(profile.id))
     adminProfileStates.set(profile.id, {
@@ -245,6 +257,21 @@ createServer(async (request, response) => {
       const state = workerProfileState(target);
       if (Object.hasOwn(config, "mode")) state.mode = config.mode;
       if (Object.hasOwn(config, "inactive")) state.inactive = config.inactive;
+      if (config.data) state.data = config.data;
+      return json(response, 200, { gets: state.gets });
+    }
+    if (url.pathname === "/__test/admin-catalog") {
+      let config;
+      if (request.method === "POST") {
+        let raw = "";
+        for await (const chunk of request) raw += chunk;
+        config = JSON.parse(raw);
+      } else config = { email: url.searchParams.get("email") };
+      const target = fixtures.find((entry) => entry.email === config.email);
+      if (!target) return json(response, 400, {});
+      if (config.reset) adminCatalogStates.delete(target.id);
+      const state = adminCatalogState(target);
+      if (Object.hasOwn(config, "mode")) state.mode = config.mode;
       if (config.data) state.data = config.data;
       return json(response, 200, { gets: state.gets });
     }
@@ -592,6 +619,25 @@ createServer(async (request, response) => {
       if (state.mode === "redirect") {
         response.writeHead(302, { location: "/api/me/profile" });
         return response.end();
+      }
+      return json(response, 200, state.data);
+    }
+    if (url.pathname === "/api/admin/catalog" && request.method === "GET") {
+      const state = adminCatalogState(profile);
+      state.gets++;
+      if (
+        !profile.active ||
+        adminProfileState(profile).inactive ||
+        profile.assignments !== 1 ||
+        profile.roles.length !== 1 ||
+        profile.roles[0] !== "ADMIN"
+      )
+        return json(response, 403, { message: "PRIVATE" });
+      if (["401", "403", "500", "503"].includes(state.mode)) {
+        if (state.mode === "503") response.setHeader("Retry-After", "9");
+        return json(response, Number(state.mode), {
+          message: "PRIVATE_SQL_DETAIL",
+        });
       }
       return json(response, 200, state.data);
     }
