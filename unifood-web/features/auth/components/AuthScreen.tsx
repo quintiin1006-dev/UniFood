@@ -1,23 +1,12 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-  type FormEvent,
-  type InputHTMLAttributes,
-  type ReactNode,
-} from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
   ChevronDown,
-  Eye,
-  EyeOff,
   IdCard,
   Info,
   LockKeyhole,
@@ -34,12 +23,12 @@ import {
   type AuthEntrypoint,
 } from "../validation";
 import Brand, { Waves } from "./Brand";
+import { Field } from "./AuthField";
+import { PanelAuthHero } from "./PanelAuthHero";
+import { useAuthHydration } from "../useAuthHydration";
 import styles from "./AuthScreen.module.css";
 
 type Mode = "login" | "register" | "recover";
-const subscribeToHydration = () => () => {};
-const clientSnapshot = () => true;
-const serverSnapshot = () => false;
 const copy = {
   es: {
     panelTitle: "Acceso al panel",
@@ -201,59 +190,19 @@ const copy = {
   },
 };
 
-function Field({
-  icon,
-  label,
-  password = false,
-  language,
-  ...props
-}: InputHTMLAttributes<HTMLInputElement> & {
-  icon: ReactNode;
-  label: string;
-  password?: boolean;
-  language: "es" | "en";
-}) {
-  const [visible, setVisible] = useState(false);
-  return (
-    <label className={styles.field}>
-      {icon}
-      <span className={styles.srOnly}>{label}</span>
-      <input
-        {...props}
-        aria-label={label}
-        placeholder={label}
-        type={password ? (visible ? "text" : "password") : props.type || "text"}
-      />
-      {password && (
-        <button
-          type="button"
-          disabled={props.disabled}
-          onClick={() => setVisible((current) => !current)}
-          aria-label={visible ? copy[language].hide : copy[language].show}
-          aria-pressed={visible}
-        >
-          {visible ? <Eye size={21} /> : <EyeOff size={21} />}
-        </button>
-      )}
-    </label>
-  );
-}
-
 export default function AuthScreen({
   initialMode,
   usernameDomain,
   entrypoint,
+  passwordUpdated = false,
 }: {
   initialMode: Mode;
   usernameDomain: string;
   entrypoint: AuthEntrypoint;
+  passwordUpdated?: boolean;
 }) {
   // The server HTML must not accept credentials before React attaches events.
-  const hydrated = useSyncExternalStore(
-    subscribeToHydration,
-    clientSnapshot,
-    serverSnapshot,
-  );
+  const hydrated = useAuthHydration();
   const [language, setLanguage] = useState<"es" | "en">("es");
   const t = copy[language];
   const [mode, setMode] = useState(initialMode);
@@ -267,7 +216,11 @@ export default function AuthScreen({
   const [code, setCode] = useState<string[]>(Array(6).fill(""));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState(
+    passwordUpdated
+      ? "Tu contrase\u00f1a se actualiz\u00f3 correctamente. Inicia sesi\u00f3n con tu nueva contrase\u00f1a."
+      : "",
+  );
   const [unverified, setUnverified] = useState(false);
   const [confirmingLogin, setConfirmingLogin] = useState(false);
   const [resendAt, setResendAt] = useState(0);
@@ -501,35 +454,18 @@ export default function AuthScreen({
 
   return (
     <main
-      className={`${styles.screen} ${entrypoint === "panel" ? `${styles.panelScreen} ${isLogin ? styles.panelLogin : ""}` : ""}`}
+      className={`${styles.screen} ${entrypoint === "panel" ? `${styles.panelScreen} ${styles.panelLogin}` : ""}`}
       lang={language}
     >
       <div
         className={`${styles.canvas} ${entrypoint === "panel" ? styles.panelCanvas : ""}`}
       >
         {entrypoint === "panel" && (
-          <aside className={styles.panelIntro}>
-            <div className={styles.panelCopy}>
-              <p className={styles.panelLabel}>{t.panelLabel}</p>
-              <h2>{t.panelHeading}</h2>
-              <p>{t.panelDescription}</p>
-            </div>
-            <div className={styles.panelIllustration} aria-hidden="true">
-              <Image
-                src={
-                  isLogin ? "/images/client/Topos.png" : "/panel-cafeteria.png"
-                }
-                alt=""
-                fill
-                sizes={
-                  isLogin
-                    ? "(min-width: 1316px) 706px, (min-width: 960px) 56vw, 100vw"
-                    : "(min-width: 960px) 460px, 100vw"
-                }
-                unoptimized={!isLogin}
-              />
-            </div>
-          </aside>
+          <PanelAuthHero
+            label={t.panelLabel}
+            heading={t.panelHeading}
+            description={t.panelDescription}
+          />
         )}
         <div
           className={`${styles.content} ${entrypoint === "panel" ? styles.panelContent : ""}`}
@@ -752,7 +688,11 @@ export default function AuthScreen({
                 </label>
                 <Link
                   className={styles.link}
-                  href={`/recuperar-contrasena?entrypoint=${entrypoint}`}
+                  href={
+                    entrypoint === "panel"
+                      ? "/panel/recuperar"
+                      : "/recuperar-contrasena?entrypoint=client"
+                  }
                 >
                   {t.forgot}
                 </Link>

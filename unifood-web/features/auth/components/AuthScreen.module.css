@@ -432,6 +432,23 @@
   font-size: 14px;
   line-height: 1.5;
 }
+.recoveryRules {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  color: #697994;
+  font-size: 13px;
+}
+.recoveryRules li::before {
+  content: "○";
+  display: inline-block;
+  width: 20px;
+}
+.recoveryRules .passed::before {
+  content: "✓";
+}
 .waves {
   position: absolute;
   z-index: 0;
@@ -560,14 +577,6 @@
   flex: 1;
   min-height: 240px;
   margin: 12px 24px 24px;
-}
-.panelIllustration img {
-  object-fit: contain;
-  object-position: center bottom;
-  /* Lift the white drawing off the PNG's pale opaque background. */
-  filter: grayscale(1) brightness(0.507) contrast(64);
-  mix-blend-mode: screen;
-  opacity: 0.72;
 }
 .panelCopy {
   padding: 44px 44px 0;
