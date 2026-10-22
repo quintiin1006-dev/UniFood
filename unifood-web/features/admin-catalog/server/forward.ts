@@ -2,7 +2,13 @@ import "server-only";
 import { unstable_rethrow } from "next/navigation";
 import { getVerifiedAuthIdentity } from "@/features/auth/server/identity";
 import { authClient } from "@/features/auth/server/client";
-import { isAdmin, type AuthProfile } from "@/features/auth/validation";
+import {
+  isAdmin,
+  sameOrigin,
+  type AuthProfile,
+} from "@/features/auth/validation";
+import { catalogUuid, parseCatalogCommand } from "../commands";
+import { catalogRequestBody } from "./body";
 import {
   isAuthServiceUnavailable,
   isTemporaryAuthFailure,
@@ -11,10 +17,15 @@ import { serverApiUrl } from "@/config/server";
 import { parseAdminCatalog } from "../contracts";
 import { CATALOG_MESSAGES, catalogErrorCode } from "../errors";
 
-function failure(status: number, retry?: string | null, auth = false) {
+function failure(
+  status: number,
+  retry?: string | null,
+  auth = false,
+  publicCode?: unknown,
+) {
   const code = catalogErrorCode(
     status,
-    auth ? "AUTH_TEMPORARILY_UNAVAILABLE" : undefined,
+    auth ? "AUTH_TEMPORARILY_UNAVAILABLE" : publicCode,
   );
   const headers: Record<string, string> = { "Cache-Control": "no-store" };
   if (status === 503)
@@ -32,8 +43,23 @@ function failure(status: number, retry?: string | null, auth = false) {
 }
 
 /** Profile transport would add email to this contract. Keep this catalog projection independent. */
-export async function forwardAdminCatalog() {
+export async function forwardAdminCatalog(
+  request?: Request,
+  kind?: "create" | "edit" | "status",
+  id?: string,
+) {
+  if (kind && (!request || !sameOrigin(request))) return failure(403);
   let identity: Awaited<ReturnType<typeof getVerifiedAuthIdentity>>;
+  let command: Record<string, unknown> | null = null;
+  if (kind) {
+    if (kind !== "create" && !catalogUuid(id)) return failure(400);
+    try {
+      command = parseCatalogCommand(await catalogRequestBody(request!), kind);
+    } catch {
+      return failure(400);
+    }
+    if (!command) return failure(400);
+  }
   try {
     identity = await getVerifiedAuthIdentity();
     if (!identity) return failure(401);
@@ -55,23 +81,39 @@ export async function forwardAdminCatalog() {
   }
   try {
     // No browser URL, headers, body or tenant selectors are forwarded.
-    const upstream = await fetch(serverApiUrl() + "/api/admin/catalog", {
-      method: "GET",
+    const path =
+      "/api/admin/catalog" +
+      (kind && kind !== "create"
+        ? "/" + id + (kind === "status" ? "/status" : "")
+        : "");
+    const upstream = await fetch(serverApiUrl() + path, {
+      method: kind === "create" ? "POST" : kind ? "PATCH" : "GET",
       headers: {
         authorization: "Bearer " + identity.accessToken,
         accept: "application/json",
+        ...(kind ? { "content-type": "application/json" } : {}),
       },
+      ...(kind ? { body: JSON.stringify(command) } : {}),
       cache: "no-store",
       redirect: "error",
       signal: AbortSignal.timeout(15000),
     });
-    if (upstream.status !== 200) {
-      const status = [401, 403, 500, 503].includes(upstream.status)
+    if (upstream.status !== (kind === "create" ? 201 : 200)) {
+      const status = (kind
+        ? [400, 401, 403, 404, 409, 500, 503]
+        : [401, 403, 500, 503]
+      ).includes(upstream.status)
         ? upstream.status
         : upstream.status >= 502
           ? 503
           : 502;
-      return failure(status, upstream.headers.get("Retry-After"));
+      const error = await upstream.json().catch(() => null);
+      return failure(
+        status,
+        upstream.headers.get("Retry-After"),
+        false,
+        error?.code,
+      );
     }
     const body: unknown = await upstream.json().catch((cause: unknown) => {
       if (
@@ -81,11 +123,19 @@ export async function forwardAdminCatalog() {
         throw cause;
       return null;
     });
-    const catalog = parseAdminCatalog(body);
+    const catalog = parseAdminCatalog(kind ? { products: [body] } : body);
     return catalog
-      ? Response.json(catalog, { headers: { "Cache-Control": "no-store" } })
+      ? Response.json(kind ? catalog.products[0] : catalog, {
+          status: kind === "create" ? 201 : 200,
+          headers: { "Cache-Control": "no-store" },
+        })
       : failure(502);
   } catch {
     return failure(503);
   }
 }
+export const forwardAdminCatalogMutation = (
+  request: Request,
+  kind: "create" | "edit" | "status",
+  id?: string,
+) => forwardAdminCatalog(request, kind, id);

@@ -13,6 +13,10 @@ export const validCatalogPrice = (value: unknown): value is string =>
   typeof value === "string" &&
   /^(?:0|[1-9]\d{0,9})\.\d{2}$/.test(value) &&
   value !== "0.00";
+export const validCatalogVersion = (value: unknown): value is string =>
+  typeof value === "string" &&
+  /^(?:0|[1-9]\d{0,18})$/.test(value) &&
+  BigInt(value) <= BigInt("9223372036854775807");
 
 /** Reject malformed/duplicate rows; project published fields and safe local image references only. */
 export function parseAdminCatalog(value: unknown): AdminCatalogData | null {
@@ -32,7 +36,8 @@ export function parseAdminCatalog(value: unknown): AdminCatalogData | null {
       !validCatalogPrice(p.price) ||
       !CATALOG_CATEGORIES.some((category) => category === p.category) ||
       !nullableText(p.imageUrl) ||
-      typeof p.active !== "boolean"
+      typeof p.active !== "boolean" ||
+      !validCatalogVersion(p.version)
     )
       return null;
     ids.add(p.id.toLowerCase());
@@ -44,6 +49,7 @@ export function parseAdminCatalog(value: unknown): AdminCatalogData | null {
       category: p.category as AdminProduct["category"],
       imageUrl: productImageSource(p.imageUrl),
       active: p.active,
+      version: p.version,
     });
   }
   return { products };
