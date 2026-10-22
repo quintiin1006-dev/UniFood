@@ -3,7 +3,7 @@ import {
   DEFAULT_USERNAME_DOMAIN,
   parseEntrypoint,
 } from "@/features/auth/validation";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 export const metadata = { title: "Recupera tu contraseña | UniFood" };
 
@@ -14,6 +14,7 @@ export default async function RecoveryPage({
 }) {
   const entrypoint = parseEntrypoint((await searchParams).entrypoint);
   if (!entrypoint) notFound();
+  if (entrypoint === "panel") redirect("/panel/recuperar");
   // Do not redirect the temporary session needed by OTP/reset.
   return (
     <AuthScreen
