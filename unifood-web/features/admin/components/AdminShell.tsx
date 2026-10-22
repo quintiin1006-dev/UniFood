@@ -49,7 +49,7 @@ function Shell({ children }: { children: ReactNode }) {
         />
         <main id="admin-content" tabIndex={-1} className={styles.main}>
           <div className={styles.content}>
-            {loading && (
+            {loading && !data && (
               <div className={styles.feedback} role="status">
                 Cargando tu espacio de administración…
               </div>
