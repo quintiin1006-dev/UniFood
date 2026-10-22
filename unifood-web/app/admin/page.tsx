@@ -1,15 +1,12 @@
-import { redirect } from "next/navigation";
-import RolePlaceholder from "@/features/auth/components/RolePlaceholder";
-import { requireAuth } from "@/features/auth/server/session";
-import { destination, isAdmin } from "@/features/auth/validation";
+import { requireAdmin } from "@/features/admin/server/requireAdmin";
+import { AdminComingSoon } from "@/features/admin/components/AdminComingSoon";
 
-export const metadata = { title: "Administración | UniFood" };
-export const dynamic = "force-dynamic";
-
-export default async function AdminPage() {
-  const { profile } = await requireAuth("panel");
-  if (!isAdmin(profile)) redirect(destination(profile));
+export default async function Page() {
+  await requireAdmin();
   return (
-    <RolePlaceholder entrypoint="panel" title="Administración de cafetería" />
+    <AdminComingSoon
+      title="Dashboard"
+      description="Aquí encontrarás una visión general de tu cafetería."
+    />
   );
 }

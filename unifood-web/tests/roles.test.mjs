@@ -12,6 +12,10 @@ const redirect = (location) => {
   throw Object.assign(new Error("redirect"), { location });
 };
 const uiMocks = {
+  "server-only": {},
+  "@/features/admin/components/AdminComingSoon": {
+    AdminComingSoon: () => createElement("div", {}, "Administracion Dashboard"),
+  },
   "next/navigation": { redirect },
   "next/link": {
     default: ({ children, ...props }) => createElement("a", props, children),
@@ -250,9 +254,9 @@ test("every student route enforces an active CLIENT role", async () => {
   }
 });
 
-test("administrative placeholders enforce explicit active roles and provide no operations", async () => {
+test("administrative pages enforce explicit active roles and provide no operations", async () => {
   for (const [file, role, heading] of [
-    ["app/admin/page.tsx", "ADMIN", "Administración de cafetería"],
+    ["app/admin/page.tsx", "ADMIN", "Administracion Dashboard"],
     ["app/super-admin/page.tsx", "SUPER_ADMIN", "Administración global"],
   ]) {
     for (const [, roles, destination] of cases) {
@@ -263,7 +267,7 @@ test("administrative placeholders enforce explicit active roles and provide no o
       ) {
         const html = renderToStaticMarkup(await page());
         assert.ok(html.includes(heading));
-        assert.match(html, /Cerrar sesión/);
+        if (role === "SUPER_ADMIN") assert.match(html, /Cerrar sesión/);
         assert.ok(!html.includes("/worker"));
       } else
         await assert.rejects(

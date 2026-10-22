@@ -6,6 +6,7 @@ import {
   workerHistoryFixture,
   workerHistoryPageFixture,
 } from "./worker-history-fixture.mjs";
+import { adminProfileBusinessFixture } from "./admin-profile-fixture.mjs";
 import { workerProfileBusinessFixture } from "./worker-profile-fixture.mjs";
 
 const fixtures = Object.entries({
@@ -86,6 +87,17 @@ function workerProfileState(profile) {
       inactive: false,
     });
   return workerProfileStates.get(profile.id);
+}
+const adminProfileStates = new Map();
+function adminProfileState(profile) {
+  if (!adminProfileStates.has(profile.id))
+    adminProfileStates.set(profile.id, {
+      data: adminProfileBusinessFixture(),
+      mode: null,
+      gets: 0,
+      inactive: false,
+    });
+  return adminProfileStates.get(profile.id);
 }
 function historyState(profile) {
   if (!historyStates.has(profile.id))
@@ -231,6 +243,22 @@ createServer(async (request, response) => {
       if (!target) return json(response, 400, {});
       if (config.reset) workerProfileStates.delete(target.id);
       const state = workerProfileState(target);
+      if (Object.hasOwn(config, "mode")) state.mode = config.mode;
+      if (Object.hasOwn(config, "inactive")) state.inactive = config.inactive;
+      if (config.data) state.data = config.data;
+      return json(response, 200, { gets: state.gets });
+    }
+    if (url.pathname === "/__test/admin-profile") {
+      let config;
+      if (request.method === "POST") {
+        let raw = "";
+        for await (const chunk of request) raw += chunk;
+        config = JSON.parse(raw);
+      } else config = { email: url.searchParams.get("email") };
+      const target = fixtures.find((entry) => entry.email === config.email);
+      if (!target) return json(response, 400, {});
+      if (config.reset) adminProfileStates.delete(target.id);
+      const state = adminProfileState(target);
       if (Object.hasOwn(config, "mode")) state.mode = config.mode;
       if (Object.hasOwn(config, "inactive")) state.inactive = config.inactive;
       if (config.data) state.data = config.data;
@@ -532,7 +560,13 @@ createServer(async (request, response) => {
               active: profile.active && !workerProfileState(profile).inactive,
               email: "business-email-is-not-auth@example.invalid",
             }
-          : profile,
+          : profile.roles.includes("ADMIN")
+            ? {
+                ...profile,
+                active: profile.active && !adminProfileState(profile).inactive,
+                email: "business-email-is-not-auth@example.invalid",
+              }
+            : profile,
       );
     }
     if (url.pathname === "/api/worker/profile" && request.method === "GET") {
@@ -547,6 +581,32 @@ createServer(async (request, response) => {
       )
         return json(response, 403, {
           code: "WORKER_PROFILE_FORBIDDEN",
+          message: "PRIVATE",
+        });
+      if (["401", "403", "500", "503"].includes(state.mode)) {
+        if (state.mode === "503") response.setHeader("Retry-After", "9");
+        return json(response, Number(state.mode), {
+          message: "PRIVATE_SQL_DETAIL",
+        });
+      }
+      if (state.mode === "redirect") {
+        response.writeHead(302, { location: "/api/me/profile" });
+        return response.end();
+      }
+      return json(response, 200, state.data);
+    }
+    if (url.pathname === "/api/admin/profile" && request.method === "GET") {
+      const state = adminProfileState(profile);
+      state.gets++;
+      if (
+        !profile.active ||
+        state.inactive ||
+        profile.assignments !== 1 ||
+        profile.roles.length !== 1 ||
+        profile.roles[0] !== "ADMIN"
+      )
+        return json(response, 403, {
+          code: "ADMIN_PROFILE_FORBIDDEN",
           message: "PRIVATE",
         });
       if (["401", "403", "500", "503"].includes(state.mode)) {
