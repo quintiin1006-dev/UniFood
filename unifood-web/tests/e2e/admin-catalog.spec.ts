@@ -80,9 +80,11 @@ test("catalog shows commercial fields, combines accent-insensitive filters local
   const view = region(page);
   await expect(view.getByRole("article")).toHaveCount(5);
   await expect(view).not.toContainText(
-    /Producto exclusivo|Editar|Eliminar|Nuevo producto|Disponible hoy/,
+    /Producto exclusivo|Eliminar|Disponible hoy/,
   );
-  await expect(view.getByRole("button")).toHaveCount(0);
+  await expect(
+    view.getByRole("button", { name: "Nuevo producto", exact: true }),
+  ).toBeEnabled();
   await expect(
     view.getByRole("article", { name: "Ejecutivo de la casa" }),
   ).toContainText("$ 18.500");

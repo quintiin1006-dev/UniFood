@@ -98,6 +98,8 @@ function adminCatalogState(profile) {
       data: adminCatalogFixture(profile.email.startsWith("adminother@")),
       mode: null,
       gets: 0,
+      mutations: [],
+      mutationMode: null,
     });
   return adminCatalogStates.get(profile.id);
 }
@@ -272,8 +274,13 @@ createServer(async (request, response) => {
       if (config.reset) adminCatalogStates.delete(target.id);
       const state = adminCatalogState(target);
       if (Object.hasOwn(config, "mode")) state.mode = config.mode;
+      if (Object.hasOwn(config, "mutationMode"))
+        state.mutationMode = config.mutationMode;
       if (config.data) state.data = config.data;
-      return json(response, 200, { gets: state.gets });
+      return json(response, 200, {
+        gets: state.gets,
+        mutations: state.mutations,
+      });
     }
     if (url.pathname === "/__test/admin-profile") {
       let config;
@@ -621,6 +628,85 @@ createServer(async (request, response) => {
         return response.end();
       }
       return json(response, 200, state.data);
+    }
+    if (
+      url.pathname.startsWith("/api/admin/catalog") &&
+      ["POST", "PATCH"].includes(request.method)
+    ) {
+      const state = adminCatalogState(profile);
+      if (
+        !profile.active ||
+        adminProfileState(profile).inactive ||
+        profile.assignments !== 1 ||
+        profile.roles.length !== 1 ||
+        profile.roles[0] !== "ADMIN"
+      )
+        return json(response, 403, { code: "ADMIN_CATALOG_FORBIDDEN" });
+      if (!adminProfileState(profile).data.cafeteria.active)
+        return json(response, 403, {
+          code: "ADMIN_CATALOG_CAFETERIA_INACTIVE",
+        });
+      let raw = "";
+      for await (const chunk of request) raw += chunk;
+      const body = JSON.parse(raw);
+      state.mutations.push({ path: url.pathname, body });
+      if (state.mutationMode === "503")
+        return json(response, 503, { message: "PRIVATE" });
+      if (state.mutationMode === "409")
+        return json(response, 409, {
+          code: "ADMIN_CATALOG_STALE_VERSION",
+          message: "PRIVATE",
+        });
+      if (state.mutationMode === "slow")
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      const isCreate =
+        request.method === "POST" && url.pathname === "/api/admin/catalog";
+      const id = url.pathname.split("/")[4];
+      const existing = state.data.products.find((p) => p.id === id);
+      if (!isCreate && !existing)
+        return json(response, 404, { code: "ADMIN_CATALOG_PRODUCT_NOT_FOUND" });
+      if (!isCreate && body.expectedVersion !== existing.version)
+        return json(response, 409, { code: "ADMIN_CATALOG_STALE_VERSION" });
+      const isStatus = url.pathname.endsWith("/status");
+      if (
+        !isStatus &&
+        state.data.products.some((p) => p.id !== id && p.name === body.name)
+      )
+        return json(response, 409, { code: "ADMIN_CATALOG_DUPLICATE_NAME" });
+      const result = isCreate
+        ? {
+            id: randomUUID(),
+            ...body,
+            active: true,
+            imageUrl: null,
+            version: "0",
+          }
+        : {
+            ...existing,
+            ...(isStatus
+              ? { active: body.active }
+              : {
+                  name: body.name,
+                  description: body.description,
+                  price: body.price,
+                  category: body.category,
+                }),
+            version: String(BigInt(existing.version) + 1n),
+          };
+      if (!isStatus)
+        result.price = result.price.includes(".")
+          ? result.price.split(".")[0] +
+            "." +
+            result.price.split(".")[1].padEnd(2, "0")
+          : result.price + ".00";
+      if (isCreate) state.data.products.push(result);
+      else
+        state.data.products = state.data.products.map((p) =>
+          p.id === id ? result : p,
+        );
+      if (state.mutationMode === "disconnect-after-commit")
+        return request.socket.destroy();
+      return json(response, isCreate ? 201 : 200, result);
     }
     if (url.pathname === "/api/admin/catalog" && request.method === "GET") {
       const state = adminCatalogState(profile);
