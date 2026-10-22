@@ -9,6 +9,10 @@ package com.santotofood.shared.error;
  * concretas permanecen en la capa a la que conceptualmente pertenecen.
  */
 public enum ErrorCode {
+  ADMIN_CATALOG_FORBIDDEN,
+  ADMIN_CATALOG_TEMPORARILY_UNAVAILABLE,
+  ADMIN_CATALOG_INTERNAL_ERROR,
+
   ADMIN_PROFILE_FORBIDDEN,
   ADMIN_PROFILE_TEMPORARILY_UNAVAILABLE,
   ADMIN_PROFILE_INTERNAL_ERROR,
