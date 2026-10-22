@@ -8,11 +8,14 @@ import {
 
 export const metadata = { title: "Acceso al panel | UniFood" };
 
-export default async function PanelLoginPage() {
+export default async function PanelLoginPage({
+  searchParams,
+}: { searchParams?: Promise<{ password?: string | string[] }> } = {}) {
   const auth = await getAuth();
   if (auth) redirect(destination(auth.profile));
   return (
     <AuthScreen
+      passwordUpdated={(await searchParams)?.password === "updated"}
       initialMode="login"
       entrypoint="panel"
       usernameDomain={

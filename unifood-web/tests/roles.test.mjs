@@ -329,7 +329,7 @@ test("recovery validates context without redirecting an authenticated temporary 
     },
   };
   const page = load("app/recuperar-contrasena/page.tsx", mocks).default;
-  for (const entrypoint of ["client", "panel", undefined]) {
+  for (const entrypoint of ["client", undefined]) {
     const html = renderToStaticMarkup(
       await page({ searchParams: Promise.resolve({ entrypoint }) }),
     );
@@ -339,6 +339,10 @@ test("recovery validates context without redirecting an authenticated temporary 
     );
     assert.match(html, /data-mode="recover"/);
   }
+  await assert.rejects(
+    page({ searchParams: Promise.resolve({ entrypoint: "panel" }) }),
+    (error) => error.location === "/panel/recuperar",
+  );
   for (const entrypoint of [
     "worker",
     ["panel", "client"],

@@ -1,6 +1,6 @@
 // Loopback-only provider/backend fixture for browser tests. Never used by the app runtime.
 import { createServer } from "node:http";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { browserAvailabilityFixture } from "./availability-fixture.mjs";
 import {
   workerHistoryFixture,
@@ -16,6 +16,8 @@ const fixtures = Object.entries({
   unverifiedclient: ["CLIENT"],
   recoveryclient: ["CLIENT"],
   recoveryworker: ["WORKER"],
+  recoveryadmin: ["ADMIN"],
+  recoverysuperadmin: ["SUPER_ADMIN"],
   providerdown: ["CLIENT"],
   providerdisconnect: ["CLIENT"],
   backendunauthorized: ["WORKER"],
@@ -53,6 +55,17 @@ const fixtures = Object.entries({
 }));
 const cafeteriaId = "00000000-0000-0000-0000-000000000002";
 const orderId = "00000000-0000-0000-0000-000000000001";
+const recoveryLinks = new Map();
+const panelRecovery = {
+  requestMode: null,
+  updateMode: null,
+  logoutMode: null,
+  lastLink: null,
+  requests: 0,
+  exchanges: 0,
+  updates: 0,
+  businessReads: 0,
+};
 const statuses = new Map();
 const confirmed = new Set();
 const passwords = new Map();
@@ -149,7 +162,63 @@ function session(profile) {
 
 createServer(async (request, response) => {
   try {
+    const origin = request.headers.origin;
+    if (
+      [
+        "http://localhost:3100",
+        "http://127.0.0.1:3100",
+        "http://[::1]:3100",
+      ].includes(origin)
+    ) {
+      response.setHeader("Access-Control-Allow-Origin", origin);
+      response.setHeader(
+        "Access-Control-Allow-Headers",
+        "authorization, apikey, content-type, x-client-info, x-supabase-api-version",
+      );
+      response.setHeader(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, OPTIONS",
+      );
+    }
+    if (request.method === "OPTIONS") {
+      response.writeHead(204);
+      return response.end();
+    }
     const url = new URL(request.url, "http://127.0.0.1:3101");
+    if (url.pathname === "/__test/panel-recovery") {
+      let input = {};
+      if (request.method === "POST") {
+        let raw = "";
+        for await (const chunk of request) raw += chunk;
+        input = JSON.parse(raw);
+      }
+      if (input.reset) {
+        recoveryLinks.clear();
+        Object.assign(panelRecovery, {
+          requestMode: null,
+          updateMode: null,
+          logoutMode: null,
+          lastLink: null,
+          requests: 0,
+          exchanges: 0,
+          updates: 0,
+          businessReads: 0,
+        });
+        for (const entry of fixtures.filter(
+          (entry) =>
+            entry.email.startsWith("recovery") &&
+            !entry.email.startsWith("recoveryclient"),
+        ))
+          passwords.delete(entry.id);
+      }
+      for (const field of ["requestMode", "updateMode", "logoutMode"])
+        if (Object.hasOwn(input, field)) panelRecovery[field] = input[field];
+      if (input.expire && panelRecovery.lastLink)
+        recoveryLinks.get(
+          new URL(panelRecovery.lastLink).searchParams.get("code"),
+        ).expired = true;
+      return json(response, 200, panelRecovery);
+    }
     if (url.pathname === "/health") return json(response, 200, { ok: true });
     if (url.pathname === "/__test/worker-profile") {
       let config;
@@ -272,13 +341,45 @@ createServer(async (request, response) => {
       else failures.set(target.id, mode);
       return json(response, 200, { ok: true });
     }
-    if (
-      ["/auth/v1/resend", "/auth/v1/recover"].includes(url.pathname) &&
-      request.method === "POST"
-    ) {
-      for await (const chunk of request) {
-        void chunk;
+    if (url.pathname === "/auth/v1/recover" && request.method === "POST") {
+      let raw = "";
+      for await (const chunk of request) raw += chunk;
+      const body = JSON.parse(raw);
+      // Legacy CLIENT recovery remains an OTP fixture. Panel uses real SDK PKCE.
+      if (
+        body.code_challenge &&
+        url.searchParams.get("redirect_to") &&
+        new URL(url.searchParams.get("redirect_to")).pathname ===
+          "/panel/nueva-contrasena"
+      ) {
+        panelRecovery.requests++;
+        if (panelRecovery.requestMode)
+          return json(response, Number(panelRecovery.requestMode), {
+            code:
+              panelRecovery.requestMode === "429"
+                ? "over_email_send_rate_limit"
+                : "unexpected_failure",
+            message: "PRIVATE_MAIL_DETAIL",
+          });
+        const profile = fixtures.find((entry) => entry.email === body.email);
+        if (profile) {
+          const code = randomUUID();
+          const redirect = new URL(url.searchParams.get("redirect_to"));
+          redirect.searchParams.set("code", code);
+          recoveryLinks.set(code, {
+            profile,
+            challenge: body.code_challenge,
+            method: body.code_challenge_method,
+            used: false,
+            expired: false,
+          });
+          panelRecovery.lastLink = redirect.href;
+        }
       }
+      return json(response, 200, {});
+    }
+    if (url.pathname === "/auth/v1/resend" && request.method === "POST") {
+      for await (const chunk of request) void chunk;
       return json(response, 200, {});
     }
     if (url.pathname === "/auth/v1/verify" && request.method === "POST") {
@@ -299,6 +400,29 @@ createServer(async (request, response) => {
       let raw = "";
       for await (const chunk of request) raw += chunk;
       const body = JSON.parse(raw);
+      if (url.searchParams.get("grant_type") === "pkce") {
+        panelRecovery.exchanges++;
+        const link = recoveryLinks.get(body.auth_code);
+        const challenge =
+          typeof body.code_verifier === "string"
+            ? createHash("sha256")
+                .update(body.code_verifier)
+                .digest("base64url")
+            : null;
+        if (
+          !link ||
+          link.used ||
+          link.expired ||
+          link.method !== "s256" ||
+          challenge !== link.challenge
+        )
+          return json(response, 400, {
+            code: "otp_expired",
+            message: "PRIVATE_RECOVERY_DETAIL",
+          });
+        link.used = true;
+        return json(response, 200, session(link.profile));
+      }
       if (url.searchParams.get("grant_type") === "refresh_token") {
         const refreshProfile = refreshTokens.get(body.refresh_token);
         if (!refreshProfile)
@@ -354,6 +478,24 @@ createServer(async (request, response) => {
       let raw = "";
       for await (const chunk of request) raw += chunk;
       const { password } = JSON.parse(raw);
+      if (
+        profile.email.startsWith("recovery") &&
+        !profile.email.startsWith("recoveryclient")
+      ) {
+        panelRecovery.updates++;
+        if (panelRecovery.updateMode)
+          return json(
+            response,
+            panelRecovery.updateMode === "503" ? 503 : 422,
+            {
+              code:
+                panelRecovery.updateMode === "503"
+                  ? "unexpected_failure"
+                  : panelRecovery.updateMode,
+              message: "PRIVATE_UPDATE_DETAIL",
+            },
+          );
+      }
       if (typeof password !== "string" || password.length < 8)
         return json(response, 400, {
           code: "weak_password",
@@ -369,13 +511,18 @@ createServer(async (request, response) => {
       return;
     if (url.pathname === "/auth/v1/user")
       return json(response, 200, user(profile));
-    if (url.pathname === "/auth/v1/logout") return json(response, 200, {});
+    if (url.pathname === "/auth/v1/logout") {
+      if (profile.email.startsWith("recovery") && panelRecovery.logoutMode)
+        return json(response, 503, { message: "PRIVATE_LOGOUT_DETAIL" });
+      return json(response, 200, {});
+    }
     if (
       url.pathname === "/rest/v1/rpc/current_auth_profile" &&
       temporaryFailure(request, response, profile, "profile")
     )
       return;
-    if (url.pathname === "/rest/v1/rpc/current_auth_profile")
+    if (url.pathname === "/rest/v1/rpc/current_auth_profile") {
+      panelRecovery.businessReads++;
       return json(
         response,
         200,
@@ -387,6 +534,7 @@ createServer(async (request, response) => {
             }
           : profile,
       );
+    }
     if (url.pathname === "/api/worker/profile" && request.method === "GET") {
       const state = workerProfileState(profile);
       state.gets++;
