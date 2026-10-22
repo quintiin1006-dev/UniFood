@@ -567,13 +567,32 @@ test("profile errors and failed provider signOut cannot retain attempt cookies o
   }
 });
 
-test("logout and reset use fixed contextual destinations; recovery OTP keeps its temporary session", async () => {
+test("logout keeps contextual destinations, CLIENT retains OTP and panel legacy reset is closed", async () => {
   for (const entrypoint of ["client", "panel"]) {
     const { post, calls } = fixture();
     const target = entrypoint === "client" ? "/login" : "/panel/login";
     assert.deepEqual(await (await post("logout", { entrypoint })).json(), {
       redirect: target,
     });
+    if (entrypoint === "panel") {
+      calls.length = 0;
+      for (const action of ["recover", "reset", "verify", "resend"]) {
+        const response = await post(action, {
+          entrypoint,
+          email: "fixture",
+          recovery: true,
+          code: "123456",
+          password: "NuevaClave8",
+        });
+        assert.equal(response.status, 400);
+        assert.equal(
+          (await response.json()).code,
+          "PANEL_RECOVERY_LINK_REQUIRED",
+        );
+      }
+      assert.equal(calls.length, 0);
+      continue;
+    }
     assert.deepEqual(
       await (
         await post("reset", { entrypoint, password: "NuevaClave8" })

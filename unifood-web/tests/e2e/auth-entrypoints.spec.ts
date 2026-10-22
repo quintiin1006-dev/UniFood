@@ -30,7 +30,7 @@ test("root opens student login with registration; panel keeps its separate conte
   ).toHaveCount(0);
   await expect(
     page.getByRole("link", { name: "¿Olvidaste tu contraseña?" }),
-  ).toHaveAttribute("href", "/recuperar-contrasena?entrypoint=panel");
+  ).toHaveAttribute("href", "/panel/recuperar");
   await page.screenshot({
     path: testInfo.outputPath("panel-desktop.png"),
     fullPage: true,
@@ -204,7 +204,7 @@ test("panel login can confirm OTP without entering student registration and reme
   ).toBe("1");
 });
 
-for (const entrypoint of ["client", "panel"]) {
+for (const entrypoint of ["client"]) {
   test(`recovery preserves the temporary OTP session and the ${entrypoint} login variant`, async ({
     page,
   }) => {
