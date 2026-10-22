@@ -105,6 +105,18 @@ export async function POST(
     const entrypoint = parseEntrypoint(body.entrypoint);
     if (!entrypoint) return fail("Entrada de acceso no válida.");
     if (
+      entrypoint === "panel" &&
+      (action === "recover" ||
+        action === "reset" ||
+        ((action === "verify" || action === "resend") &&
+          body.recovery === true))
+    )
+      return fail(
+        "Solicita un enlace desde la recuperación del panel.",
+        400,
+        "PANEL_RECOVERY_LINK_REQUIRED",
+      );
+    if (
       (action === "register" || action === "institution") &&
       entrypoint !== "client"
     )
