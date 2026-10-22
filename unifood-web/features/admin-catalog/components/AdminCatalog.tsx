@@ -1,16 +1,73 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { PackageSearch, CircleAlert } from "lucide-react";
 import { useAdminCatalog } from "../useAdminCatalog";
 import { filterCatalog } from "../presentation";
-import type { CatalogFilters } from "../types";
+import type { CatalogFilters, CatalogMutation } from "../types";
+import { useAdminProfile } from "@/features/admin-profile/context";
+import { adminCatalogApi } from "../api";
+import { AdminCatalogError } from "../errors";
+import { ProductDrawer, type CatalogEditor } from "./ProductDrawer";
 import { AdminCatalogToolbar } from "./AdminCatalogToolbar";
 import { AdminProductCard } from "./AdminProductCard";
 import shell from "@/features/admin/components/Admin.module.css";
 import styles from "./AdminCatalog.module.css";
 
 export function AdminCatalog() {
-  const { data, loading, error, retry } = useAdminCatalog();
+  const {
+    data,
+    loading,
+    error,
+    retry,
+    applyConfirmed,
+    invalidateReads,
+    denyAccess,
+  } = useAdminCatalog();
+  const profile = useAdminProfile();
+  const [editor, setEditor] = useState<CatalogEditor | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState("");
+  const writeLock = useRef(false);
+  const [deniedContext, setDeniedContext] = useState<typeof profile.data>(null);
+  const allowed =
+    !!profile.data?.cafeteria.active &&
+    profile.data !== deniedContext &&
+    !profile.loading &&
+    !profile.error &&
+    !saving &&
+    !loading &&
+    !error;
+  const save = async (command: CatalogMutation) => {
+    if (!allowed || writeLock.current) throw new AdminCatalogError(403);
+    writeLock.current = true;
+    setSaving(true);
+    setSuccess("");
+    const authorizationRevision = invalidateReads();
+    try {
+      const confirmed = await adminCatalogApi.mutate(command);
+      applyConfirmed(confirmed, authorizationRevision);
+      setSuccess(
+        command.kind === "create"
+          ? "Producto creado."
+          : "Producto actualizado.",
+      );
+      void retry();
+    } catch (cause) {
+      if (
+        cause instanceof AdminCatalogError &&
+        [401, 403].includes(cause.status)
+      ) {
+        setDeniedContext(profile.data);
+        if (cause.code !== "ADMIN_CATALOG_CAFETERIA_INACTIVE")
+          denyAccess(cause.status);
+        void profile.retry();
+      }
+      throw cause;
+    } finally {
+      writeLock.current = false;
+      setSaving(false);
+    }
+  };
   const [filters, setFilters] = useState<CatalogFilters>({
     search: "",
     category: "",
@@ -20,11 +77,18 @@ export function AdminCatalog() {
   return (
     <section className={shell.section} aria-labelledby="admin-catalog-title">
       <p className={shell.eyebrow}>TU CAFETERÍA</p>
-      <h1 id="admin-catalog-title">Catálogo</h1>
+      <h1 id="admin-catalog-title" tabIndex={-1}>
+        Catálogo
+      </h1>
       <p className={shell.intro}>
         Administra los productos que ofrece tu cafetería.
       </p>
-      {loading && (
+      {success && (
+        <p role="status" className={styles.success}>
+          {success}
+        </p>
+      )}
+      {loading && !data && (
         <div className={styles.feedback} role="status">
           Cargando el catálogo…
         </div>
@@ -46,11 +110,36 @@ export function AdminCatalog() {
       )}
       {data && (
         <>
+          <div className={styles.catalogActions}>
+            <button
+              type="button"
+              className={styles.primary}
+              disabled={!allowed}
+              onClick={() => {
+                setSuccess("");
+                setEditor({ kind: "create" });
+              }}
+            >
+              Nuevo producto
+            </button>
+          </div>
           <AdminCatalogToolbar filters={filters} onChange={setFilters} />
           {products.length ? (
             <div className={styles.grid} aria-label="Productos del catálogo">
               {products.map((product) => (
-                <AdminProductCard key={product.id} product={product} />
+                <AdminProductCard
+                  key={product.id}
+                  product={product}
+                  disabled={!allowed}
+                  onEdit={() => {
+                    setSuccess("");
+                    setEditor({ kind: "edit", product });
+                  }}
+                  onStatus={() => {
+                    setSuccess("");
+                    setEditor({ kind: "status", product });
+                  }}
+                />
               ))}
             </div>
           ) : (
@@ -66,10 +155,18 @@ export function AdminCatalog() {
             </div>
           )}
           <p className={styles.readOnly}>
-            Solo lectura · El estado del catálogo es independiente de la
-            disponibilidad diaria.
+            El estado del catálogo es independiente de la disponibilidad diaria.
           </p>
         </>
+      )}
+      {data && editor && error?.status !== 401 && error?.status !== 403 && (
+        <ProductDrawer
+          editor={editor}
+          allowed={allowed || saving}
+          save={save}
+          refresh={retry}
+          close={() => setEditor(null)}
+        />
       )}
     </section>
   );

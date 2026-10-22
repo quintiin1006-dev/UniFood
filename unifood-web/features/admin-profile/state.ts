@@ -29,7 +29,7 @@ export class AdminProfileStore {
     this.request?.abort();
     const request = new AbortController();
     this.request = request;
-    this.publish({ data: null, loading: true, error: null });
+    this.publish({ data: this.state.data, loading: true, error: null });
     try {
       const data = await this.api.get(request.signal);
       if (this.request === request)
@@ -39,7 +39,7 @@ export class AdminProfileStore {
       const error =
         cause instanceof AdminProfileError ? cause : new AdminProfileError(503);
       this.publish({
-        data: null,
+        data: [401, 403].includes(error.status) ? null : this.state.data,
         loading: false,
         error: { status: error.status, message: error.message },
       });

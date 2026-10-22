@@ -1,4 +1,13 @@
 export const CATALOG_MESSAGES = {
+  ADMIN_CATALOG_INVALID_REQUEST: "Revisa los datos del producto.",
+  ADMIN_CATALOG_PRODUCT_NOT_FOUND:
+    "El producto no está disponible en tu catálogo.",
+  ADMIN_CATALOG_STALE_VERSION:
+    "El producto cambió. Actualiza el catálogo antes de guardar.",
+  ADMIN_CATALOG_DUPLICATE_NAME:
+    "Ya existe un producto con ese nombre en tu cafetería.",
+  ADMIN_CATALOG_CAFETERIA_INACTIVE:
+    "La cafetería está inactiva. Los cambios están deshabilitados.",
   ADMIN_CATALOG_UNAUTHORIZED:
     "Tu sesión no está disponible. Inicia sesión para consultar el catálogo.",
   ADMIN_CATALOG_FORBIDDEN: "No tienes permisos para consultar este catálogo.",
@@ -15,8 +24,17 @@ export function catalogErrorCode(
   status: number,
   code?: unknown,
 ): keyof typeof CATALOG_MESSAGES {
+  if (status === 400) return "ADMIN_CATALOG_INVALID_REQUEST";
+  if (status === 404) return "ADMIN_CATALOG_PRODUCT_NOT_FOUND";
+  if (status === 409)
+    return code === "ADMIN_CATALOG_DUPLICATE_NAME"
+      ? code
+      : "ADMIN_CATALOG_STALE_VERSION";
   if (status === 401) return "ADMIN_CATALOG_UNAUTHORIZED";
-  if (status === 403) return "ADMIN_CATALOG_FORBIDDEN";
+  if (status === 403)
+    return code === "ADMIN_CATALOG_CAFETERIA_INACTIVE"
+      ? code
+      : "ADMIN_CATALOG_FORBIDDEN";
   if (status === 503)
     return code === "AUTH_TEMPORARILY_UNAVAILABLE"
       ? code

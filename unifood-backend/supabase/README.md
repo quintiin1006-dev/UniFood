@@ -229,6 +229,24 @@ Entregados sigue limitado al día de negocio mediante delivered_at; Historial us
 timestamps terminales del mes actual. No hay métricas WORKER, endpoints ADMIN,
 borrado físico, cron ni reinicio mensual de datos.
 
+## Revisión del catálogo ADMIN (016)
+
+`016_catalog_revision.sql` añade `lunches.version bigint NOT NULL DEFAULT 0`
+y un trigger SECURITY INVOKER con search_path vacío. Las filas existentes reciben
+0; los INSERT no eligen su revisión y cada UPDATE incrementa OLD.version+1.
+Las escrituras de ADMIN comparan expectedVersion en SQL antes de aplicar cambios.
+El trigger no reemplaza esa condición ni permite que un caller fuerce una revisión.
+No cambia los índices, FK, snapshots, categorías, stock ni grants de tablas.
+EXECUTE del trigger permanece revocado para PUBLIC, anon y authenticated.
+
+Aplicar una vez después de 015, con propietario autorizado, antes de desplegar
+el backend que consulta la nueva columna. Dimensionar la ventana para el lock DDL
+de ALTER TABLE. Las migraciones previas no se modifican. Las pruebas locales
+comprueban por separado actualización de datos anteriores, revisión, rollback,
+restricciones y permisos. No ejecutan migraciones contra Supabase remoto.
+El [contrato de catálogo ADMIN](../docs/admin-catalog.md) describe las escrituras
+y el reinicio transaccional de disponibilidad del día al reactivar un producto.
+
 ## Pruebas locales
 
 Instalar dependencias del monorepo, Java 21, Node y binarios nativos PostgreSQL (initdb,

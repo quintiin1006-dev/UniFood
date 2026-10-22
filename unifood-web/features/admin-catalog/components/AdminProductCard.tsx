@@ -7,7 +7,17 @@ import { CATEGORY_LABELS, type AdminProduct } from "../types";
 import { formatCatalogPrice } from "../presentation";
 import styles from "./AdminCatalog.module.css";
 
-export function AdminProductCard({ product }: { product: AdminProduct }) {
+export function AdminProductCard({
+  product,
+  disabled = true,
+  onEdit,
+  onStatus,
+}: {
+  product: AdminProduct;
+  disabled?: boolean;
+  onEdit?: () => void;
+  onStatus?: () => void;
+}) {
   const source = productImageSource(product.imageUrl);
   const [failed, setFailed] = useState<string | null>(null);
   return (
@@ -41,6 +51,28 @@ export function AdminProductCard({ product }: { product: AdminProduct }) {
             {product.active ? "Activo" : "Inactivo"}
           </span>
         </div>
+        {onEdit && onStatus && (
+          <div className={styles.actions}>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={onEdit}
+              aria-label={"Editar " + product.name}
+            >
+              Editar
+            </button>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={onStatus}
+              aria-label={
+                (product.active ? "Desactivar " : "Activar ") + product.name
+              }
+            >
+              {product.active ? "Desactivar" : "Activar"}
+            </button>
+          </div>
+        )}
       </div>
     </article>
   );

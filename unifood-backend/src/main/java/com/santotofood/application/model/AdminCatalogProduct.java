@@ -13,7 +13,19 @@ public record AdminCatalogProduct(
     BigDecimal price,
     CatalogCategory category,
     String imageUrl,
-    boolean active) {
+    boolean active,
+    long version) {
+  public AdminCatalogProduct(
+      UUID id,
+      String name,
+      String description,
+      BigDecimal price,
+      CatalogCategory category,
+      String imageUrl,
+      boolean active) {
+    this(id, name, description, price, category, imageUrl, active, 0);
+  }
+
   public AdminCatalogProduct {
     Objects.requireNonNull(id);
     Objects.requireNonNull(category);

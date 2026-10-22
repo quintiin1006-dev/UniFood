@@ -12,9 +12,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.santotofood.adapter.in.web.AdminCatalogController;
 import com.santotofood.adapter.in.web.error.AdminCatalogExceptionHandler;
 import com.santotofood.adapter.in.web.error.GlobalExceptionHandler;
+import com.santotofood.adapter.out.persistence.AdminCatalogCommandPersistenceAdapter;
 import com.santotofood.adapter.out.persistence.AdminCatalogPersistenceAdapter;
 import com.santotofood.adapter.out.persistence.AuthorizationPersistenceAdapter;
+import com.santotofood.application.service.AdminCatalogCommandService;
 import com.santotofood.application.service.AdminCatalogService;
+import com.santotofood.domain.port.out.TimeProvider;
 import jakarta.persistence.EntityManagerFactory;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -74,6 +77,11 @@ class AdminCatalogApiPostgresTest {
   @EnableWebMvc
   @EnableTransactionManagement
   static class TestConfig {
+    @Bean
+    TimeProvider timeProvider() {
+      return java.time.Instant::now;
+    }
+
     @Bean
     DataSource dataSource() {
       return source;
@@ -169,7 +177,7 @@ class AdminCatalogApiPostgresTest {
           from '../unifood-web/tests/helpers/native-auth-database.mjs';
         const binaries = await postgresBinaries();
         if (!binaries) throw new Error('Native PostgreSQL required for admin profile');
-        const db = await createNativeAuthDatabase(binaries, { throughMigration: '015' });
+        const db = await createNativeAuthDatabase(binaries, { throughMigration: '016' });
         try {
           const port = await db.query('SHOW port');
           console.log(JSON.stringify({ url: `jdbc:postgresql://127.0.0.1:${port}/postgres` }));
@@ -203,6 +211,10 @@ class AdminCatalogApiPostgresTest {
         AuthorizationPersistenceAdapter.class,
         AdminCatalogPersistenceAdapter.class,
         AdminCatalogService.class,
+        AdminCatalogCommandService.class,
+        AdminCatalogCommandPersistenceAdapter.class,
+        com.santotofood.adapter.out.persistence.DailyAvailabilityPersistenceAdapter.class,
+        com.santotofood.application.service.AvailabilityService.class,
         AdminCatalogController.class,
         AdminCatalogExceptionHandler.class,
         GlobalExceptionHandler.class,
@@ -349,7 +361,7 @@ class AdminCatalogApiPostgresTest {
                       containsInAnyOrder(
                           "DEL_DIA", "CORRIENTE", "EJECUTIVO", "ESPECIAL", "DESAYUNO")))
               .andExpect(jsonPath("$.products[*].active", hasItems(true, false)))
-              .andExpect(jsonPath("$.products[0].length()").value(7))
+              .andExpect(jsonPath("$.products[0].length()").value(8))
               .andExpect(jsonPath("$.products[*].price", everyItem(is("18500.25"))))
               .andReturn();
       String json = result.getResponse().getContentAsString();

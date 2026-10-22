@@ -154,6 +154,14 @@ function render(state = {}) {
   };
   const load = availabilityLoader({
     mocks: {
+      "@/features/admin-profile/context": {
+        useAdminProfile: () => ({
+          data: { cafeteria: { active: true } },
+          loading: false,
+          error: null,
+          retry() {},
+        }),
+      },
       [path.resolve("features/admin-catalog/useAdminCatalog.ts")]: hook,
       "next/image": {
         __esModule: true,
@@ -188,10 +196,9 @@ test("catalog renders accessible read-only cards, exact labels, optional descrip
     assert.ok(html.includes(label));
   assert.match(html, /role="search"/);
   assert.equal((html.match(/<select/g) ?? []).length, 2);
-  assert.doesNotMatch(
-    html,
-    /<button|Editar|Eliminar|Nuevo producto|Disponible hoy|stock|PRIVATE/,
-  );
+  assert.doesNotMatch(html, /Eliminar|Disponible hoy|stock|PRIVATE/);
+  assert.match(html, /Nuevo producto/);
+  assert.match(html, /Editar Ejecutivo de la casa/);
 });
 
 test("loading and genuine empty catalog are distinct from errors; 401/403 have appropriate actions", () => {

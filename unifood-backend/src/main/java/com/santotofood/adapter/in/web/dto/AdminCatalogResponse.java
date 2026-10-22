@@ -14,7 +14,20 @@ public record AdminCatalogResponse(List<Product> products) {
       String price,
       CatalogCategory category,
       String imageUrl,
-      boolean active) {}
+      boolean active,
+      String version) {}
+
+  public static Product product(AdminCatalogProduct p) {
+    return new Product(
+        p.id(),
+        p.name(),
+        p.description(),
+        p.price().toPlainString(),
+        p.category(),
+        p.imageUrl(),
+        p.active(),
+        Long.toString(p.version()));
+  }
 
   public static AdminCatalogResponse from(List<AdminCatalogProduct> products) {
     return new AdminCatalogResponse(
@@ -28,7 +41,8 @@ public record AdminCatalogResponse(List<Product> products) {
                         p.price().toPlainString(),
                         p.category(),
                         p.imageUrl(),
-                        p.active()))
+                        p.active(),
+                        Long.toString(p.version())))
             .toList());
   }
 }

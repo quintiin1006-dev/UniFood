@@ -249,7 +249,11 @@ for (const status of [401, 403, 500, 503]) {
     await expect(alert).not.toContainText(/PRIVATE|SQL|SELECT/);
     await expect(
       page.getByRole("region", { name: "Mi perfil", exact: true }),
-    ).toHaveCount(0);
+    ).toHaveCount(status === 401 || status === 403 ? 0 : 1);
+    if (status >= 500)
+      await expect(
+        page.getByText("admin@example.invalid", { exact: true }),
+      ).toBeVisible();
     const response = await page.request.get("/api/admin/profile");
     expect(response.status()).toBe(status);
     expect(response.headers()["retry-after"]).toBe(
@@ -264,7 +268,13 @@ for (const status of [401, 403, 500, 503]) {
       await expect(alert.getByRole("button")).toHaveCount(0);
     else {
       await configure(page, { mode: null });
+      const recovered = page.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname === "/api/admin/profile" &&
+          response.status() === 200,
+      );
       await alert.getByRole("button", { name: "Reintentar" }).click();
+      await recovered;
       await expect(
         page.getByText("admin@example.invalid", { exact: true }),
       ).toBeVisible();

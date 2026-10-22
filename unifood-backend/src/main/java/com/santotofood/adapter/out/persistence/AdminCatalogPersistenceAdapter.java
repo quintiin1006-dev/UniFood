@@ -39,7 +39,8 @@ public class AdminCatalogPersistenceAdapter implements AdminCatalogQueryPort {
                   row.getBigDecimal("price"),
                   CatalogCategory.valueOf(row.getString("category")),
                   row.getString("image_url"),
-                  row.getBoolean("is_active"));
+                  row.getBoolean("is_active"),
+                  row.getLong("version"));
             },
             authorizedCafeteriaId);
     if (rows.isEmpty()) return Optional.empty();

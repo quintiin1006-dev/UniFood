@@ -14,7 +14,18 @@ export type AdminProduct = {
   category: CatalogCategory;
   imageUrl: string | null;
   active: boolean;
+  version: string;
 };
+export type CatalogForm = {
+  name: string;
+  description: string | null;
+  price: string;
+  category: CatalogCategory;
+};
+export type CatalogMutation =
+  | { kind: "create"; form: CatalogForm }
+  | { kind: "edit"; id: string; expectedVersion: string; form: CatalogForm }
+  | { kind: "status"; id: string; expectedVersion: string; active: boolean };
 export type AdminCatalogData = { products: AdminProduct[] };
 export type CatalogFilters = {
   search: string;

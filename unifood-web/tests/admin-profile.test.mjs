@@ -18,7 +18,7 @@ const deferred = () => {
   return { promise, resolve, reject };
 };
 
-test("profile store clears old context, exposes loading and recovers after a temporary failure", async () => {
+test("profile store preserves context during revalidation and temporary failure, then recovers", async () => {
   let failed = false;
   const store = new AdminProfileStore({
     get: async () => {
@@ -31,7 +31,7 @@ test("profile store clears old context, exposes loading and recovers after a tem
   assert.deepEqual(store.getSnapshot().data, adminProfileFixture());
   failed = true;
   const refreshing = store.refresh();
-  assert.equal(store.getSnapshot().data, null);
+  assert.deepEqual(store.getSnapshot().data, adminProfileFixture());
   await refreshing;
   assert.equal(store.getSnapshot().error.status, 503);
   failed = false;

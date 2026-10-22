@@ -14,5 +14,11 @@ export function useAdminCatalog() {
     void store.refresh();
     return store.dispose;
   }, [store]);
-  return { ...state, retry: store.refresh };
+  return {
+    ...state,
+    retry: store.refresh,
+    applyConfirmed: store.applyConfirmed,
+    invalidateReads: store.invalidateReads,
+    denyAccess: store.denyAccess,
+  };
 }

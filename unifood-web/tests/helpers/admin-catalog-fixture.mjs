@@ -10,6 +10,7 @@ export function adminCatalogFixture(other = false) {
           category: "ESPECIAL",
           imageUrl: null,
           active: true,
+          version: "0",
         },
       ],
     };
@@ -42,6 +43,7 @@ export function adminCatalogFixture(other = false) {
       active,
       description,
       imageUrl,
+      version: "0",
     })),
   };
 }
