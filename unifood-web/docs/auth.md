@@ -17,9 +17,9 @@ ni recarga automática. Si falla la comprobación posterior del perfil, las API 
 el mismo error temporal y las páginas muestran una pantalla segura con reintento.
 
 - `/` redirige a `/login`, con acceso a registro estudiantil. `/login` es la entrada CLIENT y `/panel/login` la entrada WORKER/ADMIN/SUPER_ADMIN; ambas reutilizan `AuthScreen` con variantes explícitas.
-- `app/registro` sigue siendo exclusivamente CLIENT. `app/recuperar-contrasena` es compartida y admite el contexto cerrado `?entrypoint=client|panel`.
+- `app/registro` sigue siendo exclusivamente CLIENT. `app/recuperar-contrasena` conserva OTP para CLIENT y redirige `?entrypoint=panel` a `/panel/recuperar`. El panel usa enlaces PKCE y `/panel/nueva-contrasena`; ver [recuperación del panel](panel-password-recovery.md).
 - `app/api/auth/[action]`: login, registro, dominio institucional, verificación, reenvío, recuperación y cierre de sesión. Comprueba el origen y valida los datos antes de contactar Supabase.
-- `features/auth/server`: cliente Supabase exclusivamente en el servidor y consulta del usuario/perfil real. El navegador no recibe tokens por JSON ni los guarda en localStorage.
+- `features/auth/server`: cliente Supabase del login y consulta del usuario/perfil real. Sus tokens permanecen en cookies HttpOnly. La recuperación del panel usa un cliente Supabase browser separado: verificador PKCE en localStorage y sesión temporal solo en memoria, sin escribir cookies de login.
 - `proxy.ts`: renueva la sesión en las páginas públicas que la consultan, panel, cuenta y proxy de pedidos; no autoriza roles.
 - `app/worker/page.tsx`: comprueba la sesión y los roles antes de renderizar `components/worker/WorkerDashboard.tsx`.
 - `app/cuenta`: Inicio móvil exclusivamente CLIENT con cuenta verificada; `/cuenta/perfil` muestra nombre/correo del contrato de identidad y datos propios leídos mediante Spring; conserva logout y enlaza la recuperación por correo desde `/cuenta/perfil/contrasena`. Layout y páginas comprueban el rol en el servidor; `proxy.ts` renueva la sesión en `/cuenta/:path*`. WORKER/ADMIN/SUPER_ADMIN se redirigen a su destino. El catálogo es una vista previa identificada con datos de ejemplo; ver [frontend del estudiante](client-frontend.md).
@@ -36,7 +36,7 @@ AUTH_USERNAME_DOMAIN=ustavillavo.edu.co
 API_URL=http://localhost:8080
 ```
 
-Usar la clave pública del proyecto, **nunca service_role**. Estos valores se leen en el servidor. Reiniciar Next.js después de cambiarlos. Sin configuración, las pantallas siguen siendo visibles y los formularios muestran un error de servicio no configurado; no hay autenticación simulada.
+Usar la clave pública del proyecto, **nunca service_role**. Estos valores se leen en el servidor; las páginas de recuperación del panel comparten únicamente URL y clave publishable/anon con el cliente browser. Reiniciar Next.js después de cambiarlos. Sin configuración, las pantallas siguen siendo visibles y los formularios muestran un error seguro; no hay autenticación simulada.
 
 La comprobación de origen deriva el origen esperado de los encabezados `Host` y `x-forwarded-host`, no de `request.url`. Next construye `request.url` con el hostname del bind, de modo que con `--hostname ::` vale `http://[::]:3000` y no coincide nunca con el `Origin` que envía el navegador. Comparar contra `request.url` rechazaría todos los formularios en localhost, `127.0.0.1` y la IP de LAN. Los encabezados `X-Forwarded-*` son de uso restringido para el navegador, así que un atacante de otro origen no puede manipularlos.
 
@@ -84,7 +84,7 @@ En Authentication:
 
 1. Activar el proveedor Email y **Confirm email**.
 2. Configurar OTP de **6 dígitos**, con expiración y límites de frecuencia de Supabase habilitados.
-3. En **Confirm signup** y **Reset password**, incluir `{{ .Token }}` en la plantilla. Este flujo utiliza códigos, no enlaces de redirección. Ejemplo de contenido: `<p>Tu código de UniFood es: <strong>{{ .Token }}</strong></p>`.
+3. En **Confirm signup** y **Reset password**, conservar `{{ .Token }}` para registro y recuperación OTP de CLIENT. En **Reset password**, incluir también un enlace con `{{ .ConfirmationURL }}` para el flujo PKCE del panel. Ver la [configuración y plantilla compatible](panel-password-recovery.md).
 4. Configurar SMTP para entregar correos a estudiantes reales. El remitente de pruebas de Supabase tiene restricciones de destinatarios.
 5. Configurar también en Supabase una longitud mínima de 8 caracteres, mayúscula, minúscula y número. La aplicación valida estas reglas, pero el proveedor debe aplicarlas también para impedir que se omitan llamando directamente a su API.
 6. Configurar Site URL con la URL real del frontend. La aplicación no necesita una clave administrativa para enviar los correos.
@@ -125,7 +125,7 @@ Los destinos son `/cuenta` para CLIENT, `/worker` para WORKER, `/admin` para ADM
 
 `rememberCookie` se establece después de aceptar el perfil y la entrada. El login no confirmado puede continuar por OTP en su misma variante; remember se aplica después de esa confirmación, no antes. En un rechazo o fallo de lectura del perfil se intenta signOut local, se borra remember y se eliminan exactamente las cookies que escribió el SDK durante el intento, incluso si signOut falla. El cliente comunica únicamente sus nombres; no se interpretan formatos de cookies ni se exponen sus valores.
 
-Brand, logout y la navegación de AuthScreen reciben contexto explícito. La variante panel presenta una composición desktop y no ofrece registro estudiantil. La recuperación conserva su sesión temporal durante OTP/reset, no tiene redirección automática por una sesión válida ni admite returnTo arbitrario. Tras reset mantiene el login contextual en la misma pantalla y conserva el aviso de éxito; logout y los enlaces de retorno usan el login correspondiente. La comprobación del rol se repite al iniciar sesión.
+Brand, logout y la navegación de AuthScreen reciben contexto explícito. La variante panel presenta una composición desktop y no ofrece registro estudiantil. CLIENT conserva su sesión temporal durante OTP/reset y vuelve al login contextual en la misma pantalla. El panel solicita un enlace, valida PKCE y `PASSWORD_RECOVERY`, actualiza directamente en Supabase y vuelve a `/panel/login?password=updated` tras finalizar la sesión. Ninguna recuperación admite returnTo arbitrario ni redirige automáticamente por una sesión normal. La comprobación del rol se repite al iniciar sesión. `PanelAuthHero`, `AuthField` y el guard de hidratación se comparten sin cambiar la política del login.
 
 Hallazgo pendiente fuera de esta fase: `InstitutionController` exige autenticación, pero sus consultas por dominio o ID no filtran por rol ni pertenencia institucional. La política de visibilidad de instituciones debe definirse antes de cambiar esos endpoints.
 
