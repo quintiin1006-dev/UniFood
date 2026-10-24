@@ -34,7 +34,13 @@ El ejemplo proporciona `API_URL=http://localhost:8080`. Si ambos valores Supabas
 
 Para autenticación real, completar el proyecto y su clave pública del entorno local. Puede usarse Supabase local o un proyecto remoto dedicado al desarrollo. Los `.env.local` no se versionan.
 
-Spring no carga automáticamente `.env` ni `.env.example`. Desde `unifood-backend`, exportar las variables o suministrarlas desde la configuración de ejecución del IDE. Ejemplo para una instancia Supabase local:
+Spring no carga automáticamente `.env` ni `.env.example`. Para desarrollo Windows,
+el launcher `start-backend.ps1` en la raíz lee `unifood-backend/.env`, valida los
+valores y ejecuta Maven sin mostrar credenciales. Las variables no vacías del
+proceso tienen prioridad. Ver [arranque local del backend](../../unifood-backend/docs/local-development.md)
+para crear el archivo sin sobrescribir uno existente y configurar Storage.
+También se conservan las variables exportadas o la configuración del IDE.
+Ejemplo para una instancia Supabase local desde `unifood-backend`:
 
 ```powershell
 $env:SUPABASE_DB_URL='jdbc:postgresql://localhost:54322/postgres'

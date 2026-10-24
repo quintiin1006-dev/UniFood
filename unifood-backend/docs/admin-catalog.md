@@ -107,11 +107,12 @@ preventivos.
 
 La política de imágenes y los valores/labels de categorías se reutilizan de
 los helpers existentes de Disponibilidad, sin reutilizar su estado ni lógica diaria.
-Solo se admiten rutas locales seguras de imágenes raster. image_url no impone un
-origen remoto a nivel SQL; URLs vacías, remotas, no soportadas o imágenes fallidas
-muestran Sin imagen. No se amplía Next remotePatterns, no se administra Storage
-ni se fabrican referencias. Un origen remoto futuro requiere una decisión
-explícita y una allowlist restringida.
+Se conservan rutas locales seguras de imágenes raster y se admiten únicamente
+referencias privadas del producto bajo `/api/admin/catalog/{id}/image/{imageId}`.
+URLs remotas, no soportadas o imágenes fallidas muestran Sin imagen. No se amplía
+Next remotePatterns. Las referencias gestionadas usan entrega autenticada sin
+el optimizador compartido. [ADMIN Product Images](admin-product-images.md)
+documenta Storage, asociación, versiones y recuperación.
 
 Grid de una columna en móvil, dos en tablet, tres/cuatro según espacio desktop.
 Labels visibles, foco de teclado, heading de cada producto y estados textuales
