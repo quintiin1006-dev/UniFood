@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { ImageOff } from "lucide-react";
-import { productImageSource } from "@/features/availability/presentation";
+import { adminImageSource, managedCatalogImage } from "../images";
 import { CATEGORY_LABELS, type AdminProduct } from "../types";
 import { formatCatalogPrice } from "../presentation";
 import styles from "./AdminCatalog.module.css";
@@ -18,7 +18,7 @@ export function AdminProductCard({
   onEdit?: () => void;
   onStatus?: () => void;
 }) {
-  const source = productImageSource(product.imageUrl);
+  const source = adminImageSource(product.imageUrl, product.id);
   const [failed, setFailed] = useState<string | null>(null);
   return (
     <article className={styles.card} aria-label={product.name}>
@@ -26,6 +26,7 @@ export function AdminProductCard({
         {source && source !== failed ? (
           <Image
             src={source}
+            unoptimized={managedCatalogImage(source, product.id)}
             alt={product.name}
             fill
             sizes="(max-width: 699px) 100vw, (max-width: 1199px) 50vw, (max-width: 1679px) 30vw, 280px"

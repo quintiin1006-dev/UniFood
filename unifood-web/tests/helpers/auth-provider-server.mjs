@@ -8,6 +8,7 @@ import {
 } from "./worker-history-fixture.mjs";
 import { adminProfileBusinessFixture } from "./admin-profile-fixture.mjs";
 import { adminCatalogFixture } from "./admin-catalog-fixture.mjs";
+import { productImageFixture } from "./product-image-fixture.mjs";
 import { workerProfileBusinessFixture } from "./worker-profile-fixture.mjs";
 
 const fixtures = Object.entries({
@@ -100,6 +101,9 @@ function adminCatalogState(profile) {
       gets: 0,
       mutations: [],
       mutationMode: null,
+      imageMode: null,
+      imageOperations: {},
+      imageMutations: [],
     });
   return adminCatalogStates.get(profile.id);
 }
@@ -276,10 +280,13 @@ createServer(async (request, response) => {
       if (Object.hasOwn(config, "mode")) state.mode = config.mode;
       if (Object.hasOwn(config, "mutationMode"))
         state.mutationMode = config.mutationMode;
+      if (Object.hasOwn(config, "imageMode"))
+        state.imageMode = config.imageMode;
       if (config.data) state.data = config.data;
       return json(response, 200, {
         gets: state.gets,
         mutations: state.mutations,
+        imageMutations: state.imageMutations,
       });
     }
     if (url.pathname === "/__test/admin-profile") {
@@ -628,6 +635,91 @@ createServer(async (request, response) => {
         return response.end();
       }
       return json(response, 200, state.data);
+    }
+    if (
+      /^\/api\/admin\/catalog\/[^/]+\/(image(?:\/[^/]+)?|image-operations\/[^/]+)$/.test(
+        url.pathname,
+      )
+    ) {
+      const state = adminCatalogState(profile),
+        parts = url.pathname.split("/"),
+        id = parts[4],
+        product = state.data.products.find((p) => p.id === id);
+      if (
+        !profile.active ||
+        profile.assignments !== 1 ||
+        profile.roles.length !== 1 ||
+        profile.roles[0] !== "ADMIN" ||
+        adminProfileState(profile).inactive
+      )
+        return json(response, 403, { code: "ADMIN_CATALOG_FORBIDDEN" });
+      if (!product)
+        return json(response, 404, { code: "ADMIN_CATALOG_PRODUCT_NOT_FOUND" });
+      if (request.method === "GET" && parts[5] === "image-operations") {
+        const operation = state.imageOperations[parts[6]];
+        return operation
+          ? json(response, 200, { ...operation, product })
+          : json(response, 404, { code: "ADMIN_CATALOG_PRODUCT_NOT_FOUND" });
+      }
+      if (request.method === "GET") {
+        if (product.imageUrl !== url.pathname) return json(response, 404, {});
+        response.writeHead(200, {
+          "content-type": "image/png",
+          "cache-control": "private, no-store",
+        });
+        return response.end(productImageFixture());
+      }
+      if (!adminProfileState(profile).data.cafeteria.active)
+        return json(response, 403, {
+          code: "ADMIN_CATALOG_CAFETERIA_INACTIVE",
+        });
+      const chunks = [];
+      for await (const chunk of request) chunks.push(chunk);
+      const bytes = Buffer.concat(chunks),
+        key = request.headers["idempotency-key"];
+      const raw =
+        request.method === "PUT"
+          ? await new Response(bytes, {
+              headers: { "content-type": request.headers["content-type"] },
+            }).formData()
+          : JSON.parse(bytes.toString());
+      const expected =
+        request.method === "PUT"
+          ? raw.get("expectedVersion")
+          : raw.expectedVersion;
+      if (state.imageOperations[key])
+        return json(response, 200, { ...state.imageOperations[key], product });
+      state.imageMutations.push({
+        method: request.method,
+        id,
+        key,
+        expectedVersion: expected,
+      });
+      if (state.imageMode === "503")
+        return json(response, 503, {
+          code: "ADMIN_CATALOG_IMAGE_TEMPORARILY_UNAVAILABLE",
+        });
+      if (expected !== product.version)
+        return json(response, 409, { code: "ADMIN_CATALOG_STALE_VERSION" });
+      if (state.imageMode === "slow")
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      product.version = String(BigInt(product.version) + 1n);
+      product.imageUrl =
+        request.method === "PUT"
+          ? `/api/admin/catalog/${id}/image/${key}`
+          : null;
+      const operation = {
+        operationId: key,
+        state: "APPLIED",
+        appliedVersion: product.version,
+        failureStatus: null,
+        failureCode: null,
+        product,
+      };
+      state.imageOperations[key] = operation;
+      if (state.imageMode === "disconnect-after-commit")
+        return request.socket.destroy();
+      return json(response, 200, operation);
     }
     if (
       url.pathname.startsWith("/api/admin/catalog") &&

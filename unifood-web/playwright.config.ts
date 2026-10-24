@@ -26,7 +26,10 @@ export default defineConfig({
           reuseExistingServer: false,
         },
         {
-          command: "npm run dev -- --port 3100",
+          command:
+            process.env.PLAYWRIGHT_PRODUCTION === "true"
+              ? "node node_modules/next/dist/bin/next start --hostname :: --port 3100"
+              : "npm run dev -- --port 3100",
           url: "http://localhost:3100/login",
           reuseExistingServer: false,
           timeout: 120_000,

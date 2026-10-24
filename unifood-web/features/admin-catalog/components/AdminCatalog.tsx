@@ -4,6 +4,7 @@ import { PackageSearch, CircleAlert } from "lucide-react";
 import { useAdminCatalog } from "../useAdminCatalog";
 import { filterCatalog } from "../presentation";
 import type { CatalogFilters, CatalogMutation } from "../types";
+import { catalogImageRequest, type ImageAttempt } from "../image-api";
 import { useAdminProfile } from "@/features/admin-profile/context";
 import { adminCatalogApi } from "../api";
 import { AdminCatalogError } from "../errors";
@@ -52,6 +53,43 @@ export function AdminCatalog() {
           : "Producto actualizado.",
       );
       void retry();
+      return confirmed;
+    } catch (cause) {
+      if (
+        cause instanceof AdminCatalogError &&
+        [401, 403].includes(cause.status)
+      ) {
+        setDeniedContext(profile.data);
+        if (cause.code !== "ADMIN_CATALOG_CAFETERIA_INACTIVE")
+          denyAccess(cause.status);
+        void profile.retry();
+      }
+      throw cause;
+    } finally {
+      writeLock.current = false;
+      setSaving(false);
+    }
+  };
+  const image = async (attempt: ImageAttempt, reconcile = false) => {
+    if (
+      !profile.data ||
+      profile.data === deniedContext ||
+      writeLock.current ||
+      (!reconcile && !profile.data.cafeteria.active)
+    )
+      throw new AdminCatalogError(403);
+    writeLock.current = true;
+    setSaving(true);
+    setSuccess("");
+    const revision = invalidateReads();
+    try {
+      const result = await catalogImageRequest(attempt, reconcile);
+      if (result.state === "APPLIED") {
+        applyConfirmed(result.product, revision);
+        setSuccess("Producto e imagen guardados.");
+        void retry();
+      }
+      return result;
     } catch (cause) {
       if (
         cause instanceof AdminCatalogError &&
@@ -164,6 +202,7 @@ export function AdminCatalog() {
           editor={editor}
           allowed={allowed || saving}
           save={save}
+          image={image}
           refresh={retry}
           close={() => setEditor(null)}
         />
