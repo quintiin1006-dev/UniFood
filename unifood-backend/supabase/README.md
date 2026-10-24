@@ -247,6 +247,21 @@ restricciones y permisos. No ejecutan migraciones contra Supabase remoto.
 El [contrato de catálogo ADMIN](../docs/admin-catalog.md) describe las escrituras
 y el reinicio transaccional de disponibilidad del día al reactivar un producto.
 
+## Imágenes privadas del catálogo (017)
+
+`017_catalog_images.sql` añade assets y operaciones durables, propiedad compuesta
+producto/cafetería y el puntero nullable `lunches.image_asset_id`. Conserva los datos
+de `image_url`; no cambia snapshots, stock, categorías ni migraciones anteriores.
+RLS y revocaciones explícitas de tabla/columna mantienen cerrado el acceso browser.
+La asociación usa expectedVersion y el trigger existente de 016. La limpieza física
+se realiza mediante Storage API después de desasociar, nunca borrando metadatos de
+Storage por SQL. Aplicar una sola vez después de 016 antes del backend nuevo.
+
+La migración no crea buckets ni cambia Supabase remoto. El [contrato de imágenes
+ADMIN](../docs/admin-product-images.md) documenta configuración backend, bucket
+privado, permisos, límites de despliegue, recuperación y limpieza. Las pruebas
+locales no acreditan políticas ni credenciales de un proyecto Storage real.
+
 ## Pruebas locales
 
 Instalar dependencias del monorepo, Java 21, Node y binarios nativos PostgreSQL (initdb,

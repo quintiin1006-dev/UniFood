@@ -256,6 +256,34 @@
   box-shadow: -12px 0 50px #16345616;
   overflow-y: auto;
 }
+.imageEditor {
+  min-width: 0;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid #dbe3ed;
+  border-radius: 12px;
+  display: grid;
+  gap: 0.75rem;
+}
+.imageEditor input {
+  max-width: 100%;
+  min-width: 0;
+}
+.imageEditor p {
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+.imagePreview {
+  min-width: 0;
+}
+.imagePreview img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 10px;
+}
 .drawer::backdrop {
   background: #122d4d66;
 }

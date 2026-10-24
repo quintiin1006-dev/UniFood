@@ -127,6 +127,28 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ApiErrorResponse> handleUnexpectedException(
       Exception exception, HttpServletRequest request) {
 
+    // Multipart resolution can fail BEFORE Spring identifies a controller. The
+    // controller-scoped image advice cannot handle that phase. Keep this fallback
+    // restricted to the new upload route; other modules retain their contracts.
+    if ("PUT".equals(request.getMethod())
+        && request.getRequestURI().matches("/api/admin/catalog/[^/]+/image")
+        && exception instanceof org.springframework.web.multipart.MultipartException) {
+      boolean oversized =
+          exception instanceof org.springframework.web.multipart.MaxUploadSizeExceededException;
+      HttpStatus status = oversized ? HttpStatus.PAYLOAD_TOO_LARGE : HttpStatus.BAD_REQUEST;
+      return ResponseEntity.status(status)
+          .cacheControl(org.springframework.http.CacheControl.noStore())
+          .body(
+              new ApiErrorResponse(
+                  status.value(),
+                  oversized
+                      ? "ADMIN_CATALOG_IMAGE_TOO_LARGE"
+                      : "ADMIN_CATALOG_IMAGE_INVALID_REQUEST",
+                  "Revisa el formato y el tamaño de la imagen.",
+                  Instant.now(),
+                  request.getRequestURI()));
+    }
+
     LOGGER.error(
         "Unexpected error while processing {} {}",
         request.getMethod(),

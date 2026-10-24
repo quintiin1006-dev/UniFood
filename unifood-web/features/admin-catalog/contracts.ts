@@ -1,4 +1,4 @@
-import { productImageSource } from "@/features/availability/presentation";
+import { adminImageSource } from "./images";
 import {
   CATALOG_CATEGORIES,
   type AdminCatalogData,
@@ -47,7 +47,7 @@ export function parseAdminCatalog(value: unknown): AdminCatalogData | null {
       description: p.description,
       price: p.price,
       category: p.category as AdminProduct["category"],
-      imageUrl: productImageSource(p.imageUrl),
+      imageUrl: adminImageSource(p.imageUrl, p.id),
       active: p.active,
       version: p.version,
     });

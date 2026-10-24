@@ -38,7 +38,8 @@ public class AdminCatalogPersistenceAdapter implements AdminCatalogQueryPort {
                   row.getString("description"),
                   row.getBigDecimal("price"),
                   CatalogCategory.valueOf(row.getString("category")),
-                  row.getString("image_url"),
+                  com.santotofood.application.model.CatalogImage.source(
+                      id, row.getObject("image_asset_id", UUID.class), row.getString("image_url")),
                   row.getBoolean("is_active"),
                   row.getLong("version"));
             },

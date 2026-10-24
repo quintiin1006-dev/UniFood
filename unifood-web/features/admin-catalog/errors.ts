@@ -1,4 +1,6 @@
+import { IMAGE_MESSAGES } from "./images";
 export const CATALOG_MESSAGES = {
+  ...IMAGE_MESSAGES,
   ADMIN_CATALOG_INVALID_REQUEST: "Revisa los datos del producto.",
   ADMIN_CATALOG_PRODUCT_NOT_FOUND:
     "El producto no está disponible en tu catálogo.",
@@ -24,6 +26,21 @@ export function catalogErrorCode(
   status: number,
   code?: unknown,
 ): keyof typeof CATALOG_MESSAGES {
+  const imageStatus: Record<string, number> = {
+    ADMIN_CATALOG_IMAGE_INVALID_REQUEST: 400,
+    ADMIN_CATALOG_IMAGE_TOO_LARGE: 413,
+    ADMIN_CATALOG_IMAGE_UNSUPPORTED_FORMAT: 415,
+    ADMIN_CATALOG_IMAGE_INVALID_CONTENT: 422,
+    ADMIN_CATALOG_IMAGE_IDEMPOTENCY_CONFLICT: 409,
+    ADMIN_CATALOG_IMAGE_TEMPORARILY_UNAVAILABLE: 503,
+    ADMIN_CATALOG_IMAGE_INTERNAL_ERROR: 500,
+  };
+  if (
+    typeof code === "string" &&
+    Object.hasOwn(imageStatus, code) &&
+    imageStatus[code] === status
+  )
+    return code as keyof typeof IMAGE_MESSAGES;
   if (status === 400) return "ADMIN_CATALOG_INVALID_REQUEST";
   if (status === 404) return "ADMIN_CATALOG_PRODUCT_NOT_FOUND";
   if (status === 409)

@@ -78,6 +78,11 @@ class AdminCatalogApiPostgresTest {
   @EnableTransactionManagement
   static class TestConfig {
     @Bean
+    com.santotofood.application.port.out.ProductImageStorage imageStorage() {
+      return mock(com.santotofood.application.port.out.ProductImageStorage.class);
+    }
+
+    @Bean
     TimeProvider timeProvider() {
       return java.time.Instant::now;
     }
@@ -120,6 +125,7 @@ class AdminCatalogApiPostgresTest {
   static class TrackingDataSource extends DelegatingDataSource {
     volatile boolean unavailable, unexpectedFailure, profileReadOnly;
     volatile boolean transientAuthorizationFailure, transientProfileFailure;
+    volatile boolean loseImageCommitAcknowledgement;
     int profileIsolation;
     final List<String> statements = new ArrayList<>();
     final List<Connection> profileConnections = new ArrayList<>();
@@ -132,12 +138,15 @@ class AdminCatalogApiPostgresTest {
     public Connection getConnection() throws SQLException {
       if (unavailable) throw new SQLTransientConnectionException("PRIVATE_CONNECTION_DETAIL");
       Connection connection = super.getConnection();
+      final boolean[] imageApplied = {false};
       return (Connection)
           Proxy.newProxyInstance(
               Connection.class.getClassLoader(),
               new Class<?>[] {Connection.class},
               (proxy, method, args) -> {
                 if (method.getName().equals("prepareStatement") && args[0] instanceof String sql) {
+                  if (sql.contains("catalog_image_operations SET state='APPLIED'"))
+                    imageApplied[0] = true;
                   statements.add(sql);
                   if (sql.contains("AS roles") && transientAuthorizationFailure)
                     throw new SQLTransientConnectionException(
@@ -153,7 +162,14 @@ class AdminCatalogApiPostgresTest {
                     profileConnections.add(connection);
                 }
                 try {
-                  return method.invoke(connection, args);
+                  Object value = method.invoke(connection, args);
+                  if (method.getName().equals("commit")
+                      && imageApplied[0]
+                      && loseImageCommitAcknowledgement) {
+                    loseImageCommitAcknowledgement = false;
+                    throw new SQLTransientConnectionException("PRIVATE_LOST_COMMIT_ACK", "08006");
+                  }
+                  return value;
                 } catch (InvocationTargetException exception) {
                   throw exception.getCause();
                 }
@@ -177,7 +193,7 @@ class AdminCatalogApiPostgresTest {
           from '../unifood-web/tests/helpers/native-auth-database.mjs';
         const binaries = await postgresBinaries();
         if (!binaries) throw new Error('Native PostgreSQL required for admin profile');
-        const db = await createNativeAuthDatabase(binaries, { throughMigration: '016' });
+        const db = await createNativeAuthDatabase(binaries, { throughMigration: '017' });
         try {
           const port = await db.query('SHOW port');
           console.log(JSON.stringify({ url: `jdbc:postgresql://127.0.0.1:${port}/postgres` }));
@@ -216,6 +232,11 @@ class AdminCatalogApiPostgresTest {
         com.santotofood.adapter.out.persistence.DailyAvailabilityPersistenceAdapter.class,
         com.santotofood.application.service.AvailabilityService.class,
         AdminCatalogController.class,
+        com.santotofood.adapter.in.web.AdminCatalogImageController.class,
+        com.santotofood.adapter.in.web.error.CatalogImageExceptionHandler.class,
+        com.santotofood.adapter.out.persistence.CatalogImagePersistenceAdapter.class,
+        com.santotofood.application.service.ProductImageNormalizer.class,
+        com.santotofood.application.service.AdminCatalogImageService.class,
         AdminCatalogExceptionHandler.class,
         GlobalExceptionHandler.class,
         UnrelatedController.class);

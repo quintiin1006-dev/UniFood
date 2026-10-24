@@ -4,13 +4,93 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.env.StandardEnvironment;
+import org.springframework.core.env.SystemEnvironmentPropertySource;
 import org.springframework.core.io.support.ResourcePropertySource;
 
 class EnvironmentConfigurationTest {
+
+  @Test
+  void processEnvironmentBindsRealBackendPropertiesWithoutInterpretingSpecialCharacters() {
+    Map<String, Object> variables =
+        Map.ofEntries(
+            Map.entry(
+                "SUPABASE_DB_URL",
+                "jdbc:postgresql://127.0.0.1:1/fixture?sslmode=require&label=first=second?third"),
+            Map.entry("SUPABASE_AUTH_ISSUER", "https://auth.example.invalid/auth/v1"),
+            Map.entry("SPRING_DATASOURCE_USERNAME", "fixture_user"),
+            Map.entry("SPRING_DATASOURCE_PASSWORD", "fixture-password=a&b?c#d"),
+            Map.entry("SUPABASE_STORAGE_URL", "https://storage.example.invalid/storage/v1"),
+            Map.entry("SUPABASE_STORAGE_SECRET_KEY", "fixture-storage-secret=a&b?c#d"),
+            Map.entry("SUPABASE_PRODUCT_IMAGES_BUCKET", "product-images"),
+            Map.entry("PRODUCT_IMAGES_CONNECT_TIMEOUT_SECONDS", "5"),
+            Map.entry("PRODUCT_IMAGES_OPERATION_TIMEOUT_SECONDS", "20"),
+            Map.entry("PRODUCT_IMAGES_CLEANUP_ENABLED", "false"));
+    runner
+        .withInitializer(
+            context ->
+                context
+                    .getEnvironment()
+                    .getPropertySources()
+                    .addFirst(
+                        new SystemEnvironmentPropertySource(
+                            "isolated-process-environment", variables)))
+        .run(
+            context -> {
+              assertThat(context).hasNotFailed();
+              var environment = context.getEnvironment();
+              Map<String, String> mapping =
+                  Map.ofEntries(
+                      Map.entry("spring.datasource.url", "SUPABASE_DB_URL"),
+                      Map.entry(
+                          "spring.security.oauth2.resourceserver.jwt.issuer-uri",
+                          "SUPABASE_AUTH_ISSUER"),
+                      Map.entry("spring.datasource.username", "SPRING_DATASOURCE_USERNAME"),
+                      Map.entry("spring.datasource.password", "SPRING_DATASOURCE_PASSWORD"),
+                      Map.entry("catalog.images.storage-url", "SUPABASE_STORAGE_URL"),
+                      Map.entry("catalog.images.storage-secret", "SUPABASE_STORAGE_SECRET_KEY"),
+                      Map.entry("catalog.images.bucket", "SUPABASE_PRODUCT_IMAGES_BUCKET"),
+                      Map.entry(
+                          "catalog.images.connect-timeout-seconds",
+                          "PRODUCT_IMAGES_CONNECT_TIMEOUT_SECONDS"),
+                      Map.entry(
+                          "catalog.images.operation-timeout-seconds",
+                          "PRODUCT_IMAGES_OPERATION_TIMEOUT_SECONDS"),
+                      Map.entry(
+                          "catalog.images.cleanup-enabled", "PRODUCT_IMAGES_CLEANUP_ENABLED"));
+              mapping.forEach(
+                  (property, variable) ->
+                      assertThat(environment.getRequiredProperty(property))
+                          .isEqualTo(variables.get(variable)));
+            });
+  }
+
+  @Test
+  void storageDefaultsRemainUnchangedWhenNoStorageEnvironmentIsConfigured() {
+    runner
+        .withPropertyValues(
+            "SUPABASE_DB_URL=jdbc:postgresql://127.0.0.1:1/fixture",
+            "SUPABASE_AUTH_ISSUER=http://127.0.0.1:1/auth/v1")
+        .run(
+            context -> {
+              assertThat(context).hasNotFailed();
+              var environment = context.getEnvironment();
+              assertThat(environment.getProperty("catalog.images.storage-url")).isEmpty();
+              assertThat(environment.getProperty("catalog.images.storage-secret")).isEmpty();
+              assertThat(environment.getProperty("catalog.images.bucket"))
+                  .isEqualTo("product-images");
+              assertThat(environment.getProperty("catalog.images.connect-timeout-seconds"))
+                  .isEqualTo("5");
+              assertThat(environment.getProperty("catalog.images.operation-timeout-seconds"))
+                  .isEqualTo("20");
+              assertThat(environment.getProperty("catalog.images.cleanup-enabled"))
+                  .isEqualTo("true");
+            });
+  }
 
   private final ApplicationContextRunner runner =
       new ApplicationContextRunner()

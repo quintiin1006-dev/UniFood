@@ -26,6 +26,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
       SpringDataOrderRepository.class,
       SpringDataSiteRepository.class,
       JdbcTemplate.class,
+      org.springframework.transaction.PlatformTransactionManager.class,
       JwtDecoder.class
     })
 class SantotofoodBackendApplicationTests {
