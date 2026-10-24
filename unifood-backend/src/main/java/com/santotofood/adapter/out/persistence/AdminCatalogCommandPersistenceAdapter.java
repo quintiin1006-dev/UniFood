@@ -51,7 +51,10 @@ public class AdminCatalogCommandPersistenceAdapter implements AdminCatalogComman
         r.getString("description"),
         r.getBigDecimal("price"),
         CatalogCategory.valueOf(r.getString("category")),
-        r.getString("image_url"),
+        com.santotofood.application.model.CatalogImage.source(
+            r.getObject("id", UUID.class),
+            r.getObject("image_asset_id", UUID.class),
+            r.getString("image_url")),
         r.getBoolean("is_active"),
         r.getLong("version"));
   }

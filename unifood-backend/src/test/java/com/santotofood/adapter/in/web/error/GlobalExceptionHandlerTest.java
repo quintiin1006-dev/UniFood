@@ -16,6 +16,31 @@ import org.springframework.mock.web.MockHttpServletRequest;
 class GlobalExceptionHandlerTest {
 
   @Test
+  void multipartFailuresBeforeControllerResolutionKeepImageLimitsWithoutChangingOtherModules() {
+    var errors = new GlobalExceptionHandler();
+    var upload =
+        new MockHttpServletRequest(
+            "PUT", "/api/admin/catalog/11111111-1111-1111-1111-111111111111/image");
+    var oversized =
+        errors.handleUnexpectedException(
+            new org.springframework.web.multipart.MaxUploadSizeExceededException(3145728), upload);
+    assertEquals(413, oversized.getStatusCode().value());
+    assertEquals("ADMIN_CATALOG_IMAGE_TOO_LARGE", oversized.getBody().code());
+    assertEquals("no-store", oversized.getHeaders().getFirst("Cache-Control"));
+    var malformed =
+        errors.handleUnexpectedException(
+            new org.springframework.web.multipart.MultipartException("PRIVATE"), upload);
+    assertEquals(400, malformed.getStatusCode().value());
+    assertFalse(malformed.getBody().message().contains("PRIVATE"));
+    var other =
+        errors.handleUnexpectedException(
+            new org.springframework.web.multipart.MaxUploadSizeExceededException(1),
+            new MockHttpServletRequest("POST", "/api/orders"));
+    assertEquals(500, other.getStatusCode().value());
+    assertEquals("INTERNAL_ERROR", other.getBody().code());
+  }
+
+  @Test
   void structuredCancellationConflictsHaveFunctionalMessagesAndNoInternalDetails() {
     GlobalExceptionHandler errors = new GlobalExceptionHandler();
     MockHttpServletRequest req = new MockHttpServletRequest("PATCH", "/api/orders/id/prepare");

@@ -59,7 +59,7 @@ WITH business_tables AS (
   WHERE n.nspname='public' AND c.relkind IN ('r','p') AND c.relname=ANY(ARRAY[
     'users','roles','user_roles','clients','institutions','sites','cafeterias','cafeteria_users',
     'lunches','orders','order_items','payments','notifications','notification_preferences','cafeteria_profile_guard',
-    'cafeteria_daily_states','daily_item_availability'])
+    'cafeteria_daily_states','daily_item_availability','catalog_image_assets','catalog_image_operations'])
 )
 SELECT actor,relname AS unexpected_business_table_grant,privilege
 FROM business_tables
@@ -76,7 +76,7 @@ CROSS JOIN (VALUES ('SELECT'),('INSERT'),('UPDATE'),('REFERENCES')) privileges(p
 WHERE n.nspname='public' AND c.relkind IN ('r','p') AND c.relname=ANY(ARRAY[
   'users','roles','user_roles','clients','institutions','sites','cafeterias','cafeteria_users',
   'lunches','orders','order_items','payments','notifications','notification_preferences','cafeteria_profile_guard',
-  'cafeteria_daily_states','daily_item_availability'])
+  'cafeteria_daily_states','daily_item_availability','catalog_image_assets','catalog_image_operations'])
   AND has_column_privilege(actor,c.oid,a.attnum,privilege)
 ORDER BY actor,c.relname,a.attnum,privilege;
 
