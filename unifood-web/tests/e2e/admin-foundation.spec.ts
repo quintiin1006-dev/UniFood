@@ -78,7 +78,9 @@ test("ADMIN login, honest navigation, verified profile and existing panel logout
   await expect(
     page.getByRole("heading", { name: "Dashboard", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Próximamente", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Resumen del período", exact: true }),
+  ).toBeVisible();
   await navigate(page, "Catálogo");
   await expect(page).toHaveURL(/\/admin\/catalogo$/);
   await expect(
@@ -137,12 +139,16 @@ test("inactive cafeteria remains readable and the warning persists across all su
   await login(page);
   for (const name of ["Dashboard", "Catálogo", "Mi perfil"]) {
     if (name !== "Dashboard") await navigate(page, name);
-    await expect(page.getByRole("status")).toContainText(
-      "La cafetería está inactiva.",
-    );
-    await expect(page.getByRole("status")).toContainText(
-      "los cambios están deshabilitados",
-    );
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "La cafetería está inactiva." }),
+    ).toContainText("La cafetería está inactiva.");
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "La cafetería está inactiva." }),
+    ).toContainText("los cambios están deshabilitados");
     await expect(
       page.getByRole("heading", { name, exact: true }),
     ).toBeVisible();
