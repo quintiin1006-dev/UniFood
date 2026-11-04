@@ -1,10 +1,70 @@
-# Cliente: catálogo, carrito editable y resumen de compra
+# Cliente: catálogo, carrito editable y envío de pedidos
 
-El primer bloque y el bloque de carrito/resumen fueron autorizados por el usuario.
-Solo frontend. La creación de pedidos simulados y su seguimiento corresponden al
-siguiente bloque, después de revisar este recorrido. No se crean pedidos reales.
+El frontend del cliente lee el catálogo de `GET /api/me/menu` y envía el pedido con
+`POST /api/me/orders`. El carrito sigue en el navegador hasta que el pedido se acepta.
 
-## Implementado en este bloque
+**Estado del backend:** `POST /api/me/orders` existe; `GET /api/me/menu` todavía no. Hasta
+implementarlo, con el backend real la app muestra "No pudimos cargar el menú". Las pruebas
+E2E usan el contrato de abajo a través de `tests/helpers/auth-provider-server.mjs`.
+
+## Contrato que consume el frontend
+
+`GET /api/me/menu` (solo CLIENT activo; la institución sale del perfil, no del navegador):
+
+```json
+{
+  "sites": [
+    {
+      "id": "uuid",
+      "name": "Sede Principal",
+      "city": "Villavicencio",
+      "imageUrl": null,
+      "meals": [
+        {
+          "id": "uuid",
+          "cafeteriaId": "uuid",
+          "cafeteriaName": "Cafetería Central",
+          "name": "Pollo",
+          "description": null,
+          "price": "15000.00",
+          "imageUrl": "/images/client/chicken.png",
+          "stock": 12,
+          "category": "CORRIENTE",
+          "availableToday": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+- `category` es el enum `catalog_category` de `lunches`: `DESAYUNO` define el servicio de
+  desayuno y `DEL_DIA`, `CORRIENTE`, `EJECUTIVO` y `ESPECIAL` el de almuerzo.
+- `availableToday` refleja la disponibilidad del día en Colombia y debe ser `false` para
+  todos los platos si la cafetería está cerrada ese día. No hay días de venta semanales.
+- `price` admite número JSON o texto decimal con hasta dos decimales.
+- `imageUrl` solo se usa si es una ruta local (`/...`); cualquier otra usa el logo, porque
+  `next/image` falla con hosts no configurados.
+
+`POST /api/me/orders` recibe `{ pickupAt, items: [{ lunchId, quantity, note }] }` y responde
+201 con `id`, `status` y `total`. La ruta `app/api/me/orders/route.ts` reenvía solo esos
+campos con el token de la sesión; precios o identidades enviados por el navegador se
+descartan. `pickupAt` ya se envía, pero el backend aún no lo guarda.
+
+## Lectura del menú
+
+- `app/cuenta/layout.tsx` carga el menú una vez por petición (`loadClientMenu`, cacheado con
+  `React.cache`) y lo entrega al proveedor del carrito. El navegador no llama al backend.
+- `domain/menu.ts` convierte la respuesta en un `ClientMenu` y descarta platos mal formados
+  sin ocultar el resto de la sede. Una respuesta inesperada se trata como menú no disponible.
+- Con el menú no disponible, inicio, menú, producto, carrito y resumen muestran
+  `MenuUnavailable`; el carrito guardado no se borra.
+- Si un plato sale del menú, se quita solo esa línea del carrito.
+- Tras un rechazo 409 (stock o disponibilidad) se recarga el menú y se conserva el motivo.
+
+Los desayunos solo aparecen en las sedes que los ofrecen.
+
+## Implementado
 
 - Se conserva la selección de sede y la cafetería asociada a cada una.
 - El inicio muestra un carrusel y debajo los accesos Desayunos/Almuerzos.
@@ -14,149 +74,108 @@ siguiente bloque, después de revisar este recorrido. No se crean pedidos reales
 - Avance cada tres segundos, navegación circular, flechas, indicadores y gesto
   horizontal. La interacción pausa el avance; el botón de reproducción lo retoma.
   No avanza en pestañas ocultas ni fuera de pantalla. Respeta movimiento reducido.
-- Cinco desayunos completos, fotografías generadas y precios provisionales.
-- Desayunos solo en Principal, de 06:00 inclusive a 08:30 exclusive. Almuerzos,
-  de 11:30 inclusive a 14:30 exclusive. Toda la lógica usa `America/Bogota`.
+- Desayunos de 06:00 inclusive a 08:30 exclusive; almuerzos de 11:30 inclusive a
+  14:30 exclusive. Toda la lógica usa `America/Bogota`.
 - Los accesos de comida quedan deshabilitados fuera de horario. Se puede consultar
   el detalle desde un slide; agregar se bloquea fuera del servicio, sin stock o
   cuando el plato no se ofrece ese día. Las reglas se repiten al pulsar Agregar.
 - Pantalla de detalle, cantidad, observaciones opcionales (máximo 200 caracteres),
-  precio total y acción Agregar al carrito. Cada combo cuenta como una unidad:
-  huevos, arepa y chocolate de un desayuno no se cuentan por separado.
+  precio total y acción Agregar al carrito. Cada combo cuenta como una unidad.
 - Máximo de tres platos completos contando cantidades, y una cafetería por carrito.
   Las observaciones diferentes conservan líneas distintas pero comparten el stock.
 - Desayunos y almuerzos se piden por separado. Agregar y confirmar rechazan un
-  carrito mixto, incluso en modo de prueba. Los carritos mixtos guardados antes de
-  esta regla se conservan para corregirlos; muestran el motivo y no permiten confirmar.
+  carrito mixto, incluso en modo de prueba.
 - Al regresar al detalle de un plato ya agregado, el selector muestra su cantidad
   actual y el botón **Actualizar carrito** guarda el nuevo total sin duplicarlo.
-  Si hay varias líneas del mismo plato con distintas notas, se edita la primera;
-  cada variante también se puede editar directamente en el carrito.
-- Carrito inicial con líneas, cantidades, observaciones, subtotal y eliminación por
-  botón. Vaciar y cambiar de cafetería requieren confirmación con foco accesible.
+- Carrito con líneas, cantidades, observaciones, subtotal y eliminación por botón.
+  Vaciar y cambiar de cafetería requieren confirmación con foco accesible.
 - Navegación Inicio/Pedidos/Carrito/Perfil, contador y toast. Pedidos está reservado
-  y deshabilitado hasta implementar el bloque de seguimiento.
-- Se retiraron avisos visibles de datos ilustrativos a petición del usuario.
+  y deshabilitado hasta implementar el seguimiento.
 
 Para conciliar los slides combinados con horarios que no se superponen, el
 carrusel presenta la oferta del día con stock: puede mostrar platos de otro turno,
 sin horarios en los slides. Los horarios se consultan en las categorías y en el
 detalle del plato. Ver un slide no significa que se pueda comprar en ese momento.
 
-## Carrito editable y confirmación de prueba
+## Carrito y envío del pedido
 
 - `/cuenta/carrito` permite aumentar/reducir cantidades, editar observaciones en
   un diálogo y ver el subtotal actualizado. Las líneas del mismo plato con iguales
   observaciones se combinan. El stock se cuenta entre todas las líneas del plato.
-- Reducir cantidades y editar notas permite corregir un carrito fuera de horario;
-  aumentar y continuar al resumen vuelven a comprobar la disponibilidad actual.
 - Se puede eliminar con el botón o deslizar a la izquierda para descubrir la acción
   de eliminación. El desplazamiento vertical conserva su comportamiento normal.
 - `/cuenta/carrito/resumen` requiere CLIENT activo tanto en la página como en el
   layout. La navegación mantiene Carrito como sección activa.
-- El resumen muestra sede, cafetería, platos, notas, cantidades, precios actuales
-  del catálogo, total, efectivo al recoger y condiciones provisionales de recogida.
 - Los horarios son del día en Colombia y se ofrecen cada 30 minutos: 06:00–08:30
   para desayunos, 11:30–14:30 para almuerzos. La hora de cierre sí admite recogida,
   pero no nuevos pedidos. Se exige un margen de preparación de 20 minutos exactos,
   incluidos segundos; por ejemplo, a las 12:10:01 ya no se admite recoger a las 12:30.
-- La interfaz indica la siguiente hora disponible. Una selección que vence queda
-  bloqueada y debe cambiarse; si ya no quedan turnos, se puede regresar al carrito.
-- Confirmar requiere aceptar las condiciones. Se revalidan el carrito, las
-  existencias, la sede, el servicio y la hora elegida en el instante de pulsar.
-  Los cambios de carrito o modo de prueba invalidan la aceptación previa. La
-  confirmación relee el carrito persistido para detectar cambios aún no renderizados.
-- Al confirmar se muestra **Resumen confirmado**, identificado como confirmación
-  de prueba. Se conserva el carrito. No se asigna número de pedido, se reserva stock,
-  se crea historial ni se llama a una API de pedidos. El resultado existe solo en
-  memoria y se descarta al recargar; el próximo bloque añadirá pedidos simulados.
+- Una selección que vence queda bloqueada y debe cambiarse; si ya no quedan turnos,
+  se puede regresar al carrito.
+- Confirmar requiere aceptar las condiciones. Antes de enviar se revalidan el carrito,
+  las existencias, la sede, el servicio y la hora elegida. La confirmación relee el
+  carrito persistido para detectar cambios aún no renderizados.
+- Al confirmar, el navegador envía solo `lunchId`, `quantity` y `note` a
+  `POST /api/me/orders` (a través de la ruta `app/api/me/orders/route.ts`, que exige
+  origen válido, sesión y rol CLIENT, y descarta cualquier otro campo).
+- El backend valida el carrito, toma precios y cafetería de la base de datos, descuenta
+  el stock de cada línea de forma atómica y crea el pedido en estado `PENDING`. Si una
+  línea no tiene stock, todo el pedido se revierte.
+- Con la respuesta **201** se muestra **Pedido enviado** con la referencia del pedido
+  y se vacía el carrito. Si el backend rechaza el pedido, el carrito se conserva y se
+  muestra el motivo.
 
 `domain/cart.ts` concentra edición y validación del carrito; `domain/checkout.ts`
-define intervalos, preparación y un resumen interno. Este tipo no presupone ningún
-contrato del backend. El diálogo base `ClientDialog` conserva foco, Escape y scroll
-y se reutiliza para editar notas, vaciar el carrito y cambiar de cafetería.
+define intervalos, preparación y el resumen. Ambos reciben el menú como parámetro.
+El diálogo base `ClientDialog` conserva foco, Escape y scroll.
 
 ## Probar el carrito fuera de horario
 
-Al iniciar con `npm run dev` (o `iniciar-unifood.cmd`), las vistas del cliente
-muestran **Probar sin horario** arriba del contenido. Actívalo para explorar
-Desayunos/Almuerzos y agregar al carrito a cualquier hora. Se conserva al navegar
-y recargar en esa pestaña para la misma cuenta; cerrar sesión lo desactiva.
-Desmárcalo para volver a comprobar los horarios normales de Colombia.
+Con `npm run dev`, las vistas del cliente muestran **Probar sin horario**. Sirve para
+explorar Desayunos/Almuerzos y agregar al carrito a cualquier hora. Se conserva al
+navegar y recargar en esa pestaña para la misma cuenta; cerrar sesión lo desactiva.
 
-El control y la excepción solo funcionan con `NODE_ENV=development`. En una
-compilación de producción, incluso un valor guardado previamente se ignora.
-Se conservan las restricciones de sede, días del menú, stock y máximo de tres
-platos completos. No modifica `.env.local` ni envía pedidos al backend.
-En el resumen, el modo de prueba conserva las franjas reales: desayunos de 06:00
-a 08:30 y almuerzos de 11:30 a 14:30, cada 30 minutos. Si no queda un turno válido
-hoy, muestra la próxima fecha compatible con los días del menú. La fecha aparece
-en cada opción y se mantiene el margen de 20 minutos. No ofrece recogidas de madrugada
-ni amplía el horario del servicio. En producción solo se ofrecen turnos del día.
-La creación de pedidos y su seguimiento siguen pendientes del siguiente bloque.
+El control solo funciona con `NODE_ENV=development`. En producción se ignora aunque
+haya un valor guardado. Se conservan las restricciones de sede, disponibilidad del día, stock y
+máximo de tres platos completos.
 
-## Arquitectura y almacenamiento
+**En modo de prueba no se envían pedidos.** El botón de confirmar queda deshabilitado
+con un aviso. El backend todavía no valida horarios de servicio, así que enviar un
+pedido fuera de horario crearía un pedido real.
 
-`features/client/mocks/catalog.ts` conserva productos, imágenes, precios, stock
-y días disponibles. `getSiteMeals` define la oferta de cada cafetería; no es un
-DTO supuesto de Spring. Los nombres de las sedes fueron confirmados por el usuario.
-
-`domain/catalog.ts` concentra horarios, disponibilidad, formato COP y selección
-del carrusel. `domain/cart.ts` valida agregados y normaliza datos persistidos.
-`ClientCartProvider` limita el estado a las rutas protegidas CLIENT. Las nuevas
-rutas `/cuenta/producto/[mealId]` y `/cuenta/carrito` también comprueban el rol en
-servidor, independientemente del layout.
+## Almacenamiento en el navegador
 
 La clave `unifood.client.cart.v1` guarda el UUID de propietario y las líneas en
 localStorage. No guarda tokens, precios, información de perfil ni credenciales.
 Una cuenta diferente no restaura el carrito anterior. La lectura valida tipos,
-productos, sede y cantidades; descarta datos corruptos o excesivos. Si el navegador
-no permite almacenamiento, el carrito sigue funcionando en memoria y se informa
-que no se conservará al recargar.
+platos (contra el menú actual), sede y cantidades; descarta datos corruptos o
+excesivos, incluidos carritos guardados con los identificadores del mock anterior.
 
 Después del logout exitoso, `LogoutButton` emite `unifood:logout`. El proveedor
-limpia memoria y almacenamiento; el panel conserva su destino y comportamiento.
-Los eventos `storage` sincronizan la limpieza entre pestañas. La recuperación de
-contraseña conserva su flujo existente y no se modificaron endpoints de auth.
-
-La persistencia es provisional. El backend futuro deberá validar horarios,
-precio, stock y propiedad de forma autoritativa; estas comprobaciones del navegador
-solo hacen consistente la demostración. Todavía no hay reserva de stock ni venta.
+limpia memoria y almacenamiento. Los eventos `storage` sincronizan la limpieza entre
+pestañas. La recuperación de contraseña conserva su flujo existente.
 
 ## Comprobaciones
 
-- Pruebas de reglas: aperturas/cierres exactos, zona horaria, stock entre líneas,
-  límite total, menú por sede, días y datos persistidos manipulados.
-- E2E con proveedor local: recorrido y overflow a 320/375/390/412/430/1280 px;
-  carrusel automático/manual, horarios sin recargar, persistencia, cambio de sede,
-  confirmaciones, sesión, carrito ajeno/corrupto y bloqueo por stock.
-- Playwright comprueba el control de pruebas fuera de horario, su persistencia
-  por pestaña y el retorno al horario normal. Las reglas prueban que la excepción
-  se ignora en producción y conserva sede, stock, días y límites del carrito.
-- Edición, condiciones, márgenes exactos de recogida, cierre del servicio,
-  selecciones vencidas, confirmación de prueba, precios derivados del catálogo y
-  cambios persistidos entre la revisión y la confirmación.
+- Pruebas unitarias (`npm test`): reglas de horario y zona horaria, stock entre líneas,
+  límite total, menú por sede y días, datos persistidos manipulados, y el analizador
+  de la respuesta del menú (`tests/client-menu.test.mjs`).
+- Ruta del pedido: `tests/client-order-route.test.mjs` cubre origen, sesión, rol, campos
+  reenviados, validación y que el texto interno del backend no llegue al navegador.
+- Backend: `ClientOrderCreationServiceTest` y `ClientOrderCreationApiTest` cubren reglas de
+  pedido, stock, cafeterías y autorización.
+- E2E con proveedor local (`tests/helpers/auth-provider-server.mjs`): sirve el menú del
+  fixture y simula `POST /api/me/orders` con las mismas reglas de stock y cafetería.
+  Recorrido y overflow en 320/375/390/412/430/1280 px, horarios, persistencia, cambio de
+  sede, confirmación y sesión.
 
-## Pendiente de los siguientes bloques aprobados
+## Pendiente
 
-1. Pedidos simulados persistentes: activos/historial desplegables, estados,
-   progreso, cambios automáticos con tiempos realistas y detalle.
-2. Cancelación solo PENDING, motivo predefinido/texto, repetir omitiendo agotados,
-   últimos tres del historial y filtros por fecha/estado/cafetería.
-3. Avisos dentro de la app y notificaciones locales mientras está abierta; push
-   en segundo plano pendiente de infraestructura posterior.
-4. Integración con contratos reales de backend y menú administrado por trabajador.
-
-## Commits sugeridos
-
-- `feat(client): complete cart and checkout flow` — edición, diálogo compartido
-  del cliente, reglas y ruta de resumen, confirmación de prueba, pruebas y documentación.
-- `feat(client): add breakfast menus and rotating meal carousel` — catálogo,
-  horarios, inicio, carrusel, imágenes, estilos y pruebas de disponibilidad.
-- `feat(client): add product details and persistent cart foundation` — rutas,
-  detalle, reglas, proveedor, carrito inicial, navegación, limpieza tras logout y
-  pruebas del recorrido y aislamiento.
-- `docs(client): document shopping scope and generated breakfast assets` — este
-  documento, enlaces y procedencia de imágenes.
-
-No se ejecutaron commits ni push.
+1. Backend de `GET /api/me/menu` y datos reales del menú, sobre el catálogo de `lunches`
+   (categorías y disponibilidad diaria).
+2. Guardar `pickupAt` y validar horarios de servicio en el backend.
+3. Evitar pedidos duplicados si la respuesta se pierde y el cliente reintenta.
+4. Historial, seguimiento y cancelación de pedidos en el cliente.
+5. Verificar que la cafetería pertenece a la institución del cliente en la creación
+   (la creación aún no lo revalida).
+6. Avisos dentro de la app y notificaciones; push en segundo plano pendiente.
