@@ -3,18 +3,22 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { CircleCheck } from "lucide-react";
+import type { PlacedOrder } from "../api/placeOrder";
 import { currency } from "../domain/catalog";
 import { pickupLabel, type CheckoutSummary } from "../domain/checkout";
 import CheckoutLines from "./CheckoutLines";
 import shared from "./ClientShopping.module.css";
 import styles from "./ClientCheckout.module.css";
 
+/** Short reference shown to people; the full identifier stays in the order record. */
+export const orderReference = (id: string) => id.slice(0, 8).toUpperCase();
+
 export default function CheckoutConfirmation({
+  order,
   summary,
-  onReview,
 }: {
+  order: PlacedOrder;
   summary: CheckoutSummary;
-  onReview: () => void;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
@@ -25,11 +29,11 @@ export default function CheckoutConfirmation({
       <div className={styles.confirmationHeading}>
         <CircleCheck size={44} strokeWidth={1.5} aria-hidden="true" />
         <h1 id="confirmation-title" tabIndex={-1} ref={heading}>
-          Resumen confirmado
+          Pedido enviado
         </h1>
         <p className={shared.description}>
-          Confirmación de prueba. Tu carrito se conserva; todavía no se ha
-          enviado un pedido a la cafetería.
+          Pedido #{orderReference(order.id)} pendiente de preparación en la
+          cafetería.
         </p>
       </div>
       <dl className={styles.details}>
@@ -52,18 +56,11 @@ export default function CheckoutConfirmation({
       <CheckoutLines lines={summary.lines} />
       <div className={shared.cartTotal}>
         <span>Total</span>
-        <strong>{currency.format(summary.total)}</strong>
+        <strong>{currency.format(order.total)}</strong>
       </div>
-      <Link href="/cuenta/carrito" className={shared.primaryButton}>
-        Volver al carrito
+      <Link href="/cuenta" className={shared.primaryButton}>
+        Volver al inicio
       </Link>
-      <button
-        type="button"
-        className={shared.secondaryButton}
-        onClick={onReview}
-      >
-        Revisar horario y condiciones
-      </button>
     </section>
   );
 }

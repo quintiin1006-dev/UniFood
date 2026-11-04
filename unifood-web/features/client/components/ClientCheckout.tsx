@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, Banknote, Clock3, ShoppingBag } from "lucide-react";
 import type { ClientCart } from "../types";
-import { findDemoSite, getSiteMeals } from "../mocks/catalog";
+import { placeOrder, type PlacedOrder } from "../api/placeOrder";
 import { currency, serviceHours } from "../domain/catalog";
 import { cartMealKind, validateCart } from "../domain/cart";
 import {
@@ -12,10 +13,12 @@ import {
   reviewCheckout,
   type CheckoutSummary,
 } from "../domain/checkout";
+import { findSite } from "../domain/menu";
 import { useColombiaClock } from "../hooks/useColombiaClock";
 import { useClientCart } from "./ClientCartProvider";
 import CheckoutLines from "./CheckoutLines";
 import CheckoutConfirmation from "./CheckoutConfirmation";
+import MenuUnavailable from "./MenuUnavailable";
 import shared from "./ClientShopping.module.css";
 import styles from "./ClientCheckout.module.css";
 
@@ -24,10 +27,20 @@ export default function ClientCheckout({
 }: {
   initialTime: string;
 }) {
-  const { cart, ready, ignoreServiceHours } = useClientCart();
+  const { cart, ready, ignoreServiceHours, menu, finishOrder } =
+    useClientCart();
   const now = useColombiaClock(initialTime);
+  const [placed, setPlaced] = useState<PlacedOrder | null>(null);
+  const [placedSummary, setPlacedSummary] = useState<CheckoutSummary | null>(
+    null,
+  );
+  const [rejection, setRejection] = useState("");
+  // The confirmation outlives the cart: the cart is emptied once the backend accepts the order.
+  if (placed && placedSummary)
+    return <CheckoutConfirmation order={placed} summary={placedSummary} />;
+  if (menu.unavailable) return <MenuUnavailable />;
   if (!ready) return <p role="status">Cargando el resumen…</p>;
-  if (!cart.lines.length || !findDemoSite(cart.siteId ?? undefined))
+  if (!cart.lines.length || !findSite(menu, cart.siteId ?? undefined))
     return (
       <section className={shared.empty}>
         <ShoppingBag size={46} aria-hidden="true" />
@@ -44,20 +57,39 @@ export default function ClientCheckout({
       key={JSON.stringify([cart, ignoreServiceHours])}
       cart={cart}
       now={now}
+      initialError={rejection}
+      onRejected={setRejection}
+      onPlaced={(order, summary) => {
+        setPlaced(order);
+        setPlacedSummary(summary);
+        finishOrder();
+      }}
     />
   );
 }
 
-function CheckoutForm({ cart, now }: { cart: ClientCart; now: Date }) {
-  const { ignoreServiceHours, confirmCheckout } = useClientCart();
+function CheckoutForm({
+  cart,
+  now,
+  initialError,
+  onRejected,
+  onPlaced,
+}: {
+  cart: ClientCart;
+  now: Date;
+  initialError: string;
+  onRejected: (error: string) => void;
+  onPlaced: (order: PlacedOrder, summary: CheckoutSummary) => void;
+}) {
+  const { menu, ignoreServiceHours, confirmCheckout } = useClientCart();
+  const router = useRouter();
   const [pickupAt, setPickupAt] = useState("");
   const [accepted, setAccepted] = useState(false);
-  const [error, setError] = useState("");
-  const [confirmed, setConfirmed] = useState<CheckoutSummary | null>(null);
-  const site = findDemoSite(cart.siteId!)!;
-  const meals = getSiteMeals(site);
+  const [error, setError] = useState(initialError);
+  const [submitting, setSubmitting] = useState(false);
+  const site = findSite(menu, cart.siteId!)!;
   const lines = cart.lines.map((line) => {
-    const meal = meals.find((item) => item.id === line.mealId)!;
+    const meal = site.meals.find((item) => item.id === line.mealId)!;
     return {
       id: line.id,
       name: meal.name,
@@ -70,29 +102,16 @@ function CheckoutForm({ cart, now }: { cart: ClientCart; now: Date }) {
     (sum, line) => sum + line.quantity * line.unitPrice,
     0,
   );
-  const slots = pickupSlots(cart, now, ignoreServiceHours);
+  const slots = pickupSlots(menu, cart, now, ignoreServiceHours);
   const next = slots.find((slot) => slot.available);
-  const cartIssue = validateCart(cart, now, ignoreServiceHours);
-  const kind = cartMealKind(cart);
+  const cartIssue = validateCart(menu, cart, now, ignoreServiceHours);
+  const kind = cartMealKind(menu, cart);
   const selected = slots.find((slot) => slot.value === pickupAt);
   const expiredSelection = pickupAt && (!selected || !selected.available);
-  const canConfirm = reviewCheckout(
-    cart,
-    pickupAt,
-    accepted,
-    now,
-    ignoreServiceHours,
-  ).ok;
-  if (confirmed)
-    return (
-      <CheckoutConfirmation
-        summary={confirmed}
-        onReview={() => {
-          setConfirmed(null);
-          setAccepted(false);
-        }}
-      />
-    );
+  const canConfirm =
+    !ignoreServiceHours &&
+    !submitting &&
+    reviewCheckout(menu, cart, pickupAt, accepted, now, ignoreServiceHours).ok;
 
   return (
     <section className={shared.shopping} aria-labelledby="checkout-title">
@@ -121,15 +140,29 @@ function CheckoutForm({ cart, now }: { cart: ClientCart; now: Date }) {
       )}
       <form
         className={styles.form}
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
-          const result = confirmCheckout(cart, pickupAt, accepted);
-          if (!result.ok) {
-            setError(result.error);
+          if (submitting) return;
+          const review = confirmCheckout(cart, pickupAt, accepted);
+          if (!review.ok) {
+            setError(review.error);
             return;
           }
           setError("");
-          setConfirmed(result.summary);
+          setSubmitting(true);
+          const result = await placeOrder(cart, review.summary.pickupAt);
+          setSubmitting(false);
+          if (!result.ok) {
+            setError(result.error);
+            // Stock or availability moved: reload the menu so the summary shows the current state.
+            // The form may remount with a changed cart, so the reason is kept by the parent.
+            if (result.stale) {
+              onRejected(result.error);
+              router.refresh();
+            }
+            return;
+          }
+          onPlaced(result.order, review.summary);
         }}
       >
         <fieldset className={styles.pickup}>
@@ -199,7 +232,6 @@ function CheckoutForm({ cart, now }: { cart: ClientCart; now: Date }) {
         <div className={styles.terms}>
           <h2>Condiciones de recogida</h2>
           <p id="pickup-terms">
-            Texto provisional: revisa los platos, las cantidades y la sede.
             Recoge en la hora seleccionada y paga en efectivo en caja. La
             preparación puede variar según la demanda.
           </p>
@@ -219,10 +251,12 @@ function CheckoutForm({ cart, now }: { cart: ClientCart; now: Date }) {
             </span>
           </label>
         </div>
-        <p className={styles.previewNote}>
-          Esta confirmación es de prueba y todavía no envía pedidos a la
-          cafetería.
-        </p>
+        {ignoreServiceHours ? (
+          <p role="alert" className={shared.notice}>
+            El modo de prueba fuera de horario no envía pedidos. Desactívalo
+            para confirmar tu pedido.
+          </p>
+        ) : null}
         {error && (
           <p role="alert" className={shared.notice}>
             {error}
@@ -233,7 +267,7 @@ function CheckoutForm({ cart, now }: { cart: ClientCart; now: Date }) {
           className={shared.primaryButton}
           disabled={!canConfirm}
         >
-          Confirmar pedido
+          {submitting ? "Enviando pedido…" : "Confirmar pedido"}
         </button>
       </form>
     </section>
