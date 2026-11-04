@@ -1,6 +1,10 @@
 import { getAuth } from "@/features/auth/server/session";
 import { isClient, sameOrigin } from "@/features/auth/validation";
 import { serverApiUrl } from "@/config/server";
+import {
+  isAuthServiceUnavailable,
+  temporaryAuthResponse,
+} from "@/features/auth/server/failures";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Opaque here: the backend owns the identifier format and rejects anything malformed. */
@@ -58,7 +62,13 @@ function sanitize(body: unknown) {
 export async function POST(request: Request) {
   if (!sameOrigin(request))
     return failure(request, 403, "Origen no permitido.");
-  const auth = await getAuth();
+  let auth: Awaited<ReturnType<typeof getAuth>>;
+  try {
+    auth = await getAuth();
+  } catch (cause) {
+    if (isAuthServiceUnavailable(cause)) return temporaryAuthResponse();
+    throw cause;
+  }
   if (!auth)
     return failure(request, 401, "Inicia sesión para enviar tu pedido.");
   if (

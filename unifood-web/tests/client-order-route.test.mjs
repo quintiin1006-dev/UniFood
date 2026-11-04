@@ -148,6 +148,27 @@ test("cross-origin, anonymous and non-client requests never reach the backend", 
   );
 });
 
+test("a temporary auth failure is retryable and never reaches the backend", async () => {
+  const handler = load(
+    "app/api/me/orders/route.ts",
+    { API_URL: "http://backend.test:8080" },
+    async () => assert.fail("backend must not be called"),
+    {
+      "@/features/auth/server/session": {
+        getAuth: async () => {
+          throw Object.assign(new Error("down"), {
+            code: "AUTH_TEMPORARILY_UNAVAILABLE",
+          });
+        },
+      },
+    },
+  );
+  const response = await handler.POST(order(validBody));
+  assert.equal(response.status, 503);
+  assert.equal(response.headers.get("retry-after"), "5");
+  assert.equal((await response.json()).code, "AUTH_TEMPORARILY_UNAVAILABLE");
+});
+
 test("business rejections keep their message; other upstream text stays private", async () => {
   const stock = route(async () =>
     Response.json({ message: "No hay suficientes unidades" }, { status: 409 }),
