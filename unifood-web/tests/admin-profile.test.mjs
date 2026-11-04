@@ -164,14 +164,9 @@ test("sidebar has real destinations and exactly one accessible active link", () 
     for (const href of ["/admin", "/admin/catalogo", "/admin/perfil"])
       assert.ok(html.includes(`href="${href}"`));
     assert.match(html, /<nav aria-label="Administración"/);
-    assert.match(html, /Asistente IA/);
     assert.doesNotMatch(
       html,
-      /Configuración|TU ESPACIO UNIFOOD|Tu cafetería, en un solo lugar/,
-    );
-    assert.equal((html.match(/Próximamente/g) ?? []).length, 1);
-    assert.ok(
-      html.indexOf("Asistente IA") < html.indexOf('href="/admin/perfil"'),
+      /Asistente IA|Próximamente|Configuración|TU ESPACIO UNIFOOD|Tu cafetería, en un solo lugar/,
     );
     assert.equal((html.match(/<a /g) ?? []).length, 3);
     assert.doesNotMatch(html, /worker/);

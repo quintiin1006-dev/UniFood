@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Utensils, UserRound, Sparkles } from "lucide-react";
+import { LayoutDashboard, Utensils, UserRound } from "lucide-react";
 import styles from "./Admin.module.css";
 
 const navigation = [
@@ -40,15 +40,6 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
             {label}
           </Link>
         ))}
-        <ul className={styles.upcoming} aria-label="Próximos módulos">
-          <li>
-            <Sparkles size={19} strokeWidth={1.7} aria-hidden="true" />
-            <span>
-              Asistente IA
-              <small>Próximamente</small>
-            </span>
-          </li>
-        </ul>
         <div className={styles.secondaryNav}>
           <Link
             href="/admin/perfil"

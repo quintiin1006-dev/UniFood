@@ -798,12 +798,8 @@ for (const width of [390, 768, 1440])
         exact: true,
       });
       const current = nav.getByRole("link", { name: label, exact: true });
-      await expect(
-        nav.getByRole("list", { name: "Próximos módulos" }),
-      ).toContainText("Asistente IA");
-      await expect(
-        nav.getByRole("list", { name: "Próximos módulos" }),
-      ).not.toContainText("Configuración");
+      await expect(nav).not.toContainText("Asistente IA");
+      await expect(nav).not.toContainText("Configuración");
       await expect(nav.getByRole("link")).toHaveCount(3);
       await expect(
         page

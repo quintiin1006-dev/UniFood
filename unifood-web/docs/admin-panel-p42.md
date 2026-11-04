@@ -75,9 +75,9 @@ de nombre y subtítulo. No se diferencia Food ni se aplica un degradado al texto
 
 ## 7. Navegación
 
-Se conserva Dashboard → Catálogo → Asistente IA → separador → Mi perfil. IA sigue
-siendo información no interactiva con Próximamente, sin enlace ficticio. No hay
-Configuración ni tarjeta inferior. Rutas, `aria-current` y lógica del drawer no
+La navegación vigente es Dashboard → Catálogo → separador → Mi perfil: el aviso
+«Asistente IA · Próximamente» de esta fase se retiró después. No hay Configuración
+ni tarjeta inferior. Rutas, `aria-current` y lógica del drawer no
 cambian. Se elimina la línea adicional debajo de la marca y se reduce la separación
 antes de Mi perfil, manteniendo el único separador funcional solicitado.
 
@@ -197,7 +197,7 @@ No se encontraron regresiones funcionales pendientes en el alcance ejecutado.
 
 ## 15. Pendientes y límites
 
-IA continúa como Próximamente. Dispositivos físicos, otros motores de navegador,
+Dispositivos físicos, otros motores de navegador,
 lectores de pantalla reales y staging quedan pendientes. Una exportación oficial
 del icono azul sin márgenes blancos permitiría eliminar ese espacio intrínseco;
 no se inventó ni se editó el recurso para sustituirla. Los skeletons son estáticos
