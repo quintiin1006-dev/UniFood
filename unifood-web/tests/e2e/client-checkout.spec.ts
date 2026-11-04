@@ -41,7 +41,7 @@ async function noOverflow(page: Page) {
 }
 
 for (const width of [320, 375, 390, 412, 430, 1280]) {
-  test(`editable cart and checkout fit ${width}px and preserve the cart after preview confirmation`, async ({
+  test(`editable cart and checkout fit ${width}px and send exactly one order to the backend`, async ({
     page,
   }, testInfo) => {
     await page.setViewportSize({ width, height: 844 });
@@ -117,29 +117,25 @@ for (const width of [320, 375, 390, 412, 430, 1280]) {
     });
     await confirm.click();
     await expect(
-      page.getByRole("heading", { name: "Resumen confirmado" }),
+      page.getByRole("heading", { name: "Pedido enviado" }),
     ).toBeFocused();
-    await expect(
-      page.getByText(/todavía no se ha enviado un pedido/),
-    ).toBeVisible();
-    await expect(page.getByText(/30\.000/).last()).toBeVisible();
+    await expect(page.getByText(/Pedido #[0-9A-F]{8} pendiente/)).toBeVisible();
+    await expect(page.getByText(/30.000/).last()).toBeVisible();
     await noOverflow(page);
     await page.screenshot({
       path: testInfo.outputPath(`confirmation-${width}.png`),
     });
     await page
-      .getByRole("link", { name: "Volver al carrito", exact: true })
+      .getByRole("link", { name: "Volver al inicio", exact: true })
       .click();
-    await expect(page).toHaveURL(/\/cuenta\/carrito$/);
+    await expect(page).toHaveURL(/\/cuenta$/);
+    await page.goto("/cuenta/carrito");
     await expect(
-      page.getByRole("heading", { name: "Tu carrito", exact: true }),
+      page.getByRole("heading", { name: "Tu carrito está vacío" }),
     ).toBeVisible();
-    await page.reload();
-    await expect(
-      page.getByRole("status", { name: "Cantidad de Pechuga a la plancha" }),
-    ).toHaveText("2");
     expect(errors).toEqual([]);
-    expect(operationalRequests).toEqual([]);
+    expect(operationalRequests).toHaveLength(1);
+    expect(operationalRequests[0]).toMatch(/\/api\/me\/orders$/);
   });
 }
 
@@ -170,7 +166,7 @@ test("checkout expires a selected pickup, rejects forged submission and shows th
     "al menos 20 minutos",
   );
   await expect(
-    page.getByRole("heading", { name: "Resumen confirmado" }),
+    page.getByRole("heading", { name: "Pedido enviado" }),
   ).toHaveCount(0);
   await page.clock.setSystemTime(new Date("2026-10-07T14:11:00-05:00"));
   await page.clock.runFor(61_000);
@@ -190,9 +186,13 @@ test("after-hours preview supports checkout with a twenty-minute margin and resp
   await page.getByRole("link", { name: "Continuar con el pedido" }).click();
   await page.getByRole("combobox").selectOption("2026-10-08T16:30:00.000Z");
   await page.getByRole("checkbox", { name: /He revisado mi pedido/ }).check();
+  // Test mode never sends an order: the backend does not yet enforce service hours.
   await expect(
     page.getByRole("button", { name: "Confirmar pedido" }),
-  ).toBeEnabled();
+  ).toBeDisabled();
+  await expect(
+    page.getByText(/El modo de prueba fuera de horario no envía pedidos/),
+  ).toBeVisible();
   await preview.uncheck();
   await expect(
     page.getByRole("checkbox", { name: /He revisado mi pedido/ }),

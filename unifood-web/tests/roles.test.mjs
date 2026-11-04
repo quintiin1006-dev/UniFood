@@ -59,6 +59,33 @@ const uiMocks = {
       unavailable: false,
     }),
   },
+  "@/features/client/server/menu": {
+    loadClientMenu: async () => ({
+      sites: [
+        {
+          id: "principal",
+          name: "Sede Principal",
+          city: "Villavicencio",
+          image: "/images/client/campus.png",
+          cafeteria: "Cafetería Central",
+          meals: [
+            {
+              id: "chicken",
+              kind: "lunch",
+              category: "corriente",
+              name: "Pechuga a la plancha",
+              description: "Con arroz, ensalada y bebida del día.",
+              price: 15000,
+              image: "/images/client/chicken.png",
+              stock: 12,
+              availableDays: [0, 1, 2, 3, 4, 5, 6],
+            },
+          ],
+        },
+      ],
+      unavailable: false,
+    }),
+  },
   "@/features/client/components/ClientProfile": {
     default: () => createElement("div", {}, "Student profile"),
   },

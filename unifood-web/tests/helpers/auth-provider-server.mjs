@@ -10,6 +10,96 @@ import { adminProfileBusinessFixture } from "./admin-profile-fixture.mjs";
 import { adminCatalogFixture } from "./admin-catalog-fixture.mjs";
 import { productImageFixture } from "./product-image-fixture.mjs";
 import { workerProfileBusinessFixture } from "./worker-profile-fixture.mjs";
+import { loadTs } from "./load-ts.mjs";
+
+// Browser tests are served the provisional menu through the real GET /api/me/menu contract.
+const menuFixture = loadTs("tests/fixtures/client-menu.ts");
+const menuStock = new Map(
+  menuFixture.demoSites.flatMap((site) =>
+    menuFixture
+      .getSiteMeals(site)
+      .map((meal) => [`${site.id}|${meal.id}`, meal.stock]),
+  ),
+);
+const isClientAccount = (profile) =>
+  profile.active && profile.roles.length === 1 && profile.roles[0] === "CLIENT";
+const backendCategories = {
+  desayunos: "DESAYUNO",
+  corriente: "CORRIENTE",
+  ejecutivos: "EJECUTIVO",
+  especiales: "ESPECIAL",
+};
+function clientMenu() {
+  const weekday = new Date(Date.now() - 5 * 3_600_000).getUTCDay();
+  return {
+    sites: menuFixture.demoSites.map((site) => ({
+      id: site.id,
+      name: site.name,
+      city: "Villavicencio",
+      imageUrl: site.image,
+      meals: menuFixture.getSiteMeals(site).map((meal) => ({
+        id: meal.id,
+        cafeteriaId: `cafeteria-${site.id}`,
+        cafeteriaName: site.cafeteria,
+        name: meal.name,
+        description: meal.description,
+        price: meal.price,
+        imageUrl: meal.image,
+        stock: menuStock.get(`${site.id}|${meal.id}`),
+        category: backendCategories[meal.category],
+        availableToday: meal.availableDays.includes(weekday),
+      })),
+    })),
+  };
+}
+async function readJson(request) {
+  let text = "";
+  for await (const chunk of request) text += chunk;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+/** Mirrors the backend's order rules for browser tests: one cafeteria, stock, and an order id. */
+function placeClientOrder(response, body) {
+  const lines = Array.isArray(body?.items) ? body.items : [];
+  if (!lines.length)
+    return json(response, 400, {
+      message: "El carrito está vacío; agrega al menos un plato",
+    });
+  const found = lines.map((line) => {
+    for (const site of menuFixture.demoSites) {
+      const meal = menuFixture
+        .getSiteMeals(site)
+        .find((item) => item.id === line.lunchId);
+      if (meal) return { site, meal, quantity: line.quantity };
+    }
+    return null;
+  });
+  if (found.some((item) => !item))
+    return json(response, 409, {
+      message: "Uno de los platos ya no está disponible; actualiza tu carrito",
+    });
+  const sites = new Set(found.map((item) => item.site.id));
+  if (sites.size !== 1)
+    return json(response, 400, {
+      message: "Un pedido solo puede incluir platos de una misma cafetería",
+    });
+  for (const { site, meal, quantity } of found) {
+    const key = `${site.id}|${meal.id}`;
+    if (menuStock.get(key) < quantity)
+      return json(response, 409, {
+        message: `No hay suficientes unidades disponibles de ${meal.name}`,
+      });
+  }
+  // Stock is checked but not consumed, so tests that share this server stay independent.
+  const total = found.reduce(
+    (sum, item) => sum + item.meal.price * item.quantity,
+    0,
+  );
+  return json(response, 201, { id: randomUUID(), status: "PENDING", total });
+}
 
 const fixtures = Object.entries({
   client: ["CLIENT"],
@@ -1040,6 +1130,16 @@ createServer(async (request, response) => {
         cancellationDeadline: "2020-01-01T00:00:00Z",
         accessToken: "provider-secret",
       });
+    }
+    if (url.pathname === "/api/me/menu" && request.method === "GET") {
+      if (!isClientAccount(profile))
+        return json(response, 403, { message: "Forbidden provider-secret" });
+      return json(response, 200, clientMenu());
+    }
+    if (url.pathname === "/api/me/orders" && request.method === "POST") {
+      if (!isClientAccount(profile))
+        return json(response, 403, { message: "Forbidden provider-secret" });
+      return placeClientOrder(response, await readJson(request));
     }
     if (
       url.pathname === "/api/worker/context" ||

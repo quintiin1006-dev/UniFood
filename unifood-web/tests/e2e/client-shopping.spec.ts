@@ -113,7 +113,7 @@ test("breakfast hours and campus restrictions update in Colombia time while the 
   await page.goto("/cuenta?sede=aguas-claras");
   await expect(
     page.getByRole("button", {
-      name: /Desayunos.*Disponible únicamente en la Sede Principal/,
+      name: /Desayunos.*No se sirve en esta sede/,
     }),
   ).toBeDisabled();
   await page.goto("/cuenta/producto/breakfast-eggs?sede=aguas-claras");

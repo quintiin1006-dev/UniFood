@@ -118,9 +118,10 @@ test("at 2 am breakfast offers only 6–8:30 and lunch only 11:30–14:30 Colomb
   await expectSlotValues(page, breakfastValues);
   await page.getByRole("combobox").selectOption(breakfastValues[0]);
   await page.getByRole("checkbox", { name: /He revisado mi pedido/ }).check();
+  // Test mode never sends an order, so confirmation stays disabled even with a valid slot.
   await expect(
     page.getByRole("button", { name: "Confirmar pedido" }),
-  ).toBeEnabled();
+  ).toBeDisabled();
   await page.clock.setFixedTime(new Date("2026-10-08T22:00:00-05:00"));
   await page.reload();
   await expectSlotValues(
@@ -180,9 +181,12 @@ test("new mixed orders are blocked and older mixed carts can be repaired without
   }, cartKey);
   await page.goto("/cuenta/carrito/resumen");
   await page.reload();
-  await expect(page.getByRole("main").getByRole("alert")).toContainText(
-    "por separado",
-  );
+  await expect(
+    page
+      .getByRole("main")
+      .getByRole("alert")
+      .filter({ hasText: "por separado" }),
+  ).toBeVisible();
   await expect(page.getByRole("combobox")).toBeDisabled();
   await expect(
     page.getByRole("button", { name: "Confirmar pedido" }),

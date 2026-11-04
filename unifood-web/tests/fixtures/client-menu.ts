@@ -1,5 +1,5 @@
-// Frontend fixtures only. Site names are confirmed; menus, prices and stock are provisional.
-import type { CatalogMeal } from "../types";
+// Test fixtures only. The app reads the menu from the backend; this file seeds the same provisional menu that migration 008 stores.
+import type { CatalogMeal } from "../../features/client/types";
 export const demoSites = [
   {
     id: "principal",

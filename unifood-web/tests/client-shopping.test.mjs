@@ -24,9 +24,34 @@ function load(file) {
   return mod.exports;
 }
 const catalog = load("features/client/domain/catalog.ts");
-const fixtures = load("features/client/mocks/catalog.ts");
+const fixtures = load("tests/fixtures/client-menu.ts");
 const cart = load("features/client/domain/cart.ts");
 const checkout = load("features/client/domain/checkout.ts");
+
+// The rules take a parsed menu; tests/client-menu.test.mjs covers the backend payload.
+const menu = {
+  unavailable: false,
+  sites: fixtures.demoSites.map((site) => ({
+    ...site,
+    meals: fixtures.getSiteMeals(site),
+  })),
+};
+const bound = {
+  addMeal: (...args) => cart.addMeal(menu, ...args),
+  updateMeal: (...args) => cart.updateMeal(menu, ...args),
+  validateCart: (...args) => cart.validateCart(menu, ...args),
+  cartMealKind: (value) => cart.cartMealKind(menu, value),
+  restoreCart: (value) => cart.restoreCart(menu, value),
+  pickupSlots: (...args) => checkout.pickupSlots(menu, ...args),
+  reviewCheckout: (...args) => checkout.reviewCheckout(menu, ...args),
+};
+// Site identifiers are kept at call sites for readability; the domain no longer uses them for rules.
+const catalogBound = {
+  serviceAvailability: (kind, _siteId, date, ignore) =>
+    catalog.serviceAvailability(kind, date, ignore),
+  mealAvailability: (meal, _siteId, date, ignore) =>
+    catalog.mealAvailability(meal, date, ignore),
+};
 const breakfast = new Date("2026-10-07T07:00:00-05:00");
 const lunch = new Date("2026-10-07T12:00:00-05:00");
 const add = (
@@ -37,7 +62,7 @@ const add = (
   now = breakfast,
   site = "principal",
 ) =>
-  cart.addMeal(
+  bound.addMeal(
     state,
     site,
     id,
@@ -59,7 +84,7 @@ test("Colombia service windows include opening and exclude closing regardless of
     ["lunch", "14:30", false],
   ]) {
     assert.equal(
-      catalog.serviceAvailability(
+      catalogBound.serviceAvailability(
         kind,
         "principal",
         new Date(`2026-10-07T${clock}:00-05:00`),
@@ -68,15 +93,17 @@ test("Colombia service windows include opening and exclude closing regardless of
       `${kind} ${clock}`,
     );
   }
-  assert.equal(
-    catalog.serviceAvailability("breakfast", "aguas-claras", breakfast).open,
-    false,
+  // Breakfast is limited by the data: Aguas Claras lists no breakfast, so it cannot be ordered there.
+  assert.ok(
+    menu.sites
+      .find((site) => site.id === "aguas-claras")
+      .meals.every((meal) => meal.kind === "lunch"),
   );
   assert.equal(catalog.colombiaTime(new Date("2026-10-08T02:00:00Z")).day, 3);
 });
 test("site catalog and carousel use own stock, meal types, days and prices", () => {
-  const principal = fixtures.getSiteMeals(fixtures.findDemoSite("principal"));
-  const aguas = fixtures.getSiteMeals(fixtures.findDemoSite("aguas-claras"));
+  const principal = menu.sites.find((site) => site.id === "principal").meals;
+  const aguas = menu.sites.find((site) => site.id === "aguas-claras").meals;
   assert.equal(principal.filter((meal) => meal.kind === "breakfast").length, 5);
   assert.ok(aguas.every((meal) => meal.kind === "lunch"));
   assert.notEqual(
@@ -93,7 +120,7 @@ test("site catalog and carousel use own stock, meal types, days and prices", () 
   );
   const weekdayMeal = principal.find((meal) => meal.id === "executive-beef");
   assert.equal(
-    catalog.mealAvailability(
+    catalogBound.mealAvailability(
       weekdayMeal,
       "principal",
       new Date("2026-10-11T12:00:00-05:00"),
@@ -113,14 +140,14 @@ test("out-of-hours preview is opt-in and accepted only in development", () => {
         ["lunch", "chicken"],
       ]) {
         assert.equal(
-          catalog.serviceAvailability(kind, "principal", night).open,
+          catalogBound.serviceAvailability(kind, "principal", night).open,
           false,
         );
         assert.equal(
-          catalog.serviceAvailability(kind, "principal", night, true).open,
+          catalogBound.serviceAvailability(kind, "principal", night, true).open,
           environment === "development",
         );
-        const result = cart.addMeal(
+        const result = bound.addMeal(
           cart.emptyCart(),
           "principal",
           mealId,
@@ -144,18 +171,25 @@ test("development preview keeps campus, stock, menu-day and cart limits", () => 
   const night = new Date("2026-10-07T22:00:00-05:00");
   try {
     process.env.NODE_ENV = "development";
-    assert.equal(
-      catalog.serviceAvailability("breakfast", "aguas-claras", night, true)
-        .open,
-      false,
+    // Preview ignores clock hours, but a dish a site does not list still cannot be added there.
+    const aguasBreakfast = bound.addMeal(
+      cart.emptyCart(),
+      "aguas-claras",
+      "breakfast-eggs",
+      1,
+      "",
+      night,
+      "line-preview",
+      true,
     );
+    assert.match(aguasBreakfast.error, /no está disponible/);
     const previewAdd = (
       mealId,
       quantity,
       now = night,
       state = cart.emptyCart(),
     ) =>
-      cart.addMeal(
+      bound.addMeal(
         state,
         "principal",
         mealId,
@@ -215,7 +249,7 @@ test("add rejects stock exhaustion across different notes, invalid quantity, lon
 test("cart editing preserves totals, merges identical notes and never exceeds three combos", () => {
   let state = add(cart.emptyCart(), "chicken", 1, "Sin cubiertos", lunch).cart;
   state = add(state, "chicken", 1, "Otra nota", lunch).cart;
-  const updated = cart.updateMeal(
+  const updated = bound.updateMeal(
     state,
     state.lines[1].id,
     { notes: "  Sin cubiertos  " },
@@ -230,17 +264,19 @@ test("cart editing preserves totals, merges identical notes and never exceeds th
     "editing must not mutate the previous cart",
   );
   const id = updated.cart.lines[0].id;
-  const full = cart.updateMeal(updated.cart, id, { quantity: 3 }, lunch).cart;
+  const full = bound.updateMeal(updated.cart, id, { quantity: 3 }, lunch).cart;
   assert.equal(cart.cartCount(full), 3);
   assert.match(
-    cart.updateMeal(full, id, { quantity: 4 }, lunch).error,
+    bound.updateMeal(full, id, { quantity: 4 }, lunch).error,
     /3 platos/,
   );
-  assert.ok(cart.updateMeal(full, id, { quantity: 0 }, lunch).error);
-  assert.ok(cart.updateMeal(full, id, { quantity: 1.5 }, lunch).error);
-  assert.ok(cart.updateMeal(full, id, { notes: "a".repeat(201) }, lunch).error);
+  assert.ok(bound.updateMeal(full, id, { quantity: 0 }, lunch).error);
+  assert.ok(bound.updateMeal(full, id, { quantity: 1.5 }, lunch).error);
+  assert.ok(
+    bound.updateMeal(full, id, { notes: "a".repeat(201) }, lunch).error,
+  );
   assert.match(
-    cart.updateMeal(full, "removed", { notes: "x" }, lunch).error,
+    bound.updateMeal(full, "removed", { notes: "x" }, lunch).error,
     /ya no/,
   );
 });
@@ -249,17 +285,17 @@ test("stale cart lines can be reduced but increasing and checkout recheck stock 
   const state = add(cart.emptyCart(), "breakfast-complete", 2).cart;
   const id = state.lines[0].id;
   assert.match(
-    cart.updateMeal(state, id, { quantity: 3 }, breakfast).error,
+    bound.updateMeal(state, id, { quantity: 3 }, breakfast).error,
     /unidades/,
   );
-  const reduced = cart.updateMeal(state, id, { quantity: 1 }, lunch);
+  const reduced = bound.updateMeal(state, id, { quantity: 1 }, lunch);
   assert.equal(reduced.error, undefined);
   assert.equal(reduced.cart.lines[0].quantity, 1);
   assert.match(
-    cart.updateMeal(reduced.cart, id, { quantity: 2 }, lunch).error,
+    bound.updateMeal(reduced.cart, id, { quantity: 2 }, lunch).error,
     /Disponible de/,
   );
-  assert.match(cart.validateCart(reduced.cart, lunch), /Disponible de/);
+  assert.match(bound.validateCart(reduced.cart, lunch), /Disponible de/);
   const excessiveStock = {
     ...state,
     lines: [
@@ -268,7 +304,7 @@ test("stale cart lines can be reduced but increasing and checkout recheck stock 
     ],
   };
   assert.match(
-    cart.validateCart(excessiveStock, breakfast),
+    bound.validateCart(excessiveStock, breakfast),
     /quedan 2 unidades/,
   );
 });
@@ -283,7 +319,7 @@ test("pickup slots stay within today's Colombia service with exact twenty-minute
     ["14:10:00.001", null],
   ]) {
     const now = new Date(`2026-10-07T${clock}-05:00`);
-    const slots = checkout.pickupSlots(lunchCart, now);
+    const slots = bound.pickupSlots(lunchCart, now);
     assert.equal(slots.length, 7);
     assert.equal(
       slots.find((slot) => slot.available)?.value ?? null,
@@ -291,14 +327,14 @@ test("pickup slots stay within today's Colombia service with exact twenty-minute
     );
   }
   const breakfastCart = add(cart.emptyCart(), "breakfast-eggs").cart;
-  const lastBreakfast = checkout
+  const lastBreakfast = bound
     .pickupSlots(breakfastCart, new Date("2026-10-07T08:10:00-05:00"))
     .filter((slot) => slot.available);
   assert.deepEqual(
     lastBreakfast.map((slot) => slot.value),
     ["2026-10-07T13:30:00.000Z"],
   );
-  const lateUtc = checkout.pickupSlots(
+  const lateUtc = bound.pickupSlots(
     lunchCart,
     new Date("2026-10-08T02:00:00Z"),
   );
@@ -318,17 +354,14 @@ test("checkout requires acceptance and a currently valid slot and snapshots cata
     lunch,
   ).cart;
   const slot = "2026-10-07T17:30:00.000Z";
-  assert.equal(checkout.reviewCheckout(state, slot, false, lunch).ok, false);
+  assert.equal(bound.reviewCheckout(state, slot, false, lunch).ok, false);
   for (const invalid of [
     "",
     "invalid-date",
     "2026-10-07T17:15:00.000Z",
     "2026-10-08T17:30:00.000Z",
   ])
-    assert.equal(
-      checkout.reviewCheckout(state, invalid, true, lunch).ok,
-      false,
-    );
+    assert.equal(bound.reviewCheckout(state, invalid, true, lunch).ok, false);
   const tampered = {
     ...state,
     lines: state.lines.map((line) => ({
@@ -337,7 +370,7 @@ test("checkout requires acceptance and a currently valid slot and snapshots cata
       name: "Forged name",
     })),
   };
-  const result = checkout.reviewCheckout(tampered, slot, true, lunch);
+  const result = bound.reviewCheckout(tampered, slot, true, lunch);
   assert.equal(result.ok, true);
   assert.equal(result.summary.total, 30000);
   assert.equal(result.summary.lines[0].name, "Pechuga a la plancha");
@@ -349,7 +382,7 @@ test("checkout requires acceptance and a currently valid slot and snapshots cata
     "review does not clear the cart or create an order",
   );
   assert.equal(
-    checkout.reviewCheckout(
+    bound.reviewCheckout(
       state,
       slot,
       true,
@@ -358,7 +391,7 @@ test("checkout requires acceptance and a currently valid slot and snapshots cata
     false,
   );
   assert.equal(
-    checkout.reviewCheckout(cart.emptyCart(), slot, true, lunch).ok,
+    bound.reviewCheckout(cart.emptyCart(), slot, true, lunch).ok,
     false,
   );
 });
@@ -369,7 +402,7 @@ test("checkout preview uses the next lunch service only in development and keeps
   const now = new Date("2026-10-07T23:50:00-05:00");
   try {
     process.env.NODE_ENV = "development";
-    const slots = checkout.pickupSlots(state, now, true);
+    const slots = bound.pickupSlots(state, now, true);
     assert.equal(slots.length, 7);
     assert.equal(slots[0].value, "2026-10-08T16:30:00.000Z");
     assert.ok(
@@ -378,16 +411,16 @@ test("checkout preview uses the next lunch service only in development and keeps
       ),
     );
     assert.equal(
-      checkout.reviewCheckout(state, slots[0].value, true, now, true).ok,
+      bound.reviewCheckout(state, slots[0].value, true, now, true).ok,
       true,
     );
     process.env.NODE_ENV = "production";
     assert.equal(
-      checkout.reviewCheckout(state, slots[0].value, true, now, true).ok,
+      bound.reviewCheckout(state, slots[0].value, true, now, true).ok,
       false,
     );
     assert.ok(
-      checkout.pickupSlots(state, now, true).every((slot) => !slot.available),
+      bound.pickupSlots(state, now, true).every((slot) => !slot.available),
     );
   } finally {
     if (originalEnv === undefined) delete process.env.NODE_ENV;
@@ -424,7 +457,7 @@ test("breakfast and lunch always retain separate pickup windows even in after-ho
       ]) {
         const now = new Date(`2026-10-07T${clock}:00-05:00`);
         for (const preview of [false, true]) {
-          const slots = checkout.pickupSlots(state, now, preview);
+          const slots = bound.pickupSlots(state, now, preview);
           assert.equal(slots.length, length);
           assert.equal(
             catalog.colombiaTime(new Date(slots[0].value)).minutes,
@@ -455,7 +488,7 @@ test("breakfast and lunch always retain separate pickup windows even in after-ho
       lunch,
     ).cart;
     assert.equal(
-      checkout.pickupSlots(
+      bound.pickupSlots(
         weekdayCart,
         new Date("2026-10-09T22:00:00-05:00"),
         true,
@@ -478,7 +511,7 @@ test("mixed meals are rejected on add and checkout, while legacy carts remain ed
       [morning, "chicken"],
       [afternoon, "breakfast-eggs"],
     ]) {
-      const result = cart.addMeal(
+      const result = bound.addMeal(
         state,
         "principal",
         other,
@@ -496,20 +529,15 @@ test("mixed meals are rejected on add and checkout, while legacy carts remain ed
       lines: [morning.lines[0], { ...afternoon.lines[0], id: "lunch" }],
     };
     assert.equal(
-      cart.restoreCart(mixed).lines.length,
+      bound.restoreCart(mixed).lines.length,
       2,
       "do not silently discard the user's existing cart",
     );
-    assert.match(cart.validateCart(mixed, lunch, true), /por separado/);
-    assert.equal(checkout.pickupSlots(mixed, lunch, true).length, 0);
+    assert.match(bound.validateCart(mixed, lunch, true), /por separado/);
+    assert.equal(bound.pickupSlots(mixed, lunch, true).length, 0);
     assert.equal(
-      checkout.reviewCheckout(
-        mixed,
-        "2026-10-07T17:30:00.000Z",
-        true,
-        lunch,
-        true,
-      ).ok,
+      bound.reviewCheckout(mixed, "2026-10-07T17:30:00.000Z", true, lunch, true)
+        .ok,
       false,
     );
   } finally {
@@ -520,12 +548,12 @@ test("mixed meals are rejected on add and checkout, while legacy carts remain ed
 
 test("restored carts reject corrupt or excessive data and never trust stored prices", () => {
   const valid = add(cart.emptyCart(), "breakfast-eggs", 2).cart;
-  assert.deepEqual(cart.restoreCart(valid), valid);
+  assert.deepEqual(bound.restoreCart(valid), valid);
   const poisoned = {
     ...valid,
     lines: [{ ...valid.lines[0], price: 1, owner: "other" }],
   };
-  assert.deepEqual(cart.restoreCart(poisoned), valid);
+  assert.deepEqual(bound.restoreCart(poisoned), valid);
   for (const bad of [
     null,
     [],
@@ -535,5 +563,5 @@ test("restored carts reject corrupt or excessive data and never trust stored pri
     { ...valid, lines: [{ ...valid.lines[0], mealId: "missing" }] },
     { ...valid, lines: [null] },
   ])
-    assert.deepEqual(cart.restoreCart(bad), cart.emptyCart());
+    assert.deepEqual(bound.restoreCart(bad), cart.emptyCart());
 });
