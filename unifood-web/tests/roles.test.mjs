@@ -12,6 +12,9 @@ const redirect = (location) => {
   throw Object.assign(new Error("redirect"), { location });
 };
 const uiMocks = {
+  "@/features/admin-dashboard/components/AdminDashboard": {
+    AdminDashboard: () => createElement("div", {}, "Administracion Dashboard"),
+  },
   "server-only": {},
   "@/features/admin/components/AdminComingSoon": {
     AdminComingSoon: () => createElement("div", {}, "Administracion Dashboard"),

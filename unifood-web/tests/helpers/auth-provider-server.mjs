@@ -8,6 +8,7 @@ import {
 } from "./worker-history-fixture.mjs";
 import { adminProfileBusinessFixture } from "./admin-profile-fixture.mjs";
 import { adminCatalogFixture } from "./admin-catalog-fixture.mjs";
+import { dashboardUiFixture } from "./admin-dashboard-ui-fixture.mjs";
 import { productImageFixture } from "./product-image-fixture.mjs";
 import { workerProfileBusinessFixture } from "./worker-profile-fixture.mjs";
 
@@ -93,6 +94,17 @@ function workerProfileState(profile) {
 }
 const adminProfileStates = new Map();
 const adminCatalogStates = new Map();
+const adminDashboardStates = new Map();
+function adminDashboardState(profile) {
+  if (!adminDashboardStates.has(profile.id))
+    adminDashboardStates.set(profile.id, {
+      scenario: "normal",
+      mode: null,
+      delay: 0,
+      gets: 0,
+    });
+  return adminDashboardStates.get(profile.id);
+}
 function adminCatalogState(profile) {
   if (!adminCatalogStates.has(profile.id))
     adminCatalogStates.set(profile.id, {
@@ -288,6 +300,21 @@ createServer(async (request, response) => {
         mutations: state.mutations,
         imageMutations: state.imageMutations,
       });
+    }
+    if (url.pathname === "/__test/admin-dashboard") {
+      let config;
+      if (request.method === "POST") {
+        let raw = "";
+        for await (const chunk of request) raw += chunk;
+        config = JSON.parse(raw);
+      } else config = { email: url.searchParams.get("email") };
+      const target = fixtures.find((entry) => entry.email === config.email);
+      if (!target) return json(response, 400, {});
+      if (config.reset) adminDashboardStates.delete(target.id);
+      const state = adminDashboardState(target);
+      for (const key of ["scenario", "mode", "delay"])
+        if (Object.hasOwn(config, key)) state[key] = config[key];
+      return json(response, 200, { gets: state.gets });
     }
     if (url.pathname === "/__test/admin-profile") {
       let config;
@@ -818,6 +845,30 @@ createServer(async (request, response) => {
         });
       }
       return json(response, 200, state.data);
+    }
+    if (url.pathname === "/api/admin/dashboard" && request.method === "GET") {
+      const state = adminDashboardState(profile);
+      state.gets++;
+      if (
+        !profile.active ||
+        adminProfileState(profile).inactive ||
+        profile.assignments !== 1 ||
+        profile.roles.length !== 1 ||
+        profile.roles[0] !== "ADMIN"
+      )
+        return json(response, 403, { message: "PRIVATE" });
+      const { mode, scenario, delay } = state;
+      if (delay)
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.min(delay, 5000)),
+        );
+      if (["401", "403", "500", "503"].includes(mode))
+        return json(response, Number(mode), { message: "PRIVATE_SQL" });
+      return json(
+        response,
+        200,
+        dashboardUiFixture(url.searchParams, scenario),
+      );
     }
     if (url.pathname === "/api/admin/profile" && request.method === "GET") {
       const state = adminProfileState(profile);
