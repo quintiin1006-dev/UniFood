@@ -3,13 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Utensils, UserRound } from "lucide-react";
+import { LayoutDashboard, Utensils, UserRound, Sparkles } from "lucide-react";
 import styles from "./Admin.module.css";
 
 const navigation = [
   { href: "/admin", label: "Dashboard", Icon: LayoutDashboard },
   { href: "/admin/catalogo", label: "Catálogo", Icon: Utensils },
-  { href: "/admin/perfil", label: "Mi perfil", Icon: UserRound },
 ];
 
 export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -17,11 +16,15 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className={styles.sidebarContent}>
       <div className={styles.brand}>
-        <Image src="/unifood-logo.png" width={42} height={42} alt="" />
+        <Image
+          src="/unifood-logo.png"
+          width={52}
+          height={52}
+          className={styles.brandMark}
+          alt=""
+        />
         <div>
-          <strong>
-            Uni<span>Food</span>
-          </strong>
+          <strong>UniFood</strong>
           <small>Administración</small>
         </div>
       </div>
@@ -37,8 +40,26 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
             {label}
           </Link>
         ))}
+        <ul className={styles.upcoming} aria-label="Próximos módulos">
+          <li>
+            <Sparkles size={19} strokeWidth={1.7} aria-hidden="true" />
+            <span>
+              Asistente IA
+              <small>Próximamente</small>
+            </span>
+          </li>
+        </ul>
+        <div className={styles.secondaryNav}>
+          <Link
+            href="/admin/perfil"
+            aria-current={pathname === "/admin/perfil" ? "page" : undefined}
+            onClick={onNavigate}
+          >
+            <UserRound size={19} strokeWidth={1.7} aria-hidden="true" />
+            Mi perfil
+          </Link>
+        </div>
       </nav>
-      <p className={styles.sidebarCaption}>Tu cafetería, en un solo lugar.</p>
     </div>
   );
 }

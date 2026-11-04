@@ -164,7 +164,17 @@ test("sidebar has real destinations and exactly one accessible active link", () 
     for (const href of ["/admin", "/admin/catalogo", "/admin/perfil"])
       assert.ok(html.includes(`href="${href}"`));
     assert.match(html, /<nav aria-label="Administración"/);
-    assert.doesNotMatch(html, /Asistente|worker/);
+    assert.match(html, /Asistente IA/);
+    assert.doesNotMatch(
+      html,
+      /Configuración|TU ESPACIO UNIFOOD|Tu cafetería, en un solo lugar/,
+    );
+    assert.equal((html.match(/Próximamente/g) ?? []).length, 1);
+    assert.ok(
+      html.indexOf("Asistente IA") < html.indexOf('href="/admin/perfil"'),
+    );
+    assert.equal((html.match(/<a /g) ?? []).length, 3);
+    assert.doesNotMatch(html, /worker/);
   }
 });
 
@@ -197,7 +207,7 @@ test("inactive cafeteria banner is shared across all ADMIN surfaces with one pan
   assert.match(html, /La cafetería está inactiva/);
   assert.match(html, /los cambios están deshabilitados/);
   assert.match(html, /Protected content/);
-  assert.equal((html.match(/Cerrar sesión/g) ?? []).length, 1);
+  assert.equal((html.match(/Cerrar sesión<\/button>/g) ?? []).length, 1);
 });
 
 test("every ADMIN page and layout rejects other active roles using their existing destination", async () => {

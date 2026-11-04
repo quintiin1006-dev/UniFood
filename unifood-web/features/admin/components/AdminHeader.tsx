@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu } from "lucide-react";
+import { Menu, Store } from "lucide-react";
 import LogoutButton from "@/features/auth/components/LogoutButton";
 import { useAdminProfile } from "@/features/admin-profile/context";
 import styles from "./Admin.module.css";
@@ -26,16 +26,25 @@ export function AdminHeader({
         <Menu size={23} aria-hidden="true" />
       </button>
       <div className={styles.context}>
-        <strong>{data?.cafeteria.name ?? "Administración de cafetería"}</strong>
-        {data && (
-          <span>
-            {data.site.name}
-            <span aria-hidden="true"> · </span>
-            {data.institution.name}
-          </span>
-        )}
+        <span className={styles.contextIcon} aria-hidden="true">
+          <Store size={23} strokeWidth={1.7} />
+        </span>
+        <div>
+          <strong>
+            {data?.cafeteria.name ?? "Administración de cafetería"}
+          </strong>
+          {data && (
+            <span className={styles.contextLocation}>
+              {data.site.name}
+              <span aria-hidden="true"> · </span>
+              {data.institution.name}
+            </span>
+          )}
+        </div>
       </div>
-      <LogoutButton entrypoint="panel" className={styles.logout} />
+      <div className={styles.headerActions} title="Cerrar sesión">
+        <LogoutButton entrypoint="panel" className={styles.logout} />
+      </div>
     </header>
   );
 }
