@@ -14,27 +14,33 @@ export function ProductsRanking({
     return (
       <div className={styles.unavailable}>
         <strong>Ranking no disponible</strong>
-        <p>
-          Faltan detalles de productos completos y fiables en algunos pedidos.
-          No se muestra un Top parcial como resultado definitivo.
-        </p>
+        <p>Faltan detalles fiables para mostrar el Top completo.</p>
       </div>
     );
   return (
     <>
       <p className={styles.rankingTotals}>
-        Universo completo:{" "}
-        <strong>
-          {formatCount(ranking.totals.products)}{" "}
-          {ranking.totals.products === "1" ? "producto" : "productos"}
-        </strong>{" "}
-        · {formatCount(ranking.totals.orders)} pedidos distintos ·{" "}
-        {formatCount(ranking.totals.units)} unidades ·{" "}
-        {formatMoney(ranking.totals.itemValue)}
+        Total del período:{" "}
+        {!uncollected && (
+          <>
+            <strong>
+              {formatCount(ranking.totals.products)}{" "}
+              {ranking.totals.products === "1" ? "producto" : "productos"}
+            </strong>{" "}
+            ·{" "}
+          </>
+        )}
+        {formatCount(ranking.totals.orders)}{" "}
+        {ranking.totals.orders === "1"
+          ? "pedido distinto"
+          : "pedidos distintos"}{" "}
+        · {formatCount(ranking.totals.units)}{" "}
+        {ranking.totals.units === "1" ? "unidad" : "unidades"} ·{" "}
+        {formatMoney(ranking.totals.itemValue)} en productos
       </p>
       {ranking.items.length === 0 ? (
         <p className={styles.empty}>
-          Sin unidades {uncollected ? "no recogidas" : "entregadas"}{" "}
+          Sin productos {uncollected ? "no recogidos" : "entregados"}{" "}
           verificables en este período.
         </p>
       ) : (
@@ -46,18 +52,20 @@ export function ProductsRanking({
             tabIndex={0}
           >
             <table>
-              <caption>
+              <caption className={styles.tableCaption}>
                 {label}: Top {ranking.limit} por unidades
               </caption>
               <thead>
                 <tr>
-                  <th scope="col">Producto histórico</th>
+                  <th scope="col">Producto</th>
                   <th scope="col">Unidades</th>
-                  <th scope="col">
-                    Pedidos {uncollected ? "afectados" : "distintos"}
-                  </th>
-                  <th scope="col">Valor histórico</th>
                   {uncollected && <th scope="col">Participación</th>}
+                  <th scope="col">Pedidos distintos</th>
+                  <th scope="col">
+                    {uncollected
+                      ? "Valor histórico asociado"
+                      : "Valor asociado"}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -72,12 +80,28 @@ export function ProductsRanking({
                       </span>
                       {p.historicalName ?? "Nombre histórico no disponible"}
                     </th>
-                    <td>{formatCount(p.units)}</td>
+                    <td className={styles.priorityCell}>
+                      {formatCount(p.units)}
+                    </td>
+                    {uncollected && (
+                      <td className={styles.priorityCell}>
+                        <span className={styles.shareCell}>
+                          {p.unitSharePercent !== null && (
+                            <span
+                              className={styles.shareTrack}
+                              aria-hidden="true"
+                            >
+                              <span
+                                style={{ width: p.unitSharePercent + "%" }}
+                              />
+                            </span>
+                          )}
+                          {formatPercent(p.unitSharePercent)}
+                        </span>
+                      </td>
+                    )}
                     <td>{formatCount(p.orders)}</td>
                     <td>{formatMoney(p.itemValue)}</td>
-                    {uncollected && (
-                      <td>{formatPercent(p.unitSharePercent)}</td>
-                    )}
                   </tr>
                 ))}
               </tbody>
@@ -98,11 +122,14 @@ export function ProductsRanking({
         </p>
       )}
       {uncollected && (
-        <p className={styles.hint}>
-          La participación usa todas las unidades no recogidas, incluidas las de
-          productos fuera del Top. Un pedido puede aparecer en varios productos;
-          sus conteos no se suman.
-        </p>
+        <details className={styles.metricHelp}>
+          <summary>Cómo interpretar la participación</summary>
+          <p>
+            La participación usa todas las unidades no recogidas, incluidas las
+            de productos fuera del Top. Un pedido puede aparecer en varios
+            productos; sus conteos no se suman.
+          </p>
+        </details>
       )}
     </>
   );

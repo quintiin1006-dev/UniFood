@@ -15,7 +15,6 @@ export function DeliveredProductsRanking({
       <div className={styles.panelHeading}>
         <div>
           <h2 id="delivered-products-title">Productos más entregados</h2>
-          <p>Unidades entregadas y valor histórico de sus productos.</p>
         </div>
         <span className={styles.badge}>Top {ranking.limit}</span>
       </div>

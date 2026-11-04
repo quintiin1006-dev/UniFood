@@ -65,6 +65,9 @@ test("summary renders accurate labels, backend rate and nominal money without fi
     "$ 30,00",
   ])
     assert.ok(html.includes(text), text);
+  assert.equal((html.match(/class="metric"/g) ?? []).length, 5);
+  assert.match(html, /class="monetarySummary"/);
+  assert.doesNotMatch(html, /Valor asociado a no recogidos/);
   assert.doesNotMatch(html, />Ingresos|>Ventas|>Pérdidas/);
 });
 test("trend has a zero-based proportional scale and exact accessible data for huge counts", () => {
@@ -85,8 +88,44 @@ test("zero trend and one-day series remain visible without fabricated values", (
   const data = adminDashboardFixture({ empty: true });
   const html = render("OrdersTrend", { trend: data.trend });
   assert.equal(p.chartGeometry(data.trend).max.toString(), "4");
-  assert.match(html, /<circle/);
+  assert.match(html, /height="0"/);
+  assert.equal((html.match(/data-count="0"/g) ?? []).length, 3);
+  assert.doesNotMatch(html, /<circle|<polyline/);
   assert.match(html, /<tbody>/);
+});
+
+test("grouped bars scale all three events and keep raw counts", () => {
+  const day = {
+    date: "2024-01-01",
+    receivedOrders: "9".repeat(90),
+    deliveredOrders: "3",
+    notCollectedOrders: "1",
+  };
+  const before = JSON.stringify(day);
+  const geometry = p.chartGeometry([day], 392);
+  assert.ok(geometry.max > BigInt(day.receivedOrders));
+  assert.ok(geometry.y(day.receivedOrders) >= 40);
+  const html = render("OrdersTrend", { trend: [day] });
+  assert.equal(JSON.stringify(day), before);
+  assert.equal((html.match(/data-series=/g) ?? []).length, 3);
+  assert.match(html, /data-series="receivedOrders"/);
+  assert.match(html, /data-series="deliveredOrders".*?data-count="3"/);
+  assert.match(html, /data-series="notCollectedOrders".*?data-count="1"/);
+  assert.match(html, /<pattern/);
+  assert.ok(html.includes(p.formatCount(day.receivedOrders)));
+});
+
+test("a 366-day bar chart preserves every date and series without aggregation", () => {
+  const trend = Array.from({ length: 366 }, (_, index) => ({
+    date: new Date(Date.UTC(2024, 0, index + 1)).toISOString().slice(0, 10),
+    receivedOrders: "6",
+    deliveredOrders: "3",
+    notCollectedOrders: "1",
+  }));
+  const html = render("OrdersTrend", { trend });
+  assert.equal((html.match(/data-series=/g) ?? []).length, 1098);
+  assert.match(html, /data-date="2024-12-31"/);
+  assert.doesNotMatch(html, /NaN|Infinity|undefined/);
 });
 test("rankings keep backend order and distinguish empty from unavailable", () => {
   const ranking = adminDashboardFixture().topDeliveredProducts;
@@ -99,7 +138,7 @@ test("rankings keep backend order and distinguish empty from unavailable", () =>
   const empty = render("ProductsRanking", {
     ranking: adminDashboardFixture({ empty: true }).topDeliveredProducts,
   });
-  assert.match(empty, /Sin unidades entregadas verificables/);
+  assert.match(empty, /Sin productos entregados verificables/);
   assert.doesNotMatch(empty, /Ranking no disponible/);
   const unavailable = render("ProductsRanking", {
     ranking: adminDashboardFixture({ unavailable: true }).notCollectedProducts,
@@ -129,23 +168,58 @@ test("no recogidos shows all-universe share and monetary sources without summing
   ])
     assert.ok(html.includes(text), text);
 });
-test("coverage explains NOT_CHECKED, UNKNOWN, limited data and scope without leaking backend codes", () => {
+test("coverage explains pending checks and real issues without an audit table or backend codes", () => {
   const html = render("DashboardCoverage", {
     coverage: adminDashboardFixture({ unavailable: true }).coverage,
   });
   for (const text of [
-    "Cobertura limitada",
-    "No comprobado",
-    "no está certificada",
-    "Histórico completo de la cafetería",
-    "requieren atención",
-    "No calculable",
+    "Información sobre los datos",
+    "¿Por qué?",
+    "No se ha comprobado todo el histórico",
+    "operaciones reales",
+    "Faltan detalles fiables",
   ])
     assert.ok(html.includes(text), text);
   assert.doesNotMatch(
     html,
-    /UNVERIFIED_ORDER_PROVENANCE|SELECTED_EVENT_ORDERS|SQL|PRIVATE/,
+    /NOT_CHECKED|UNKNOWN|CREATED_COHORT|RECORDED_TERMINAL_EVENTS|UNVERIFIED_ORDER_PROVENANCE|SELECTED_EVENT_ORDERS|SQL|PRIVATE|<table/,
   );
+});
+test("pending history never claims missing orders or invalid dates; detected anomalies stay expanded", () => {
+  const coverage = adminDashboardFixture().coverage;
+  const normal = render("DashboardCoverage", { coverage });
+  assert.doesNotMatch(
+    normal,
+    /podrían no incluir|fechas de finalización no válidas|<details open/,
+  );
+  assert.equal(
+    (normal.match(/No se ha comprobado todo el histórico/g) ?? []).length,
+    1,
+  );
+  coverage.checks[0].status = "WARN";
+  coverage.checks[0].affectedOrders = "1";
+  const invalid = render("DashboardCoverage", { coverage });
+  assert.match(invalid, /podrían no incluir todos los pedidos/);
+  assert.match(invalid, /<details open/);
+  assert.match(invalid, /fechas de finalización no válidas/);
+});
+test("five KPIs and one secondary amount preserve null rate and place uncollected money only in its section", () => {
+  const data = adminDashboardFixture({ empty: true });
+  const summary = render("DashboardSummary", { summary: data.summary });
+  assert.match(summary, /Sin base de cálculo/);
+  assert.doesNotMatch(summary, /0,00 %/);
+  assert.equal((summary.match(/<dd\b/g) ?? []).length, 6);
+  const section = render("NotCollectedProducts", {
+    ranking: data.notCollectedProducts,
+    summary: data.summary,
+  });
+  assert.match(section, /Productos distintos afectados/);
+  assert.match(section, /Valor asociado a pedidos no recogidos/);
+  assert.doesNotMatch(
+    section,
+    /<dt>Pedidos no recogidos|<dt>Unidades no recogidas|Universo completo/,
+  );
+  assert.match(section, /Total del período/);
 });
 function dashboard(state) {
   const loadedDashboard = availabilityLoader({
@@ -167,6 +241,13 @@ function dashboard(state) {
 test("initial loading announces progress and never fabricates zero metrics", () => {
   const html = dashboard({ loading: true, data: null, error: null });
   assert.match(html, /role="status"/);
+  assert.match(html, /Consultando el período seleccionado/);
+  assert.match(html, /aria-hidden="true"/);
+  assert.match(html, /skeletonChart/);
+  assert.match(html, /skeletonRows/);
+  assert.equal((html.match(/class="skeletonMetric"/g) ?? []).length, 5);
+  const placeholder = render("DashboardLoading", {});
+  assert.doesNotMatch(placeholder.replace(/<[^>]*>/g, ""), /[0-9$%]/);
   assert.doesNotMatch(html, /Resumen del período|Productos más entregados/);
 });
 for (const status of [401, 403, 503])
@@ -177,6 +258,7 @@ for (const status of [401, 403, 503])
       error: { status, message: "Mensaje seguro" },
     });
     assert.match(html, /role="alert"/);
+    assert.doesNotMatch(html, /skeletonChart/);
     assert.doesNotMatch(html, /Resumen del período/);
     assert.equal(html.includes("Iniciar sesión"), status === 401);
     assert.equal(html.includes("Reintentar"), status === 503);
@@ -188,13 +270,24 @@ test("full dashboard renders effective server period, all sections and empty cov
     data: adminDashboardFixture({ empty: true }),
   });
   for (const text of [
-    "Período aplicado",
+    "Período consultado",
     "Colombia",
-    "Valores en COP",
+    "Importes en COP",
     "Productos no recogidos",
     "Productos más entregados",
     "no confirma ausencia total",
   ])
     assert.ok(html.includes(text), text);
   assert.doesNotMatch(html, /Próximamente|PRIVATE/);
+});
+
+test("compact dates use the server period across month and year boundaries", () => {
+  const base = adminDashboardFixture().period;
+  for (const [from, to, range, expected] of [
+    ["2026-10-25", "2026-10-25", "TODAY", "25 oct 2026"],
+    ["2026-10-19", "2026-10-25", "LAST_7_DAYS", "19–25 oct 2026"],
+    ["2026-09-26", "2026-10-25", "LAST_30_DAYS", "26 sep – 25 oct 2026"],
+    ["2025-12-28", "2026-01-03", "CUSTOM", "28 dic 2025 – 3 ene 2026"],
+  ])
+    assert.equal(p.compactPeriodLabel({ ...base, range, from, to }), expected);
 });

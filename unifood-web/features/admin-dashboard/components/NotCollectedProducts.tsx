@@ -18,31 +18,29 @@ export function NotCollectedProducts({
     >
       <div className={styles.panelHeading}>
         <div>
-          <p className={styles.eyebrow}>SEGUIMIENTO OPERATIVO</p>
           <h2 id="not-collected-products-title">Productos no recogidos</h2>
-          <p>Unidades de productos en pedidos marcados como no recogidos.</p>
+          <p>Productos con más unidades sin recoger</p>
         </div>
         <span className={styles.badge}>Top {ranking.limit}</span>
       </div>
       <dl className={styles.impactGrid}>
         <div>
-          <dt>Pedidos no recogidos</dt>
-          <dd>{formatCount(summary.notCollectedOrders)}</dd>
-        </div>
-        <div>
-          <dt>Unidades no recogidas</dt>
-          <dd>{formatCount(summary.notCollectedUnits)}</dd>
-        </div>
-        <div>
-          <dt>Valor asociado a pedidos</dt>
+          <dt>Valor asociado a pedidos no recogidos</dt>
           <dd>{formatMoney(summary.notCollectedOrderValue)}</dd>
         </div>
+        <div>
+          <dt>Productos distintos afectados</dt>
+          <dd>{formatCount(ranking.totals.products)}</dd>
+        </div>
       </dl>
-      <p className={styles.hint}>
-        El valor asociado es el importe registrado en los pedidos. El desglose
-        utiliza los subtotales históricos de sus productos y puede diferir.
-        Ninguno acredita dinero cobrado.
-      </p>
+      <details className={styles.metricHelp}>
+        <summary>Sobre los valores registrados</summary>
+        <p>
+          El valor asociado es el importe registrado en los pedidos. El desglose
+          utiliza los subtotales históricos de sus productos y puede diferir.
+          Ninguno acredita dinero cobrado.
+        </p>
+      </details>
       <ProductsRanking ranking={ranking} uncollected />
     </section>
   );

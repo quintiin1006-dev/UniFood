@@ -50,17 +50,42 @@ export const periodLabel = (p: DashboardPeriod) =>
   p.from === p.to
     ? formatDay(p.from)
     : `${formatDay(p.from)} al ${formatDay(p.to)}`;
+export function compactPeriodLabel(p: DashboardPeriod): string {
+  const months = [
+    "ene",
+    "feb",
+    "mar",
+    "abr",
+    "may",
+    "jun",
+    "jul",
+    "ago",
+    "sep",
+    "oct",
+    "nov",
+    "dic",
+  ];
+  const [fy, fm, fd] = p.from.split("-");
+  const [ty, tm, td] = p.to.split("-");
+  const from = `${Number(fd)} ${months[Number(fm) - 1]}`;
+  const to = `${Number(td)} ${months[Number(tm) - 1]}`;
+  if (p.from === p.to) return `${to} ${ty}`;
+  if (fy !== ty) return `${from} ${fy} – ${to} ${ty}`;
+  if (fm !== tm) return `${from} – ${to} ${ty}`;
+  return `${Number(fd)}–${to} ${ty}`;
+}
 export function axisLabel(value: string): string {
   return value.length <= 9
     ? formatCount(value)
     : `≈${value[0]},${value.slice(1, 3).padEnd(2, "0")}×10^${value.length - 1}`;
 }
-export function chartGeometry(trend: DashboardTrend[], width = 980) {
-  const keys = [
-    "receivedOrders",
-    "deliveredOrders",
-    "notCollectedOrders",
-  ] as const;
+export function chartGeometry(
+  trend: DashboardTrend[],
+  width = 980,
+  keys: readonly (
+    "receivedOrders" | "deliveredOrders" | "notCollectedOrders"
+  )[] = ["receivedOrders", "deliveredOrders", "notCollectedOrders"],
+) {
   const observed = trend
     .flatMap((day) => keys.map((key) => BigInt(day[key])))
     .reduce((a, b) => (a > b ? a : b), BigInt(0));

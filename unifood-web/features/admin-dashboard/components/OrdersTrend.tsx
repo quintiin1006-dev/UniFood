@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   chartGeometry,
   axisLabel,
@@ -10,28 +10,26 @@ import type { DashboardTrend } from "../types";
 import styles from "./AdminDashboard.module.css";
 
 const series = [
-  {
-    key: "receivedOrders",
-    label: "Recibidos",
-    color: "#155bb5",
-    dash: undefined,
-  },
+  { key: "receivedOrders", label: "Recibidos", color: "#475a75" },
   {
     key: "deliveredOrders",
     label: "Entregados",
-    color: "#267056",
-    dash: "9 5",
+    color: "#0868e9",
   },
   {
     key: "notCollectedOrders",
     label: "No recogidos",
     color: "#9b570b",
-    dash: "2 5",
   },
 ] as const;
 export function OrdersTrend({ trend }: { trend: DashboardTrend[] }) {
   const figure = useRef<HTMLElement>(null);
   const [width, setWidth] = useState(980);
+  const viewport = useRef<HTMLDivElement>(null);
+  const [focusedDay, setFocusedDay] = useState(0);
+  const [tooltipDay, setTooltipDay] = useState<number | null>(null);
+  const patternId = useId() + "-not-collected";
+  const tooltipId = patternId + "-tooltip";
   useEffect(() => {
     if (!figure.current) return;
     const observer = new ResizeObserver((entries) => {
@@ -41,95 +39,224 @@ export function OrdersTrend({ trend }: { trend: DashboardTrend[] }) {
     observer.observe(figure.current);
     return () => observer.disconnect();
   }, []);
-  const geometry = chartGeometry(trend, width);
-  const labelIndices = [
-    ...new Set([0, Math.floor((trend.length - 1) / 2), trend.length - 1]),
-  ].filter((i) => i >= 0);
+  const chartWidth = Math.max(width, trend.length * 36 + 140);
+  const geometry = chartGeometry(trend, chartWidth);
+  const groupWidth = (chartWidth - 140) / Math.max(1, trend.length);
+  const barWidth = Math.min(22, (groupWidth - 6) / 3);
+  const labelStep = Math.max(1, Math.ceil(68 / groupWidth));
+  const empty = trend.every((day) => series.every((s) => day[s.key] === "0"));
   return (
     <section className={styles.panel} aria-labelledby="dashboard-trend-title">
       <div className={styles.panelHeading}>
         <div>
-          <h2 id="dashboard-trend-title">Evolución diaria de pedidos</h2>
-          <p>Recepción, entrega y no recogida según la fecha de cada evento.</p>
+          <h2 id="dashboard-trend-title">Pedidos por día</h2>
         </div>
       </div>
       <ul className={styles.legend} aria-label="Series del gráfico">
         {series.map((s) => (
           <li key={s.key}>
-            <svg width="28" height="12" aria-hidden="true">
-              <line
-                x1="0"
-                y1="6"
-                x2="28"
-                y2="6"
-                stroke={s.color}
-                strokeWidth="3"
-                strokeDasharray={s.dash}
-              />
-            </svg>
+            <span
+              className={
+                s.key === "receivedOrders"
+                  ? styles.receivedSwatch
+                  : s.key === "deliveredOrders"
+                    ? styles.deliveredSwatch
+                    : styles.notCollectedSwatch
+              }
+              aria-hidden="true"
+            />
             {s.label}
           </li>
         ))}
       </ul>
       <figure ref={figure} className={styles.chart}>
-        <svg
-          viewBox={`0 0 ${width} 290`}
-          role="img"
-          aria-labelledby="dashboard-chart-title dashboard-chart-description"
+        <div
+          className={styles.chartViewport}
+          ref={viewport}
+          role="region"
+          aria-label="Gráfico diario de pedidos"
+          tabIndex={0}
+          onBlur={(event) => {
+            if (
+              !event.currentTarget.contains(event.relatedTarget as Node | null)
+            )
+              setTooltipDay(null);
+          }}
+          onMouseLeave={() => setTooltipDay(null)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              setTooltipDay(null);
+              return;
+            }
+            if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key))
+              return;
+            event.preventDefault();
+            const target =
+              event.key === "Home"
+                ? 0
+                : event.key === "End"
+                  ? trend.length - 1
+                  : Math.max(
+                      0,
+                      Math.min(
+                        trend.length - 1,
+                        focusedDay + (event.key === "ArrowRight" ? 1 : -1),
+                      ),
+                    );
+            const group =
+              viewport.current?.querySelectorAll<SVGGElement>(
+                "[data-chart-day]",
+              )[target];
+            setFocusedDay(target);
+            setTooltipDay(target);
+            group?.focus();
+            group?.scrollIntoView({ block: "nearest", inline: "nearest" });
+          }}
         >
-          <title id="dashboard-chart-title">
-            Pedidos diarios recibidos, entregados y no recogidos
-          </title>
-          <desc id="dashboard-chart-description">
-            Líneas rectas con escala desde cero. Los valores exactos de todos
-            los días están en la tabla desplegable debajo del gráfico.
-          </desc>
-          {geometry.ticks.map((tick) => (
-            <g key={tick}>
-              <line
-                x1="100"
-                x2={width - 40}
-                y1={geometry.y(tick)}
-                y2={geometry.y(tick)}
-                stroke="#e3eaf2"
-              />
-              <text x="88" y={geometry.y(tick) + 4} textAnchor="end">
-                <title>{`${formatCount(tick)} pedidos`}</title>
-                {axisLabel(tick)}
-              </text>
-            </g>
-          ))}
-          {labelIndices.map((i) => (
-            <text key={i} x={geometry.x(i)} y="274" textAnchor="middle">
-              {formatDay(trend[i].date, true)}
-            </text>
-          ))}
-          {series.map((s, index) => (
-            <g key={s.key}>
-              <polyline
-                fill="none"
-                stroke={s.color}
-                strokeWidth="2.5"
-                strokeDasharray={s.dash}
-                points={trend
-                  .map((day, i) => `${geometry.x(i)},${geometry.y(day[s.key])}`)
-                  .join(" ")}
-              />
-              {trend.length === 1 && (
-                <circle
-                  cx={geometry.x(0)}
-                  cy={geometry.y(trend[0][s.key])}
-                  r={6 - index * 2}
-                  fill={s.color}
-                >
-                  <title>{`${s.label}: ${formatCount(trend[0][s.key])}`}</title>
-                </circle>
-              )}
-            </g>
-          ))}
-        </svg>
+          <svg
+            viewBox={`0 0 ${chartWidth} 290`}
+            width={chartWidth}
+            height={290}
+            role="group"
+            aria-labelledby="dashboard-chart-title"
+            aria-describedby="dashboard-chart-description"
+          >
+            <title id="dashboard-chart-title">
+              Pedidos recibidos, entregados y no recogidos por día
+            </title>
+            <desc id="dashboard-chart-description">
+              Tres barras por día, con escala desde cero. Usa las flechas para
+              consultar cada día y Escape para cerrar la información. Todos los
+              valores también están en la tabla desplegable.
+            </desc>
+            <defs>
+              <pattern
+                id={patternId}
+                width="6"
+                height="6"
+                patternUnits="userSpaceOnUse"
+              >
+                <rect width="6" height="6" fill="#fff4df" />
+                <path
+                  d="M-1 1L1 -1M0 6L6 0M5 7L7 5"
+                  stroke="#9b570b"
+                  strokeWidth="1.2"
+                />
+              </pattern>
+            </defs>
+            {geometry.ticks.map((tick) => (
+              <g key={tick}>
+                <line
+                  x1="100"
+                  x2={chartWidth - 40}
+                  y1={geometry.y(tick)}
+                  y2={geometry.y(tick)}
+                  stroke="#e3eaf2"
+                />
+                <text x="88" y={geometry.y(tick) + 4} textAnchor="end">
+                  <title>{`${formatCount(tick)} pedidos`}</title>
+                  {axisLabel(tick)}
+                </text>
+              </g>
+            ))}
+            {trend.map((day, i) => (
+              <g
+                key={day.date}
+                data-chart-day={day.date}
+                role="img"
+                aria-label={formatDay(day.date)}
+                aria-describedby={tooltipDay === i ? tooltipId : undefined}
+                tabIndex={i === focusedDay ? 0 : -1}
+                onFocus={() => {
+                  setFocusedDay(i);
+                  setTooltipDay(i);
+                }}
+                onMouseEnter={() => setTooltipDay(i)}
+                onClick={() => {
+                  setFocusedDay(i);
+                  setTooltipDay(i);
+                }}
+              >
+                <rect
+                  x={100 + i * groupWidth}
+                  y="38"
+                  width={groupWidth}
+                  height="205"
+                  fill={tooltipDay === i ? "#f3f6fb" : "transparent"}
+                  aria-hidden="true"
+                />
+                {i % labelStep === 0 && (
+                  <text
+                    x={100 + groupWidth * (i + 0.5)}
+                    y="274"
+                    textAnchor="middle"
+                  >
+                    {formatDay(day.date, true)}
+                  </text>
+                )}
+                {series.map((s, index) => {
+                  const y = geometry.y(day[s.key]);
+                  return (
+                    <g key={s.key}>
+                      <rect
+                        data-series={s.key}
+                        data-date={day.date}
+                        data-count={day[s.key]}
+                        x={
+                          100 +
+                          groupWidth * (i + 0.5) +
+                          (index - 1) * (barWidth + 2) -
+                          barWidth / 2
+                        }
+                        y={y}
+                        width={barWidth}
+                        height={240 - y}
+                        rx="2"
+                        fill={
+                          s.key === "notCollectedOrders"
+                            ? `url(#${patternId})`
+                            : s.color
+                        }
+                        stroke={s.color}
+                      >
+                        <title>{`${formatDay(day.date)} · ${s.label}: ${formatCount(day[s.key])}`}</title>
+                      </rect>
+                      {trend.length === 1 && (
+                        <text
+                          x={
+                            100 + groupWidth / 2 + (index - 1) * (barWidth + 2)
+                          }
+                          y={Math.max(26, y - 9)}
+                          textAnchor="middle"
+                        >
+                          {axisLabel(day[s.key])}
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
+              </g>
+            ))}
+          </svg>
+        </div>
+        {tooltipDay !== null && trend[tooltipDay] && (
+          <div className={styles.chartTooltip} id={tooltipId} role="tooltip">
+            <strong>{formatDay(trend[tooltipDay].date)}</strong>
+            {series.map((s) => (
+              <span key={s.key}>
+                {s.label}: <b>{formatCount(trend[tooltipDay][s.key])}</b>
+              </span>
+            ))}
+          </div>
+        )}
+        {empty && (
+          <p className={styles.chartEmpty}>
+            Sin eventos verificables en este período
+          </p>
+        )}
         <figcaption className={styles.hint}>
-          Días de Colombia · Pedidos registrados por evento.
+          {chartWidth > width &&
+            " Desplaza el gráfico para ver todos los días."}
           {geometry.max.toString().length > 9 &&
             " Eje abreviado; consulta los valores exactos en la tabla."}
         </figcaption>
