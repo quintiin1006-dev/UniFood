@@ -11,6 +11,7 @@ import com.santotofood.adapter.in.web.error.GlobalExceptionHandler;
 import com.santotofood.adapter.in.web.mapper.OrderResponseMapper;
 import com.santotofood.application.model.*;
 import com.santotofood.application.port.in.CancelOrderUseCase;
+import com.santotofood.application.port.in.CreateOwnOrderUseCase;
 import com.santotofood.application.port.out.AuthorizationQueryPort;
 import com.santotofood.application.service.OrderService;
 import com.santotofood.domain.model.*;
@@ -83,6 +84,11 @@ class ClientOrderCancellationApiTest {
     @Bean
     TimeProvider clock() {
       return mock(TimeProvider.class);
+    }
+
+    @Bean
+    CreateOwnOrderUseCase createOwnOrderUseCase() {
+      return mock(CreateOwnOrderUseCase.class);
     }
 
     @Bean

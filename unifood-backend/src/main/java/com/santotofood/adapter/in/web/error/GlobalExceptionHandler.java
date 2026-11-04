@@ -1,8 +1,10 @@
 package com.santotofood.adapter.in.web.error;
 
+import com.santotofood.application.exception.ClientProfileNotFoundException;
 import com.santotofood.application.exception.OrderNotFoundException;
 import com.santotofood.application.exception.OrderProcessingSequenceException;
 import com.santotofood.domain.exception.DomainException;
+import com.santotofood.domain.exception.InvalidOrderRequestException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import org.slf4j.Logger;
@@ -27,6 +29,22 @@ public class GlobalExceptionHandler {
 
     return buildResponse(
         HttpStatus.NOT_FOUND, exception.getCode().name(), exception.getMessage(), request);
+  }
+
+  @ExceptionHandler(InvalidOrderRequestException.class)
+  public ResponseEntity<ApiErrorResponse> handleInvalidOrderRequestException(
+      InvalidOrderRequestException exception, HttpServletRequest request) {
+
+    return buildResponse(
+        HttpStatus.BAD_REQUEST, exception.getCode().name(), exception.getMessage(), request);
+  }
+
+  @ExceptionHandler(ClientProfileNotFoundException.class)
+  public ResponseEntity<ApiErrorResponse> handleClientProfileNotFoundException(
+      ClientProfileNotFoundException exception, HttpServletRequest request) {
+
+    return buildResponse(
+        HttpStatus.FORBIDDEN, exception.getCode().name(), exception.getMessage(), request);
   }
 
   @ExceptionHandler(DomainException.class)
