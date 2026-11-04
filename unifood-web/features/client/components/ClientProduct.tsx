@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Clock3, Minus, Plus, ShoppingCart } from "lucide-react";
 import type { CartLine, CatalogMeal } from "../types";
-import type { DemoSite } from "../mocks/catalog";
+import type { ClientSite } from "../types";
 import {
   currency,
   MAX_CART_MEALS,
@@ -19,7 +19,7 @@ import CafeteriaSelector from "./CafeteriaSelector";
 import styles from "./ClientShopping.module.css";
 
 type ProductProps = {
-  site: DemoSite;
+  site: ClientSite;
   meal: CatalogMeal;
   initialTime: string;
 };
@@ -45,12 +45,12 @@ function ProductDetails({
   initialTime,
   line,
 }: ProductProps & { line?: CartLine }) {
-  const { cart, count, ready, add, update, ignoreServiceHours } =
+  const { menu, cart, count, ready, add, update, ignoreServiceHours } =
     useClientCart();
   const now = useColombiaClock(initialTime);
   const [quantity, setQuantity] = useState(line?.quantity ?? 1);
   const [notes, setNotes] = useState(line?.notes ?? "");
-  const availability = mealAvailability(meal, site.id, now, ignoreServiceHours);
+  const availability = mealAvailability(meal, now, ignoreServiceHours);
   const existing =
     cart.siteId === site.id
       ? cart.lines
@@ -68,7 +68,7 @@ function ProductDetails({
     cart.lines.length > 0
       ? cart.siteId !== site.id
         ? "Vacía tu carrito antes de cambiar de cafetería."
-        : cartMealKind(cart) !== meal.kind
+        : cartMealKind(menu, cart) !== meal.kind
           ? MIXED_MEALS_MESSAGE
           : ""
       : "";

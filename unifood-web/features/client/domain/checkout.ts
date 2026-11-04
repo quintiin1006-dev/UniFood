@@ -1,7 +1,7 @@
-import type { ClientCart } from "../types";
-import { findDemoSite, getSiteMeals } from "../mocks/catalog";
+import type { ClientCart, ClientMenu } from "../types";
 import { colombiaTime, COLOMBIA_TIME_ZONE, serviceWindow } from "./catalog";
 import { cartMealKind, restoreCart, validateCart } from "./cart";
+import { findSite } from "./menu";
 
 export const PREPARATION_MINUTES = 20;
 export const PICKUP_INTERVAL_MINUTES = 30;
@@ -41,20 +41,20 @@ export function pickupLabel(value: string) {
 
 /** Preview may use the next service date, but never changes the service's time window. */
 export function pickupSlots(
+  menu: ClientMenu,
   cart: ClientCart,
   now: Date,
   ignoreServiceHours = false,
 ): PickupSlot[] {
-  const safe = restoreCart(cart);
-  const site = findDemoSite(safe.siteId ?? undefined);
+  const safe = restoreCart(menu, cart);
+  const site = findSite(menu, safe.siteId ?? undefined);
   if (!site || !safe.lines.length) return [];
-  const kind = cartMealKind(safe);
+  const kind = cartMealKind(menu, safe);
   if (!kind) return [];
   const earliest = now.getTime() + PREPARATION_MINUTES * MINUTE;
   const preview = process.env.NODE_ENV === "development" && ignoreServiceHours;
-  const meals = getSiteMeals(site);
   const selectedMeals = safe.lines.map((line) =>
-    meals.find((meal) => meal.id === line.mealId)!,
+    site.meals.find((meal) => meal.id === line.mealId)!,
   );
   const [start, end] = serviceWindow(kind);
   const midnight =
@@ -83,20 +83,21 @@ export function pickupSlots(
 }
 
 export function reviewCheckout(
+  menu: ClientMenu,
   cart: ClientCart,
   pickupAt: string,
   accepted: boolean,
   now: Date,
   ignoreServiceHours = false,
 ): CheckoutResult {
-  const error = validateCart(cart, now, ignoreServiceHours);
+  const error = validateCart(menu, cart, now, ignoreServiceHours);
   if (error) return { ok: false, error };
   if (!accepted)
     return {
       ok: false,
       error: "Acepta las condiciones de recogida para continuar.",
     };
-  const slot = pickupSlots(cart, now, ignoreServiceHours).find(
+  const slot = pickupSlots(menu, cart, now, ignoreServiceHours).find(
     (item) => item.value === pickupAt && item.available,
   );
   if (!slot)
@@ -105,11 +106,10 @@ export function reviewCheckout(
       error:
         "Elige una hora disponible con al menos 20 minutos de preparación.",
     };
-  const safe = restoreCart(cart);
-  const site = findDemoSite(safe.siteId!)!;
-  const meals = getSiteMeals(site);
+  const safe = restoreCart(menu, cart);
+  const site = findSite(menu, safe.siteId!)!;
   const lines = safe.lines.map((line) => {
-    const meal = meals.find((item) => item.id === line.mealId)!;
+    const meal = site.meals.find((item) => item.id === line.mealId)!;
     return {
       id: line.id,
       name: meal.name,

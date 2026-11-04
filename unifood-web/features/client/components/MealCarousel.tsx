@@ -10,7 +10,7 @@ import {
   Play,
 } from "lucide-react";
 import type { CatalogMeal } from "../types";
-import { mealHref } from "../mocks/catalog";
+import { mealHref } from "../domain/menu";
 import styles from "./MealCarousel.module.css";
 
 export default function MealCarousel({

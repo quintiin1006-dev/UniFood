@@ -1,22 +1,25 @@
 "use client";
 import Link from "next/link";
 import { ArrowRight, ShoppingBag, Trash2 } from "lucide-react";
-import { findDemoSite, getSiteMeals } from "../mocks/catalog";
 import { currency } from "../domain/catalog";
 import {
   cartMealKind,
   MIXED_MEALS_MESSAGE,
   validateCart,
 } from "../domain/cart";
+import { findSite } from "../domain/menu";
 import { useColombiaClock } from "../hooks/useColombiaClock";
 import { useClientCart } from "./ClientCartProvider";
 import CartLineItem from "./CartLineItem";
+import MenuUnavailable from "./MenuUnavailable";
 import styles from "./ClientShopping.module.css";
 
 export default function ClientCart({ initialTime }: { initialTime: string }) {
-  const { cart, ready, count, clear, ignoreServiceHours } = useClientCart();
+  const { cart, ready, count, clear, ignoreServiceHours, menu } =
+    useClientCart();
   const now = useColombiaClock(initialTime);
-  const site = findDemoSite(cart.siteId ?? undefined);
+  const site = findSite(menu, cart.siteId ?? undefined);
+  if (menu.unavailable) return <MenuUnavailable />;
   if (!ready) return <p role="status">Cargando tu carrito…</p>;
   if (!site || !cart.lines.length)
     return (
@@ -29,8 +32,8 @@ export default function ClientCart({ initialTime }: { initialTime: string }) {
         </Link>
       </section>
     );
-  const meals = getSiteMeals(site);
-  const issue = validateCart(cart, now, ignoreServiceHours);
+  const meals = site.meals;
+  const issue = validateCart(menu, cart, now, ignoreServiceHours);
   const total = cart.lines.reduce(
     (sum, line) =>
       sum +
@@ -71,7 +74,7 @@ export default function ClientCart({ initialTime }: { initialTime: string }) {
       </p>
       {issue && (
         <p className={styles.notice} aria-live="polite">
-          {!cartMealKind(cart)
+          {!cartMealKind(menu, cart)
             ? MIXED_MEALS_MESSAGE
             : "Revisa la disponibilidad de tus platos antes de continuar."}
         </p>

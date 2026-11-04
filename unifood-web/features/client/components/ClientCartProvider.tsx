@@ -17,13 +17,14 @@ import {
   updateMeal,
 } from "../domain/cart";
 import { reviewCheckout, type CheckoutResult } from "../domain/checkout";
-import type { ClientCart } from "../types";
+import type { ClientCart, ClientMenu } from "../types";
 import ConfirmDialog from "./ConfirmDialog";
 import styles from "./ClientShopping.module.css";
 
 export const CART_STORAGE_KEY = "unifood.client.cart.v1";
 const HOURS_PREVIEW_KEY = "unifood.client.hours-preview.v1";
 type CartContextValue = {
+  menu: ClientMenu;
   cart: ClientCart;
   ready: boolean;
   count: number;
@@ -46,6 +47,8 @@ type CartContextValue = {
     accepted: boolean,
   ) => CheckoutResult;
   clear: () => void;
+  /** Called after the backend accepted the order: the cart is emptied only then. */
+  finishOrder: () => void;
   chooseSite: (siteId: string, proceed: () => void) => void;
 };
 const CartContext = createContext<CartContextValue | null>(null);
@@ -57,9 +60,11 @@ export function useClientCart() {
 
 export default function ClientCartProvider({
   userId,
+  menu,
   children,
 }: {
   userId: string;
+  menu: ClientMenu;
   children: React.ReactNode;
 }) {
   const [cart, setCart] = useState<ClientCart>(emptyCart);
@@ -112,7 +117,7 @@ export default function ClientCartProvider({
       try {
         const raw = localStorage.getItem(CART_STORAGE_KEY);
         const saved = raw ? JSON.parse(raw) : null;
-        if (saved?.ownerId === userId) next = restoreCart(saved.cart);
+        if (saved?.ownerId === userId) next = restoreCart(menu, saved.cart);
         else if (saved) localStorage.removeItem(CART_STORAGE_KEY);
         storageSynced.current = true;
       } catch {
@@ -161,7 +166,7 @@ export default function ClientCartProvider({
       window.removeEventListener("storage", sync);
       window.removeEventListener("unifood:logout", logout);
     };
-  }, [userId]);
+  }, [userId, menu]);
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(null), 5500);
@@ -173,6 +178,7 @@ export default function ClientCartProvider({
       globalThis.crypto?.randomUUID?.() ??
       `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const result = addMeal(
+      menu,
       current.current,
       siteId,
       mealId,
@@ -204,6 +210,7 @@ export default function ClientCartProvider({
   const update: CartContextValue["update"] = (id, changes) => {
     if (!ready) return "Espera a que termine de cargar el carrito.";
     const result = updateMeal(
+      menu,
       current.current,
       id,
       changes,
@@ -232,7 +239,9 @@ export default function ClientCartProvider({
         try {
           const saved = raw ? JSON.parse(raw) : null;
           latest =
-            saved?.ownerId === userId ? restoreCart(saved.cart) : emptyCart();
+            saved?.ownerId === userId
+              ? restoreCart(menu, saved.cart)
+              : emptyCart();
         } catch {
           latest = emptyCart();
         }
@@ -254,6 +263,7 @@ export default function ClientCartProvider({
       };
     }
     return reviewCheckout(
+      menu,
       latest,
       pickupAt,
       accepted,
@@ -269,6 +279,7 @@ export default function ClientCartProvider({
   return (
     <CartContext.Provider
       value={{
+        menu,
         cart,
         ready,
         count: cartCount(cart),
@@ -279,6 +290,7 @@ export default function ClientCartProvider({
         update,
         confirmCheckout,
         clear: () => setConfirmClear(true),
+        finishOrder: () => persist(emptyCart()),
         chooseSite,
       }}
     >

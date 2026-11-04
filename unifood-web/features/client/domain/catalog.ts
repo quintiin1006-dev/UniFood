@@ -37,15 +37,9 @@ export function serviceWindow(kind: MealKind): readonly [number, number] {
 }
 export function serviceAvailability(
   kind: MealKind,
-  siteId: string,
   date: Date,
   ignoreServiceHours = false,
 ) {
-  if (kind === "breakfast" && siteId !== "principal")
-    return {
-      open: false,
-      reason: "Disponible únicamente en la Sede Principal",
-    };
   if (process.env.NODE_ENV === "development" && ignoreServiceHours)
     return { open: true, reason: "Horario de prueba activo" };
   const { minutes } = colombiaTime(date);
@@ -55,16 +49,16 @@ export function serviceAvailability(
     reason: `Disponible de ${serviceHours(kind)} · Hora de Colombia`,
   };
 }
+/** Which sites offer a breakfast is data-driven: a site only lists the dishes it serves. */
 export function mealAvailability(
   meal: CatalogMeal,
-  siteId: string,
   date: Date,
   ignoreServiceHours = false,
 ) {
   if (!meal.availableDays.includes(colombiaTime(date).day))
     return { open: false, reason: "Este plato no está disponible hoy" };
   if (meal.stock <= 0) return { open: false, reason: "Agotado por hoy" };
-  return serviceAvailability(meal.kind, siteId, date, ignoreServiceHours);
+  return serviceAvailability(meal.kind, date, ignoreServiceHours);
 }
 
 /** Browse today's stocked offerings; ordering hours are checked separately on every add. */

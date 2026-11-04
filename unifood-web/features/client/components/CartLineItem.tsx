@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Minus, Plus, Pencil, Trash2 } from "lucide-react";
 import type { CartLine, CatalogMeal } from "../types";
 import { currency, MAX_CART_MEALS, mealAvailability } from "../domain/catalog";
-import { mealHref } from "../mocks/catalog";
+import { mealHref } from "../domain/menu";
 import { useClientCart } from "./ClientCartProvider";
 import CartNotesDialog from "./CartNotesDialog";
 import styles from "./ClientShopping.module.css";
@@ -27,7 +27,7 @@ export default function CartLineItem({
   const [editing, setEditing] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const gesture = useRef<{ x: number; y: number } | null>(null);
-  const availability = mealAvailability(meal, siteId, now, ignoreServiceHours);
+  const availability = mealAvailability(meal, now, ignoreServiceHours);
   const totalQuantity = cart.lines
     .filter((item) => item.mealId === meal.id)
     .reduce((sum, item) => sum + item.quantity, 0);

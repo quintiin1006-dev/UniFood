@@ -3,13 +3,9 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Search, SearchX, X } from "lucide-react";
-import {
-  getSiteMeals,
-  mealHref,
-  type DemoSite,
-  type DemoCategory,
-} from "../mocks/catalog";
+import type { ClientSite } from "../types";
 import { currency, mealAvailability } from "../domain/catalog";
+import { mealHref, type MenuCategory } from "../domain/menu";
 import { useColombiaClock } from "../hooks/useColombiaClock";
 import CafeteriaSelector from "./CafeteriaSelector";
 import { useClientCart } from "./ClientCartProvider";
@@ -25,8 +21,8 @@ export default function ClientMenu({
   category,
   initialTime,
 }: {
-  site: DemoSite;
-  category: DemoCategory;
+  site: ClientSite;
+  category: MenuCategory;
   initialTime: string;
 }) {
   const [search, setSearch] = useState("");
@@ -37,7 +33,7 @@ export default function ClientMenu({
     setSearch("");
     searchInput.current?.focus();
   }
-  const meals = getSiteMeals(site).filter(
+  const meals = site.meals.filter(
     (meal) =>
       (meal.category === category.id ||
         (category.id === "almuerzos" && meal.kind === "lunch")) &&
@@ -104,13 +100,9 @@ export default function ClientMenu({
                   <strong className={styles.price}>
                     {currency.format(meal.price)}
                   </strong>
-                  {!mealAvailability(meal, site.id, now, ignoreServiceHours)
-                    .open && (
+                  {!mealAvailability(meal, now, ignoreServiceHours).open && (
                     <small className={styles.availability}>
-                      {
-                        mealAvailability(meal, site.id, now, ignoreServiceHours)
-                          .reason
-                      }
+                      {mealAvailability(meal, now, ignoreServiceHours).reason}
                     </small>
                   )}
                 </div>

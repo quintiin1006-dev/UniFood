@@ -18,6 +18,18 @@ export type CatalogMeal = {
   availableDays: number[];
 };
 
+export type ClientSite = {
+  id: string;
+  name: string;
+  city: string;
+  image: string;
+  cafeteria: string;
+  meals: CatalogMeal[];
+};
+
+/** Menu served by the backend for the signed-in client's institution. */
+export type ClientMenu = { sites: ClientSite[]; unavailable: boolean };
+
 export type CartLine = {
   id: string;
   mealId: string;

@@ -1,10 +1,10 @@
 import Image from "next/image";
 import { ChevronRight, MapPin } from "lucide-react";
-import { demoSites } from "../mocks/catalog";
+import type { ClientSite } from "../types";
 import SiteLink from "./SiteLink";
 import styles from "./ClientCatalog.module.css";
 
-export default function SiteSelection() {
+export default function SiteSelection({ sites }: { sites: ClientSite[] }) {
   return (
     <section className={styles.selection} aria-labelledby="site-title">
       <div className={styles.pageHeading}>
@@ -16,7 +16,7 @@ export default function SiteSelection() {
         <p>Selecciona tu sede para explorar el menú.</p>
       </div>
       <ul className={styles.siteList} aria-label="Sedes">
-        {demoSites.map((site) => (
+        {sites.map((site) => (
           <li key={site.id}>
             <SiteLink className={styles.siteCard} siteId={site.id}>
               <Image

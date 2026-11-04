@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { House, UserRound, ShoppingCart, ReceiptText } from "lucide-react";
 import { useClientCart } from "./ClientCartProvider";
-import { findDemoSite } from "../mocks/catalog";
+import { findSite } from "../domain/menu";
 import styles from "./ClientShell.module.css";
 
 export default function ClientBottomNav() {
@@ -12,9 +12,9 @@ export default function ClientBottomNav() {
   const profileActive = pathname.startsWith("/cuenta/perfil");
   const cartActive =
     pathname === "/cuenta/carrito" || pathname.startsWith("/cuenta/carrito/");
-  const { count, cart } = useClientCart();
+  const { count, cart, menu } = useClientCart();
   const query = useSearchParams();
-  const site = findDemoSite(query.get("sede") ?? cart.siteId ?? undefined);
+  const site = findSite(menu, query.get("sede") ?? cart.siteId ?? undefined);
 
   return (
     <nav className={styles.nav} aria-label="Navegación del estudiante">

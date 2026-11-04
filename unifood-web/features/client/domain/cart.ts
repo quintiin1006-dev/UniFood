@@ -1,6 +1,6 @@
-import { findDemoSite, getSiteMeals } from "../mocks/catalog";
-import type { ClientCart, MealKind } from "../types";
+import type { ClientCart, ClientMenu, MealKind } from "../types";
 import { MAX_CART_MEALS, NOTES_LIMIT, mealAvailability } from "./catalog";
+import { findSite } from "./menu";
 
 export const emptyCart = (): ClientCart => ({ siteId: null, lines: [] });
 export const cartCount = (cart: ClientCart) =>
@@ -10,13 +10,15 @@ export const MIXED_MEALS_MESSAGE =
   "Los desayunos y los almuerzos deben pedirse por separado. Retira un tipo de comida del carrito para continuar.";
 
 /** A null kind identifies an empty or mixed cart, including carts saved before this rule. */
-export function cartMealKind(cart: ClientCart): MealKind | null {
-  const site = findDemoSite(cart.siteId ?? undefined);
+export function cartMealKind(
+  menu: ClientMenu,
+  cart: ClientCart,
+): MealKind | null {
+  const site = findSite(menu, cart.siteId ?? undefined);
   if (!site || !cart.lines.length) return null;
-  const meals = getSiteMeals(site);
   const kinds = new Set(
     cart.lines.map(
-      (line) => meals.find((meal) => meal.id === line.mealId)?.kind,
+      (line) => site.meals.find((meal) => meal.id === line.mealId)?.kind,
     ),
   );
   return kinds.size === 1 ? ([...kinds][0] ?? null) : null;
@@ -24,6 +26,7 @@ export function cartMealKind(cart: ClientCart): MealKind | null {
 
 /** Reducing a stale line is allowed; increasing it checks current availability again. */
 export function updateMeal(
+  menu: ClientMenu,
   cart: ClientCart,
   lineId: string,
   changes: Partial<Pick<ClientCart["lines"][number], "quantity" | "notes">>,
@@ -52,6 +55,7 @@ export function updateMeal(
       lines: cart.lines.filter((item) => item.id !== lineId),
     };
     const result = addMeal(
+      menu,
       remaining,
       cart.siteId ?? "",
       line.mealId,
@@ -77,24 +81,19 @@ export function updateMeal(
 }
 
 export function validateCart(
+  menu: ClientMenu,
   cart: ClientCart,
   now: Date,
   ignoreServiceHours = false,
 ): string | null {
-  const safe = restoreCart(cart);
-  const site = findDemoSite(safe.siteId ?? undefined);
+  const safe = restoreCart(menu, cart);
+  const site = findSite(menu, safe.siteId ?? undefined);
   if (!site || !safe.lines.length)
     return "Agrega al menos un plato válido a tu carrito.";
-  const meals = getSiteMeals(site);
-  if (!cartMealKind(safe)) return MIXED_MEALS_MESSAGE;
+  if (!cartMealKind(menu, safe)) return MIXED_MEALS_MESSAGE;
   for (const line of safe.lines) {
-    const meal = meals.find((item) => item.id === line.mealId)!;
-    const availability = mealAvailability(
-      meal,
-      site.id,
-      now,
-      ignoreServiceHours,
-    );
+    const meal = site.meals.find((item) => item.id === line.mealId)!;
+    const availability = mealAvailability(meal, now, ignoreServiceHours);
     if (!availability.open) return `${meal.name}: ${availability.reason}.`;
     const quantity = safe.lines
       .filter((item) => item.mealId === meal.id)
@@ -106,6 +105,7 @@ export function validateCart(
 }
 
 export function addMeal(
+  menu: ClientMenu,
   cart: ClientCart,
   siteId: string,
   mealId: string,
@@ -116,14 +116,14 @@ export function addMeal(
   ignoreServiceHours = false,
 ): CartResult {
   const fail = (error: string) => ({ cart, error });
-  const site = findDemoSite(siteId);
-  const meal = site && getSiteMeals(site).find((item) => item.id === mealId);
+  const site = findSite(menu, siteId);
+  const meal = site?.meals.find((item) => item.id === mealId);
   if (!meal) return fail("Este plato ya no está disponible.");
   if (cart.lines.length && cart.siteId !== siteId)
     return fail("Vacía tu carrito antes de cambiar de cafetería.");
-  if (cart.lines.length && cartMealKind(cart) !== meal.kind)
+  if (cart.lines.length && cartMealKind(menu, cart) !== meal.kind)
     return fail(MIXED_MEALS_MESSAGE);
-  const availability = mealAvailability(meal, siteId, now, ignoreServiceHours);
+  const availability = mealAvailability(meal, now, ignoreServiceHours);
   if (!availability.open) return fail(availability.reason);
   if (
     !Number.isInteger(quantity) ||
@@ -156,19 +156,23 @@ export function addMeal(
   };
 }
 
-/** Treat browser storage as untrusted. Never persist or accept prices or identity fields. */
-export function restoreCart(value: unknown): ClientCart {
+/**
+ * Treat browser storage as untrusted. Never persist or accept prices or identity fields.
+ * Carts saved against an older menu (for example, before the backend served it) are discarded.
+ */
+export function restoreCart(menu: ClientMenu, value: unknown): ClientCart {
   if (!value || typeof value !== "object") return emptyCart();
   const record = value as Partial<ClientCart>;
   const site =
-    typeof record.siteId === "string" ? findDemoSite(record.siteId) : undefined;
+    typeof record.siteId === "string"
+      ? findSite(menu, record.siteId)
+      : undefined;
   if (
     !site ||
     !Array.isArray(record.lines) ||
     record.lines.length > MAX_CART_MEALS
   )
     return emptyCart();
-  const meals = getSiteMeals(site);
   const ids = new Set<string>();
   const cart = emptyCart();
   cart.siteId = site.id;
@@ -184,10 +188,11 @@ export function restoreCart(value: unknown): ClientCart {
       line.quantity < 1 ||
       line.quantity > MAX_CART_MEALS ||
       typeof line.notes !== "string" ||
-      line.notes.length > NOTES_LIMIT ||
-      !meals.some((meal) => meal.id === line.mealId)
+      line.notes.length > NOTES_LIMIT
     )
       return emptyCart();
+    // The menu changes during the day: a withdrawn dish costs its line, not the whole cart.
+    if (!site.meals.some((meal) => meal.id === line.mealId)) continue;
     ids.add(line.id);
     cart.lines.push({
       id: line.id,

@@ -4,6 +4,7 @@ import { requireAuth } from "@/features/auth/server/session";
 import { destination, isClient } from "@/features/auth/validation";
 import ClientShell from "@/features/client/components/ClientShell";
 import ClientCartProvider from "@/features/client/components/ClientCartProvider";
+import { loadClientMenu } from "@/features/client/server/menu";
 
 export const dynamic = "force-dynamic";
 export const viewport: Viewport = {
@@ -18,8 +19,9 @@ export default async function ClientLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const { profile } = await requireAuth();
   if (!isClient(profile)) redirect(destination(profile));
+  const menu = await loadClientMenu();
   return (
-    <ClientCartProvider key={profile.id} userId={profile.id}>
+    <ClientCartProvider key={profile.id} userId={profile.id} menu={menu}>
       <ClientShell>{children}</ClientShell>
     </ClientCartProvider>
   );

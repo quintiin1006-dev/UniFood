@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { Coffee, Utensils, Clock3 } from "lucide-react";
-import { getSiteMeals, type DemoSite } from "../mocks/catalog";
+import type { ClientSite } from "../types";
 import {
   featuredMeals,
   serviceAvailability,
@@ -19,13 +19,14 @@ export default function ClientHome({
   initialTime,
 }: {
   fullName: string | null;
-  site: DemoSite;
+  site: ClientSite;
   initialTime: string;
 }) {
   const now = useColombiaClock(initialTime);
   const { ignoreServiceHours } = useClientCart();
   const firstName = fullName?.trim().split(/\s+/)[0];
-  const featured = featuredMeals(getSiteMeals(site), now);
+  const featured = featuredMeals(site.meals, now);
+  const offersBreakfast = site.meals.some((meal) => meal.kind === "breakfast");
   return (
     <section className={styles.home} aria-labelledby="client-home-title">
       <div className={styles.pageHeading}>
@@ -45,33 +46,27 @@ export default function ClientHome({
         <nav className={styles.mealTypes} aria-label="Tipos de comida">
           {(["breakfast", "lunch"] as const).map((kind) => {
             const breakfast = kind === "breakfast";
-            const availability = serviceAvailability(
-              kind,
-              site.id,
-              now,
-              ignoreServiceHours,
-            );
+            const notServed = breakfast && !offersBreakfast;
+            const open =
+              !notServed &&
+              serviceAvailability(kind, now, ignoreServiceHours).open;
             const Icon = breakfast ? Coffee : Utensils;
             const content = (
               <>
                 <Icon size={30} strokeWidth={1.7} aria-hidden="true" />
                 <strong>{breakfast ? "Desayunos" : "Almuerzos"}</strong>
                 <span>
-                  {breakfast && site.id !== "principal"
-                    ? "Disponible únicamente en la Sede Principal"
-                    : serviceHours(kind)}
+                  {notServed ? "No se sirve en esta sede" : serviceHours(kind)}
                 </span>
-                {!availability.open && (
+                {!open && (
                   <small>
                     <Clock3 size={13} aria-hidden="true" />
-                    {breakfast && site.id !== "principal"
-                      ? "Otra sede"
-                      : "Fuera de horario"}
+                    {notServed ? "Otra sede" : "Fuera de horario"}
                   </small>
                 )}
               </>
             );
-            return availability.open ? (
+            return open ? (
               <Link
                 key={kind}
                 className={breakfast ? styles.breakfastType : styles.lunchType}

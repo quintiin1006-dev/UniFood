@@ -1,9 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
-import type { DemoSite } from "../mocks/catalog";
+import type { ClientSite } from "../types";
 import styles from "./ClientCatalog.module.css";
-export default function CafeteriaSelector({ site }: { site: DemoSite }) {
+export default function CafeteriaSelector({ site }: { site: ClientSite }) {
   return (
     <Link
       className={styles.cafeteriaSelector}
