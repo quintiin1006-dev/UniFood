@@ -36,7 +36,8 @@ export default defineConfig({
           env: {
             API_URL: "http://127.0.0.1:3101",
             SUPABASE_URL: "http://127.0.0.1:3101",
-            SUPABASE_PUBLISHABLE_KEY: "opaque-public-key-test-only",
+            SUPABASE_PUBLISHABLE_KEY:
+              "sb_publishable_FAKE_E2E_ONLY_NOT_A_REAL_KEY",
           },
         },
       ],
