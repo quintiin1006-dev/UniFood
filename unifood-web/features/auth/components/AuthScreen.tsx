@@ -512,10 +512,10 @@ export default function AuthScreen({
             {title}
           </h1>
           <p className={styles.description}>{description}</p>
-          {/* Firefox must not restore disabled attributes before panel hydration. */}
+          {/* Firefox must not restore disabled attributes before login hydration. */}
           <form
             method="post"
-            autoComplete={isLogin && entrypoint === "panel" ? "off" : undefined}
+            autoComplete={isLogin ? "off" : undefined}
             onSubmit={submit}
             className={`${styles.form} ${isLogin ? styles.loginForm : ""}`}
             aria-busy={busy}
