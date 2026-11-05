@@ -260,10 +260,12 @@ for (const [name, login, destination, api] of [
       test.setTimeout(90_000);
       expect((await submitLogin(page, login, name)).status()).toBe(200);
       await expect(page).toHaveURL(new URL(destination, page.url()).href);
-      await expireSession(page);
-      const before = await page.context().cookies();
+      // The outage starts first: otherwise a background request could validly
+      // renew the expired session before the assertions below begin.
       await providerFailure(page, name, mode);
       try {
+        await expireSession(page);
+        const before = await page.context().cookies();
         const denied =
           name === "worker"
             ? page.request.get(api, { timeout: 60_000 })
