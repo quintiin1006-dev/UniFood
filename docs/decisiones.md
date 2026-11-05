@@ -57,10 +57,11 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
 
 ## 4. Flujo del cliente
 
-1. Registro con OTP e inicio de sesión. El dominio del correo determina la universidad.
+1. Registro con OTP e inicio de sesión. El dominio del correo determina la universidad; el
+   cliente no la elige.
 2. Elegir sede y luego cafetería entre las ACTIVAS de esa sede.
-3. Pantalla principal con módulos Menú, Mi pedido, Historial y Perfil: barra inferior en
-   celular, sidebar en escritorio y carrito como botón flotante o dentro del Menú.
+3. Pantalla principal con módulos Inicio, Mi pedido, Historial y Perfil: barra inferior en
+   celular, sidebar en escritorio y carrito como botón flotante o dentro de Inicio.
 
 - Modelo multi-sede y multi-cafetería desde ya.
 - Si solo hay una opción de sede o de cafetería, se salta ese paso, con selector visible
@@ -85,13 +86,18 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
 
 - Una sola cafetería, «lo antes posible»: sin hora programada, tiempo estimado ni turno.
   Aparece de inmediato en el panel del worker.
+- Un pedido puede mezclar desayuno y almuerzo.
 - Un pedido activo por cliente. Una sola nota de hasta 200 caracteres, sin opciones ni
   extras.
 - Límites: **10 unidades por producto y 15 unidades en total**.
 - Sin stock: manda la disponibilidad diaria del worker, validada en servidor dentro de la
   transacción con locks. Precios y totales siempre en servidor, con idempotencia.
 - Menú: con la cafetería **cerrada** se ven los productos activos sin poder pedir; con la
-  cafetería **abierta** solo las categorías con productos disponibles.
+  cafetería **abierta** se muestran con carrusel las categorías con productos disponibles.
+- Categoría sin productos disponibles: línea compacta con el nombre de la categoría y
+  «No hay productos disponibles de esta categoría por el momento», sin carrusel.
+- Filtros de Inicio: Todo, Del día, Desayunos, Corriente, Ejecutivo, Especial y Bebidas.
+  «Del día» corresponde a `DEL_DIA`, que ya existe en `catalog_category`.
 - Catálogo: todo lo que cada admin cree y active. Se añade `BEBIDA` al enum
   `catalog_category` en migración propia. Categorías libres por cafetería, después del
   piloto. Producto sin foto: inicial sobre azul suave.
@@ -110,9 +116,12 @@ título de la pestaña. Web Push queda para después.
 ## 8. Diseño
 
 Estilo iPhone minimalista, mobile-first, azules y blancos, marca UniFood
-(`unifood-logo.png`), cero ruido visual, una acción principal por pantalla, tipografía del
-sistema, modo oscuro, transiciones cortas y respeto a `prefers-reduced-motion`. Se definen
-tokens reales del cliente y se aíslan sus estilos de `globals.css`.
+(`unifood-logo.png`), cero ruido visual, una acción principal por pantalla, transiciones
+cortas y respeto a `prefers-reduced-motion`. Se definen tokens reales del cliente y se
+aíslan sus estilos de `globals.css`.
+
+- Tipografía: Inter, cargada solo en `/cuenta`. El resto de la app no cambia.
+- Modo oscuro: después del piloto. Los tokens del cliente quedan preparados para añadirlo.
 
 ## 9. Infraestructura y Supabase
 
