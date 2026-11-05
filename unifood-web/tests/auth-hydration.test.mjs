@@ -49,14 +49,18 @@ test("panel SSR disables every form control while preserving credential hints an
   assert.match(html, /aria-busy="false"/);
 });
 
-test("CLIENT keeps its existing form autocomplete policy and SSR credential guard", () => {
+test("CLIENT login opts out of form restoration and keeps credential hints and SSR guard", () => {
   const html = render("client");
-  assert.doesNotMatch(html.match(/<form\b[^>]*>/)[0], /autocomplete=/i);
+  assert.match(html.match(/<form\b[^>]*>/)[0], /autoComplete="off"/i);
+  assert.match(html, /<input[^>]*autoComplete="username"/i);
+  assert.match(html, /<input[^>]*autoComplete="current-password"/i);
   assert.match(html, /<input[^>]*disabled=""[^>]*name="username"/);
   assert.match(html, /<input[^>]*disabled=""[^>]*name="password"/);
 });
 
-test("the panel login restoration opt-out does not change recovery forms", () => {
-  const html = render("panel", "recover");
-  assert.doesNotMatch(html.match(/<form\b[^>]*>/)[0], /autocomplete=/i);
+test("the login restoration opt-out does not change recovery forms", () => {
+  for (const entrypoint of ["panel", "client"]) {
+    const html = render(entrypoint, "recover");
+    assert.doesNotMatch(html.match(/<form\b[^>]*>/)[0], /autocomplete=/i);
+  }
 });
