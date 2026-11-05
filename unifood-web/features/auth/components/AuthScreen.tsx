@@ -29,6 +29,9 @@ import { useAuthHydration } from "../useAuthHydration";
 import styles from "./AuthScreen.module.css";
 
 type Mode = "login" | "register" | "recover";
+// Firefox-only button attribute, absent from the React types: without it the
+// back button sits outside the form and Firefox restores its disabled state.
+const NO_FIREFOX_STATE_RESTORE = { autoComplete: "off" };
 const copy = {
   es: {
     panelTitle: "Acceso al panel",
@@ -475,6 +478,7 @@ export default function AuthScreen({
               {!isLogin && (
                 <button
                   type="button"
+                  {...NO_FIREFOX_STATE_RESTORE}
                   className={styles.back}
                   onClick={back}
                   disabled={!hydrated || busy}
@@ -512,10 +516,10 @@ export default function AuthScreen({
             {title}
           </h1>
           <p className={styles.description}>{description}</p>
-          {/* Firefox must not restore disabled attributes before login hydration. */}
+          {/* Firefox must not restore disabled attributes before hydration. */}
           <form
             method="post"
-            autoComplete={isLogin ? "off" : undefined}
+            autoComplete="off"
             onSubmit={submit}
             className={`${styles.form} ${isLogin ? styles.loginForm : ""}`}
             aria-busy={busy}
