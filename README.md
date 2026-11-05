@@ -1,8 +1,6 @@
 # UniFood
 
-La carpeta principal elegida para este equipo es `C:\Users\credi\Documents\UniFood`.
-Abrir `UniFood.code-workspace` desde esta carpeta para continuar el proyecto en otra sesión.
-La copia de `OneDrive\Desktop\UniFood` es independiente y no recibe estos cambios.
+Abrir `UniFood.code-workspace` desde la raíz del repositorio para continuar el proyecto en otra sesión.
 
 ## Iniciar siempre la misma aplicación
 
@@ -11,7 +9,7 @@ En Windows, abrir `iniciar-unifood.cmd` de esta carpeta. El archivo inicia el pr
 También se puede ejecutar:
 
 ```powershell
-Set-Location C:\Users\credi\Documents\UniFood
+Set-Location <ruta-del-repositorio>
 npm run dev
 ```
 

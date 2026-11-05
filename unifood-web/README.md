@@ -4,7 +4,7 @@ Aplicación en Next.js con login, registro de estudiantes y panel de trabajadore
 
 El estudiante accede a `/cuenta`: selección de sede, carrusel de platos, desayunos y almuerzos por horario colombiano, detalle y carrito editable persistente. `/cuenta/carrito/resumen` permite revisar el total, elegir recogida cada 30 minutos con un margen de preparación de 20 minutos, aceptar condiciones y probar la confirmación con efectivo al recoger. Los menús, precios y stock son mocks; todavía no se crean pedidos y la confirmación de prueba conserva el carrito. `/cuenta/perfil` muestra datos reales de la cuenta y conserva cierre de sesión y cambio de contraseña por correo. Ver [alcance y siguientes bloques del cliente](docs/client-shopping.md) y [análisis de arquitectura](docs/client-frontend.md).
 
-En este equipo se trabaja desde `C:\Users\credi\Documents\UniFood`. Se puede iniciar desde la raíz con `npm run dev` o con `iniciar-unifood.cmd`; local y red usan el mismo servidor en el puerto 3000. Ver [arranque del proyecto](../README.md). No ejecutar la copia independiente de `OneDrive\Desktop\UniFood` para consultar estos cambios.
+Se puede iniciar desde la raíz del repositorio con `npm run dev` o con `iniciar-unifood.cmd`; local y red usan el mismo servidor en el puerto 3000. Ver [arranque del proyecto](../README.md).
 
 La configuración de Supabase, migración, plantillas de correo y estructura del módulo se documentan en [Autenticación](docs/auth.md). Ver [configuración de local, staging y production](docs/environments.md). Copiar `.env.example` a `.env.local`; completar los dos valores Supabase antes de probar el acceso real.
 
