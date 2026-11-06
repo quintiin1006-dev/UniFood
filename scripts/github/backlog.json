@@ -241,6 +241,7 @@
       "criteria": [
         "Formulario con correo, nombre, código institucional y aceptación de privacidad",
         "Código obligatorio para estudiantes y opcional para docentes y administrativos",
+        "Código de 7 dígitos de estudiantes validado en la UI y en el BFF, además de en la base",
         "Verificación con OTP de 6 dígitos",
         "Errores claros sin revelar si un código existe"
       ]

@@ -1,5 +1,7 @@
 # Default is a dry run: nothing is written to GitHub without -Apply.
-# Keep this file ASCII: Windows PowerShell 5.1 reads scripts without a BOM as ANSI.
+# Encoding: Windows PowerShell 5.1 reads a .ps1 without BOM as ANSI, which corrupts accents
+# such as those in issue bodies. This file stays ASCII for that reason: write accents as
+# [char]0xF3. To use literal accents, save it as UTF-8 with BOM or run it with pwsh (7+).
 param([switch] $Apply)
 $ErrorActionPreference = 'Stop'
 $repo = 'quintiin1006-dev/UniFood'
