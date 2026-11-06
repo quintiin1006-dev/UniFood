@@ -2,7 +2,7 @@ name: Backend completo
 
 on:
   push:
-    branches: [develop, chore/ci]
+    branches: [develop]
     paths:
       - "unifood-backend/**"
       - "unifood-web/tests/helpers/**"

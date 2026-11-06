@@ -2,7 +2,7 @@ name: E2E
 
 on:
   push:
-    branches: [develop, chore/ci]
+    branches: [develop]
     paths:
       - "unifood-web/**"
       - ".nvmrc"
