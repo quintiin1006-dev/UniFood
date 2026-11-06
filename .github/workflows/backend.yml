@@ -1,0 +1,38 @@
+name: Backend
+
+on:
+  pull_request:
+    branches: [develop]
+    paths:
+      - "unifood-backend/**"
+      - ".github/workflows/backend.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: unifood-backend
+    steps:
+      # Spotless ratchets from origin/develop, so it needs the full history.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Tests without PostgreSQL
+        run: bash ./mvnw -B test "-Dtest=!*PostgresTest"
+      - name: Spotless
+        run: bash ./mvnw -B spotless:check
