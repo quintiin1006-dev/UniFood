@@ -1,0 +1,46 @@
+name: Backend completo
+
+on:
+  push:
+    branches: [develop, chore/ci]
+    paths:
+      - "unifood-backend/**"
+      - "unifood-web/tests/helpers/**"
+      - ".nvmrc"
+      - ".github/workflows/backend-full.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-full-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      # The *PostgresTest classes start their cluster with the unifood-web helper.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: unifood-web/package-lock.json
+      - run: npm ci
+        working-directory: unifood-web
+      - name: Require native PostgreSQL
+        run: test -x "$(pg_config --bindir)/initdb"
+      - name: Verify
+        run: bash ./mvnw -B verify
+        working-directory: unifood-backend

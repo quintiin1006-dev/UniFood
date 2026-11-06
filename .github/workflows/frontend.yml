@@ -1,0 +1,60 @@
+name: Frontend
+
+on:
+  push:
+    branches: [chore/ci]
+  pull_request:
+    branches: [develop]
+    paths:
+      - "unifood-web/**"
+      - ".nvmrc"
+      - ".github/workflows/frontend.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+# Fake values: the build only validates their format and nothing is contacted.
+env:
+  API_URL: http://127.0.0.1:3101
+  SUPABASE_URL: http://127.0.0.1:3101
+  SUPABASE_PUBLISHABLE_KEY: sb_publishable_FAKE_CI_ONLY_NOT_A_REAL_KEY
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: unifood-web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: unifood-web/package-lock.json
+      - run: npm ci
+      # npm test skips the native tests silently when PostgreSQL is missing.
+      - name: Require native PostgreSQL
+        run: test -x "$(pg_config --bindir)/initdb"
+      - run: npm run lint
+      - name: Type check
+        run: |
+          npx --no-install next typegen
+          npx --no-install tsc --noEmit --incremental false
+      - run: npm test
+      - run: npm run build
+      - name: Check formatting of changed files
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git diff --relative --name-only --diff-filter=ACMR -z "origin/$BASE_REF...HEAD" -- . \
+            | xargs -0 -r npx --no-install prettier --check --ignore-unknown
