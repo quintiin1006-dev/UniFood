@@ -41,6 +41,9 @@ jobs:
         working-directory: unifood-web
       - name: Require native PostgreSQL
         run: test -x "$(pg_config --bindir)/initdb"
+      # Ubuntu's binaries keep their socket here, closed to the runner user.
+      - name: Open PostgreSQL socket directory
+        run: sudo chmod 1777 /var/run/postgresql
       - name: Verify
         run: bash ./mvnw -B verify
         working-directory: unifood-backend

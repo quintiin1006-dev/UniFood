@@ -44,6 +44,9 @@ jobs:
       # npm test skips the native tests silently when PostgreSQL is missing.
       - name: Require native PostgreSQL
         run: test -x "$(pg_config --bindir)/initdb"
+      # Ubuntu's binaries keep their socket here, closed to the runner user.
+      - name: Open PostgreSQL socket directory
+        run: sudo chmod 1777 /var/run/postgresql
       - run: npm run lint
       - name: Type check
         run: |
