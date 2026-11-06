@@ -1,0 +1,870 @@
+{
+  "labels": [
+    [
+      "area:backend",
+      "1d76db",
+      "Spring Boot"
+    ],
+    [
+      "area:frontend",
+      "0e8a16",
+      "Next.js y BFF"
+    ],
+    [
+      "area:db",
+      "5319e7",
+      "Migraciones y datos"
+    ],
+    [
+      "area:infra",
+      "fbca04",
+      "CI, hosting y entornos"
+    ],
+    [
+      "area:seguridad",
+      "b60205",
+      "Seguridad y privacidad"
+    ],
+    [
+      "tipo:feature",
+      "a2eeef",
+      "Funcion nueva"
+    ],
+    [
+      "tipo:bug",
+      "d73a4a",
+      "Defecto"
+    ],
+    [
+      "tipo:chore",
+      "c5def5",
+      "Mantenimiento"
+    ],
+    [
+      "prioridad:alta",
+      "b60205",
+      "Bloquea la demo"
+    ],
+    [
+      "prioridad:media",
+      "fbca04",
+      "Importante para la demo"
+    ],
+    [
+      "prioridad:baja",
+      "0e8a16",
+      "Puede esperar"
+    ],
+    [
+      "esfuerzo:S",
+      "ededed",
+      "Hasta 1 dia"
+    ],
+    [
+      "esfuerzo:M",
+      "bfbfbf",
+      "2 a 5 dias"
+    ],
+    [
+      "esfuerzo:L",
+      "6a737d",
+      "Mas de 1 semana"
+    ],
+    [
+      "corte:post-demo",
+      "f9d0c4",
+      "Pasa a despues de la demo si falta tiempo"
+    ]
+  ],
+  "milestones": [
+    [
+      "Fase 0 Base",
+      "2026-11-09",
+      "3-9 nov: base, CI, actualizaciones, registro y migraciones"
+    ],
+    [
+      "Fase 2 Núcleo MVP",
+      "2026-11-23",
+      "10-23 nov: backend de pedidos y cliente completo; congelar funciones el 21"
+    ],
+    [
+      "Fase 3 Endurecimiento",
+      "2026-11-28",
+      "24-28 nov: endurecimiento minimo"
+    ],
+    [
+      "Demo 28-nov",
+      "2026-11-28",
+      "24-28 nov: SUPER_ADMIN minimo, staging y ensayo"
+    ],
+    [
+      "Piloto",
+      null,
+      "Despues de la demo"
+    ]
+  ],
+  "issues": [
+    {
+      "id": 1,
+      "title": "Configurar CI de backend y frontend",
+      "type": "chore",
+      "areas": [
+        "infra"
+      ],
+      "size": "S",
+      "priority": "alta",
+      "milestone": "Fase 0 Base",
+      "deps": [],
+      "criteria": [
+        "Cada PR ejecuta las verificaciones de backend y frontend con filtros de ruta",
+        "Workflows con permisos mínimos y acciones fijadas por versión",
+        "Sin secretos reales: solo valores falsos de prueba"
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Actualizar Next y sharp",
+      "type": "chore",
+      "areas": [
+        "frontend",
+        "seguridad"
+      ],
+      "size": "S",
+      "priority": "alta",
+      "milestone": "Fase 0 Base",
+      "deps": [
+        1
+      ],
+      "criteria": [
+        "next y eslint-config-next en 16.4.5 o superior",
+        "sharp en 0.35.5 o superior",
+        "npm audit --omit=dev sin hallazgos críticos",
+        "Consultada la documentación local de Next antes de cambiar código"
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Actualizar Tomcat y retirar WebSocket",
+      "type": "chore",
+      "areas": [
+        "backend",
+        "seguridad"
+      ],
+      "size": "S",
+      "priority": "alta",
+      "milestone": "Fase 0 Base",
+      "deps": [
+        1
+      ],
+      "criteria": [
+        "Tomcat en 11.0.27 o superior, con versión verificada en fuente oficial",
+        "spring-boot-starter-websocket retirado tras confirmar que no se usa",
+        "Tests sin Postgres y Spotless en verde"
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Corregir respuestas 500 ante errores del cliente",
+      "type": "bug",
+      "areas": [
+        "backend"
+      ],
+      "size": "S",
+      "priority": "alta",
+      "milestone": "Fase 0 Base",
+      "deps": [
+        1
+      ],
+      "criteria": [
+        "Ruta inexistente responde 404",
+        "Método incorrecto responde 405",
+        "Parámetro faltante responde 400 y media type no soportado 415",
+        "Formato ApiErrorResponse conservado, con tests (hallazgo A5 del backend)"
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Añadir timeouts de pedidos y desactivar OSIV",
+      "type": "chore",
+      "areas": [
+        "backend"
+      ],
+      "size": "S",
+      "priority": "media",
+      "milestone": "Fase 0 Base",
+      "deps": [
+        1
+      ],
+      "criteria": [
+        "Transacciones de pedidos con timeout y lock timeout",
+        "spring.jpa.open-in-view=false",
+        "Pool de conexiones explícito (hallazgo M2 del backend)"
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Crear migración 018 de registro seguro y ampliar audit",
+      "type": "feature",
+      "areas": [
+        "db",
+        "seguridad"
+      ],
+      "size": "M",
+      "priority": "alta",
+      "milestone": "Fase 0 Base",
+      "deps": [
+        38
+      ],
+      "criteria": [
+        "Un signup directo con dominio no registrado falla",
+        "La cuenta queda inactiva hasta confirmar el correo",
+        "Dominios en institution_email_domains: ustavillavo.edu.co (STUDENT) y ustavillavicencio.edu.co (docentes y administrativos, un solo client_type)",
+        "Código obligatorio para STUDENT, numérico de exactamente 7 dígitos (min_code_length = max_code_length = 7); opcional para docentes y administrativos",
+        "Código único por institución: índice único parcial sobre institution_id y código, ignorando nulos",
+        "Regla de dominio en el trigger de la base, probada con el rol anon, mayúsculas y minúsculas, dominios falsos (ustavillavo.edu.co.evil.com, evilustavillavo.edu.co) y correos con + o espacios",
+        "Probada en base temporal local y luego en unifood-staging, nunca en el proyecto real"
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Adaptar registro y OTP en BFF y UI",
+      "type": "feature",
+      "areas": [
+        "frontend"
+      ],
+      "size": "M",
+      "priority": "alta",
+      "milestone": "Fase 0 Base",
+      "deps": [
+        6
+      ],
+      "criteria": [
+        "Formulario con correo, nombre, código institucional y aceptación de privacidad",
+        "Código obligatorio para estudiantes y opcional para docentes y administrativos",
+        "Verificación con OTP de 6 dígitos",
+        "Errores claros sin revelar si un código existe"
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Rechazar en Spring las cuentas no confirmadas",
+      "type": "feature",
+      "areas": [
+        "backend",
+        "seguridad"
+      ],
+      "size": "S",
+      "priority": "alta",
+      "milestone": "Fase 0 Base",
+      "deps": [
+        6
+      ],
+      "criteria": [
+        "Una cuenta sin confirmar recibe 403 aunque tenga JWT válido",
+        "La autorización lee users.email_confirmed_at",
+        "Test de autorización dedicado"
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Verificar configuración de Supabase Auth",
+      "type": "chore",
+      "areas": [
+        "infra",
+        "seguridad"
+      ],
+      "size": "S",
+      "priority": "alta",
+      "milestone": "Fase 0 Base",
+      "deps": [],
+      "criteria": [
+        "Confirm email activo y OTP de 6 dígitos con expiración de 900 s",
+        "Plantilla Confirm sign up con {{ .Token }}",
+        "Contraseña mínima de 8 con letras y dígitos; Secure password change activo",
+        "Anonymous sign-ins y manual linking apagados",
+        "Verificado por el responsable el 2026-11-04; el correo real sigue en B37"
+      ],
+      "first": true,
+      "closed": true
+    },
+    {
+      "id": 10,
+      "title": "Crear feature/client-orders-v2 e integrar develop",
+      "type": "chore",
+      "areas": [
+        "infra"
+      ],
+      "size": "S",
+      "priority": "alta",
+      "milestone": "Fase 0 Base",
+      "deps": [
+        1,
+        2,
+        3
+      ],
+      "criteria": [
+        "Rama creada desde origin/feature/client-orders, conservando la autoría de Jonathan",
+        "La rama original queda intacta",
+        "develop integrado mediante merge, sin rebase"
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Crear migraciones 019 a 023",
+      "type": "feature",
+      "areas": [
+        "db"
+      ],
+      "size": "M",
+      "priority": "alta",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [
+        6,
+        38
+      ],
+      "criteria": [
+        "Aplican en orden sobre 001-018",
+        "BEBIDA en migración propia",
+        "Permisos cerrados a PUBLIC, anon y authenticated",
+        "Probadas en base temporal local y luego en unifood-staging",
+        "Audit sin incompatibilidades"
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Aplicar suscripción de cafeterías en backend",
+      "type": "feature",
+      "areas": [
+        "backend"
+      ],
+      "size": "M",
+      "priority": "alta",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [
+        11
+      ],
+      "criteria": [
+        "Una cafetería no suscrita no aparece para el cliente",
+        "Menú, preferencia y crear pedido la rechazan por API directa con CAFETERIA_NOT_SUBSCRIBED",
+        "WORKER y ADMIN siguen entrando a su panel",
+        "Los pedidos en curso continúan hasta su estado final"
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Crear contexto del cliente y preferencia",
+      "type": "feature",
+      "areas": [
+        "backend"
+      ],
+      "size": "M",
+      "priority": "alta",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [
+        12
+      ],
+      "criteria": [
+        "GET /api/me/context lista sedes y cafeterías activas",
+        "PUT /api/me/preference valida institución, sede y suscripción",
+        "Una preferencia inválida se devuelve con valid=false"
+      ]
+    },
+    {
+      "id": 14,
+      "title": "Crear menú real con disponibilidad del día",
+      "type": "feature",
+      "areas": [
+        "backend"
+      ],
+      "size": "M",
+      "priority": "alta",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [
+        12
+      ],
+      "criteria": [
+        "Cerrada: productos activos visibles sin poder pedir",
+        "Abierta: solo categorías con productos disponibles",
+        "Imágenes accesibles para el cliente con autorización"
+      ]
+    },
+    {
+      "id": 15,
+      "title": "Crear pedido sin stock, con idempotencia y locks",
+      "type": "feature",
+      "areas": [
+        "backend"
+      ],
+      "size": "L",
+      "priority": "alta",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [
+        11,
+        14
+      ],
+      "criteria": [
+        "Precios y totales calculados en servidor",
+        "Máximo 10 unidades por producto y 15 unidades en total",
+        "Valida suscripción, institución y disponibilidad dentro de la transacción con locks",
+        "Prueba de concurrencia: dos pedidos simultáneos del mismo cliente producen exactamente un ACTIVE_ORDER_EXISTS",
+        "Prueba: la misma Idempotency-Key repetida devuelve el mismo pedido"
+      ]
+    },
+    {
+      "id": 16,
+      "title": "Crear pedido actual, historial y cancelación del cliente",
+      "type": "feature",
+      "areas": [
+        "backend"
+      ],
+      "size": "M",
+      "priority": "alta",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [
+        15
+      ],
+      "criteria": [
+        "GET /api/me/orders/current incluye calledAt y reminderCount",
+        "Historial paginado de solo lectura",
+        "Cancelación solo en PENDING, sin plazo",
+        "Propiedad validada desde la sesión"
+      ]
+    },
+    {
+      "id": 17,
+      "title": "Publicar recordatorios y no recogido",
+      "type": "feature",
+      "areas": [
+        "backend",
+        "frontend"
+      ],
+      "size": "M",
+      "priority": "alta",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [
+        11
+      ],
+      "criteria": [
+        "Endpoints remind y not-collected con autorización de worker",
+        "UI del worker con recordatorio activo",
+        "Se mantienen 3 recordatorios y 5 minutos de espera"
+      ]
+    },
+    {
+      "id": 18,
+      "title": "Añadir rechazo del worker con motivo",
+      "type": "feature",
+      "areas": [
+        "backend",
+        "frontend"
+      ],
+      "size": "S",
+      "priority": "alta",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [
+        11
+      ],
+      "criteria": [
+        "Solo en PENDING",
+        "Motivo obligatorio",
+        "Registra actor y fuente WORKER"
+      ]
+    },
+    {
+      "id": 19,
+      "title": "Crear cierre diario y limitar FIFO al día",
+      "type": "feature",
+      "areas": [
+        "backend"
+      ],
+      "size": "M",
+      "priority": "alta",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [
+        11
+      ],
+      "criteria": [
+        "PENDING pasa a CANCELLED con fuente SYSTEM",
+        "PREPARING, READY y CALLED pasan a NOT_COLLECTED",
+        "Job idempotente y seguro con varias instancias",
+        "La cola FIFO ignora pedidos de días anteriores"
+      ]
+    },
+    {
+      "id": 20,
+      "title": "Limitar datos del estudiante visibles al worker",
+      "type": "feature",
+      "areas": [
+        "backend",
+        "frontend",
+        "seguridad"
+      ],
+      "size": "S",
+      "priority": "alta",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [
+        11
+      ],
+      "criteria": [
+        "OrderResponse sin documento ni clientId",
+        "El worker ve nombre y código, o nombre y tipo de cliente"
+      ]
+    },
+    {
+      "id": 21,
+      "title": "Definir tokens del cliente y aislar estilos",
+      "type": "feature",
+      "areas": [
+        "frontend"
+      ],
+      "size": "M",
+      "priority": "media",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [
+        10
+      ],
+      "criteria": [
+        "Tokens para modo claro y oscuro",
+        "El cliente no depende de globals.css",
+        "Respeta prefers-reduced-motion"
+      ]
+    },
+    {
+      "id": 22,
+      "title": "Crear selección de sede y cafetería",
+      "type": "feature",
+      "areas": [
+        "frontend"
+      ],
+      "size": "M",
+      "priority": "alta",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [
+        13,
+        21
+      ],
+      "criteria": [
+        "Salta el paso si hay una sola opción, con selector visible",
+        "Mensaje: Aún no hay cafeterías disponibles en tu sede",
+        "localStorage solo como caché"
+      ]
+    },
+    {
+      "id": 23,
+      "title": "Conectar menú y carrito reales",
+      "type": "feature",
+      "areas": [
+        "frontend"
+      ],
+      "size": "L",
+      "priority": "alta",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [
+        14,
+        21
+      ],
+      "criteria": [
+        "Sin mocks, stock ni horarios fijos",
+        "Con la cafetería cerrada no se puede pedir",
+        "Producto sin foto: inicial sobre azul suave"
+      ]
+    },
+    {
+      "id": 24,
+      "title": "Confirmar pedido con reintento seguro",
+      "type": "feature",
+      "areas": [
+        "frontend"
+      ],
+      "size": "M",
+      "priority": "alta",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [
+        15,
+        23
+      ],
+      "criteria": [
+        "Reintentar reutiliza la misma Idempotency-Key",
+        "Una sola nota de hasta 200 caracteres",
+        "Errores de negocio claros"
+      ]
+    },
+    {
+      "id": 25,
+      "title": "Crear pantalla Mi pedido con notificaciones",
+      "type": "feature",
+      "areas": [
+        "frontend"
+      ],
+      "size": "M",
+      "priority": "alta",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [
+        16
+      ],
+      "criteria": [
+        "Polling del pedido actual",
+        "Aviso visible al pasar a preparación y a listo para recoger",
+        "Sonido y cambio del título de la pestaña"
+      ]
+    },
+    {
+      "id": 26,
+      "title": "Crear historial y perfil del cliente",
+      "type": "feature",
+      "areas": [
+        "frontend"
+      ],
+      "size": "S",
+      "priority": "media",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [
+        16
+      ],
+      "criteria": [
+        "Historial de solo lectura, sin repetir pedido",
+        "Barra inferior en celular y sidebar en escritorio"
+      ],
+      "cut": true
+    },
+    {
+      "id": 27,
+      "title": "Hacer resiliente el Kanban y avisar al abrir sin disponibilidad",
+      "type": "bug",
+      "areas": [
+        "frontend"
+      ],
+      "size": "S",
+      "priority": "alta",
+      "milestone": "Fase 2 Núcleo MVP",
+      "deps": [],
+      "criteria": [
+        "Un fallo de polling conserva los datos y muestra un aviso",
+        "Un 401 lleva al login",
+        "Llamadas muestra errores y estado vacío",
+        "El panel avisa si el worker abre la cafetería sin marcar nada disponible"
+      ]
+    },
+    {
+      "id": 28,
+      "title": "Crear siembra de cuentas SUPER_ADMIN",
+      "type": "feature",
+      "areas": [
+        "db",
+        "seguridad"
+      ],
+      "size": "S",
+      "priority": "alta",
+      "milestone": "Demo 28-nov",
+      "deps": [
+        6
+      ],
+      "criteria": [
+        "Exactamente dos cuentas",
+        "Sin correos versionados",
+        "Rechaza una tercera cuenta"
+      ]
+    },
+    {
+      "id": 29,
+      "title": "Crear credenciales de WORKER y ADMIN",
+      "type": "feature",
+      "areas": [
+        "backend",
+        "seguridad"
+      ],
+      "size": "M",
+      "priority": "media",
+      "milestone": "Demo 28-nov",
+      "deps": [
+        28
+      ],
+      "criteria": [
+        "API de administración solo en backend",
+        "Contraseña temporal mostrada una sola vez, con no-store y sin logs",
+        "Compensa la identidad creada si falla la transacción"
+      ],
+      "cut": true
+    },
+    {
+      "id": 30,
+      "title": "Forzar cambio de contraseña en el primer ingreso",
+      "type": "feature",
+      "areas": [
+        "frontend",
+        "backend"
+      ],
+      "size": "M",
+      "priority": "media",
+      "milestone": "Demo 28-nov",
+      "deps": [
+        29
+      ],
+      "criteria": [
+        "El panel se bloquea hasta cambiarla",
+        "Spring responde PASSWORD_CHANGE_REQUIRED"
+      ],
+      "cut": true
+    },
+    {
+      "id": 31,
+      "title": "Crear interruptor de suscripción en panel",
+      "type": "feature",
+      "areas": [
+        "frontend"
+      ],
+      "size": "S",
+      "priority": "media",
+      "milestone": "Demo 28-nov",
+      "deps": [
+        12,
+        28
+      ],
+      "criteria": [
+        "Solo SUPER_ADMIN",
+        "Registra quién y cuándo en la misma transacción",
+        "Los pedidos en curso continúan"
+      ],
+      "cut": true
+    },
+    {
+      "id": 32,
+      "title": "Crear universidades, sedes y cafeterías en panel",
+      "type": "feature",
+      "areas": [
+        "frontend",
+        "backend"
+      ],
+      "size": "M",
+      "priority": "baja",
+      "milestone": "Demo 28-nov",
+      "deps": [
+        28
+      ],
+      "criteria": [
+        "Respeta las reglas de cardinalidad de la migración 009",
+        "Solo SUPER_ADMIN"
+      ],
+      "cut": true
+    },
+    {
+      "id": 33,
+      "title": "Aplicar endurecimiento mínimo",
+      "type": "feature",
+      "areas": [
+        "seguridad"
+      ],
+      "size": "M",
+      "priority": "alta",
+      "milestone": "Fase 3 Endurecimiento",
+      "deps": [],
+      "criteria": [
+        "Límites propios por IP real y por cuenta en login, OTP y envío de correos",
+        "CAPTCHA en registro y recuperación",
+        "IP forwarding de Supabase sigue apagado",
+        "Cabeceras de seguridad",
+        "Logs de error en servidor sin datos personales"
+      ]
+    },
+    {
+      "id": 34,
+      "title": "Preparar hosting del backend y staging en Vercel",
+      "type": "chore",
+      "areas": [
+        "infra"
+      ],
+      "size": "M",
+      "priority": "alta",
+      "milestone": "Demo 28-nov",
+      "deps": [
+        1
+      ],
+      "criteria": [
+        "Entorno separado de cuentas reales",
+        "Variables inyectadas desde gestor de secretos",
+        "Health del backend accesible"
+      ]
+    },
+    {
+      "id": 35,
+      "title": "Crear E2E de pedido y ensayar la demo",
+      "type": "feature",
+      "areas": [
+        "frontend",
+        "backend"
+      ],
+      "size": "M",
+      "priority": "alta",
+      "milestone": "Demo 28-nov",
+      "deps": [
+        24,
+        25,
+        34,
+        37
+      ],
+      "criteria": [
+        "Recorrido registro, pedido, worker y entrega en staging",
+        "Dos días reservados para el ensayo"
+      ]
+    },
+    {
+      "id": 36,
+      "title": "Crear dashboard de clientes para SUPER_ADMIN",
+      "type": "feature",
+      "areas": [
+        "frontend",
+        "backend"
+      ],
+      "size": "M",
+      "priority": "baja",
+      "milestone": "Piloto",
+      "deps": [
+        28
+      ],
+      "criteria": [
+        "Solo SUPER_ADMIN",
+        "Primera función que se mueve si falta tiempo"
+      ],
+      "cut": true
+    },
+    {
+      "id": 37,
+      "title": "Comprar dominio y configurar SMTP (Resend)",
+      "type": "chore",
+      "areas": [
+        "infra"
+      ],
+      "size": "S",
+      "priority": "alta",
+      "milestone": "Demo 28-nov",
+      "deps": [],
+      "first": true,
+      "criteria": [
+        "Fecha límite: 15 de noviembre de 2026; es requisito de la demo",
+        "Dominio comprado",
+        "SPF y DKIM verificados en Resend",
+        "Remitente con el dominio propio, sin onboarding@resend.dev",
+        "Prueba de entrega real a un correo @ustavillavo.edu.co"
+      ]
+    },
+    {
+      "id": 38,
+      "title": "Crear proyecto Supabase unifood-staging",
+      "type": "chore",
+      "areas": [
+        "infra",
+        "db"
+      ],
+      "size": "S",
+      "priority": "alta",
+      "milestone": "Fase 0 Base",
+      "deps": [],
+      "first": true,
+      "criteria": [
+        "Proyecto separado del real, creado por el responsable",
+        "Configuración de Auth equivalente a la verificada",
+        "Sin datos ni cuentas reales"
+      ]
+    }
+  ]
+}
