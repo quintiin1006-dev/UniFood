@@ -11,11 +11,11 @@ consultaron datos privados ni se modificaron servicios remotos.
 ## 1. Estructura actual
 
 El monorepo contiene `unifood-web` y `unifood-backend`; los scripts raíz delegan
-al frontend. Spring Boot 4.0.8 / Java 21 separa dominio, aplicación (casos de uso,
+al frontend. Spring Boot 4.0.9 / Java 21 separa dominio, aplicación (casos de uso,
 puertos y servicios), adaptadores web/persistencia y configuración de seguridad.
 PostgreSQL se describe en siete migraciones de Supabase.
 
-El frontend usa Next.js 16.3.8, React 19.2.8 y TypeScript estricto, alias `@/*`
+El frontend usa Next.js 16.4.5, React 19.2.8 y TypeScript estricto, alias `@/*`
 y resolución `bundler`. App Router combina páginas de servidor con componentes
 interactivos. `next.config.ts` valida el entorno, define el root de Turbopack y
 permite orígenes locales/LAN. No hay una capa general `services/`, `utils/`,
