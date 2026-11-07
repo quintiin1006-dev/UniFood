@@ -47,7 +47,7 @@ test("client ownership SQL follows actual PostgreSQL links and current roles, ne
     ).rows[0].id;
     const client = (
       await db.query(
-        "INSERT INTO public.clients(user_id,full_name,document,institution_id) VALUES ($1,'Fixture',$2,$3) RETURNING id",
+        "INSERT INTO public.clients(user_id,full_name,document,institution_id,client_type,code_review_required) VALUES ($1,'Fixture',$2,$3,'STUDENT',true) RETURNING id",
         [user, `fixture-${number}`, institution],
       )
     ).rows[0].id;

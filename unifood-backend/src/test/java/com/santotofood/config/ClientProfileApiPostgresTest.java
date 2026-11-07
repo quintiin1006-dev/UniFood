@@ -132,14 +132,23 @@ class ClientProfileApiPostgresTest {
     mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
   }
 
+  // A student from before 018: new signups no longer store a document.
   static void student(UUID id, String email, String document) {
     jdbc.update(
-        "INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES (?, ?, ?::jsonb)",
+        "INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES (?, ?, '{\"role\":\"SUPER_ADMIN\"}')",
         id,
-        email,
-        "{\"registration_type\":\"student\",\"full_name\":\"Profile test\",\"document\":\""
-            + document
-            + "\",\"role\":\"SUPER_ADMIN\"}");
+        email);
+    jdbc.update(
+        "INSERT INTO public.clients(user_id,full_name,document,institution_id,client_type,code_review_required) "
+            + "SELECT ?,'Profile test',?,id,'STUDENT',true FROM public.institutions "
+            + "WHERE email_domain=split_part(?,'@',2)",
+        id,
+        document,
+        email);
+    jdbc.update(
+        "INSERT INTO public.user_roles(user_id,role_id) SELECT ?,id FROM public.roles WHERE name::text='CLIENT'",
+        id);
+    jdbc.update("UPDATE public.users SET is_active=true WHERE id=?", id);
   }
 
   static void provision(UUID id, String role, UUID cafeteria) {

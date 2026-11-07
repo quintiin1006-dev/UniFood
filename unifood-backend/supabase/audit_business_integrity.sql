@@ -1,5 +1,19 @@
--- Read-only preflight after 007, usable before/after 008-014. No secrets or data repair.
+-- Read-only preflight after 007, usable before/after 008-018. No secrets or data repair.
 BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY;
+
+-- 018 aborts if a client uses another domain. The list mirrors its seed on purpose.
+SELECT 'client_unknown_domain' AS reason, c.id AS subject
+FROM public.clients c
+JOIN public.users u ON u.id=c.user_id
+WHERE split_part(lower(u.email),'@',2) NOT IN ('ustavillavo.edu.co','ustavillavicencio.edu.co');
+
+-- 018 deactivates these CLIENT accounts because their email is unconfirmed.
+SELECT 'unconfirmed_active_client' AS reason, u.id AS subject
+FROM public.users u
+JOIN auth.users a ON a.id=u.id
+JOIN public.user_roles ur ON ur.user_id=u.id
+JOIN public.roles r ON r.id=ur.role_id
+WHERE r.name::text='CLIENT' AND u.is_active AND a.email_confirmed_at IS NULL;
 
 SELECT 'invalid_user_assignment' AS reason, u.id AS subject,
        u.is_active, r.name AS role, count(cu.id) AS assignments
@@ -59,7 +73,8 @@ WITH business_tables AS (
   WHERE n.nspname='public' AND c.relkind IN ('r','p') AND c.relname=ANY(ARRAY[
     'users','roles','user_roles','clients','institutions','sites','cafeterias','cafeteria_users',
     'lunches','orders','order_items','payments','notifications','notification_preferences','cafeteria_profile_guard',
-    'cafeteria_daily_states','daily_item_availability','catalog_image_assets','catalog_image_operations'])
+    'cafeteria_daily_states','daily_item_availability','catalog_image_assets','catalog_image_operations',
+    'institution_email_domains','client_code_corrections'])
 )
 SELECT actor,relname AS unexpected_business_table_grant,privilege
 FROM business_tables
@@ -167,10 +182,15 @@ ORDER BY actor;
 WITH expected(signature,actor,expected_execute) AS (VALUES
   ('public.is_institutional_email(text)','anon',true),
   ('public.is_institutional_email(text)','authenticated',true),
+  ('public.registration_rules(text)','anon',true),
+  ('public.registration_rules(text)','authenticated',true),
   ('public.current_auth_profile()','anon',false),
   ('public.current_auth_profile()','authenticated',true)
 ), actual AS (
   SELECT *,to_regprocedure(signature) AS function_oid FROM expected
+  -- registration_rules arrives with 018; this preflight also runs before it.
+  WHERE signature<>'public.registration_rules(text)'
+     OR to_regclass('public.institution_email_domains') IS NOT NULL
 )
 SELECT signature,actor,expected_execute,function_oid IS NOT NULL AS function_exists,
        CASE WHEN function_oid IS NULL THEN false ELSE has_function_privilege(actor,function_oid,'EXECUTE') END AS can_execute,
@@ -186,8 +206,11 @@ WHERE n.nspname='public' AND p.proname=ANY(ARRAY[
   'decrease_lunch_stock','set_updated_at','create_auth_profile','canonical_institution_email_domain',
   'auth_role_lock_key','lock_auth_role_user','check_auth_role_cardinality','prevent_auth_roles_truncate',
   'advance_order_version','cafeteria_profile_violations','lock_cafeteria_profiles','check_cafeteria_profiles',
-  'derive_order_item_cafeteria','guard_order_cancellation_timestamp','is_institutional_email','current_auth_profile'])
+  'derive_order_item_cafeteria','guard_order_cancellation_timestamp','is_institutional_email','current_auth_profile',
+  'registration_rules','registration_domain_rule','valid_institutional_code','is_provisioned_identity',
+  'confirm_auth_profile','guard_auth_email_change','admin_set_client_code'])
   AND p.oid<>COALESCE(to_regprocedure('public.is_institutional_email(text)')::oid,0::oid)
+  AND p.oid<>COALESCE(to_regprocedure('public.registration_rules(text)')::oid,0::oid)
   AND p.oid<>COALESCE(to_regprocedure('public.current_auth_profile()')::oid,0::oid)
 ORDER BY actor,helper_signature;
 

@@ -2,6 +2,15 @@
 -- Consolidates migrations 005, 006 and 007; safe to run again.
 BEGIN;
 
+-- This script restores the 005-007 auth functions: after 018 it would reopen registration.
+DO $guard$
+BEGIN
+  IF to_regclass('public.institution_email_domains') IS NOT NULL THEN
+    RAISE EXCEPTION 'setup_auth.sql cannot run after migration 018';
+  END IF;
+END;
+$guard$;
+
 ALTER TABLE public.clients ALTER COLUMN phone DROP NOT NULL;
 REVOKE UPDATE ON public.clients FROM authenticated;
 -- Business writes belong to Spring, including when this Auth setup is rerun.
