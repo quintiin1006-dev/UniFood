@@ -67,7 +67,8 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
   contraseña podría completar antes. Es una ventana corta y se prueba en staging.
 - **Cuentas nunca confirmadas:** se eliminan a las 24 horas de creadas. Solo las que
   nunca confirmaron el correo, con registro de auditoría, un límite de cuentas por
-  ejecución y un interruptor para pausarlo.
+  ejecución y un interruptor para pausarlo. Se programa con `pg_cron`, que el responsable
+  activa en el panel, primero en staging.
 - Verificación: OTP de 6 dígitos generado por Supabase y enviado al correo (plantilla con
   `{{ .Token }}`, no enlace). Solo prueba que el usuario es dueño del correo; no es dato
   de negocio.
@@ -90,13 +91,14 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
 - El worker ve solo nombre y código institucional, o nombre y tipo de cliente si no hay
   código.
 
-**Cuentas de la demo del 28 de noviembre:** las crea el responsable, ya confirmadas, sin
-pasar por el registro público. El registro con OTP no se muestra hasta tener dominio
-(§9). Procedimiento:
+**Cuentas de la demo del 28 de noviembre:** las crea el responsable en
+`unifood-staging`, ya confirmadas, sin pasar por el registro público. El registro con OTP
+no se muestra hasta tener dominio (§9). Procedimiento, todo en staging:
 
-1. Preautorizar cada correo con SQL controlado: rol CLIENT, institución, tipo de cliente,
-   nombre y código. El correo va como parámetro y nunca se versiona.
-2. Crear la identidad en el panel de Supabase, en Authentication > Users > Add user >
+1. Preautorizar cada correo con SQL controlado en el SQL Editor de staging: rol CLIENT,
+   institución, tipo de cliente, nombre y código. El correo va como parámetro y nunca se
+   versiona.
+2. Crear la identidad en el panel de staging, en Authentication > Users > Add user >
    Create new user, con contraseña propia y **Auto Confirm User** marcado. Usa la API de
    administración y no envía correo.
 3. Comprobar con SQL que la cuenta quedó activa, confirmada y con el tipo esperado.
@@ -181,6 +183,9 @@ aíslan sus estilos de `globals.css`.
 ## 9. Infraestructura y Supabase
 
 - Frontend en Vercel. Backend Spring en hosting con contenedor, por decidir.
+- **Entornos:** la demo del 28 de noviembre corre sobre `unifood-staging`; el piloto, sobre
+  el proyecto real. El real recibe la 018 y B7 en enero de 2027, antes del piloto, tras
+  validarlos en staging.
 - Supabase en plan gratuito hoy. Migraciones: primero bases temporales locales, luego el
   proyecto de pruebas `unifood-staging`. **Nunca se estrenan en el proyecto real.**
 
