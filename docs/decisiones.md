@@ -34,9 +34,11 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
 - Auto-registro solo con dominios institucionales; cualquier otro se rechaza. Todos
   entran con rol cliente.
 - Dominios en la tabla `institution_email_domains(domain, institution_id, client_type)`,
-  no en código. **Dominio cargado hoy: solo `ustavillavo.edu.co` (STUDENT).**
-  `ustavillavicencio.edu.co` (docentes y administrativos) está pendiente y se añade como
-  dato en esa tabla.
+  no en código. **Dominios de la universidad: `ustavillavo.edu.co` (STUDENT) y
+  `ustavillavicencio.edu.co` (docentes y administrativos, con un solo `client_type`).**
+- El dominio se compara por igualdad exacta, sin distinguir mayúsculas. Se rechazan
+  subdominios y dominios parecidos, como `ustavillavo.edu.co.evil.com` o
+  `evilustavillavo.edu.co`, y los correos con `+` o espacios.
 - La regla se valida en la base de datos (trigger de la 018), no solo en el BFF, para que
   no se salte con un signup directo usando la clave pública. Solo la API de administración
   crea identidades fuera de esa regla, con una marca en `app_metadata`.
@@ -49,8 +51,14 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
 - Datos de registro: correo institucional, nombre y código institucional (solo dígitos y
   único). Obligatorio para estudiantes; opcional para docentes y administrativos. Sin
   teléfono ni documento.
-- Longitud del código configurable por institución: `min_code_length` y `max_code_length`,
-  con valores iniciales 5 y 12. No se fija en código.
+- Longitud del código configurable por institución: `min_code_length` y `max_code_length`.
+  **El código de estudiante es numérico de exactamente 7 dígitos**
+  (`min_code_length = max_code_length = 7`). No se fija en código.
+- Código único por institución: índice único parcial sobre institución y código, que ignora
+  los nulos.
+- Si alguien reclama un código por error, SUPER_ADMIN lo libera en una transacción con
+  registro de auditoría y marca la cuenta como «código en revisión». Se hace con un script
+  local hasta que exista el panel.
 - Casilla de aceptación de la política de privacidad, con fecha guardada (Ley 1581).
 - El worker ve solo nombre y código institucional, o nombre y tipo de cliente si no hay
   código.
