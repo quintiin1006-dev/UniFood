@@ -24,36 +24,64 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
   la suscripción de cada cafetería y muestra el dashboard de clientes. Se recomienda 2FA
   y no compartir contraseña.
 - **Credenciales de WORKER y ADMIN**: las crea SUPER_ADMIN sin depender del dominio del
-  correo, con cambio obligatorio en el primer ingreso, mediante la API de administración
-  de Supabase. La service role key vive solo en el backend. La contraseña temporal se
-  muestra una sola vez al SUPER_ADMIN (`no-store`, sin logs). Cuando Resend esté listo
-  con dominio propio, pasa a correo.
+  correo, con cambio obligatorio en el primer ingreso, mediante una preautorización en
+  servidor y la API de administración de Supabase (§3). La service role key vive solo en
+  el backend. La contraseña temporal se muestra una sola vez al SUPER_ADMIN (`no-store`,
+  sin logs). Cuando Resend esté listo con dominio propio, pasa a correo.
 
 ## 3. Registro e identidad
 
 - Auto-registro solo con dominios institucionales; cualquier otro se rechaza. Todos
   entran con rol cliente.
-- Dominios en la tabla `institution_email_domains(domain, institution_id, client_type)`,
-  no en código. **Dominios de la universidad: `ustavillavo.edu.co` (STUDENT) y
-  `ustavillavicencio.edu.co` (docentes y administrativos, con un solo `client_type`).**
+- Dominios en la tabla `institution_email_domains`, no en código, con `domain`,
+  `institution_id`, `client_type`, `code_required`, `min_code_length` y
+  `max_code_length`. **Dominios de la universidad: `ustavillavo.edu.co` (STUDENT) y
+  `ustavillavicencio.edu.co` (STAFF: docentes y administrativos, con un solo
+  `client_type`).**
 - El dominio se compara por igualdad exacta, sin distinguir mayúsculas. Se rechazan
   subdominios y dominios parecidos, como `ustavillavo.edu.co.evil.com` o
   `evilustavillavo.edu.co`, y los correos con `+` o espacios.
 - La regla se valida en la base de datos (trigger de la 018), no solo en el BFF, para que
-  no se salte con un signup directo usando la clave pública. Solo la API de administración
-  crea identidades fuera de esa regla, con una marca en `app_metadata`.
+  no se salte con un signup directo usando la clave pública.
+- **Identidades fuera de la regla:** solo con una preautorización previa en una tabla
+  cerrada a `anon`, `authenticated` y `service_role`, que se escribe con SQL controlado o
+  desde el backend: correo, rol, institución, tipo de cliente y expiración. La API de
+  administración crea la identidad y el trigger consume esa preautorización. No se usa
+  una marca en `app_metadata`: Auth la escribe después de insertar el usuario, y el
+  trigger no la ve (hallazgo F1 de la revisión de la 018).
 - Se guarda el tipo de cliente, deducido del dominio.
+
+**Registro en dos pasos** (aprobado el 2026-11-07, propuesta A de la revisión de la 018):
+
+1. **Signup:** solo correo y contraseña. La base valida el dominio y crea una identidad
+   inactiva, sin nombre, código ni privacidad. Auth envía el OTP.
+2. **Tras confirmar el OTP**, en una llamada autenticada: nombre, código, aceptación de
+   privacidad y una **contraseña nueva**. Se cierran las demás sesiones. El código se
+   reserva en este paso, así que reservarlo exige tener el buzón.
+
+- Motivo: con un solo paso, quien se registra primero con un correo ajeno fija la
+  contraseña y el código que quedan activos cuando el dueño confirma, y un buzón
+  inexistente retiene el código de un estudiante real.
+- Hasta completar el paso 2, la cuenta no opera: no ve contexto, menú ni pedidos.
+- Riesgo residual aceptado: entre la confirmación y el paso 2, quien conozca la primera
+  contraseña podría completar antes. Es una ventana corta y se prueba en staging.
+- **Cuentas nunca confirmadas:** se eliminan a las 24 horas de creadas. Solo las que
+  nunca confirmaron el correo, con registro de auditoría, un límite de cuentas por
+  ejecución y un interruptor para pausarlo. Se programa con `pg_cron`, que el responsable
+  activa en el panel, primero en staging.
 - Verificación: OTP de 6 dígitos generado por Supabase y enviado al correo (plantilla con
   `{{ .Token }}`, no enlace). Solo prueba que el usuario es dueño del correo; no es dato
   de negocio.
 - La cuenta queda inactiva hasta confirmar el correo. Spring también rechaza cuentas no
   confirmadas, sin confiar solo en el BFF.
-- Datos de registro: correo institucional, nombre y código institucional (solo dígitos y
-  único). Obligatorio para estudiantes; opcional para docentes y administrativos. Sin
-  teléfono ni documento.
-- Longitud del código configurable por institución: `min_code_length` y `max_code_length`.
-  **El código de estudiante es numérico de exactamente 7 dígitos**
-  (`min_code_length = max_code_length = 7`). No se fija en código.
+- Datos de registro: correo institucional en el paso 1; nombre y código institucional
+  (solo dígitos y único) en el paso 2. Obligatorio para estudiantes; opcional para
+  docentes y administrativos. Sin teléfono ni documento.
+- Longitud del código configurable **por dominio**, no por institución: `code_required`,
+  `min_code_length` y `max_code_length` en `institution_email_domains`. No se fija en
+  código.
+  - **Estudiantes:** numérico de exactamente 7 dígitos, obligatorio (`7-7`).
+  - **Docentes y administrativos:** de 5 a 12 dígitos, opcional (`5-12`).
 - Código único por institución: índice único parcial sobre institución y código, que ignora
   los nulos.
 - Si alguien reclama un código por error, SUPER_ADMIN lo libera en una transacción con
@@ -63,10 +91,31 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
 - El worker ve solo nombre y código institucional, o nombre y tipo de cliente si no hay
   código.
 
+**Cuentas de la demo del 28 de noviembre:** las crea el responsable en
+`unifood-staging`, ya confirmadas, sin pasar por el registro público. El registro con OTP
+no se muestra hasta tener dominio (§9). Procedimiento, todo en staging:
+
+1. Preautorizar cada correo con SQL controlado en el SQL Editor de staging: rol CLIENT,
+   institución, tipo de cliente, nombre y código. El correo va como parámetro y nunca se
+   versiona.
+2. Crear la identidad en el panel de staging, en Authentication > Users > Add user >
+   Create new user, con contraseña propia y **Auto Confirm User** marcado. Usa la API de
+   administración y no envía correo.
+3. Comprobar con SQL que la cuenta quedó activa, confirmada y con el tipo esperado.
+4. En el primer ingreso, la persona de la demo acepta la privacidad.
+5. Tras la demo, se eliminan desde Authentication > Users. El borrado en cascada alcanza
+   su perfil.
+
+- Correos: buzones que controle el responsable. **No se inventan direcciones
+  `@ustavillavo.edu.co`**: podrían pertenecer a un estudiante real y bloquearían su
+  registro o su código.
+- Códigos: valores de prueba que no correspondan a estudiantes reales.
+- El SQL exacto llega con la 018 corregida.
+
 ## 4. Flujo del cliente
 
-1. Registro con OTP e inicio de sesión. El dominio del correo determina la universidad; el
-   cliente no la elige.
+1. Registro en dos pasos con OTP (§3) e inicio de sesión. El dominio del correo determina
+   la universidad; el cliente no la elige.
 2. Elegir sede y luego cafetería entre las ACTIVAS de esa sede.
 3. Pantalla principal con módulos Inicio, Mi pedido, Historial y Perfil: barra inferior en
    celular, sidebar en escritorio y carrito como botón flotante o dentro de Inicio.
@@ -134,6 +183,9 @@ aíslan sus estilos de `globals.css`.
 ## 9. Infraestructura y Supabase
 
 - Frontend en Vercel. Backend Spring en hosting con contenedor, por decidir.
+- **Entornos:** la demo del 28 de noviembre corre sobre `unifood-staging`; el piloto, sobre
+  el proyecto real. El real recibe la 018 y B7 en enero de 2027, antes del piloto, tras
+  validarlos en staging.
 - Supabase en plan gratuito hoy. Migraciones: primero bases temporales locales, luego el
   proyecto de pruebas `unifood-staging`. **Nunca se estrenan en el proyecto real.**
 
@@ -143,8 +195,13 @@ con letras y dígitos; Secure password change activo; anonymous sign-ins y manua
 apagados; registro público abierto, porque la regla de dominio vive en el trigger de la 018.
 
 **Correo:** SMTP personalizado con Resend activo, con remitente de pruebas
-`onboarding@resend.dev`, que solo entrega al correo dueño de la cuenta de Resend. **El
-dominio verificado es requisito de la demo, con fecha límite 15 de noviembre.**
+`onboarding@resend.dev`, que solo entrega al correo dueño de la cuenta de Resend.
+
+**Dominio (B37):** se compra en enero de 2027, ya no es requisito de la demo y pasa al hito
+«Piloto». Antes de abrir el piloto se prueba el registro real con 3 o 4 estudiantes. Lo que
+necesita dominio verificado queda «pendiente hasta B37»: entrega del OTP a cualquier
+estudiante, registro público de extremo a extremo y correo de credenciales de WORKER y
+ADMIN.
 
 **Rate limits de Auth:** 30 correos por hora; 30 sign-ups o sign-ins y 30 verificaciones
 cada 5 minutos por IP; 60 s entre correos al mismo usuario; IP forwarding apagado. Como el
@@ -165,7 +222,13 @@ por IP real y por cuenta, y CAPTCHA, sin activar IP forwarding por ahora.
 - Todas: RLS sin policies y `REVOKE` a `PUBLIC, anon, authenticated`. Antes de aplicar, se
   amplía y ejecuta `audit_business_integrity.sql`.
 - Cuentas existentes: confirmadas siguen activas con tipo por dominio; no confirmadas pasan
-  a inactivas. El `CHECK` de código obligatorio entra `NOT VALID` y se valida después.
+  a inactivas.
+- El `CHECK` de código obligatorio entra **validado** en la misma 018, no `NOT VALID`: antes
+  de crearlo, los estudiantes existentes sin código se marcan «código en revisión».
+- Se conserva `canonical_institution_email_domain`, porque Spring la usa en
+  `SpringDataInstitutionRepository`.
+- La 018 se corrige en su propio archivo, sin crear una 019, porque no está aplicada en
+  ninguna base. Si se aplica en staging antes de corregirse, staging se reinicia.
 - `clients.document`: se quita `NOT NULL`, se deja de usar y no se copia al código, porque
   son datos distintos. Se elimina tras el piloto.
 - `orders.client_document`: historial intacto. Los pedidos nuevos usan `client_code`.
