@@ -15,13 +15,15 @@ copiar.
 
 ## Encabezado
 
-La imagen del encabezado se sirve desde el bucket **público** `branding`, archivo
-`unifood-email-header.png`. La URL está fija en las dos plantillas y apunta al proyecto
-`qcdxkmowlbptgbgjuywc`.
+La imagen del encabezado se sirve desde el bucket **público** `branding` del proyecto
+real (`qcdxkmowlbptgbgjuywc`), que ya contiene `unifood-email-header.png`. La URL está fija
+en las dos plantillas.
 
+- Las plantillas se copian tal cual a cualquier proyecto, staging o real, sin cambiar la
+  URL.
 - Todo lo que se sube a `branding` es público: solo debe contener imágenes de marca.
-- Si el bucket o el archivo cambian de proyecto o de nombre, hay que actualizar la URL en
-  las dos plantillas y volver a copiarlas en cada panel.
+- Si algún día se cambia de proyecto o de dominio, hay que subir la imagen al nuevo bucket
+  y actualizar la URL en las dos plantillas.
 
 ## Vigencia del código
 
