@@ -1,15 +1,43 @@
 <!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Verifica tu correo en UniFood</title>
-  </head>
-  <body style="font-family: Arial, sans-serif; color: #172b24; line-height: 1.6;">
-    <h1>Verifica tu correo en UniFood</h1>
-    <p>Ingresa este código de 6 dígitos en la pantalla de verificación para completar tu registro:</p>
-    <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px;">{{ .Token }}</p>
-    <p>No compartas este código. Si vence, solicita uno nuevo desde UniFood.</p>
-    <p>Si no solicitaste esta cuenta, puedes ignorar este correo.</p>
-  </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Verifica tu correo en UniFood</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F5F5F7;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#F5F5F7;">Tu c&oacute;digo de verificaci&oacute;n de UniFood</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F5F7;">
+<tr>
+<td align="center" style="padding:32px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;">
+<tr>
+<td align="center" style="padding:0 0 20px 0;">
+<img src="https://qcdxkmowlbptgbgjuywc.supabase.co/storage/v1/object/public/branding/unifood-email-header.png" width="240" height="70" alt="UniFood" style="display:block;border:0;outline:none;text-decoration:none;width:240px;height:70px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:28px;font-weight:700;color:#0A5CF0;">
+</td>
+</tr>
+<tr>
+<td bgcolor="#0A5CF0" style="background-color:#0A5CF0;background-image:linear-gradient(160deg,#0A66F5 0%,#0A52E0 55%,#0033A8 100%);border-radius:24px;padding:40px 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#FFFFFF;">
+<h1 style="margin:0 0 12px 0;font-size:24px;line-height:30px;font-weight:700;color:#FFFFFF;">Verifica tu correo</h1>
+<p style="margin:0 0 26px 0;font-size:15px;line-height:24px;color:#EEF4FF;">Ingresa este c&oacute;digo de 6 d&iacute;gitos en la pantalla de verificaci&oacute;n para completar tu registro.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td align="center" bgcolor="#FFFFFF" style="background-color:#FFFFFF;border-radius:16px;padding:22px 12px;font-family:'SF Mono',Menlo,Consolas,'Courier New',monospace;font-size:36px;line-height:40px;font-weight:700;letter-spacing:10px;color:#0050CC;">{{ .Token }}</td>
+</tr>
+</table>
+<p style="margin:16px 0 0 0;font-size:13px;line-height:20px;color:#E6EEFF;text-align:center;">El c&oacute;digo vence en 15 minutos.</p>
+<hr style="border:0;border-top:1px solid #5E8FF2;margin:28px 0 20px 0;">
+<p style="margin:0;font-size:13px;line-height:20px;color:#E6EEFF;">Si no solicitaste esta cuenta, puedes ignorar este correo. Por tu seguridad, no compartas este c&oacute;digo con nadie.</p>
+</td>
+</tr>
+<tr>
+<td align="center" style="padding:20px 0 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#6E6E73;">Pedidos de cafeter&iacute;a sin filas &middot; UniFood</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
 </html>
