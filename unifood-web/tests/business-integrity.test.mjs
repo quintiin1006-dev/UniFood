@@ -379,7 +379,7 @@ test("read-only preflight detects effective table, column, RPC and helper privil
   const clean = await db.exec(audit);
   assert.deepEqual(rows(clean, "unexpected_business_table_grant"), []);
   assert.deepEqual(rows(clean, "unexpected_business_column_grant"), []);
-  assert.equal(rows(clean, "unexpected_rpc_permission").length, 4);
+  assert.equal(rows(clean, "unexpected_rpc_permission").length, 6);
   assert.ok(
     rows(clean, "unexpected_rpc_permission").every(
       (row) => row.function_exists && !row.unexpected_rpc_permission,

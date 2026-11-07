@@ -11,16 +11,18 @@ test("institutional registration migrations execute on PostgreSQL", async (t) =>
       "SELECT id FROM public.institutions WHERE email_domain = 'ustavillavo.edu.co'",
     )
   ).rows[0].id;
-  let number = 100000;
+  let number = 1000000;
   const register = (email) =>
     db.query(
-      "INSERT INTO auth.users(email, raw_user_meta_data) VALUES ($1, $2) RETURNING id",
+      `INSERT INTO auth.users(email, raw_user_meta_data, raw_app_meta_data)
+       VALUES ($1, $2, '{}') RETURNING id`,
       [
         email,
         JSON.stringify({
           registration_type: "student",
           full_name: "Estudiante de prueba",
-          document: String(++number),
+          code: String(++number),
+          privacy_accepted: "true",
           role: "SUPER_ADMIN",
         }),
       ],
@@ -46,7 +48,7 @@ test("institutional registration migrations execute on PostgreSQL", async (t) =>
         assert.deepEqual(profile, [
           {
             email: email.toLowerCase(),
-            is_active: true,
+            is_active: false,
             institution_id: institution,
             role: "CLIENT",
           },
@@ -64,13 +66,13 @@ test("institutional registration migrations execute on PostgreSQL", async (t) =>
   );
 
   await t.test(
-    "public RPC accepts exact domains, case and outer spaces, but rejects lookalikes",
+    "public RPC accepts exact domains and case, but rejects spaces and lookalikes",
     async () => {
       await db.exec("SET ROLE anon");
       try {
         for (const email of [
           "user@ustavillavo.edu.co",
-          " User@USTAVILLAVICENCIO.EDU.CO ",
+          "User@USTAVILLAVICENCIO.EDU.CO",
         ]) {
           assert.equal(
             (
@@ -84,6 +86,7 @@ test("institutional registration migrations execute on PostgreSQL", async (t) =>
         }
         for (const email of [
           "user@gmail.com",
+          " User@USTAVILLAVICENCIO.EDU.CO ",
           "user@usantotomas.edu.co",
           "user@ustavillavo.edu.co.evil.com",
           "user@sub.ustavillavicencio.edu.co",
@@ -117,10 +120,7 @@ test("institutional registration migrations execute on PostgreSQL", async (t) =>
         "user@ustavillavicencio.edu.co.evil.com",
         "user@@ustavillavo.edu.co",
       ]) {
-        await assert.rejects(
-          register(email),
-          /Invalid institutional student registration/,
-        );
+        await assert.rejects(register(email), /Invalid registration/);
         assert.equal(
           (
             await db.query(
@@ -181,10 +181,7 @@ test("institutional registration migrations execute on PostgreSQL", async (t) =>
           ).rows[0].allowed,
           false,
         );
-        await assert.rejects(
-          register(email),
-          /Invalid institutional student registration/,
-        );
+        await assert.rejects(register(email), /Invalid registration/);
       }
     },
   );

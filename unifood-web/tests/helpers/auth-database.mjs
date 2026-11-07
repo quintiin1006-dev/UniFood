@@ -3,6 +3,8 @@ import { readdir, readFile } from "node:fs/promises";
 
 // Real PostgreSQL in memory. Only Supabase's managed auth schema is a fixture;
 // all public tables, policies, functions and triggers come from our migrations.
+// Fixtures insert identities directly, as the Admin API does, so raw_app_meta_data
+// defaults to the provisioned mark. Public signups must pass '{}' explicitly.
 export const authSchemaSql = `
       CREATE ROLE anon;
       CREATE ROLE authenticated;
@@ -10,7 +12,9 @@ export const authSchemaSql = `
       CREATE TABLE auth.users (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         email text NOT NULL,
-        raw_user_meta_data jsonb NOT NULL DEFAULT '{}'::jsonb
+        raw_user_meta_data jsonb NOT NULL DEFAULT '{}'::jsonb,
+        raw_app_meta_data jsonb NOT NULL DEFAULT '{"unifood_provisioned": true}'::jsonb,
+        email_confirmed_at timestamptz
       );
       CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
         SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
