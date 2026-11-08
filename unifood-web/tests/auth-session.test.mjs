@@ -20,8 +20,7 @@ function load(file, mocks = {}, cache = new Map()) {
     (name) => {
       if (name === "server-only") return {};
       if (name in mocks) return mocks[name];
-      if (name.startsWith("node:"))
-        return createRequire(import.meta.url)(name);
+      if (name.startsWith("node:")) return createRequire(import.meta.url)(name);
       if (name.startsWith("@/"))
         return load(`${name.slice(2)}.ts`, mocks, cache);
       if (name.startsWith("."))
