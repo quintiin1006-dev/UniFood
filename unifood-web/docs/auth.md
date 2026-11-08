@@ -97,7 +97,7 @@ El registro usa `signUp`, el reenvío usa `resend({ type: "signup" })` y la veri
 
 1. Abrir en el panel de Supabase el proyecto correspondiente a `SUPABASE_URL`.
 2. En **Authentication → Email Templates** (o **Emails → Templates**), abrir **Confirm sign up**.
-3. Usar el asunto `Verifica tu correo en UniFood` y reemplazar **todo** el cuerpo con el contenido de [`confirmation.html`](../../unifood-backend/supabase/templates/confirmation.html). La plantilla muestra `{{ .Token }}` y no contiene enlaces ni `{{ .ConfirmationURL }}`. Guardar los cambios. Editar únicamente **Magic Link** no cambia los correos de registro con contraseña.
+3. Usar el asunto `Tu código de verificación de UniFood` y reemplazar **todo** el cuerpo con el contenido de [`confirmation.html`](../../unifood-backend/supabase/templates/confirmation.html). La plantilla muestra `{{ .Token }}` y no contiene enlaces ni `{{ .ConfirmationURL }}`. Guardar los cambios. Editar únicamente **Magic Link** no cambia los correos de registro con contraseña.
 4. En la configuración del proveedor **Email**, mantener **Confirm email** activado y establecer **Email OTP Length** en **6**. Conservar la expiración y los límites de envío habilitados.
 5. Desde la pantalla de verificación de UniFood, solicitar **Reenviar código** cuando termine la espera. Comprobar el correo nuevo: debe mostrar seis dígitos, sin botón de confirmación. Introducir ese código en UniFood y verificar el acceso a `/cuenta`.
 
