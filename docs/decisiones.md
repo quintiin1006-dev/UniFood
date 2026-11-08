@@ -490,6 +490,20 @@ El BFF y Spring usan las mismas rutas. Errores con `ApiErrorResponse`:
 **Cierre diario:** sin endpoint público. Tarea cada 5 minutos y al arrancar; toma pedidos
 activos anteriores al inicio del día con `FOR UPDATE SKIP LOCKED`. Es idempotente.
 
+**Cierre manual hasta tener la tarea** (`scripts/supabase/close-stale-orders.sql`): aplica la
+misma regla a los pedidos activos creados antes del inicio del día en America/Bogota.
+PENDING pasa a CANCELLED con `cancellation_source = 'SYSTEM'` y `cancelled_at`; PREPARING,
+READY y CALLED pasan a NOT_COLLECTED con `not_collected_at`. Cada pedido cerrado sube su
+`version`. Los pedidos de hoy y los ya terminados no se tocan, y los bloqueados en ese
+momento se saltan hasta la siguiente ejecución.
+
+- Por defecto es un **ensayo**: solo lista qué cerraría. Cierra de verdad con
+  `SET unifood.close_stale_orders = 'apply';` en la misma ejecución.
+- Ejecutarlo al empezar cada día de ensayo, antes de abrir la cafetería: libera a los
+  clientes que dejaron un pedido activo el día anterior (020).
+- Límite: un NOT_COLLECTED del cierre no se distingue de uno marcado por el worker, porque
+  `not_collected_at` no guarda quién lo marcó.
+
 **Cambio forzado de contraseña:** `current_auth_profile` devuelve `mustChangePassword`.
 Hasta cambiarla, el panel solo muestra esa pantalla y Spring responde 403
 `PASSWORD_CHANGE_REQUIRED`.
