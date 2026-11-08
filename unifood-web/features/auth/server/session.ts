@@ -7,8 +7,17 @@ import {
   AuthServiceUnavailableError,
   isTemporaryAuthFailure,
 } from "./failures";
-import type { AuthProfile, AuthEntrypoint } from "../validation";
-import { hasValidBusinessRole, loginPath } from "../validation";
+import type {
+  AuthProfile,
+  AuthEntrypoint,
+  PendingRegistration,
+} from "../validation";
+import {
+  REGISTRATION_COMPLETE_PATH,
+  hasValidBusinessRole,
+  loginPath,
+} from "../validation";
+import { pendingRegistration } from "./registration";
 
 export const getAuth = cache(async () => {
   if (!authConfig()) return null;
@@ -44,9 +53,40 @@ export const getAuth = cache(async () => {
   }
 });
 
+/**
+ * The signed-in user's registration waiting for step 2, or null. Any failure counts as
+ * "not pending": it can only send someone to the login, never past step 2.
+ */
+export const getPendingRegistration = cache(
+  async (): Promise<PendingRegistration | null> => {
+    if (!authConfig()) return null;
+    try {
+      const client = await authClient();
+      const {
+        data: { user },
+        error,
+      } = await client.auth.getUser();
+      if (error && isTemporaryAuthFailure(error))
+        throw new AuthServiceUnavailableError();
+      if (error || !user) return null;
+      return await pendingRegistration(client);
+    } catch (error) {
+      unstable_rethrow(error);
+      if (isTemporaryAuthFailure(error))
+        throw new AuthServiceUnavailableError();
+      return null;
+    }
+  },
+);
+
 export async function requireAuth(entrypoint: AuthEntrypoint = "client") {
   // Context chooses the anonymous return path; each page still checks its role.
   const auth = await getAuth();
-  if (!auth) redirect(loginPath(entrypoint));
+  if (!auth) {
+    // A pending registration reaches no client screen: only step 2.
+    if (entrypoint === "client" && (await getPendingRegistration()))
+      redirect(REGISTRATION_COMPLETE_PATH);
+    redirect(loginPath(entrypoint));
+  }
   return auth;
 }

@@ -11,6 +11,7 @@ import {
 } from "@/features/auth/server/config";
 import {
   DEFAULT_USERNAME_DOMAIN,
+  REGISTRATION_COMPLETE_PATH,
   destination,
   hasValidBusinessRole,
   canUseEntrypoint,
@@ -18,15 +19,24 @@ import {
   loginPath,
   normalizeIdentifier,
   sameOrigin,
-  validDocument,
   validEmail,
+  validFullName,
+  validInstitutionalCode,
   validPassword,
+  validRegistrationEmail,
 } from "@/features/auth/validation";
+import {
+  generateSignupPassword,
+  pendingRegistration,
+  registrationErrorCode,
+  registrationFailure,
+} from "@/features/auth/server/registration";
 
 const actions = new Set([
   "login",
   "register",
-  "institution",
+  "rules",
+  "complete",
   "verify",
   "resend",
   "recover",
@@ -37,6 +47,12 @@ const json = (data: object, status = 200) =>
   Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
 const fail = (message: string, status = 400, code?: string) =>
   json({ message, code }, status);
+const failRegistration = (code: string) => {
+  const failure = registrationFailure(code);
+  return fail(failure.message, failure.status, failure.code);
+};
+const passwordRuleMessage =
+  "La contraseña debe tener entre 8 y 128 caracteres, mayúscula, minúscula y número.";
 
 function providerError(error: {
   code?: string;
@@ -117,7 +133,7 @@ export async function POST(
         "PANEL_RECOVERY_LINK_REQUIRED",
       );
     if (
-      (action === "register" || action === "institution") &&
+      (action === "register" || action === "rules" || action === "complete") &&
       entrypoint !== "client"
     )
       return fail("El registro está disponible en el acceso de estudiantes.");
@@ -135,7 +151,7 @@ export async function POST(
       names.forEach((name) => cookiesWritten.add(name)),
     );
     const email =
-      action === "institution" || action === "register"
+      action === "rules" || action === "register"
         ? value("email").trim().toLowerCase()
         : normalizeIdentifier(
             value("email"),
@@ -150,11 +166,52 @@ export async function POST(
         return providerError(error);
       return json({ redirect: loginPath(entrypoint) });
     }
+    if (action === "complete") {
+      // Step 2 (docs/decisiones.md §3), with the session from the emailed code.
+      const fullName = value("fullName").trim();
+      const code = value("code").trim();
+      if (!validFullName(fullName))
+        return failRegistration("REGISTRATION_INVALID_NAME");
+      if (body.privacy !== true)
+        return failRegistration("REGISTRATION_PRIVACY_REQUIRED");
+      if (!validPassword(password)) return fail(passwordRuleMessage);
+      const {
+        data: { user },
+        error: userError,
+      } = await client.auth.getUser();
+      if (userError && isTemporaryAuthFailure(userError))
+        return temporaryAuthResponse();
+      if (userError || !user)
+        return failRegistration("REGISTRATION_NOT_AUTHENTICATED");
+      const pending = await pendingRegistration(client);
+      if (!pending) return failRegistration("REGISTRATION_NOT_PENDING");
+      if (!pending.emailConfirmed)
+        return failRegistration("REGISTRATION_EMAIL_NOT_CONFIRMED");
+      if (!validInstitutionalCode(code, pending))
+        return failRegistration("REGISTRATION_INVALID_CODE");
+      // 1. Replace the step 1 password. On a retry it is already this one, and Auth
+      //    answers same_password: the hash was updated by the earlier attempt.
+      const updated = await client.auth.updateUser({ password });
+      if (updated.error && updated.error.code !== "same_password")
+        return providerError(updated.error);
+      // 2. Close every other session before the account becomes usable.
+      const others = await client.auth.signOut({ scope: "others" });
+      if (others.error) return providerError(others.error);
+      // 3. Only now store the profile. On failure the session stays for a retry.
+      const completed = await client.rpc("complete_registration", {
+        full_name: fullName,
+        institutional_code: code || null,
+        privacy_accepted: true,
+      });
+      if (completed.error)
+        return failRegistration(registrationErrorCode(completed.error));
+      const { data: profile, error } = await client.rpc("current_auth_profile");
+      if (error || !canUseEntrypoint(profile, "client"))
+        return failRegistration("REGISTRATION_FAILED");
+      return json({ redirect: destination(profile) });
+    }
     if (action === "reset") {
-      if (!validPassword(password))
-        return fail(
-          "La contraseña debe tener entre 8 y 128 caracteres, mayúscula, minúscula y número.",
-        );
+      if (!validPassword(password)) return fail(passwordRuleMessage);
       const {
         data: { user },
         error: userError,
@@ -171,43 +228,42 @@ export async function POST(
       await clearAuthCookies(cookiesWritten);
       return json({ redirect: loginPath(entrypoint) });
     }
+    if (action === "rules" || action === "register") {
+      // Same rule as the database; an invalid address never reaches Supabase.
+      const allowed = validRegistrationEmail(email);
+      let clientType: unknown = null;
+      if (allowed) {
+        const { data, error } = await client.rpc("registration_rules", {
+          email,
+        });
+        if (error)
+          return fail(
+            "No pudimos consultar tu institución. Inténtalo nuevamente.",
+            502,
+          );
+        const rules = data as { allowed?: unknown; clientType?: unknown };
+        if (rules?.allowed === true) clientType = rules.clientType;
+      }
+      const known = clientType === "STUDENT" || clientType === "STAFF";
+      // Domain facts only: whether an account exists is never part of the answer.
+      if (action === "rules")
+        return json(known ? { allowed: true, clientType } : { allowed: false });
+      if (!known) return failRegistration("REGISTRATION_DOMAIN_NOT_ALLOWED");
+    }
     if (!value("email").trim() || !validEmail(email))
       return fail("Escribe un correo válido.");
-    if (action === "institution" || action === "register") {
-      const { data, error } = await client.rpc("is_institutional_email", {
-        email,
-      });
-      if (error)
-        return fail(
-          "No pudimos consultar tu institución. Inténtalo nuevamente.",
-          502,
-        );
-      if (!data)
-        return fail(
-          "Solo se permiten correos de instituciones habilitadas en UniFood.",
-        );
-      if (action === "institution") return json({ ok: true });
-    }
     if (action === "register") {
-      const fullName = value("fullName").trim();
-      const document = value("document").trim();
-      if (
-        fullName.length < 3 ||
-        fullName.length > 150 ||
-        !validDocument(document)
-      )
-        return fail("Revisa tu nombre completo y número de documento.");
-      if (!validPassword(password))
-        return fail(
-          "La contraseña debe tener entre 8 y 128 caracteres, mayúscula, minúscula y número.",
-        );
+      // Step 1: address only. Name, code and privacy arrive in step 2.
       const { data, error } = await client.auth.signUp({
         email,
-        password,
-        options: {
-          data: { full_name: fullName, document, registration_type: "student" },
-        },
+        password: generateSignupPassword(),
       });
+      // Same answer whether or not the address already had an account.
+      if (
+        error?.code === "user_already_exists" ||
+        error?.code === "email_exists"
+      )
+        return json({ ok: true });
       if (error) return providerError(error);
       // Confirmation must remain enabled in Supabase; never silently bypass the OTP screen.
       if (data.session) {
@@ -241,8 +297,14 @@ export async function POST(
         type: body.recovery === true ? "recovery" : "signup",
       });
       if (error) return providerError(error);
-      if (body.recovery === true) return json({ ok: true });
       authenticated = true;
+      if (body.recovery === true) {
+        // A registration left before step 2 continues there with this code session.
+        if (entrypoint === "client" && (await pendingRegistration(client)))
+          return json({ redirect: REGISTRATION_COMPLETE_PATH });
+        authenticated = false;
+        return json({ ok: true });
+      }
     }
     if (action === "login") {
       if (!password || password.length > 128)
@@ -255,6 +317,22 @@ export async function POST(
       authenticated = true;
     }
     const { data: profile, error } = await client.rpc("current_auth_profile");
+    if (
+      !error &&
+      !hasValidBusinessRole(profile) &&
+      entrypoint === "client" &&
+      (await pendingRegistration(client))
+    ) {
+      // Pending step 2: keep this session; the account has no role yet.
+      authenticated = false;
+      if (remember !== undefined)
+        (await cookies()).set(
+          rememberCookie,
+          remember ? "1" : "0",
+          sessionCookieOptions(!!remember),
+        );
+      return json({ redirect: REGISTRATION_COMPLETE_PATH });
+    }
     if (error || !hasValidBusinessRole(profile)) {
       await discardSession();
       return fail(

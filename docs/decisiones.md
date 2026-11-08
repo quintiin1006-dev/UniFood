@@ -78,13 +78,29 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
     llamar a `complete_registration()`. La base rechaza el paso 2 si la contraseña no se
     actualizó desde el signup.
   - Si falla a mitad, la cuenta queda confirmada pero sin completar: no opera, conserva
-    la contraseña actualizada y puede repetir el paso 2 antes de 24 horas. Después la borra la
-    limpieza.
+    la contraseña actualizada y puede repetir el paso 2 sin un código nuevo mientras dure
+    la sesión. Pasadas 24 horas la borra la limpieza.
   - Tras un signup público, el paso 2 exige una sesión emitida al verificar el código
     del correo (`amr` con `otp`). Con una sesión de contraseña se rechaza, así que quien
     eligió la contraseña del signup con un correo ajeno no puede completarlo. Las cuentas
     preautorizadas por el servidor, como las de la demo, sí pueden completarlo con
     contraseña.
+- **Flujo en la web (B7):**
+  1. `/registro`: el usuario escribe su correo. `registration_rules()` informa si el
+     dominio vale y el tipo de cuenta, sin decir si la cuenta existe. El signup responde
+     igual exista o no.
+  2. El código llega al correo y vence a los 15 minutos, como los 900 s de Auth. Se
+     puede reenviar con 60 s de espera y hasta 3 veces por pantalla; el límite de
+     Supabase se muestra con un mensaje claro.
+  3. Al verificarlo, la sesión queda en las cookies HttpOnly y la web lleva a
+     `/registro/completar`. Ahí se piden nombre, código, privacidad y contraseña. Las
+     longitudes del código salen de `pending_registration()`.
+  4. Al terminar, la cuenta entra a `/cuenta`.
+- **Reanudar:** una cuenta pendiente que entra con sesión vigente, por login o por
+  recuperación, vuelve a `/registro/completar` y no llega a ninguna pantalla del cliente.
+  Sin sesión, usa «¿Olvidaste tu contraseña?»: el código de recuperación también da una
+  sesión `otp` y lleva al paso 2, donde fija la contraseña. Pasadas 24 horas la cuenta se
+  borra y hay que registrarse de nuevo.
 - **Cuentas sin completar:** se eliminan a las 24 horas de creadas si no completaron el
   paso 2, hayan confirmado el correo o no, y solo si nada más apunta a ellas: perfil de
   cliente, pedidos, roles, cafeterías, notificaciones ni correcciones de código. Con
@@ -109,7 +125,9 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
 - Si alguien reclama un código por error, SUPER_ADMIN lo libera en una transacción con
   registro de auditoría y marca la cuenta como «código en revisión». Se hace con un script
   local hasta que exista el panel.
-- Casilla de aceptación de la política de privacidad, con fecha guardada (Ley 1581).
+- Casilla de aceptación de la política de privacidad, con fecha guardada (Ley 1581). Enlaza
+  a `/privacidad`, que hoy es un **borrador pendiente de revisión legal**: no es la
+  política definitiva y queda para la auditoría de legalidad.
 - El worker ve solo nombre y código institucional, o nombre y tipo de cliente si no hay
   código.
 

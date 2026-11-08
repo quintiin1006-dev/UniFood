@@ -112,6 +112,7 @@ export const config = {
     "/login",
     "/panel/login",
     "/registro",
+    "/registro/completar",
     "/recuperar-contrasena",
     "/worker/:path*",
     "/cuenta/:path*",
