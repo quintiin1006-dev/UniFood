@@ -86,6 +86,8 @@ Migración 018 y `docs/decisiones.md` §3. Toda llamada a Supabase del registro 
 
 **Código.** El correo trae 6 dígitos que vencen a los 15 minutos, igual que los 900 s de Auth. El reenvío espera 60 s y se limita a 3 por pantalla; el `429` de Supabase muestra «Demasiados intentos». `verifyOtp` de tipo `signup` deja la sesión en las cookies existentes. Esa sesión lleva `amr` con `otp`, que `complete_registration()` exige tras un signup público.
 
+**Campo del código.** Registro, confirmación desde el login y recuperación comparten un solo campo en `AuthScreen`, en lugar de las seis cajas anteriores. Lleva `autoComplete="one-time-code"`, `inputMode="numeric"`, `pattern="[0-9]{6}"` y `name="one-time-code"`, para que iOS y Android lo autocompleten entero. `normalizeOtp` deja solo dígitos, hasta seis, al escribir, pegar o autocompletar, así que «123 456», «123-456» o el asunto completo del correo valen. Al completar los seis dígitos el formulario se envía solo, por el mismo manejador que el botón «Verificar». No se envía dos veces: hay un candado mientras la petición está en curso, y el mismo código no se reenvía solo tras un rechazo. El campo recibe el foco al aparecer, queda de solo lectura mientras se envía para no cerrar el teclado, y tras un error queda seleccionado y enlazado al mensaje, que se anuncia con `role="alert"`.
+
 **Paso 2, `/registro/completar`.** La página lee `pending_registration()` en el servidor y pasa al formulario el tipo de cuenta y las longitudes del código; el cliente no las fija. `POST /api/auth/complete` valida nombre, código, privacidad y contraseña, y luego, en este orden:
 
 1. `updateUser({ password })` con la sesión del usuario. En un reintento Auth responde `same_password`, que aquí no es error: el hash ya cambió en el intento anterior.
@@ -117,7 +119,7 @@ El registro usa `signUp`, el reenvío usa `resend({ type: "signup" })` y la veri
 
 1. Abrir en el panel de Supabase el proyecto correspondiente a `SUPABASE_URL`.
 2. En **Authentication → Email Templates** (o **Emails → Templates**), abrir **Confirm sign up**.
-3. Usar el asunto `Tu código de verificación de UniFood` y reemplazar **todo** el cuerpo con el contenido de [`confirmation.html`](../../unifood-backend/supabase/templates/confirmation.html). La plantilla muestra `{{ .Token }}` y no contiene enlaces ni `{{ .ConfirmationURL }}`. Guardar los cambios. Editar únicamente **Magic Link** no cambia los correos de registro con contraseña.
+3. Usar el asunto `Tu código UniFood: {{ .Token }}`, recomendado en el [README de plantillas](../../unifood-backend/supabase/templates/README.md), y reemplazar **todo** el cuerpo con el contenido de [`confirmation.html`](../../unifood-backend/supabase/templates/confirmation.html). La plantilla muestra `{{ .Token }}` y no contiene enlaces ni `{{ .ConfirmationURL }}`. Guardar los cambios. Editar únicamente **Magic Link** no cambia los correos de registro con contraseña.
 4. En la configuración del proveedor **Email**, mantener **Confirm email** activado y establecer **Email OTP Length** en **6**. Conservar la expiración y los límites de envío habilitados.
 5. Desde la pantalla de verificación de UniFood, solicitar **Reenviar código** cuando termine la espera. Comprobar el correo nuevo: debe mostrar seis dígitos, sin botón de confirmación. Introducir ese código en UniFood y verificar el acceso a `/cuenta`.
 
