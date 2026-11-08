@@ -171,6 +171,74 @@ no se muestra hasta tener dominio (§9). Procedimiento, todo en staging:
 - **El paso 2 debe hacerse antes de 24 horas desde la creación:** si no, la limpieza borra
   la cuenta. Conviene crearlas el mismo día del ensayo y completarlas en seguida.
 
+**Siembra y cuentas ADMIN y WORKER de la demo**, todo en `unifood-staging`, con 001-021
+aplicadas. Ningún paso envía correos. Sustituye `TU_GMAIL` por la parte de tu dirección de
+Gmail antes de la `@`: se usan los alias `+admin` y `+worker`, que llegan al mismo buzón.
+
+1. **Siembra.** En el SQL Editor, pega en la misma ejecución:
+
+   ```sql
+   SET unifood.seed_target = 'staging';
+   ```
+
+   seguido del contenido de `scripts/supabase/seed-demo.sql`. Crea «Sede Principal»,
+   «Cafetería Central» **inactiva**, los 8 productos y el estado abierto y la
+   disponibilidad de hoy. Repetirlo no cambia lo que ya existe.
+
+2. **ADMIN.** Justo antes de crearlo, nunca con anticipación (la preautorización vale 15
+   minutos y un solo uso):
+
+   ```sql
+   SELECT public.preauthorize_identity('TU_GMAIL+admin@gmail.com', 'ADMIN');
+   ```
+
+   En seguida, en Authentication > Users > Add user > Create new user, el mismo correo,
+   una contraseña tuya y **Auto Confirm User** marcado. Usa la API de administración y no
+   envía correo.
+
+3. **Rol, asignación y activación**, en una sola ejecución. La 009 exige que una
+   cafetería activa tenga su ADMIN activo y asignado, y lo comprueba al confirmar la
+   transacción:
+
+   ```sql
+   BEGIN;
+   INSERT INTO public.user_roles (user_id, role_id)
+     SELECT u.id, r.id FROM public.users u, public.roles r
+     WHERE u.email = lower('TU_GMAIL+admin@gmail.com') AND r.name = 'ADMIN';
+   INSERT INTO public.cafeteria_users (cafeteria_id, user_id)
+     SELECT c.id, u.id
+     FROM public.cafeterias c
+     JOIN public.sites s ON s.id = c.site_id
+     CROSS JOIN public.users u
+     WHERE s.name = 'Sede Principal' AND c.name = 'Cafetería Central'
+       AND u.email = lower('TU_GMAIL+admin@gmail.com');
+   UPDATE public.users SET is_active = true WHERE email = lower('TU_GMAIL+admin@gmail.com');
+   UPDATE public.cafeterias SET is_active = true
+     WHERE name = 'Cafetería Central'
+       AND site_id = (SELECT id FROM public.sites WHERE name = 'Sede Principal');
+   COMMIT;
+   ```
+
+4. **WORKER.** Igual que el 2 con `'TU_GMAIL+worker@gmail.com'` y el rol `'WORKER'`, y el 3
+   con ese correo, `r.name = 'WORKER'` y **sin** la última sentencia `UPDATE public.cafeterias`.
+5. **Comprobación:**
+
+   ```sql
+   SELECT u.email, r.name AS role, u.is_active, c.is_active AS cafeteria_active
+   FROM public.users u
+   JOIN public.user_roles ur ON ur.user_id = u.id
+   JOIN public.roles r ON r.id = ur.role_id
+   JOIN public.cafeteria_users cu ON cu.user_id = u.id
+   JOIN public.cafeterias c ON c.id = cu.cafeteria_id;
+   ```
+
+   Esperado: las dos cuentas activas, con su rol, en la cafetería activa. Ambas entran por
+   `/panel/login` con la contraseña que les pusiste.
+
+- **Cada día de ensayo, el WORKER abre la cafetería** desde su panel. La siembra solo deja
+  abierta la fecha en que se ejecutó, y en America/Bogota.
+- `tests/order-schema.test.mjs` ejecuta esta misma secuencia en una base local.
+
 ## 4. Flujo del cliente
 
 1. Registro en dos pasos con OTP (§3) e inicio de sesión. El dominio del correo determina
@@ -197,6 +265,9 @@ no se muestra hasta tener dominio (§9). Procedimiento, todo en staging:
   incluido el cierre diario. Solo se bloquean los pedidos nuevos.
 - Sin cafeterías activas en la sede: «Aún no hay cafeterías disponibles en tu sede».
 - Cada cambio del interruptor registra quién y cuándo, en la misma transacción.
+- **Demo (decidido el 2026-11-08):** ACTIVA/SUSCRITA se lee de `cafeterias.is_active`. La
+  tabla propia de suscripciones, con su historial de quién y cuándo, queda como **deuda
+  antes del piloto**: hasta entonces el cambio de suscripción no deja registro propio.
 
 ## 6. Pedido
 
@@ -217,8 +288,20 @@ no se muestra hasta tener dominio (§9). Procedimiento, todo en staging:
 - Catálogo: todo lo que cada admin cree y active. Se añade `BEBIDA` al enum
   `catalog_category` en migración propia. Categorías libres por cafetería, después del
   piloto. Producto sin foto: inicial sobre azul suave.
-- Cancelación: el cliente cancela mientras esté PENDING, sin plazo por tiempo.
-- Rechazo: el worker puede rechazar **solo en PENDING**, con motivo obligatorio.
+- Cancelación: el cliente cancela **solo mientras el pedido esté PENDING, sin plazo** por
+  tiempo (confirmado el 2026-11-08).
+- Rechazo: el worker puede rechazar **solo en PENDING**, con motivo obligatorio. **El worker
+  no cancela** (confirmado el 2026-11-08): la ruta actual `PATCH /api/orders/{id}/cancel`
+  del worker se sustituye por el rechazo cuando este se implemente.
+- **Pedido activo:** PENDING, PREPARING, READY y CALLED. Terminales: DELIVERED,
+  NOT_COLLECTED y CANCELLED. La base lo garantiza con el índice único parcial
+  `uq_orders_one_active_per_client` (020): un estado terminal cierra el pedido para siempre,
+  y uno activo todavía obliga al cliente a recogerlo o cancelarlo.
+- **Quién terminó un pedido cancelado** (`orders.cancellation_source`, 021): `CLIENT`, el
+  cliente en PENDING; `WORKER`, la cafetería, con `rejection_reason` y `rejected_by` si es
+  un rechazo; `SYSTEM`, el cierre diario. Es inmutable una vez fijado.
+- Una clave de idempotencia sirve una sola vez por cliente, para siempre: repetirla tras la
+  entrega sigue siendo un reintento, nunca un pedido nuevo.
 - Cierre diario (America/Bogota): PENDING pasa a CANCELLED por el sistema; PREPARING, READY
   o CALLED pasan a NOT_COLLECTED. La cola FIFO solo considera pedidos del día.
 - Historial de solo lectura, sin «repetir pedido».
@@ -228,6 +311,9 @@ no se muestra hasta tener dominio (§9). Procedimiento, todo en staging:
 Solo dentro de la app, al pasar a preparación y a listo para recoger (CALLED y sus
 recordatorios): pantalla «Mi pedido» con polling, aviso visible, sonido y cambio del
 título de la pestaña. Web Push queda para después.
+
+**Decidido el 2026-11-08:** los avisos se deducen del estado que devuelve el sondeo de «Mi
+pedido». La tabla `notifications` **no se usa por ahora**: no se escribe ni se lee.
 
 ## 8. Diseño
 
@@ -242,6 +328,8 @@ aíslan sus estilos de `globals.css`.
 ## 9. Infraestructura y Supabase
 
 - Frontend en Vercel. Backend Spring en hosting con contenedor, por decidir.
+- **Demo (decidido el 2026-11-08):** la web y Spring corren **en local** contra
+  `unifood-staging`. El hosting se decide después.
 - **Entornos:** la demo del 28 de noviembre corre sobre `unifood-staging`; el piloto, sobre
   el proyecto real. El real recibe la 018 y B7 en enero de 2027, antes del piloto, tras
   validarlos en staging.
@@ -267,16 +355,24 @@ cada 5 minutos por IP; 60 s entre correos al mismo usuario; IP forwarding apagad
 BFF llama desde el servidor, todos comparten IP. El endurecimiento incluye límites propios
 por IP real y por cuenta, y CAPTCHA, sin activar IP forwarding por ahora.
 
-## 10. Migraciones 018 a 023
+## 10. Migraciones 018 a 021
+
+Renumeradas el 2026-11-08, consecutivas y sin saltos. Las suscripciones y las preferencias
+salen del bloque: la suscripción es deuda antes del piloto (§5) y la preferencia de sede y
+cafetería tomará el siguiente número libre cuando se implemente.
 
 | #   | Archivo                         | Contenido                                                                                                                                                                                          |
 | --- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 018 | `secure_registration`           | Tabla de dominios, `min_code_length` y `max_code_length`, tipo de cliente, código, privacidad, `users.email_confirmed_at`, `users.must_change_password`, cuenta inactiva y activación al confirmar |
-| 019 | `cafeteria_subscriptions`       | Tabla propia e historial de cambios. No reutiliza `cafeterias.is_active`                                                                                                                           |
-| 020 | `client_preferences`            | Sede y cafetería, con FK compuesta                                                                                                                                                                 |
-| 021 | `catalog_category_bebida`       | Solo `ALTER TYPE ... ADD VALUE 'BEBIDA'`                                                                                                                                                           |
-| 022 | `order_idempotency`             | `idempotency_key`, `request_hash` y único parcial de pedido activo por cliente                                                                                                                     |
-| 023 | `order_rejection_and_snapshots` | `note`, `cancellation_source`, `rejection_reason`, `rejected_by`, `client_code`, `client_type`                                                                                                     |
+| 019 | `catalog_category_bebida`       | Solo `ALTER TYPE ... ADD VALUE IF NOT EXISTS 'BEBIDA'`, fuera de transacción                                                                                                                       |
+| 020 | `order_idempotency`             | `idempotency_key`, `request_hash`, único por cliente y clave, único parcial de pedido activo por cliente e índice del historial                                                                    |
+| 021 | `order_rejection_and_snapshots` | `note`, `cancellation_source`, `rejection_reason`, `rejected_by`, `client_code`, `client_type`                                                                                                     |
+
+- 019-021: los pedidos existentes conservan su historia. `cancellation_source` se deduce
+  exactamente del indicador `cancelled_by_client` de la 008; `client_code` y `client_type`
+  quedan nulos en los pedidos anteriores, que mantienen `client_document`.
+- La 020 se niega a aplicarse si un cliente tiene dos pedidos activos, con un mensaje que
+  dice cuáles; no repara datos.
 
 - Todas: RLS sin policies y `REVOKE` a `PUBLIC, anon, authenticated`. Antes de aplicar, se
   amplía y ejecuta `audit_business_integrity.sql`.
