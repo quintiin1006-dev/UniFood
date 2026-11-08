@@ -30,7 +30,33 @@ WITH checks(migration, applied) AS (VALUES
 SELECT migration, applied FROM checks ORDER BY migration;
 
 -- Read-only: objects of migration 018. Every row must say true. No data is returned.
-WITH checks(object, ok) AS (VALUES
+-- Every foreign key to an account must be checked by purge_unconfirmed_accounts() or be
+-- the cascade it relies on. Supabase's own auth tables only need to cascade.
+WITH account_fks AS (
+  SELECT c.conrelid::regclass::text || '.' || a.attname AS reference,
+         c.connamespace = 'auth'::regnamespace AS auth_internal,
+         c.confdeltype = 'c' AS cascades
+  FROM pg_catalog.pg_constraint c
+  JOIN pg_catalog.pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
+  WHERE c.contype = 'f'
+    AND c.confrelid IN (to_regclass('public.users'), to_regclass('public.clients'), to_regclass('auth.users'))
+), uncovered_fks AS (
+  SELECT reference FROM account_fks
+  WHERE NOT (auth_internal AND cascades)
+    AND reference NOT IN (
+      'users.id', 'clients.user_id', 'user_roles.user_id', 'cafeteria_users.user_id',
+      'notifications.user_id', 'notification_preferences.user_id', 'pending_registrations.user_id',
+      'client_code_corrections.actor_id', 'client_code_corrections.client_id', 'orders.client_id')
+), checks(object, ok) AS (VALUES
+  ('every account foreign key is covered by the cleanup', NOT EXISTS (SELECT 1 FROM uncovered_fks)),
+  ('browser roles cannot write account columns', CASE WHEN to_regclass('public.pending_registrations') IS NULL THEN false
+    ELSE NOT EXISTS (
+      SELECT 1 FROM unnest(ARRAY['anon', 'authenticated']) r,
+        (VALUES ('public.clients', 'client_type'), ('public.clients', 'institutional_code'),
+                ('public.clients', 'code_review_required'), ('public.clients', 'privacy_accepted_at'),
+                ('public.users', 'is_active'), ('public.users', 'must_change_password'),
+                ('public.users', 'deactivated_at')) t(tbl, col)
+      WHERE has_table_privilege(r, t.tbl, 'UPDATE') OR has_column_privilege(r, t.tbl, t.col, 'UPDATE')) END),
   ('pg_cron extension', EXISTS (SELECT 1 FROM pg_catalog.pg_extension WHERE extname = 'pg_cron')),
   ('table institution_email_domains', to_regclass('public.institution_email_domains') IS NOT NULL),
   ('table identity_preauthorizations', to_regclass('public.identity_preauthorizations') IS NOT NULL),
@@ -78,3 +104,18 @@ WITH checks(object, ok) AS (VALUES
       false, true, '')))[1]::text::boolean END)
 )
 SELECT object, ok FROM checks ORDER BY object;
+
+-- Read-only: names the foreign keys behind a false "covered by the cleanup" row.
+-- An empty result is expected.
+SELECT c.conrelid::regclass::text || '.' || a.attname AS uncovered_account_foreign_key,
+       c.confdeltype AS on_delete
+FROM pg_catalog.pg_constraint c
+JOIN pg_catalog.pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
+WHERE c.contype = 'f'
+  AND c.confrelid IN (to_regclass('public.users'), to_regclass('public.clients'), to_regclass('auth.users'))
+  AND NOT (c.connamespace = 'auth'::regnamespace AND c.confdeltype = 'c')
+  AND c.conrelid::regclass::text || '.' || a.attname NOT IN (
+    'users.id', 'clients.user_id', 'user_roles.user_id', 'cafeteria_users.user_id',
+    'notifications.user_id', 'notification_preferences.user_id', 'pending_registrations.user_id',
+    'client_code_corrections.actor_id', 'client_code_corrections.client_id', 'orders.client_id')
+ORDER BY 1;

@@ -96,9 +96,11 @@ CREATE TABLE public.identity_preauthorizations (
     CHECK (expires_at > created_at AND expires_at <= created_at + interval '1 hour')
 );
 
--- Step 1 done, step 2 pending. password_fingerprint is md5 of the signup password hash:
--- step 2 requires a different one, so a password chosen by whoever signed up first with
--- someone else's address never survives (finding F2).
+-- Step 1 done, step 2 pending. password_fingerprint is md5 of the signup password hash.
+-- Step 2 requires the stored hash to have changed, that is, the password to have been
+-- updated in Auth since signup. bcrypt uses a new salt each time, so the hash changes
+-- even if the same password is set again; this proves an update, not a different
+-- password. Whoever signed up first with someone else's address loses theirs (F2).
 CREATE TABLE public.pending_registrations (
   user_id uuid PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
   institution_id uuid NOT NULL REFERENCES public.institutions(id) ON DELETE CASCADE,
@@ -389,8 +391,8 @@ CREATE TRIGGER trg_code_corrections_no_truncate
 
 -- Step 2, called with the user's own session. After a public signup that session must
 -- come from verifying an emailed code (amr "otp"), never from a password login: whoever
--- chose the signup password cannot finish someone else's registration. Auth must already hold a new
--- password; the caller also signs out the other sessions.
+-- chose the signup password cannot finish someone else's registration. Auth must already hold an
+-- updated password hash; the caller also signs out the other sessions.
 CREATE FUNCTION public.complete_registration(
   full_name text, institutional_code text, privacy_accepted boolean
 ) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$

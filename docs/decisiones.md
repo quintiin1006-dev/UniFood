@@ -49,6 +49,10 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
   y como máximo 1 hora. La API de administración crea la identidad y el trigger consume
   esa preautorización. No se usa una marca en `app_metadata`: Auth la escribe después de
   insertar el usuario, y el trigger no la ve (hallazgo F1 de la revisión de la 018).
+- **Uso de `preauthorize_identity`:** se ejecuta justo antes de crear la cuenta con la API
+  de administración, nunca con anticipación: mientras está vigente, cualquier signup con
+  ese correo la consume. Si la cuenta es de cliente, el paso 2 se completa de inmediato,
+  porque la limpieza la borra a las 24 horas.
 - Se guarda el tipo de cliente, deducido del dominio.
 
 **Registro en dos pasos** (aprobado el 2026-11-07, propuesta A de la revisión de la 018):
@@ -56,7 +60,9 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
 1. **Signup:** solo correo y contraseña. La base valida el dominio y crea una identidad
    inactiva, sin nombre, código ni privacidad. Auth envía el OTP.
 2. **Tras confirmar el OTP**, en una llamada autenticada: nombre, código, aceptación de
-   privacidad y una **contraseña nueva**. Se cierran las demás sesiones. El código se
+   privacidad, y la contraseña **actualizada** en Auth. Se cierran las demás sesiones.
+   La base comprueba que el hash cambió desde el signup; como bcrypt usa una sal nueva,
+   eso prueba que hubo una actualización, no que la contraseña sea distinta. El código se
    reserva en este paso, así que reservarlo exige tener el buzón.
 
 - Motivo: con un solo paso, quien se registra primero con un correo ajeno fija la
@@ -69,10 +75,10 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
   - `complete_registration()` actúa solo sobre la cuenta de `auth.uid()`: no recibe otra
     cuenta y falla si ya se completó.
   - Orden: el BFF cambia la contraseña en Auth y cierra las demás sesiones **antes** de
-    llamar a `complete_registration()`. La base rechaza el paso 2 si la contraseña sigue
-    siendo la del signup.
+    llamar a `complete_registration()`. La base rechaza el paso 2 si la contraseña no se
+    actualizó desde el signup.
   - Si falla a mitad, la cuenta queda confirmada pero sin completar: no opera, conserva
-    la contraseña nueva y puede repetir el paso 2 antes de 24 horas. Después la borra la
+    la contraseña actualizada y puede repetir el paso 2 antes de 24 horas. Después la borra la
     limpieza.
   - Tras un signup público, el paso 2 exige una sesión emitida al verificar el código
     del correo (`amr` con `otp`). Con una sesión de contraseña se rechaza, así que quien
@@ -111,8 +117,9 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
 `unifood-staging`, ya confirmadas, sin pasar por el registro público. El registro con OTP
 no se muestra hasta tener dominio (§9). Procedimiento, todo en staging:
 
-1. Preautorizar cada correo en el SQL Editor de staging. La preautorización vale 15
-   minutos y un solo uso; el correo se escribe ahí y nunca se versiona:
+1. Preautorizar cada correo en el SQL Editor de staging **justo antes** del paso 2, de uno
+   en uno y nunca con anticipación. La preautorización vale 15 minutos y un solo uso; el
+   correo se escribe ahí y nunca se versiona:
 
    ```sql
    SELECT public.preauthorize_identity(
@@ -121,7 +128,7 @@ no se muestra hasta tener dominio (§9). Procedimiento, todo en staging:
      'STUDENT');
    ```
 
-2. Antes de que venza, crear la identidad en el panel de staging, en Authentication >
+2. En seguida, crear la identidad en el panel de staging, en Authentication >
    Users > Add user > Create new user, con una contraseña provisional y **Auto Confirm
    User** marcado. Usa la API de administración y no envía correo.
 3. Comprobar que quedó confirmada y pendiente del paso 2:
@@ -135,7 +142,7 @@ no se muestra hasta tener dominio (§9). Procedimiento, todo en staging:
    Esperado: `false`, `true` y el tipo pedido.
 
 4. En el primer ingreso, la persona hace el paso 2 como cualquier cliente: nombre,
-   código, privacidad y una contraseña distinta de la provisional. Necesita B7.
+   código, privacidad y actualizar la contraseña provisional. Necesita B7.
 5. Tras la demo, se eliminan desde Authentication > Users. El borrado en cascada alcanza
    su perfil.
 
