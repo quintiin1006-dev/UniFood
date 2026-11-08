@@ -7,20 +7,19 @@ import {
   ArrowRight,
   CheckCircle2,
   ChevronDown,
-  IdCard,
   Info,
   LockKeyhole,
   Mail,
-  UserRound,
 } from "lucide-react";
 import {
   loginPath,
   normalizeIdentifier,
   passwordRules,
-  validDocument,
   validEmail,
   validPassword,
+  validRegistrationEmail,
   type AuthEntrypoint,
+  type ClientType,
 } from "../validation";
 import Brand, { Waves } from "./Brand";
 import { Field } from "./AuthField";
@@ -29,6 +28,14 @@ import { useAuthHydration } from "../useAuthHydration";
 import styles from "./AuthScreen.module.css";
 
 type Mode = "login" | "register" | "recover";
+// Must match Auth's Email OTP expiration of 900 s and the email templates.
+const OTP_VALIDITY_MINUTES = 15;
+const RESEND_WAIT_SECONDS = 60;
+// Supabase also rate-limits; this keeps one screen from spending that budget.
+const MAX_RESENDS = 3;
+type DomainCheck =
+  | { state: "idle" | "checking" | "denied" }
+  | { state: "allowed"; clientType: ClientType };
 // Firefox-only button attribute, absent from the React types: without it the
 // back button sits outside the form and Firefox restores its disabled state.
 const NO_FIREFOX_STATE_RESTORE = { autoComplete: "off" };
@@ -52,10 +59,6 @@ const copy = {
     or: "o",
     noAccount: "¿No tienes una cuenta?",
     register: "Registrarse como estudiante",
-    create: "Crea tu cuenta",
-    createNote: "Solo necesitas unos datos para comenzar.",
-    name: "Nombre completo",
-    document: "Número de documento",
     next: "Continuar",
     useEmail: "Usa tu correo",
     institutional: "institucional",
@@ -63,6 +66,14 @@ const copy = {
       "Te enviaremos un código de verificación para confirmar tu cuenta.",
     onlyInstitutional:
       "Usa tu correo @ustavillavo.edu.co o @ustavillavicencio.edu.co.",
+    checking: "Comprobando tu correo…",
+    studentAccount: "Correo válido: cuenta de estudiante.",
+    staffAccount: "Correo válido: cuenta de docente o administrativo.",
+    denied:
+      "Este correo no está habilitado. Usa tu correo institucional, sin «+».",
+    validity: `El código vence en ${OTP_VALIDITY_MINUTES} minutos.`,
+    resendLimit:
+      "Ya pediste varios códigos. Espera unos minutos y revisa tu correo, incluida la carpeta de spam.",
     createPassword: "Crea una contraseña",
     secure: "segura",
     passwordNote: "Debe tener al menos 8 caracteres.",
@@ -93,15 +104,7 @@ const copy = {
     show: "Mostrar contraseña",
     hide: "Ocultar contraseña",
     progress: "Progreso del registro",
-    steps: [
-      "Datos personales",
-      "Correo institucional",
-      "Contraseña",
-      "Verificación",
-    ],
-    invalidName: "Escribe tu nombre completo (entre 3 y 150 caracteres).",
-    invalidDocument:
-      "Escribe un documento de 5 a 30 caracteres, sin espacios ni puntos.",
+    steps: ["Correo institucional", "Verificación", "Tus datos"],
     invalidEmail: "Escribe un correo institucional válido.",
     invalidPassword:
       "La contraseña debe cumplir los requisitos y no superar 128 caracteres.",
@@ -132,16 +135,20 @@ const copy = {
     or: "or",
     noAccount: "Don't have an account?",
     register: "Register as a student",
-    create: "Create your account",
-    createNote: "Just a few details to get started.",
-    name: "Full name",
-    document: "Document number",
     next: "Continue",
     useEmail: "Use your",
     institutional: "institutional email",
     emailNote: "We'll send you a verification code to confirm your account.",
     onlyInstitutional:
       "Use your @ustavillavo.edu.co or @ustavillavicencio.edu.co email.",
+    checking: "Checking your email…",
+    studentAccount: "Valid email: student account.",
+    staffAccount: "Valid email: faculty or staff account.",
+    denied:
+      "This email is not enabled. Use your institutional email, without “+”.",
+    validity: `The code expires in ${OTP_VALIDITY_MINUTES} minutes.`,
+    resendLimit:
+      "You already requested several codes. Wait a few minutes and check your email, including spam.",
     createPassword: "Create a",
     secure: "secure password",
     passwordNote: "Use at least 8 characters.",
@@ -171,15 +178,7 @@ const copy = {
     show: "Show password",
     hide: "Hide password",
     progress: "Registration progress",
-    steps: [
-      "Personal details",
-      "Institutional email",
-      "Password",
-      "Verification",
-    ],
-    invalidName: "Enter your full name (3 to 150 characters).",
-    invalidDocument:
-      "Enter a document number with 5 to 30 characters, without spaces or dots.",
+    steps: ["Institutional email", "Verification", "Your details"],
     invalidEmail: "Enter a valid institutional email.",
     invalidPassword:
       "Your password must meet the requirements and contain no more than 128 characters.",
@@ -210,9 +209,12 @@ export default function AuthScreen({
   const t = copy[language];
   const [mode, setMode] = useState(initialMode);
   const [step, setStep] = useState(0);
-  const [fullName, setFullName] = useState("");
-  const [document, setDocument] = useState("");
   const [email, setEmail] = useState("");
+  const [rulesAnswer, setRulesAnswer] = useState<{
+    address: string;
+    result: DomainCheck;
+  } | null>(null);
+  const [resends, setResends] = useState(0);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [remember, setRemember] = useState(true);
@@ -232,9 +234,52 @@ export default function AuthScreen({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const isLogin = mode === "login";
   const isRecovery = mode === "recover";
-  const isOtp =
-    (mode === "register" && step === 3) || (isRecovery && step === 1);
-  const isPassword = !isLogin && step === 2;
+  // Registration here is step 1 only: email, then the code. Step 2 has its own page.
+  const isRegisterEmail = mode === "register" && step === 0;
+  const isOtp = !isLogin && step === 1;
+  const isPassword = isRecovery && step === 2;
+
+  const typedAddress = email.trim().toLowerCase();
+  const typedValid = validRegistrationEmail(typedAddress);
+  // Derived on render: only the server's answer for this exact address is state.
+  const domain: DomainCheck = !typedValid
+    ? { state: typedAddress.includes("@") ? "denied" : "idle" }
+    : rulesAnswer?.address === typedAddress
+      ? rulesAnswer.result
+      : { state: "checking" };
+
+  useEffect(() => {
+    if (!isRegisterEmail || !typedValid) return;
+    const address = typedAddress;
+    let current = true;
+    // Debounced, and stale answers are ignored. Only domain facts come back.
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch("/api/auth/rules", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: address, entrypoint }),
+        });
+        const data = await response.json();
+        if (!current) return;
+        setRulesAnswer({
+          address,
+          result:
+            response.ok &&
+            data.allowed === true &&
+            (data.clientType === "STUDENT" || data.clientType === "STAFF")
+              ? { state: "allowed", clientType: data.clientType }
+              : { state: response.ok ? "denied" : "idle" },
+        });
+      } catch {
+        if (current) setRulesAnswer({ address, result: { state: "idle" } });
+      }
+    }, 400);
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [typedAddress, typedValid, entrypoint, isRegisterEmail]);
 
   useEffect(() => {
     if (!resendAt) return;
@@ -264,8 +309,8 @@ export default function AuthScreen({
   }
 
   function startCountdown() {
-    setResendAt(Date.now() + 60_000);
-    setCountdown(60);
+    setResendAt(Date.now() + RESEND_WAIT_SECONDS * 1000);
+    setCountdown(RESEND_WAIT_SECONDS);
   }
   function next() {
     setStep((current) => current + 1);
@@ -295,42 +340,39 @@ export default function AuthScreen({
           recovery: isRecovery,
           ...(confirmingLogin ? { remember } : {}),
         });
-        if (isRecovery) {
+        // Signup and a recovery left before step 2 continue on the server's redirect.
+        if (data.redirect) navigate(data.redirect);
+        else {
           setPassword("");
           setConfirm("");
           next();
-        } else navigate(data.redirect);
+        }
       } else if (isPassword) {
         if (!validPassword(password)) throw new Error(t.invalidPassword);
         if (password !== confirm) throw new Error(t.mismatch);
-        if (isRecovery) {
-          await request("reset", { password });
-          setMode("login");
-          setStep(0);
-          setPassword("");
-          setConfirm("");
-          setNotice(t.resetDone);
-        } else {
-          await request("register", { fullName, document, email, password });
-          setPassword("");
-          setConfirm("");
-          startCountdown();
-          next();
-        }
-      } else if (mode === "register" && step === 0) {
-        if (fullName.trim().length < 3 || fullName.trim().length > 150)
-          throw new Error(t.invalidName);
-        if (!validDocument(document.trim())) throw new Error(t.invalidDocument);
+        await request("reset", { password });
+        setMode("login");
+        setStep(0);
+        setPassword("");
+        setConfirm("");
+        setNotice(t.resetDone);
+      } else if (isRegisterEmail) {
+        const address = email.trim().toLowerCase();
+        if (!validRegistrationEmail(address)) throw new Error(t.denied);
+        // The server generates the step 1 password; the browser never sees it.
+        await request("register", { email: address });
+        setEmail(address);
+        setResends(0);
+        startCountdown();
         next();
       } else {
         if (!validEmail(email.trim())) throw new Error(t.invalidEmail);
-        await request(isRecovery ? "recover" : "institution", { email });
+        await request("recover", { email });
         setEmail(email.trim().toLowerCase());
+        setResends(0);
         next();
-        if (isRecovery) {
-          startCountdown();
-          setNotice(t.recoverySent);
-        }
+        startCountdown();
+        setNotice(t.recoverySent);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t.connection);
@@ -341,6 +383,11 @@ export default function AuthScreen({
 
   async function resend(fromLogin = false) {
     if (busy || (!fromLogin && countdown > 0)) return;
+    if (!fromLogin && resends >= MAX_RESENDS) {
+      setNotice("");
+      setError(t.resendLimit);
+      return;
+    }
     setError("");
     setNotice("");
     setBusy(true);
@@ -349,12 +396,13 @@ export default function AuthScreen({
       await request("resend", { email: normalized, recovery: isRecovery });
       setEmail(normalized);
       setCode(Array(6).fill(""));
+      setResends((count) => (fromLogin ? 0 : count + 1));
       startCountdown();
       setNotice(t.resendDone);
       if (fromLogin) {
         setConfirmingLogin(true);
         setMode("register");
-        setStep(3);
+        setStep(1);
         setPassword("");
         setUnverified(false);
       }
@@ -414,8 +462,6 @@ export default function AuthScreen({
       <br />
       <em>{t.account}</em>
     </>
-  ) : step === 0 ? (
-    t.create
   ) : (
     <>
       {t.useEmail}
@@ -438,8 +484,6 @@ export default function AuthScreen({
     t.passwordNote
   ) : isRecovery ? (
     t.recoveryNote
-  ) : step === 0 ? (
-    t.createNote
   ) : (
     t.emailNote
   );
@@ -556,37 +600,7 @@ export default function AuthScreen({
                   />
                 </>
               )}
-              {mode === "register" && step === 0 && (
-                <>
-                  <Field
-                    language={language}
-                    icon={<UserRound size={21} />}
-                    label={t.name}
-                    name="name"
-                    value={fullName}
-                    onChange={(event) => setFullName(event.target.value)}
-                    autoComplete="name"
-                    required
-                    minLength={3}
-                    maxLength={150}
-                    disabled={!hydrated || busy}
-                  />
-                  <Field
-                    language={language}
-                    icon={<IdCard size={21} />}
-                    label={t.document}
-                    name="document"
-                    value={document}
-                    onChange={(event) => setDocument(event.target.value)}
-                    required
-                    minLength={5}
-                    maxLength={30}
-                    disabled={!hydrated || busy}
-                  />
-                </>
-              )}
-              {((mode === "register" && step === 1) ||
-                (isRecovery && step === 0)) && (
+              {(isRegisterEmail || (isRecovery && step === 0)) && (
                 <Field
                   language={language}
                   icon={<Mail size={21} />}
@@ -702,10 +716,18 @@ export default function AuthScreen({
                 </Link>
               </div>
             )}
-            {mode === "register" && step === 1 && (
-              <p className={styles.note}>
+            {isRegisterEmail && (
+              <p className={styles.note} aria-live="polite">
                 <Info size={20} fill="#0064ff" color="white" />
-                {t.onlyInstitutional}
+                {domain.state === "checking"
+                  ? t.checking
+                  : domain.state === "allowed"
+                    ? domain.clientType === "STUDENT"
+                      ? t.studentAccount
+                      : t.staffAccount
+                    : domain.state === "denied"
+                      ? t.denied
+                      : t.onlyInstitutional}
               </p>
             )}
             {isPassword && (
@@ -731,18 +753,28 @@ export default function AuthScreen({
             )}
             {isOtp && (
               <p className={styles.resend}>
+                {t.validity}
+                <br />
                 {t.notReceived}
                 <br />
                 <button
                   className={styles.link}
                   type="button"
-                  disabled={!hydrated || busy || countdown > 0}
+                  disabled={
+                    !hydrated || busy || countdown > 0 || resends >= MAX_RESENDS
+                  }
                   onClick={() => resend()}
                 >
                   {t.resend}
                   {countdown > 0 &&
                     ` (${String(Math.floor(countdown / 60)).padStart(2, "0")}:${String(countdown % 60).padStart(2, "0")})`}
                 </button>
+                {resends >= MAX_RESENDS && (
+                  <>
+                    <br />
+                    {t.resendLimit}
+                  </>
+                )}
               </p>
             )}
             {error && (
