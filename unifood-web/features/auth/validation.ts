@@ -21,6 +21,81 @@ export function validDocument(document: string) {
   return /^[A-Za-z0-9-]{5,30}$/.test(document);
 }
 
+/** Step 2 of the two-step registration (migration 018). */
+export const REGISTRATION_COMPLETE_PATH = "/registro/completar";
+
+/**
+ * Mirrors registration_domain_rule() in migration 018: no "+", spaces or stray dots.
+ * The database stays the authority; this only rejects early and identically.
+ */
+export function validRegistrationEmail(email: string) {
+  return (
+    email.length <= 254 &&
+    /^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/.test(
+      email,
+    )
+  );
+}
+
+export type ClientType = "STUDENT" | "STAFF";
+
+export type PendingRegistration = {
+  emailConfirmed: boolean;
+  clientType: ClientType;
+  codeRequired: boolean;
+  minCodeLength: number;
+  maxCodeLength: number;
+};
+
+const codeLength = (value: unknown): value is number =>
+  Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 32;
+
+/** Strict reading of pending_registration(); anything unexpected means "not pending". */
+export function parsePendingRegistration(
+  value: unknown,
+): PendingRegistration | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const data = value as Record<string, unknown>;
+  if (
+    data.pending !== true ||
+    typeof data.emailConfirmed !== "boolean" ||
+    (data.clientType !== "STUDENT" && data.clientType !== "STAFF") ||
+    typeof data.codeRequired !== "boolean" ||
+    !codeLength(data.minCodeLength) ||
+    !codeLength(data.maxCodeLength) ||
+    data.minCodeLength > data.maxCodeLength
+  )
+    return null;
+  return {
+    emailConfirmed: data.emailConfirmed,
+    clientType: data.clientType,
+    codeRequired: data.codeRequired,
+    minCodeLength: data.minCodeLength,
+    maxCodeLength: data.maxCodeLength,
+  };
+}
+
+/** Empty means "no code"; otherwise only digits within the domain's range. */
+export function validInstitutionalCode(
+  code: string,
+  rules: Pick<
+    PendingRegistration,
+    "codeRequired" | "minCodeLength" | "maxCodeLength"
+  >,
+) {
+  if (!code) return !rules.codeRequired;
+  return (
+    /^[0-9]+$/.test(code) &&
+    code.length >= rules.minCodeLength &&
+    code.length <= rules.maxCodeLength
+  );
+}
+
+export function validFullName(fullName: string) {
+  const value = fullName.trim();
+  return value.length >= 3 && value.length <= 150;
+}
+
 export function normalizeIdentifier(identifier: string, domain: string) {
   const value = identifier.trim().toLowerCase();
   return value.includes("@") ? value : `${value}@${domain}`;
