@@ -4,7 +4,10 @@ import { access, mkdtemp, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createServer } from "node:net";
-import { authSchemaSql } from "./auth-database.mjs";
+import {
+  authSchemaSql,
+  simulatedServerPreauthorizationSql,
+} from "./auth-database.mjs";
 
 const run = promisify(execFile);
 const suffix = process.platform === "win32" ? ".exe" : "";
@@ -70,7 +73,7 @@ export async function postgresBinaries() {
 
 export async function createNativeAuthDatabase(
   directory,
-  { throughMigration = "999" } = {},
+  { throughMigration = "999", simulateServerPreauthorization = true } = {},
 ) {
   const root = await mkdtemp(join(tmpdir(), "unifood-role-cardinality-"));
   const data = join(root, "data");
@@ -167,6 +170,8 @@ export async function createNativeAuthDatabase(
   }
   try {
     await query(authSchemaSql);
+    if (simulateServerPreauthorization)
+      await query(simulatedServerPreauthorizationSql);
     const migrations = new URL(
       "../../../unifood-backend/supabase/migrations/",
       import.meta.url,

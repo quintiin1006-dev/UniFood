@@ -45,10 +45,14 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
   no se salte con un signup directo usando la clave pública.
 - **Identidades fuera de la regla:** solo con una preautorización previa en una tabla
   cerrada a `anon`, `authenticated` y `service_role`, que se escribe con SQL controlado o
-  desde el backend: correo, rol, institución, tipo de cliente y expiración. La API de
-  administración crea la identidad y el trigger consume esa preautorización. No se usa
-  una marca en `app_metadata`: Auth la escribe después de insertar el usuario, y el
-  trigger no la ve (hallazgo F1 de la revisión de la 018).
+  desde el backend: correo, rol, institución, tipo de cliente y expiración, de un solo uso
+  y como máximo 1 hora. La API de administración crea la identidad y el trigger consume
+  esa preautorización. No se usa una marca en `app_metadata`: Auth la escribe después de
+  insertar el usuario, y el trigger no la ve (hallazgo F1 de la revisión de la 018).
+- **Uso de `preauthorize_identity`:** se ejecuta justo antes de crear la cuenta con la API
+  de administración, nunca con anticipación: mientras está vigente, cualquier signup con
+  ese correo la consume. Si la cuenta es de cliente, el paso 2 se completa de inmediato,
+  porque la limpieza la borra a las 24 horas.
 - Se guarda el tipo de cliente, deducido del dominio.
 
 **Registro en dos pasos** (aprobado el 2026-11-07, propuesta A de la revisión de la 018):
@@ -56,19 +60,37 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
 1. **Signup:** solo correo y contraseña. La base valida el dominio y crea una identidad
    inactiva, sin nombre, código ni privacidad. Auth envía el OTP.
 2. **Tras confirmar el OTP**, en una llamada autenticada: nombre, código, aceptación de
-   privacidad y una **contraseña nueva**. Se cierran las demás sesiones. El código se
+   privacidad, y la contraseña **actualizada** en Auth. Se cierran las demás sesiones.
+   La base comprueba que el hash cambió desde el signup; como bcrypt usa una sal nueva,
+   eso prueba que hubo una actualización, no que la contraseña sea distinta. El código se
    reserva en este paso, así que reservarlo exige tener el buzón.
 
 - Motivo: con un solo paso, quien se registra primero con un correo ajeno fija la
   contraseña y el código que quedan activos cuando el dueño confirma, y un buzón
   inexistente retiene el código de un estudiante real.
 - Hasta completar el paso 2, la cuenta no opera: no ve contexto, menú ni pedidos.
-- Riesgo residual aceptado: entre la confirmación y el paso 2, quien conozca la primera
-  contraseña podría completar antes. Es una ventana corta y se prueba en staging.
-- **Cuentas nunca confirmadas:** se eliminan a las 24 horas de creadas. Solo las que
-  nunca confirmaron el correo, con registro de auditoría, un límite de cuentas por
-  ejecución y un interruptor para pausarlo. Se programa con `pg_cron`, que el responsable
-  activa en el panel, primero en staging.
+- **Condiciones del BFF** (aprobadas el 2026-11-07):
+  - La contraseña del paso 1 la genera el servidor con un generador criptográfico, nunca
+    el navegador. No se registra en logs ni se devuelve al cliente.
+  - `complete_registration()` actúa solo sobre la cuenta de `auth.uid()`: no recibe otra
+    cuenta y falla si ya se completó.
+  - Orden: el BFF cambia la contraseña en Auth y cierra las demás sesiones **antes** de
+    llamar a `complete_registration()`. La base rechaza el paso 2 si la contraseña no se
+    actualizó desde el signup.
+  - Si falla a mitad, la cuenta queda confirmada pero sin completar: no opera, conserva
+    la contraseña actualizada y puede repetir el paso 2 antes de 24 horas. Después la borra la
+    limpieza.
+  - Tras un signup público, el paso 2 exige una sesión emitida al verificar el código
+    del correo (`amr` con `otp`). Con una sesión de contraseña se rechaza, así que quien
+    eligió la contraseña del signup con un correo ajeno no puede completarlo. Las cuentas
+    preautorizadas por el servidor, como las de la demo, sí pueden completarlo con
+    contraseña.
+- **Cuentas sin completar:** se eliminan a las 24 horas de creadas si no completaron el
+  paso 2, hayan confirmado el correo o no, y solo si nada más apunta a ellas: perfil de
+  cliente, pedidos, roles, cafeterías, notificaciones ni correcciones de código. Con
+  registro de auditoría sin el correo, un límite de cuentas por ejecución y un interruptor
+  para pausarlo. Se programa con `pg_cron`, que el responsable activa en el panel, primero
+  en staging. Las cuentas anteriores a la 018 nunca se borran solas.
 - Verificación: OTP de 6 dígitos generado por Supabase y enviado al correo (plantilla con
   `{{ .Token }}`, no enlace). Solo prueba que el usuario es dueño del correo; no es dato
   de negocio.
@@ -95,14 +117,32 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
 `unifood-staging`, ya confirmadas, sin pasar por el registro público. El registro con OTP
 no se muestra hasta tener dominio (§9). Procedimiento, todo en staging:
 
-1. Preautorizar cada correo con SQL controlado en el SQL Editor de staging: rol CLIENT,
-   institución, tipo de cliente, nombre y código. El correo va como parámetro y nunca se
-   versiona.
-2. Crear la identidad en el panel de staging, en Authentication > Users > Add user >
-   Create new user, con contraseña propia y **Auto Confirm User** marcado. Usa la API de
-   administración y no envía correo.
-3. Comprobar con SQL que la cuenta quedó activa, confirmada y con el tipo esperado.
-4. En el primer ingreso, la persona de la demo acepta la privacidad.
+1. Preautorizar cada correo en el SQL Editor de staging **justo antes** del paso 2, de uno
+   en uno y nunca con anticipación. La preautorización vale 15 minutos y un solo uso; el
+   correo se escribe ahí y nunca se versiona:
+
+   ```sql
+   SELECT public.preauthorize_identity(
+     'CORREO_DE_LA_DEMO', 'CLIENT',
+     (SELECT id FROM public.institutions WHERE email_domain = 'ustavillavo.edu.co'),
+     'STUDENT');
+   ```
+
+2. En seguida, crear la identidad en el panel de staging, en Authentication >
+   Users > Add user > Create new user, con una contraseña provisional y **Auto Confirm
+   User** marcado. Usa la API de administración y no envía correo.
+3. Comprobar que quedó confirmada y pendiente del paso 2:
+
+   ```sql
+   SELECT u.is_active, u.email_confirmed_at IS NOT NULL AS confirmed, p.client_type
+   FROM public.users u JOIN public.pending_registrations p ON p.user_id = u.id
+   WHERE u.email = lower('CORREO_DE_LA_DEMO');
+   ```
+
+   Esperado: `false`, `true` y el tipo pedido.
+
+4. En el primer ingreso, la persona hace el paso 2 como cualquier cliente: nombre,
+   código, privacidad y actualizar la contraseña provisional. Necesita B7.
 5. Tras la demo, se eliminan desde Authentication > Users. El borrado en cascada alcanza
    su perfil.
 
@@ -110,7 +150,8 @@ no se muestra hasta tener dominio (§9). Procedimiento, todo en staging:
   `@ustavillavo.edu.co`**: podrían pertenecer a un estudiante real y bloquearían su
   registro o su código.
 - Códigos: valores de prueba que no correspondan a estudiantes reales.
-- El SQL exacto llega con la 018 corregida.
+- **El paso 2 debe hacerse antes de 24 horas desde la creación:** si no, la limpieza borra
+  la cuenta. Conviene crearlas el mismo día del ensayo y completarlas en seguida.
 
 ## 4. Flujo del cliente
 

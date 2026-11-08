@@ -29,7 +29,7 @@ test("institutional registration migrations execute on PostgreSQL", async (t) =>
     );
 
   await t.test(
-    "both domains create CLIENT profiles in the same institution, preserving email",
+    "both domains create pending registrations in the same institution, preserving email",
     async () => {
       for (const email of [
         "maria@ustavillavo.edu.co",
@@ -37,11 +37,14 @@ test("institutional registration migrations execute on PostgreSQL", async (t) =>
         "ANA@USTAVILLAVICENCIO.EDU.CO",
       ]) {
         const id = (await register(email)).rows[0].id;
+        // Two-step registration: no client profile or role until step 2.
         const profile = (
           await db.query(
-            `SELECT u.email, u.is_active, c.institution_id, r.name AS role FROM public.users u
-        JOIN public.clients c ON c.user_id = u.id JOIN public.user_roles ur ON ur.user_id = u.id
-        JOIN public.roles r ON r.id = ur.role_id WHERE u.id = $1`,
+            `SELECT u.email, u.is_active, p.institution_id,
+               (SELECT count(*)::int FROM public.clients c WHERE c.user_id = u.id) AS clients,
+               (SELECT count(*)::int FROM public.user_roles ur WHERE ur.user_id = u.id) AS roles
+             FROM public.users u JOIN public.pending_registrations p ON p.user_id = u.id
+             WHERE u.id = $1`,
             [id],
           )
         ).rows;
@@ -50,7 +53,8 @@ test("institutional registration migrations execute on PostgreSQL", async (t) =>
             email: email.toLowerCase(),
             is_active: false,
             institution_id: institution,
-            role: "CLIENT",
+            clients: 0,
+            roles: 0,
           },
         ]);
       }
@@ -120,7 +124,10 @@ test("institutional registration migrations execute on PostgreSQL", async (t) =>
         "user@ustavillavicencio.edu.co.evil.com",
         "user@@ustavillavo.edu.co",
       ]) {
-        await assert.rejects(register(email), /Invalid registration/);
+        await assert.rejects(
+          register(email),
+          /REGISTRATION_DOMAIN_NOT_ALLOWED/,
+        );
         assert.equal(
           (
             await db.query(
@@ -181,7 +188,10 @@ test("institutional registration migrations execute on PostgreSQL", async (t) =>
           ).rows[0].allowed,
           false,
         );
-        await assert.rejects(register(email), /Invalid registration/);
+        await assert.rejects(
+          register(email),
+          /REGISTRATION_DOMAIN_NOT_ALLOWED/,
+        );
       }
     },
   );
