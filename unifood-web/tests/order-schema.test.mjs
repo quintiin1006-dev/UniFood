@@ -681,3 +681,174 @@ test(
     assert.equal(await db.query("SELECT count(*) FROM public.orders"), "1");
   },
 );
+
+const closeScript = () =>
+  readFile(new URL("close-stale-orders.sql", scripts), "utf8");
+const YESTERDAY = "now() - interval '1 day'";
+
+test("close-stale-orders.sql is a dry run by default and closes only stale active orders", async (t) => {
+  const db = await createAuthDatabase();
+  t.after(() => db.close());
+  const { client, order } = await world(db);
+  const at = async (status, when, extra = {}) => {
+    const someone = await client();
+    const id = (await order(someone.id, status, extra)).rows[0].id;
+    await db.query(
+      `UPDATE public.orders SET created_at = ${when} WHERE id = $1`,
+      [id],
+    );
+    return { id, client: someone.id };
+  };
+  const stale = {};
+  for (const status of ACTIVE) stale[status] = await at(status, YESTERDAY);
+  const today = await at("PENDING", "now()");
+  const finished = {};
+  for (const status of TERMINAL)
+    finished[status] = await at(status, YESTERDAY, {
+      ...(status === "DELIVERED" ? { delivered_at: new Date() } : {}),
+    });
+  const states = async () =>
+    Object.fromEntries(
+      (
+        await db.query("SELECT id, status::text AS status FROM public.orders")
+      ).rows.map((row) => [row.id, row.status]),
+    );
+  const before = await states();
+  const script = await closeScript();
+
+  // Dry run: lists exactly the stale active orders and changes nothing.
+  const dry = await db.exec(script);
+  assert.equal(
+    dry.find((r) => r.fields?.[0]?.name === "mode").rows[0].mode,
+    "dry run: nothing changes",
+  );
+  const preview = dry.find((r) =>
+    r.fields?.some((f) => f.name === "closes_as"),
+  ).rows;
+  assert.deepEqual(
+    preview.map((row) => [row.current_status, row.closes_as]).sort(),
+    [
+      ["CALLED", "NOT_COLLECTED"],
+      ["PENDING", "CANCELLED"],
+      ["PREPARING", "NOT_COLLECTED"],
+      ["READY", "NOT_COLLECTED"],
+    ],
+  );
+  assert.deepEqual(await states(), before);
+
+  // A typo never applies anything.
+  await db.exec("SET unifood.close_stale_orders = 'aply'");
+  await assert.rejects(db.exec(script), /must be 'apply' or unset/);
+  await db.exec("ROLLBACK");
+  assert.deepEqual(await states(), before);
+
+  await db.exec("SET unifood.close_stale_orders = 'apply'");
+  await db.exec(script);
+  const after = await states();
+  assert.equal(after[stale.PENDING.id], "CANCELLED");
+  for (const status of ["PREPARING", "READY", "CALLED"])
+    assert.equal(after[stale[status].id], "NOT_COLLECTED", status);
+  assert.equal(after[today.id], "PENDING");
+  for (const status of TERMINAL)
+    assert.equal(after[finished[status].id], status, status);
+  // Who closed it is recorded, and the timestamps are set.
+  assert.deepEqual(
+    await one(
+      db,
+      `SELECT cancellation_source, cancelled_by_client, cancelled_at IS NOT NULL AS dated
+       FROM public.orders WHERE id = $1`,
+      [stale.PENDING.id],
+    ),
+    { cancellation_source: "SYSTEM", cancelled_by_client: false, dated: true },
+  );
+  for (const status of ["PREPARING", "READY", "CALLED"])
+    assert.equal(
+      (
+        await one(
+          db,
+          "SELECT not_collected_at IS NOT NULL AS dated FROM public.orders WHERE id = $1",
+          [stale[status].id],
+        )
+      ).dated,
+      true,
+      status,
+    );
+  // Each released client can order again.
+  for (const status of ACTIVE) await order(stale[status].client, "PENDING");
+  await assert.rejects(
+    order(today.client, "PENDING"),
+    unique("uq_orders_one_active_per_client"),
+  );
+  // A second run finds nothing left to close.
+  const again = await db.exec(script);
+  assert.equal(
+    again.find((r) => r.fields?.some((f) => f.name === "closes_as")).rows
+      .length,
+    0,
+  );
+  await db.exec("RESET unifood.close_stale_orders");
+});
+
+test(
+  "native PostgreSQL: the manual close skips locked orders and frees the client",
+  { timeout: 120000 },
+  async (t) => {
+    const binaries = await postgresBinaries();
+    if (!binaries) return t.skip("Native PostgreSQL is not installed");
+    const db = await createNativeAuthDatabase(binaries, {
+      simulateServerPreauthorization: false,
+    });
+    t.after(() => db.close());
+    const ids = (
+      await db.query(`
+        INSERT INTO public.sites (name, city, institution_id)
+          SELECT 'Sede', 'Villavicencio', id FROM public.institutions
+          WHERE email_domain = 'ustavillavo.edu.co';
+        INSERT INTO public.cafeterias (site_id, name, is_active, lunch_order_start, lunch_order_end)
+          SELECT id, 'Cafetería', false, '06:00', '18:00' FROM public.sites;
+        INSERT INTO public.orders (cafeteria_id, client_name, total, created_at)
+          SELECT id, 'Libre', 13000, ${YESTERDAY} FROM public.cafeterias;
+        INSERT INTO public.orders (cafeteria_id, client_name, total, created_at)
+          SELECT id, 'Bloqueado', 13000, ${YESTERDAY} FROM public.cafeterias;
+        SELECT string_agg(id::text, ' ' ORDER BY client_name) FROM public.orders;`)
+    )
+      .split(/\r?\n/)
+      .at(-1)
+      .split(" ");
+    const [locked] = ids; // "Bloqueado" sorts first
+    const holder = db.session();
+    holder.write(
+      `BEGIN; SELECT id FROM public.orders WHERE id = '${locked}' FOR UPDATE;`,
+    );
+    await until(async () =>
+      (
+        await db.query(
+          "SELECT count(*) FROM pg_stat_activity WHERE state = 'idle in transaction'",
+        )
+      ).startsWith("1"),
+    );
+    // Runs to completion while the other order stays locked.
+    await db.query(
+      `SET unifood.close_stale_orders = 'apply';\n${await closeScript()}`,
+    );
+    assert.equal(
+      await db.query(
+        `SELECT string_agg(client_name || ':' || status, ',' ORDER BY client_name) FROM public.orders`,
+      ),
+      "Bloqueado:PENDING,Libre:CANCELLED",
+    );
+    holder.write("ROLLBACK;");
+    holder.end();
+    await holder.done;
+    // The skipped one closes on the next run.
+    await db.query(
+      `SET unifood.close_stale_orders = 'apply';\n${await closeScript()}`,
+    );
+    assert.equal(
+      await db.query(
+        `SELECT count(*) FROM public.orders WHERE status = 'CANCELLED' AND cancellation_source = 'SYSTEM'`,
+      ),
+      "2",
+    );
+  },
+);
