@@ -144,6 +144,12 @@ test("client ownership SQL follows actual PostgreSQL links and current roles, ne
   await t.test(
     "unlinking or reassigning a client changes the actual ownership immediately",
     async () => {
+      // 020: a client has at most one active order, and the second client already has
+      // one. Delivering this order first keeps the reassignment within that rule.
+      await db.query(
+        "UPDATE public.orders SET status='DELIVERED', delivered_at=now() WHERE id=$1",
+        [own],
+      );
       await db.query("UPDATE public.orders SET client_id=$2 WHERE id=$1", [
         own,
         second.client,
