@@ -384,23 +384,22 @@
   overflow-wrap: anywhere;
 }
 .otp {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
   margin: 10px 0 8px;
-  padding: 0;
-  border: 0;
   min-width: 0;
 }
+/* One field for the whole code; wide letter spacing keeps the six digits apart. */
 .otp input {
-  width: calc((100% - 40px) / 6);
+  width: 100%;
   min-width: 0;
   height: 60px;
   border: 1.5px solid #dde5f5;
   border-radius: 11px;
   outline: 0;
   text-align: center;
-  font-size: 24px;
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5em;
+  text-indent: 0.5em;
   color: var(--ink);
   background: #ffffffa6;
 }

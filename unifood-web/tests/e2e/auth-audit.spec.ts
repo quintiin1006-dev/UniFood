@@ -98,9 +98,8 @@ test("unconfirmed CLIENT completes OTP admission without credentials in navigati
     .getByRole("button", { name: "Verificar mi correo", exact: true })
     .click();
   await page
-    .getByRole("textbox", { name: "Dígito 1", exact: true })
+    .getByRole("textbox", { name: "Código de verificación", exact: true })
     .fill("123456");
-  await page.getByRole("button", { name: "Verificar", exact: true }).click();
   await expect(page).toHaveURL(new URL("/cuenta", page.url()).href);
   for (const url of urls) expect(new URL(url).search).toBe("");
 });

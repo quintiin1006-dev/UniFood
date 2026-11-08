@@ -187,15 +187,14 @@ test("panel login can confirm OTP without entering student registration and reme
     .getByRole("button", { name: "Verificar mi correo", exact: true })
     .click();
   await expect(
-    page.getByRole("textbox", { name: "Dígito 1", exact: true }),
+    page.getByRole("textbox", { name: "Código de verificación", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("list", { name: "Progreso del registro" }),
   ).toHaveCount(0);
   await page
-    .getByRole("textbox", { name: "Dígito 1", exact: true })
+    .getByRole("textbox", { name: "Código de verificación", exact: true })
     .fill("123456");
-  await page.getByRole("button", { name: "Verificar", exact: true }).click();
   await expect(page).toHaveURL(/\/worker$/);
   expect(
     (await page.context().cookies()).find(
@@ -230,9 +229,8 @@ for (const entrypoint of ["client"]) {
       "Si existe una cuenta",
     );
     await page
-      .getByRole("textbox", { name: "Dígito 1", exact: true })
+      .getByRole("textbox", { name: "Código de verificación", exact: true })
       .fill("123456");
-    await page.getByRole("button", { name: "Verificar", exact: true }).click();
     await expect(
       page.getByLabel("Confirmar contraseña", { exact: true }),
     ).toBeVisible();

@@ -81,16 +81,19 @@ for (const [domain, clientType, hint] of [
       page.getByRole("button", { name: /Reenviar código/ }),
     ).toBeDisabled();
     await page
-      .getByRole("textbox", { name: "Dígito 1", exact: true })
+      .getByRole("textbox", { name: "Código de verificación", exact: true })
       .fill("123456");
     await expect(
-      page.getByRole("textbox", { name: "Dígito 6", exact: true }),
-    ).toHaveValue("6");
+      page.getByRole("textbox", {
+        name: "Código de verificación",
+        exact: true,
+      }),
+    ).toHaveValue("123456");
     await page.screenshot({
       path: testInfo.outputPath("register-verify.png"),
       fullPage: true,
     });
-    await page.getByRole("button", { name: "Verificar", exact: true }).click();
+    // The sixth digit submits on its own; no click is needed.
     await expect(page.getByRole("main").getByRole("alert")).toContainText(
       "no es válido",
     );
@@ -214,6 +217,85 @@ test("a rate-limited resend shows a clear message", async ({ page }) => {
   );
 });
 
+test("the code field suits mobile: attributes, focus, paste, digits only and one submit", async ({
+  page,
+}) => {
+  const verifies: string[] = [];
+  await page.route("**/api/auth/*", async (route) => {
+    const action = route.request().url().split("/").at(-1)!;
+    if (action === "rules")
+      return route.fulfill({ json: { allowed: true, clientType: "STUDENT" } });
+    if (action === "verify") {
+      verifies.push(route.request().postDataJSON().code);
+      // Slow answer: a second submit would arrive while this one is in flight.
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      return route.fulfill({
+        status: 400,
+        json: {
+          message: "El código no es válido o ya venció. Solicita uno nuevo.",
+        },
+      });
+    }
+    await route.fulfill({ json: { ok: true } });
+  });
+  await page.goto("/registro");
+  await page.getByRole("textbox").fill("maria@ustavillavo.edu.co");
+  await page.getByRole("button", { name: "Continuar" }).click();
+
+  const field = page.getByRole("textbox", {
+    name: "Código de verificación",
+    exact: true,
+  });
+  // One labelled field, focused when the screen appears.
+  await expect(field).toBeFocused();
+  await expect(page.getByRole("textbox")).toHaveCount(1);
+  await expect(field).toHaveAttribute("autocomplete", "one-time-code");
+  await expect(field).toHaveAttribute("inputmode", "numeric");
+  await expect(field).toHaveAttribute("pattern", "[0-9]{6}");
+  await expect(field).toHaveAttribute("name", "one-time-code");
+
+  // Only digits are kept while typing.
+  await field.pressSequentially("1a2-3 ");
+  await expect(field).toHaveValue("123");
+  expect(verifies).toEqual([]);
+  await field.fill("");
+
+  // A pasted code with spaces or dashes fills the field and submits once.
+  const paste = (text: string) =>
+    field.evaluate((input, value) => {
+      const data = new DataTransfer();
+      data.setData("text/plain", value);
+      input.dispatchEvent(
+        new ClipboardEvent("paste", {
+          clipboardData: data,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    }, text);
+  await paste("123 - 456");
+  await expect(field).toHaveValue("123456");
+  // Enter while the first request is still in flight sends nothing more.
+  await field.press("Enter");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "no es válido",
+  );
+  expect(verifies).toEqual(["123456"]);
+  // The error is announced and tied to the field, which is selected for a retry.
+  await expect(page.getByRole("main").getByRole("alert")).toHaveAttribute(
+    "aria-live",
+    "assertive",
+  );
+  await expect(field).toHaveAttribute("aria-invalid", "true");
+  await expect(field).toHaveAttribute("aria-describedby", "auth-error");
+  await expect(field).toBeFocused();
+
+  // The same code is not resent on its own; a different one is.
+  await paste("Tu código UniFood: 654-321");
+  await expect(field).toHaveValue("654321");
+  await expect.poll(() => verifies).toEqual(["123456", "654321"]);
+});
+
 test("password recovery goes from email and OTP to password and back to login", async ({
   page,
 }) => {
@@ -227,9 +309,8 @@ test("password recovery goes from email and OTP to password and back to login", 
   await page.getByRole("button", { name: "Enviar código" }).click();
   await expect(page.getByRole("status")).toContainText("Si existe una cuenta");
   await page
-    .getByRole("textbox", { name: "Dígito 1", exact: true })
+    .getByRole("textbox", { name: "Código de verificación", exact: true })
     .fill("654321");
-  await page.getByRole("button", { name: "Verificar", exact: true }).click();
   await page.getByLabel("Contraseña", { exact: true }).fill("NuevaClave9");
   await page
     .getByLabel("Confirmar contraseña", { exact: true })

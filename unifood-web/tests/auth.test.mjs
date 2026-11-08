@@ -72,6 +72,24 @@ test("password, email, document and role boundaries", () => {
   );
 });
 
+test("OTP input keeps only six digits from typed, pasted or autofilled text", () => {
+  for (const [input, expected] of [
+    ["123456", "123456"],
+    ["123 456", "123456"],
+    ["123-456", "123456"],
+    [" 12 34 56 ", "123456"],
+    ["Tu código UniFood: 123456", "123456"],
+    ["1234567890", "123456"],
+    ["12ab3", "123"],
+    ["abc", ""],
+    ["", ""],
+    // Full-width digits are not ASCII digits; Auth only accepts 0-9.
+    ["１２３４５６", ""],
+  ])
+    assert.equal(validation.normalizeOtp(input), expected, input);
+  assert.equal(validation.OTP_LENGTH, 6);
+});
+
 test("cookies are HttpOnly; remember disabled creates a browser-session cookie", () => {
   const config = load("features/auth/server/config.ts");
   assert.equal(config.sessionCookieOptions(false).httpOnly, true);

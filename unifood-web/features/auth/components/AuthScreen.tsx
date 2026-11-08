@@ -18,6 +18,8 @@ import {
   validEmail,
   validPassword,
   validRegistrationEmail,
+  normalizeOtp,
+  OTP_LENGTH,
   type AuthEntrypoint,
   type ClientType,
 } from "../validation";
@@ -91,7 +93,6 @@ const copy = {
     resend: "Reenviar código",
     verifyButton: "Verificar",
     code: "Código de verificación",
-    digit: "Dígito",
     recovery: "Recupera tu",
     account: "cuenta",
     recoveryNote:
@@ -166,7 +167,6 @@ const copy = {
     resend: "Resend code",
     verifyButton: "Verify",
     code: "Verification code",
-    digit: "Digit",
     recovery: "Recover your",
     account: "account",
     recoveryNote: "Enter your institutional email to reset your password.",
@@ -218,7 +218,7 @@ export default function AuthScreen({
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [remember, setRemember] = useState(true);
-  const [code, setCode] = useState<string[]>(Array(6).fill(""));
+  const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState(
@@ -230,7 +230,12 @@ export default function AuthScreen({
   const [confirmingLogin, setConfirmingLogin] = useState(false);
   const [resendAt, setResendAt] = useState(0);
   const [countdown, setCountdown] = useState(0);
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const codeRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  // One request at a time, even between a state update and its re-render.
+  const inFlight = useRef(false);
+  // The last complete code sent automatically, so the same code is never sent twice.
+  const autoSubmitted = useRef("");
   const headingRef = useRef<HTMLHeadingElement>(null);
   const isLogin = mode === "login";
   const isRecovery = mode === "recover";
@@ -291,8 +296,19 @@ export default function AuthScreen({
   }, [resendAt]);
 
   useEffect(() => {
-    if (step > 0) headingRef.current?.focus();
-  }, [step]);
+    // The code screen focuses its labelled field so the keyboard opens at once.
+    if (isOtp) codeRef.current?.focus();
+    else if (step > 0) headingRef.current?.focus();
+  }, [step, isOtp]);
+
+  useEffect(() => {
+    // Six digits typed, pasted or autofilled send the form once, through the same
+    // submit handler and its guards as the Verify button.
+    if (!isOtp || !hydrated || code.length !== OTP_LENGTH) return;
+    if (autoSubmitted.current === code || inFlight.current) return;
+    autoSubmitted.current = code;
+    formRef.current?.requestSubmit();
+  }, [code, isOtp, hydrated]);
 
   async function request(action: string, body: Record<string, unknown>) {
     const response = await fetch(`/api/auth/${action}`, {
@@ -323,24 +339,28 @@ export default function AuthScreen({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!hydrated || busy) return;
+    if (!hydrated || busy || inFlight.current) return;
+    inFlight.current = true;
     setError("");
     setNotice("");
     setBusy(true);
+    let failedOnCode = false;
     try {
       if (isLogin) {
         setUnverified(false);
         const data = await request("login", { email, password, remember });
         navigate(data.redirect);
       } else if (isOtp) {
-        if (!/^\d{6}$/.test(code.join(""))) throw new Error(t.invalidCode);
+        failedOnCode = true;
+        if (code.length !== OTP_LENGTH) throw new Error(t.invalidCode);
         const data = await request("verify", {
           email,
-          code: code.join(""),
+          code,
           recovery: isRecovery,
           ...(confirmingLogin ? { remember } : {}),
         });
         // Signup and a recovery left before step 2 continue on the server's redirect.
+        failedOnCode = false;
         if (data.redirect) navigate(data.redirect);
         else {
           setPassword("");
@@ -377,7 +397,10 @@ export default function AuthScreen({
     } catch (err) {
       setError(err instanceof Error ? err.message : t.connection);
     } finally {
+      inFlight.current = false;
       setBusy(false);
+      // Back to the code after a rejected one, once the field is enabled again.
+      if (failedOnCode) setTimeout(() => codeRef.current?.select(), 0);
     }
   }
 
@@ -395,7 +418,8 @@ export default function AuthScreen({
       const normalized = normalizeIdentifier(email, usernameDomain);
       await request("resend", { email: normalized, recovery: isRecovery });
       setEmail(normalized);
-      setCode(Array(6).fill(""));
+      setCode("");
+      autoSubmitted.current = "";
       setResends((count) => (fromLogin ? 0 : count + 1));
       startCountdown();
       setNotice(t.resendDone);
@@ -425,15 +449,8 @@ export default function AuthScreen({
     }
   }
 
-  function updateCode(value: string, index: number) {
-    const digits = value.replace(/\D/g, "").slice(0, 6 - index);
-    setCode((previous) => {
-      const updated = [...previous];
-      if (!digits) updated[index] = "";
-      for (let i = 0; i < digits.length; i++) updated[index + i] = digits[i];
-      return updated;
-    });
-    if (digits) otpRefs.current[Math.min(index + digits.length, 5)]?.focus();
+  function updateCode(value: string) {
+    setCode(normalizeOtp(value));
   }
 
   const title = isLogin ? (
@@ -562,6 +579,7 @@ export default function AuthScreen({
           <p className={styles.description}>{description}</p>
           {/* Firefox must not restore disabled attributes before hydration. */}
           <form
+            ref={formRef}
             method="post"
             autoComplete="off"
             onSubmit={submit}
@@ -652,45 +670,36 @@ export default function AuthScreen({
                 </>
               )}
               {isOtp && (
-                <fieldset className={styles.otp}>
-                  <legend className={styles.srOnly}>{t.code}</legend>
-                  {code.map((digit, index) => (
-                    <input
-                      key={index}
-                      ref={(element) => {
-                        otpRefs.current[index] = element;
-                      }}
-                      value={digit}
-                      inputMode="numeric"
-                      autoComplete={index === 0 ? "one-time-code" : "off"}
-                      aria-label={`${t.digit} ${index + 1}`}
-                      disabled={!hydrated || busy}
-                      onChange={(event) =>
-                        updateCode(event.target.value, index)
-                      }
-                      onFocus={(event) => event.target.select()}
-                      onPaste={(event) => {
-                        event.preventDefault();
-                        updateCode(event.clipboardData.getData("text"), index);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Backspace" && !digit && index > 0) {
-                          event.preventDefault();
-                          setCode((previous) =>
-                            previous.map((value, i) =>
-                              i === index - 1 ? "" : value,
-                            ),
-                          );
-                          otpRefs.current[index - 1]?.focus();
-                        }
-                        if (event.key === "ArrowLeft" && index > 0)
-                          otpRefs.current[index - 1]?.focus();
-                        if (event.key === "ArrowRight" && index < 5)
-                          otpRefs.current[index + 1]?.focus();
-                      }}
-                    />
-                  ))}
-                </fieldset>
+                <div className={styles.otp}>
+                  <label htmlFor="otp-code" className={styles.srOnly}>
+                    {t.code}
+                  </label>
+                  {/* One field: iOS and Android autofill the whole code into it. */}
+                  <input
+                    ref={codeRef}
+                    id="otp-code"
+                    name="one-time-code"
+                    type="text"
+                    value={code}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern={`[0-9]{${OTP_LENGTH}}`}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    required
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? "auth-error" : undefined}
+                    disabled={!hydrated}
+                    // Read-only while sending keeps the keyboard open on mobile.
+                    readOnly={busy}
+                    onChange={(event) => updateCode(event.target.value)}
+                    onPaste={(event) => {
+                      event.preventDefault();
+                      updateCode(event.clipboardData.getData("text"));
+                    }}
+                  />
+                </div>
               )}
             </div>
             {isLogin && (
@@ -778,7 +787,12 @@ export default function AuthScreen({
               </p>
             )}
             {error && (
-              <p className={styles.error} role="alert">
+              <p
+                id="auth-error"
+                className={styles.error}
+                role="alert"
+                aria-live="assertive"
+              >
                 {error}
               </p>
             )}
