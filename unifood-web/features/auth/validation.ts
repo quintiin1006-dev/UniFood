@@ -21,6 +21,16 @@ export function validDocument(document: string) {
   return /^[A-Za-z0-9-]{5,30}$/.test(document);
 }
 
+export const OTP_LENGTH = 6;
+
+/**
+ * Keeps only the digits of a typed, pasted or autofilled code, up to six. "123 456",
+ * "123-456" and "Tu código UniFood: 123456" all become "123456".
+ */
+export function normalizeOtp(value: string) {
+  return value.replace(/\D/g, "").slice(0, OTP_LENGTH);
+}
+
 /** Step 2 of the two-step registration (migration 018). */
 export const REGISTRATION_COMPLETE_PATH = "/registro/completar";
 
