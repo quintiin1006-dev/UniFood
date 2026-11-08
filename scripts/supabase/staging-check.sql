@@ -31,18 +31,19 @@ SELECT migration, applied FROM checks ORDER BY migration;
 
 -- Read-only: objects of migration 018. Every row must say true. No data is returned.
 -- Every foreign key to an account must be checked by purge_unconfirmed_accounts() or be
--- the cascade it relies on. Supabase's own auth tables only need to cascade.
+-- the cascade it relies on. Supabase's own auth tables need ON DELETE CASCADE or SET NULL
+-- (auth.scim_users uses SET NULL); public tables get no such exception.
 WITH account_fks AS (
   SELECT c.conrelid::regclass::text || '.' || a.attname AS reference,
          c.connamespace = 'auth'::regnamespace AS auth_internal,
-         c.confdeltype = 'c' AS cascades
+         c.confdeltype IN ('c', 'n') AS auth_safe_delete
   FROM pg_catalog.pg_constraint c
   JOIN pg_catalog.pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
   WHERE c.contype = 'f'
     AND c.confrelid IN (to_regclass('public.users'), to_regclass('public.clients'), to_regclass('auth.users'))
 ), uncovered_fks AS (
   SELECT reference FROM account_fks
-  WHERE NOT (auth_internal AND cascades)
+  WHERE NOT (auth_internal AND auth_safe_delete)
     AND reference NOT IN (
       'users.id', 'clients.user_id', 'user_roles.user_id', 'cafeteria_users.user_id',
       'notifications.user_id', 'notification_preferences.user_id', 'pending_registrations.user_id',
@@ -113,7 +114,7 @@ FROM pg_catalog.pg_constraint c
 JOIN pg_catalog.pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
 WHERE c.contype = 'f'
   AND c.confrelid IN (to_regclass('public.users'), to_regclass('public.clients'), to_regclass('auth.users'))
-  AND NOT (c.connamespace = 'auth'::regnamespace AND c.confdeltype = 'c')
+  AND NOT (c.connamespace = 'auth'::regnamespace AND c.confdeltype IN ('c', 'n'))
   AND c.conrelid::regclass::text || '.' || a.attname NOT IN (
     'users.id', 'clients.user_id', 'user_roles.user_id', 'cafeteria_users.user_id',
     'notifications.user_id', 'notification_preferences.user_id', 'pending_registrations.user_id',

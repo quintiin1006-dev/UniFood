@@ -17,8 +17,8 @@ ni recarga automática. Si falla la comprobación posterior del perfil, las API 
 el mismo error temporal y las páginas muestran una pantalla segura con reintento.
 
 - `/` redirige a `/login`, con acceso a registro estudiantil. `/login` es la entrada CLIENT y `/panel/login` la entrada WORKER/ADMIN/SUPER_ADMIN; ambas reutilizan `AuthScreen` con variantes explícitas.
-- `app/registro` sigue siendo exclusivamente CLIENT. `app/recuperar-contrasena` conserva OTP para CLIENT y redirige `?entrypoint=panel` a `/panel/recuperar`. El panel usa enlaces PKCE y `/panel/nueva-contrasena`; ver [recuperación del panel](panel-password-recovery.md).
-- `app/api/auth/[action]`: login, registro, dominio institucional, verificación, reenvío, recuperación y cierre de sesión. Comprueba el origen y valida los datos antes de contactar Supabase.
+- `app/registro` sigue siendo exclusivamente CLIENT y es el paso 1 del registro en dos pasos; `app/registro/completar` es el paso 2 (ver [Registro en dos pasos](#registro-en-dos-pasos)). `app/privacidad` es un borrador pendiente de revisión legal. `app/recuperar-contrasena` conserva OTP para CLIENT y redirige `?entrypoint=panel` a `/panel/recuperar`. El panel usa enlaces PKCE y `/panel/nueva-contrasena`; ver [recuperación del panel](panel-password-recovery.md).
+- `app/api/auth/[action]`: login, reglas del dominio (`rules`), registro (`register`), paso 2 (`complete`), verificación, reenvío, recuperación y cierre de sesión. Comprueba el origen y valida los datos antes de contactar Supabase.
 - `features/auth/server`: cliente Supabase del login y consulta del usuario/perfil real. Sus tokens permanecen en cookies HttpOnly. La recuperación del panel usa un cliente Supabase browser separado: verificador PKCE en localStorage y sesión temporal solo en memoria, sin escribir cookies de login.
 - `proxy.ts`: renueva la sesión en las páginas públicas que la consultan, panel, cuenta y proxy de pedidos; no autoriza roles.
 - `app/worker/page.tsx`: comprueba la sesión y los roles antes de renderizar `components/worker/WorkerDashboard.tsx`.
@@ -55,7 +55,7 @@ Después de `005`, aplicar **`006_institution_email_alias.sql`**. Esta actualiza
 La migración:
 
 - Crea un perfil `public.users` al crearse una identidad en Supabase.
-- Para registros de estudiantes, valida el dominio, nombre y documento; crea `clients` y asigna exclusivamente `CLIENT` en la misma transacción. El documento es único.
+- Para registros de estudiantes, valida el dominio, nombre y documento; crea `clients` y asigna exclusivamente `CLIENT` en la misma transacción. El documento es único. **Desde la 018 esto cambia:** ver [Registro en dos pasos](#registro-en-dos-pasos).
 - Hace opcional el teléfono, que no forma parte de las pantallas solicitadas.
 - Evita que un estudiante cambie su institución mediante la política existente de actualización de perfil.
 - Expone dos RPC con privilegios acotados: `is_institutional_email` y `current_auth_profile`.
@@ -64,7 +64,7 @@ Las cuentas existentes deben tener su correspondiente registro en `public.users`
 
 Después de `006`, aplicar **`007_auth_role_cardinality.sql`**. Mantiene `user_roles` y añade `uq_user_roles_user UNIQUE(user_id)`: ninguna cuenta, activa o inactiva, puede tener dos roles. Los constraint triggers `trg_users_auth_role_cardinality` y `trg_user_roles_auth_role_cardinality` son `DEFERRABLE INITIALLY DEFERRED`; al commit cada usuario activo debe tener exactamente un rol CLIENT, WORKER, ADMIN o SUPER_ADMIN. La migración aborta si encuentra datos incompatibles y no elige ni asigna roles automáticamente. Las migraciones históricas permanecen intactas. `setup_auth.sql` consolida 005–007, funciona después de 001–004 y puede repetirse después de 007.
 
-El registro de estudiantes crea CLIENT y activa el perfil en la misma transacción. Una identidad no estudiantil empieza inactiva y sin rol, aunque sus metadatos soliciten privilegios. Para WORKER/ADMIN, insertar un único rol, asignar una cafetería y activar únicamente con el perfil completo; se permite construir ese estado en una transacción. SUPER_ADMIN no tiene asignación. Para revocar el último rol, desactivar el usuario y ajustar sus asignaciones en la misma transacción. Sustituir un ADMIN de cafetería activa requiere completar su reemplazo atómicamente o desactivar administrativamente la cafetería. Una eliminación de identidad sigue sujeta a FK e invariantes. `TRUNCATE` se rechaza porque omite los triggers por fila; usar `DELETE`.
+Desde la 018, el registro crea CLIENT y activa el perfil en el paso 2, en la misma transacción. Una identidad no estudiantil empieza inactiva y sin rol, aunque sus metadatos soliciten privilegios. Para WORKER/ADMIN, insertar un único rol, asignar una cafetería y activar únicamente con el perfil completo; se permite construir ese estado en una transacción. SUPER_ADMIN no tiene asignación. Para revocar el último rol, desactivar el usuario y ajustar sus asignaciones en la misma transacción. Sustituir un ADMIN de cafetería activa requiere completar su reemplazo atómicamente o desactivar administrativamente la cafetería. Una eliminación de identidad sigue sujeta a FK e invariantes. `TRUNCATE` se rechaza porque omite los triggers por fila; usar `DELETE`.
 
 La migración 007, considerada aisladamente, usa los triggers `trg_users_auth_role_lock` y `trg_user_roles_auth_role_lock` para adquirir `pg_advisory_xact_lock` por usuario antes de las escrituras relevantes. La clave es `hashtextextended('unifood:auth-role-cardinality:' || user_id::text, 0)`, un entero firmado de 64 bits derivado del UUID completo con un namespace propio. No se trunca el UUID ni se usa un hash de 32 bits. Estos locks de 007 no son globales. Un hash finito admite colisiones, aproximadamente 2⁻⁶⁴ por pareja: una colisión solo introduce espera entre esos usuarios, nunca permite un estado inválido. Las claves se calculan en el mismo servidor y no se persisten; no se requiere estabilidad entre versiones mayores de PostgreSQL.
 
@@ -77,6 +77,26 @@ administrativamente activas. Puede serializar escrituras de usuarios distintos, 
 altas de estudiantes y aprovisionamiento, y provocar reintentos completos bajo snapshots
 antiguos. No define disponibilidad diaria. La protección de pedidos de 008 y del servicio
 es independiente: reserva de orden, reserva de cola por cafetería y versión JPA/DB.
+
+## Registro en dos pasos
+
+Migración 018 y `docs/decisiones.md` §3. Toda llamada a Supabase del registro pasa por el BFF con la clave publicable; el navegador no recibe tokens fuera de las cookies HttpOnly ni la contraseña del paso 1.
+
+**Paso 1, `/registro`.** El correo se valida en cliente y en servidor con la misma regla que la base: dominio exacto, sin `+`, espacios ni puntos sueltos. Mientras se escribe, `POST /api/auth/rules` llama a `registration_rules(email)` y devuelve solo `{ allowed, clientType }`, nunca si la cuenta existe. `POST /api/auth/register` genera en el servidor una contraseña con `crypto.randomBytes(32)` y llama a `signUp` solo con correo y esa contraseña, sin metadatos. La contraseña no se devuelve, no se registra en logs ni en errores, y la respuesta es `{ ok: true }` exista o no la cuenta (también ante `user_already_exists` o `email_exists`).
+
+**Código.** El correo trae 6 dígitos que vencen a los 15 minutos, igual que los 900 s de Auth. El reenvío espera 60 s y se limita a 3 por pantalla; el `429` de Supabase muestra «Demasiados intentos». `verifyOtp` de tipo `signup` deja la sesión en las cookies existentes. Esa sesión lleva `amr` con `otp`, que `complete_registration()` exige tras un signup público.
+
+**Paso 2, `/registro/completar`.** La página lee `pending_registration()` en el servidor y pasa al formulario el tipo de cuenta y las longitudes del código; el cliente no las fija. `POST /api/auth/complete` valida nombre, código, privacidad y contraseña, y luego, en este orden:
+
+1. `updateUser({ password })` con la sesión del usuario. En un reintento Auth responde `same_password`, que aquí no es error: el hash ya cambió en el intento anterior.
+2. `signOut({ scope: "others" })`.
+3. `rpc("complete_registration", { full_name, institutional_code, privacy_accepted })`.
+
+Si falla el 1 o el 2, no se llama al 3. Si falla el 3, la sesión se conserva y el usuario reintenta sin un código nuevo. Al terminar, la cuenta entra a `/cuenta`.
+
+**Reanudar.** Login, verificación y recuperación consultan `pending_registration()` cuando la cuenta aún no tiene rol: si está pendiente, conservan la sesión y llevan a `/registro/completar`. `requireAuth`, `/login` y `/registro` hacen lo mismo, así que una cuenta pendiente no llega a ninguna pantalla del cliente. Un error al leer el registro pendiente niega el acceso, nunca lo concede. Sin sesión, «¿Olvidaste tu contraseña?» da una sesión `otp` y continúa en el paso 2. Pasadas 24 horas la limpieza de la 018 borra la cuenta y hay que registrarse de nuevo.
+
+**Errores.** Los `REGISTRATION_*` de la base se traducen en `features/auth/server/registration.ts` a mensajes en español sin detalles internos. Solo `REGISTRATION_CODE_UNAVAILABLE` habla de un código existente, y solo aparece dentro del paso 2 de quien lo intenta. Un error desconocido devuelve `REGISTRATION_FAILED` con un mensaje genérico.
 
 ## Correo y contraseñas en Supabase
 
@@ -171,9 +191,9 @@ En el backend, con Java 21:
 ./mvnw -Dtest=OrderTest,OrderServiceTest,ClientTest,SecurityConfigTest test
 ```
 
-Las pruebas automatizadas de auth usan un proveedor simulado. La política de autorización tiene tests de aplicación sin MVC ni JDBC. Los tests HTTP backend usan los endpoints, guards, servicio y handlers reales con hechos simulados detrás del puerto; los tests directos del adaptador verifican el mapeo JDBC y los recursos SQL. Esos mismos recursos se ejecutan en PostgreSQL/PGlite con las migraciones reales para comprobar roles, asignaciones, inactividad y revocación, sin reproducir la política de permisos en JavaScript ni extraer SQL mediante regex. Para validar la integración real, configurar el proyecto y comprobar: registro con documento nuevo, correo real, código inválido/vencido, reenvío, confirmación, login, recarga, cierre de sesión, recuperación y rechazo del estudiante al acceder a `/worker` y `/api/orders`. Con un trabajador, comprobar acceso a su cafetería y rechazo a otra. No asumir que las pruebas locales verifican SMTP o la aplicación remota de las migraciones.
+Las pruebas automatizadas de auth usan un proveedor simulado. La política de autorización tiene tests de aplicación sin MVC ni JDBC. Los tests HTTP backend usan los endpoints, guards, servicio y handlers reales con hechos simulados detrás del puerto; los tests directos del adaptador verifican el mapeo JDBC y los recursos SQL. Esos mismos recursos se ejecutan en PostgreSQL/PGlite con las migraciones reales para comprobar roles, asignaciones, inactividad y revocación, sin reproducir la política de permisos en JavaScript ni extraer SQL mediante regex. Para validar la integración real, configurar el proyecto y comprobar: registro en dos pasos con correo real, código inválido/vencido, reenvío, confirmación, login, recarga, cierre de sesión, recuperación y rechazo del estudiante al acceder a `/worker` y `/api/orders`. Con un trabajador, comprobar acceso a su cafetería y rechazo a otra. No asumir que las pruebas locales verifican SMTP o la aplicación remota de las migraciones.
 
-`npm test` también ejecuta las migraciones completas en PostgreSQL en memoria (PGlite). Comprueba los dos dominios, conservación del correo, coincidencia exacta, rechazo de subdominios/sufijos falsos, institución inactiva, rollback de registros inválidos y asignación exclusiva del rol CLIENT. La API de registro se prueba contra esa validación SQL real; el envío de correo de Supabase sigue simulado.
+`npm test` también ejecuta las migraciones completas en PostgreSQL en memoria (PGlite). Comprueba los dos dominios, conservación del correo, coincidencia exacta, rechazo de subdominios/sufijos falsos, institución inactiva, rollback de registros inválidos y asignación exclusiva del rol CLIENT. La acción `rules` se prueba contra `registration_rules()` real con el rol `anon`; el envío de correo de Supabase sigue simulado. El paso 2 tiene un e2e contra el proveedor local con la cuenta `pendingclient`.
 
 Los tests de cardinalidad PGlite comprueban commits, rollback, sustitución/revocación de roles, traslado de asignaciones, cascadas, datos históricos incompatibles y repetición de `setup_auth.sql`. Los tests específicos de 007 fijan esa versión para aislar su invariante; allí se comprueba independencia entre usuarios y ese test legado puede omitirse si faltan binarios. Eso no representa el esquema combinado posterior a 009.
 
