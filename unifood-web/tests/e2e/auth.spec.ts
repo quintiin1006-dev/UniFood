@@ -19,64 +19,112 @@ test("mobile login: password visibility, remember, language and responsive layou
   await page.screenshot({ path: testInfo.outputPath("login-mobile.png"), fullPage: true });
 });
 
-for (const domain of ["ustavillavo.edu.co", "ustavillavicencio.edu.co"]) {
-test(`registration validates each step and supports pasting an OTP for ${domain}`, async ({ page }, testInfo) => {
+for (const [domain, clientType, hint] of [
+  ["ustavillavo.edu.co", "STUDENT", "cuenta de estudiante"],
+  ["ustavillavicencio.edu.co", "STAFF", "cuenta de docente o administrativo"],
+] as const) {
+test(`step 1 asks only for the email, shows its account type and verifies the OTP for ${domain}`, async ({ page }, testInfo) => {
   const requests: { action: string; body: Record<string, unknown> }[] = [];
   await page.route("**/api/auth/*", async (route) => {
     const action = route.request().url().split("/").at(-1)!;
     requests.push({ action, body: route.request().postDataJSON() });
-    await route.fulfill({ status: action === "verify" ? 400 : 200, json: action === "verify" ? { message: "El código no es válido o ya venció." } : { ok: true } });
+    if (action === "rules") return route.fulfill({ json: { allowed: true, clientType } });
+    if (action === "verify") return route.fulfill({ status: 400, json: { message: "El código no es válido o ya venció. Solicita uno nuevo." } });
+    await route.fulfill({ json: { ok: true } });
   });
   await page.goto("/registro");
-  await page.getByRole("textbox", { name: "Nombre completo" }).fill("María Pérez");
-  await page.getByRole("textbox", { name: "Número de documento" }).fill("12.345");
-  await page.getByRole("button", { name: "Continuar" }).click();
-  await expect(page.getByRole("main").getByRole("alert")).toContainText("sin espacios ni puntos");
-  await page.getByRole("textbox", { name: "Número de documento" }).fill("123456789");
-  await page.screenshot({ path: testInfo.outputPath("register-personal.png"), fullPage: true });
-  await page.getByRole("button", { name: "Continuar" }).click();
-  await expect(page.getByText("Usa tu correo @ustavillavo.edu.co o @ustavillavicencio.edu.co.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Usa tu correo institucional" })).toBeVisible();
+  // Step 1 has no name, document or password fields.
+  await expect(page.getByRole("textbox")).toHaveCount(1);
+  await expect(page.getByLabel("Contraseña", { exact: true })).toHaveCount(0);
   await page.getByRole("textbox").fill(`maria@${domain}`);
+  await expect(page.getByText(hint)).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("register-email.png"), fullPage: true });
-  await page.getByRole("button", { name: "Continuar" }).click();
-  await page.getByLabel("Contraseña", { exact: true }).fill("UnaClave8");
-  await page.getByLabel("Confirmar contraseña", { exact: true }).fill("OtraClave8");
-  await page.getByRole("button", { name: "Continuar" }).click();
-  await expect(page.getByRole("main").getByRole("alert")).toContainText("no coinciden");
-  await page.getByLabel("Confirmar contraseña", { exact: true }).fill("UnaClave8");
-  await page.screenshot({ path: testInfo.outputPath("register-password.png"), fullPage: true });
   await page.getByRole("button", { name: "Continuar" }).click();
   await expect(page.getByRole("heading", { name: "Verifica tu correo" })).toBeVisible();
   await expect(page.getByText(`maria@${domain}`, { exact: true })).toBeVisible();
+  await expect(page.getByText("El código vence en 15 minutos.")).toBeVisible();
   await expect(page.getByRole("button", { name: /Reenviar código/ })).toBeDisabled();
   await page.getByRole("textbox", { name: "Dígito 1", exact: true }).fill("123456");
   await expect(page.getByRole("textbox", { name: "Dígito 6", exact: true })).toHaveValue("6");
   await page.screenshot({ path: testInfo.outputPath("register-verify.png"), fullPage: true });
   await page.getByRole("button", { name: "Verificar", exact: true }).click();
   await expect(page.getByRole("main").getByRole("alert")).toContainText("no es válido");
-  expect(requests.map(({ action }) => action)).toEqual(["institution", "register", "verify"]);
+  const actions = requests.map(({ action }) => action);
+  expect(actions.filter((action) => action !== "rules")).toEqual(["register", "verify"]);
+  const register = requests.find(({ action }) => action === "register")!.body;
+  // The browser sends no password, name or code in step 1.
+  expect(Object.keys(register).sort()).toEqual(["email", "entrypoint"]);
   expect(requests.at(-1)?.body.code).toBe("123456");
   expect(requests.every(({ body }) => body.email === `maria@${domain}`)).toBe(true);
 });
 }
 
-test("registration stays on email when the institutional domain is rejected", async ({ page }) => {
+test("step 1 rejects addresses outside the rule before signing up", async ({ page }) => {
   const actions: string[] = [];
   await page.route("**/api/auth/*", async (route) => {
-    actions.push(route.request().url().split("/").at(-1)!);
-    await route.fulfill({ status: 400, json: { message: "Solo se permiten correos de instituciones habilitadas en UniFood." } });
+    const action = route.request().url().split("/").at(-1)!;
+    actions.push(action);
+    if (action === "rules") return route.fulfill({ json: { allowed: false } });
+    await route.fulfill({ status: 400, json: { message: "Solo se permiten correos institucionales habilitados en UniFood.", code: "REGISTRATION_DOMAIN_NOT_ALLOWED" } });
   });
   await page.goto("/registro");
-  await page.getByRole("textbox", { name: "Nombre completo" }).fill("María Pérez");
-  await page.getByRole("textbox", { name: "Número de documento" }).fill("123456789");
+  // A "+" never reaches the server.
+  await page.getByRole("textbox").fill("maria+alias@ustavillavo.edu.co");
+  await expect(page.getByText("sin «+»")).toBeVisible();
   await page.getByRole("button", { name: "Continuar" }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("sin «+»");
   for (const email of ["maria@gmail.com", "maria@ustavillavicencio.edu.co.evil.com"]) {
     await page.getByRole("textbox").fill(email);
+    await expect(page.getByRole("main").getByText("Este correo no está habilitado")).toBeVisible();
     await page.getByRole("button", { name: "Continuar" }).click();
-    await expect(page.getByRole("main").getByRole("alert")).toContainText("instituciones habilitadas");
+    await expect(page.getByRole("main").getByRole("alert")).toContainText("institucionales habilitados");
     await expect(page.getByRole("heading", { name: "Usa tu correo institucional" })).toBeVisible();
   }
-  expect(actions).toEqual(["institution", "institution"]);
+  expect(actions.filter((action) => action !== "rules")).toEqual(["register", "register"]);
+});
+
+test("resending the code waits between requests and stops after the limit", async ({ page }) => {
+  await page.clock.install();
+  const actions: string[] = [];
+  await page.route("**/api/auth/*", async (route) => {
+    const action = route.request().url().split("/").at(-1)!;
+    actions.push(action);
+    if (action === "rules") return route.fulfill({ json: { allowed: true, clientType: "STUDENT" } });
+    await route.fulfill({ json: { ok: true } });
+  });
+  await page.goto("/registro");
+  await page.getByRole("textbox").fill("maria@ustavillavo.edu.co");
+  await page.getByRole("button", { name: "Continuar" }).click();
+  const resend = page.getByRole("button", { name: /Reenviar código/ });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await expect(resend).toBeDisabled();
+    await expect(resend).toContainText("(01:00)");
+    await page.clock.fastForward(61_000);
+    await expect(resend).toBeEnabled();
+    await resend.click();
+    await expect(page.getByRole("status")).toContainText("Enviamos un nuevo código");
+  }
+  await page.clock.fastForward(61_000);
+  await expect(resend).toBeDisabled();
+  await expect(page.getByText("Ya pediste varios códigos")).toBeVisible();
+  expect(actions.filter((action) => action === "resend")).toHaveLength(3);
+});
+
+test("a rate-limited resend shows a clear message", async ({ page }) => {
+  await page.clock.install();
+  await page.route("**/api/auth/*", async (route) => {
+    const action = route.request().url().split("/").at(-1)!;
+    if (action === "rules") return route.fulfill({ json: { allowed: true, clientType: "STUDENT" } });
+    if (action === "resend") return route.fulfill({ status: 429, json: { message: "Demasiados intentos. Espera un momento y vuelve a intentarlo." } });
+    await route.fulfill({ json: { ok: true } });
+  });
+  await page.goto("/registro");
+  await page.getByRole("textbox").fill("maria@ustavillavo.edu.co");
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await page.clock.fastForward(61_000);
+  await page.getByRole("button", { name: /Reenviar código/ }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Demasiados intentos");
 });
 
 test("password recovery goes from email and OTP to password and back to login", async ({ page }) => {

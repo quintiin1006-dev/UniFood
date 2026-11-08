@@ -18,6 +18,8 @@ const fixtures = Object.entries({
   worker: ["WORKER"],
   unverifiedworker: ["WORKER"],
   unverifiedclient: ["CLIENT"],
+  // Two-step registration (018): confirmed, waiting for step 2, no role yet.
+  pendingclient: [],
   recoveryclient: ["CLIENT"],
   recoveryworker: ["WORKER"],
   recoveryadmin: ["ADMIN"],
@@ -54,7 +56,7 @@ const fixtures = Object.entries({
       : roles.includes("WORKER")
         ? null
         : "Usuario de prueba",
-  active: name !== "inactive",
+  active: name !== "inactive" && name !== "pendingclient",
   roles,
   assignments: name === "unassigned" ? 0 : name === "multiassigned" ? 2 : 1,
 }));
@@ -611,6 +613,49 @@ createServer(async (request, response) => {
       if (profile.email.startsWith("recovery") && panelRecovery.logoutMode)
         return json(response, 503, { message: "PRIVATE_LOGOUT_DETAIL" });
       return json(response, 200, {});
+    }
+    // Step 2 of the two-step registration, modelled on migration 018.
+    const awaitingStep2 =
+      profile.email.startsWith("pendingclient@") && profile.roles.length === 0;
+    if (url.pathname === "/rest/v1/rpc/pending_registration")
+      return json(
+        response,
+        200,
+        awaitingStep2
+          ? {
+              pending: true,
+              emailConfirmed: true,
+              clientType: "STUDENT",
+              codeRequired: true,
+              minCodeLength: 7,
+              maxCodeLength: 7,
+            }
+          : { pending: false },
+      );
+    if (
+      url.pathname === "/rest/v1/rpc/complete_registration" &&
+      request.method === "POST"
+    ) {
+      let raw = "";
+      for await (const chunk of request) raw += chunk;
+      const input = JSON.parse(raw);
+      if (!awaitingStep2)
+        return json(response, 400, {
+          code: "P0002",
+          message: "REGISTRATION_NOT_PENDING",
+        });
+      // A code already taken in this fixture, to show the only code-related error.
+      if (input.institutional_code === "7000000")
+        return json(response, 409, {
+          code: "23505",
+          message: "REGISTRATION_CODE_UNAVAILABLE",
+          details: "PRIVATE_DATABASE_DETAIL",
+        });
+      profile.roles = ["CLIENT"];
+      profile.active = true;
+      profile.fullName = input.full_name;
+      response.writeHead(204);
+      return response.end();
     }
     if (
       url.pathname === "/rest/v1/rpc/current_auth_profile" &&

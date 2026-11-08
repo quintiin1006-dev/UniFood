@@ -179,10 +179,11 @@ test("role predicates and destinations separate operations from administration",
   assert.equal(validation.destination(null), "/login");
 });
 
-function pages(current) {
+function pages(current, pending = null) {
   return {
     ...uiMocks,
     "@/features/auth/server/session": {
+      getPendingRegistration: async () => pending,
       getAuth: async () =>
         validation.hasValidBusinessRole(current) ? { profile: current } : null,
       requireAuth: async (entrypoint = "client") => {
@@ -323,6 +324,27 @@ test("root opens student login; existing sessions leave either login and registr
       );
     }
   }
+});
+
+test("a pending registration leaves the login and step 1 for step 2", async () => {
+  const pending = {
+    emailConfirmed: true,
+    clientType: "STUDENT",
+    codeRequired: true,
+    minCodeLength: 7,
+    maxCodeLength: 7,
+  };
+  for (const file of ["app/login/page.tsx", "app/registro/page.tsx"])
+    await assert.rejects(
+      load(file, pages(profile([], false), pending)).default(),
+      (error) => error.location === "/registro/completar",
+      file,
+    );
+  // A finished account still goes to its destination first.
+  await assert.rejects(
+    load("app/login/page.tsx", pages(profile(["CLIENT"]), pending)).default(),
+    (error) => error.location === "/cuenta",
+  );
 });
 
 test("recovery validates context without redirecting an authenticated temporary session", async () => {

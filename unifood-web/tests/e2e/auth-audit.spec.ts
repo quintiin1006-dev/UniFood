@@ -105,6 +105,63 @@ test("unconfirmed CLIENT completes OTP admission without credentials in navigati
   for (const url of urls) expect(new URL(url).search).toBe("");
 });
 
+test("a pending registration is held at step 2 until it completes, then enters /cuenta", async ({
+  page,
+}) => {
+  // Login with a session but no role yet: the BFF keeps it and sends it to step 2.
+  expect((await submitLogin(page, "/login", "pendingclient")).status()).toBe(
+    200,
+  );
+  await expect(page).toHaveURL(new URL("/registro/completar", page.url()).href);
+  // No client screen is reachable while step 2 is pending.
+  for (const path of ["/cuenta", "/cuenta/perfil", "/login", "/registro"]) {
+    await page.goto(path);
+    await expect(page).toHaveURL(
+      new URL("/registro/completar", page.url()).href,
+    );
+  }
+  await expect(
+    page.getByRole("heading", { name: "Completa tu registro" }),
+  ).toBeVisible();
+  // Rules come from pending_registration(): a student code has exactly 7 digits.
+  await expect(page.getByText("Solo números, 7 dígitos.")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "política de privacidad" }),
+  ).toHaveAttribute("href", "/privacidad");
+  await page
+    .getByRole("textbox", { name: "Nombre completo", exact: true })
+    .fill("Ana Torres");
+  await page
+    .getByRole("textbox", { name: "Código estudiantil", exact: true })
+    .fill("7000000");
+  await page.getByLabel("Contraseña", { exact: true }).fill("NuevaClave9");
+  await page
+    .getByLabel("Confirmar contraseña", { exact: true })
+    .fill("NuevaClave9");
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Crear mi cuenta" }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+    "Ese código institucional ya está registrado. Si es tuyo, contacta a soporte.",
+  );
+  // The retry keeps the session: no new code is requested.
+  await page
+    .getByRole("textbox", { name: "Código estudiantil", exact: true })
+    .fill("7000001");
+  await page.getByRole("button", { name: "Crear mi cuenta" }).click();
+  await expect(page).toHaveURL(new URL("/cuenta", page.url()).href);
+  await page.goto("/registro/completar");
+  await expect(page).toHaveURL(new URL("/cuenta", page.url()).href);
+});
+
+test("the privacy page is a draft marked for legal review", async ({
+  page,
+}) => {
+  await page.goto("/privacidad");
+  await expect(page.getByRole("note")).toContainText(
+    "Borrador, pendiente de revisión legal",
+  );
+});
+
 test("all four anonymous protected routes redirect to their exact entrypoint", async ({
   page,
 }) => {
