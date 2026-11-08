@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
 import { createAuthDatabase as createFixtureDatabase } from "./helpers/auth-database.mjs";
 import {
@@ -41,7 +41,8 @@ const changePassword = (db, id) =>
     "UPDATE auth.users SET encrypted_password = 'hash-new' WHERE id = $1",
     [id],
   );
-// Confirmed and with a new password: ready for step 2.
+// Confirmed and with the password updated in Auth since signup: ready for step 2.
+// Only the hash changes; bcrypt salts make it change even for the same password.
 async function ready(db, email) {
   const id = await signup(db, email);
   await confirm(db, id);
@@ -225,7 +226,7 @@ test("confirmation only records the date; the account stays inactive", async (t)
   );
 });
 
-test("step 2 requires confirmation and a password other than the signup one", async (t) => {
+test("step 2 requires confirmation and a password updated since signup", async (t) => {
   const db = await createAuthDatabase();
   t.after(() => db.close());
   const id = await signup(db, "ana@ustavillavo.edu.co");
@@ -234,7 +235,8 @@ test("step 2 requires confirmation and a password other than the signup one", as
     fails(/REGISTRATION_EMAIL_NOT_CONFIRMED/),
   );
   await confirm(db, id);
-  // Whoever signed up first with this address chose that password (finding F2).
+  // Whoever signed up first with this address chose that password (finding F2):
+  // the stored hash must have changed, whatever the new password is.
   await assert.rejects(
     complete(db, id),
     fails(/REGISTRATION_PASSWORD_CHANGE_REQUIRED/),
@@ -590,6 +592,85 @@ test("no identity can change its email address", async (t) => {
   );
 });
 
+test("browser roles cannot write account columns, even with Supabase default grants", async (t) => {
+  const db = await createAuthDatabase({ throughMigration: "000" });
+  t.after(() => db.close());
+  // Supabase grants every new public object to the API roles; 001-018 must undo it.
+  await db.exec(`
+    GRANT USAGE ON SCHEMA public TO anon, authenticated;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated;`);
+  const directory = new URL(
+    "../../unifood-backend/supabase/migrations/",
+    import.meta.url,
+  );
+  for (const name of (await readdir(directory))
+    .filter((file) => file.endsWith(".sql"))
+    .sort())
+    await db.exec(await readFile(new URL(name, directory), "utf8"));
+
+  const columns = [
+    ["public.clients", "client_type"],
+    ["public.clients", "institutional_code"],
+    ["public.clients", "code_review_required"],
+    ["public.clients", "privacy_accepted_at"],
+    ["public.users", "is_active"],
+    ["public.users", "must_change_password"],
+    ["public.users", "deactivated_at"],
+  ];
+  for (const role of ["anon", "authenticated"]) {
+    for (const table of ["public.clients", "public.users"])
+      for (const privilege of ["SELECT", "INSERT", "UPDATE", "DELETE"])
+        assert.equal(
+          (
+            await one(db, "SELECT has_table_privilege($1, $2, $3) AS ok", [
+              role,
+              table,
+              privilege,
+            ])
+          ).ok,
+          false,
+          `${role} ${privilege} ${table}`,
+        );
+    for (const [table, column] of columns)
+      assert.equal(
+        (
+          await one(
+            db,
+            "SELECT has_column_privilege($1, $2, $3, 'UPDATE') AS ok",
+            [role, table, column],
+          )
+        ).ok,
+        false,
+        `${role} UPDATE ${table}.${column}`,
+      );
+  }
+  assert.deepEqual(
+    (
+      await db.query(
+        `SELECT c.relname, c.relrowsecurity,
+           (SELECT count(*)::int FROM pg_policy p WHERE p.polrelid = c.oid) AS policies
+         FROM pg_class c
+         WHERE c.oid IN ('public.users'::regclass, 'public.clients'::regclass)
+         ORDER BY 1`,
+      )
+    ).rows,
+    [
+      { relname: "clients", relrowsecurity: true, policies: 0 },
+      { relname: "users", relrowsecurity: true, policies: 0 },
+    ],
+  );
+
+  // And the attempt itself, with the user's own session.
+  const id = await signup(db, "ana@ustavillavo.edu.co");
+  for (const sql of [
+    "UPDATE public.users SET is_active = true WHERE id = $1",
+    "UPDATE public.users SET deactivated_at = NULL WHERE id = $1",
+    "UPDATE public.users SET must_change_password = false WHERE id = $1",
+    "UPDATE public.clients SET institutional_code = '7000001' WHERE user_id = $1",
+  ])
+    await assert.rejects(as(db, "authenticated", id, sql, [id]), denied, sql);
+});
+
 test("browser and service roles reach only the public entry points", async (t) => {
   const db = await createAuthDatabase({ throughMigration: "017" });
   t.after(() => db.close());
@@ -821,6 +902,39 @@ test("cleanup checks every table that references an account", async (t) => {
     "public.client_code_corrections x WHERE x.actor_id",
   ])
     assert.ok(source.includes(check), check);
+});
+
+test("staging-check.sql passes on 018 and flags an uncovered account reference", async (t) => {
+  const db = await createAuthDatabase();
+  t.after(() => db.close());
+  const script = await readFile(
+    new URL("../../scripts/supabase/staging-check.sql", import.meta.url),
+    "utf8",
+  );
+  const run = async () => {
+    const [migrations, checks, uncovered] = await db.exec(script);
+    return {
+      missing: migrations.rows.filter((row) => !row.applied),
+      failing: checks.rows.filter((row) => !row.ok).map((row) => row.object),
+      uncovered: uncovered.rows.map((row) => row.uncovered_account_foreign_key),
+    };
+  };
+  // The test fixture provides pg_cron's objects but not the extension itself.
+  assert.deepEqual(await run(), {
+    missing: [],
+    failing: ["pg_cron extension"],
+    uncovered: [],
+  });
+  await db.exec(
+    "CREATE TABLE public.future_table (user_id uuid REFERENCES public.users(id))",
+  );
+  const result = await run();
+  assert.ok(
+    result.failing.includes(
+      "every account foreign key is covered by the cleanup",
+    ),
+  );
+  assert.deepEqual(result.uncovered, ["future_table.user_id"]);
 });
 
 test("the cleanup job is scheduled once, even if scheduling runs again", async (t) => {
