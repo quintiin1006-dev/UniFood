@@ -86,6 +86,11 @@ class ClientOrderCancellationApiTest {
     }
 
     @Bean
+    com.santotofood.application.port.in.CreateOwnOrderUseCase create() {
+      return mock(com.santotofood.application.port.in.CreateOwnOrderUseCase.class);
+    }
+
+    @Bean
     CancelOrderUseCase cancel(
         OrderRepository orders, OrderItemRepository items, TimeProvider clock) {
       return new OrderService(orders, items, clock);
