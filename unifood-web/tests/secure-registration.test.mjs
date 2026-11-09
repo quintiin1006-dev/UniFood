@@ -883,6 +883,8 @@ test("cleanup checks every table that references an account", async (t) => {
     "notification_preferences.user_id",
     "notifications.user_id",
     "orders.client_id",
+    // 021: whoever rejects is a WORKER, so the user_roles check below covers it.
+    "orders.rejected_by",
     "pending_registrations.user_id",
     "user_roles.user_id",
   ]);

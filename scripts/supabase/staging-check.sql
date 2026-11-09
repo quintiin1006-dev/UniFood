@@ -47,7 +47,9 @@ WITH account_fks AS (
     AND reference NOT IN (
       'users.id', 'clients.user_id', 'user_roles.user_id', 'cafeteria_users.user_id',
       'notifications.user_id', 'notification_preferences.user_id', 'pending_registrations.user_id',
-      'client_code_corrections.actor_id', 'client_code_corrections.client_id', 'orders.client_id')
+      'client_code_corrections.actor_id', 'client_code_corrections.client_id', 'orders.client_id',
+      -- 021: whoever rejects is a WORKER, and the cleanup skips accounts with a role.
+      'orders.rejected_by')
 ), checks(object, ok) AS (VALUES
   ('every account foreign key is covered by the cleanup', NOT EXISTS (SELECT 1 FROM uncovered_fks)),
   ('browser roles cannot write account columns', CASE WHEN to_regclass('public.pending_registrations') IS NULL THEN false
@@ -118,5 +120,47 @@ WHERE c.contype = 'f'
   AND c.conrelid::regclass::text || '.' || a.attname NOT IN (
     'users.id', 'clients.user_id', 'user_roles.user_id', 'cafeteria_users.user_id',
     'notifications.user_id', 'notification_preferences.user_id', 'pending_registrations.user_id',
-    'client_code_corrections.actor_id', 'client_code_corrections.client_id', 'orders.client_id')
+    'client_code_corrections.actor_id', 'client_code_corrections.client_id', 'orders.client_id',
+    -- 021: whoever rejects is a WORKER, and the cleanup skips accounts with a role.
+    'orders.rejected_by')
 ORDER BY 1;
+
+-- Read-only: objects of migrations 019-021 (order backend base). Every row must say true.
+-- Uses catalog lookups only, so it also runs before 019 and simply reports false.
+WITH order_columns AS (
+  SELECT attname FROM pg_catalog.pg_attribute
+  WHERE attrelid = 'public.orders'::regclass AND attnum > 0 AND NOT attisdropped
+), checks(object, ok) AS (VALUES
+  ('019 catalog_category has BEBIDA', EXISTS (
+    SELECT 1 FROM pg_catalog.pg_enum
+    WHERE enumtypid = 'public.catalog_category'::regtype AND enumlabel = 'BEBIDA')),
+  ('020 orders.idempotency_key and request_hash',
+    (SELECT count(*) = 2 FROM order_columns WHERE attname IN ('idempotency_key', 'request_hash'))),
+  ('020 unique idempotency key per client', to_regclass('public.uq_orders_client_idempotency_key') IS NOT NULL),
+  ('020 one active order per client', COALESCE((
+    SELECT i.indisunique AND pg_catalog.pg_get_expr(i.indpred, i.indrelid) LIKE '%PENDING%PREPARING%READY%CALLED%'
+    FROM pg_catalog.pg_index i
+    WHERE i.indexrelid = to_regclass('public.uq_orders_one_active_per_client')), false)),
+  ('020 client history index', to_regclass('public.idx_orders_client_history') IS NOT NULL),
+  ('021 orders note, cancellation and snapshot columns',
+    (SELECT count(*) = 6 FROM order_columns WHERE attname IN (
+      'note', 'cancellation_source', 'rejection_reason', 'rejected_by', 'client_code', 'client_type'))),
+  ('021 cancellation source trigger enabled', EXISTS (
+    SELECT 1 FROM pg_catalog.pg_trigger
+    WHERE tgrelid = 'public.orders'::regclass AND tgname = 'trg_orders_cancellation_source'
+      AND NOT tgisinternal AND tgenabled <> 'D')),
+  ('021 every cancelled order has a source', CASE
+    WHEN NOT EXISTS (SELECT 1 FROM order_columns WHERE attname = 'cancellation_source') THEN false
+    ELSE (xpath('/row/n/text()', query_to_xml(
+      $q$SELECT NOT EXISTS (SELECT 1 FROM public.orders
+         WHERE (status = 'CANCELLED') <> (cancellation_source IS NOT NULL)) AS n$q$,
+      false, true, '')))[1]::text::boolean END),
+  ('orders closed to browser roles', NOT EXISTS (
+    SELECT 1 FROM unnest(ARRAY['anon', 'authenticated']) r
+    WHERE has_table_privilege(r, 'public.orders', 'SELECT')
+       OR has_table_privilege(r, 'public.orders', 'INSERT')
+       OR has_table_privilege(r, 'public.orders', 'UPDATE')
+       OR has_any_column_privilege(r, 'public.orders', 'SELECT')
+       OR has_any_column_privilege(r, 'public.orders', 'UPDATE')))
+)
+SELECT object, ok FROM checks ORDER BY object;
