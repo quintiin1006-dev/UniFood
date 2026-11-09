@@ -502,11 +502,49 @@ según `cafeteria_daily_states` de hoy en America/Bogota. Nunca incluye el docum
 - Orden de locks: suscripción, cafetería, productos por id y filas del día. Sin fila del
   día, el producto se considera no disponible.
 - 400 `INVALID_ORDER_REQUEST`, `ORDER_LIMIT_EXCEEDED`, `ORDER_NOTE_TOO_LONG`.
-- 403 `CAFETERIA_NOT_SUBSCRIBED`, `INSTITUTION_MISMATCH`.
+- 403 `CAFETERIA_NOT_SUBSCRIBED`.
+- 404 `CAFETERIA_NOT_FOUND` (decidido el 2026-11-08, sustituye a `INSTITUTION_MISMATCH`).
 - 409 `CAFETERIA_CLOSED`, `PRODUCT_UNAVAILABLE`, `ACTIVE_ORDER_EXISTS`,
   `IDEMPOTENCY_KEY_CONFLICT`.
 - Pruebas obligatorias: dos pedidos simultáneos del mismo cliente producen exactamente un
   `ACTIVE_ORDER_EXISTS`; la misma `Idempotency-Key` repetida devuelve el mismo pedido.
+
+**Crear pedido implementado (B15, decidido el 2026-11-08):**
+
+- **Orden de las comprobaciones:**
+  1. Cuenta inactiva o sin fila en `clients`: 403 `FORBIDDEN`, antes que cualquier otra
+     validación.
+  2. Forma de la solicitud: 400.
+  3. Clave ya usada: la repetición devuelve 200; otro contenido con la misma clave es 409.
+  4. Pedido activo: 409.
+  5. Cafetería: no existe o es de otra institución, 404; inactiva, 403; cerrada hoy, 409.
+  6. Productos: 409.
+- **Cafetería de otra institución:** 404 `CAFETERIA_NOT_FOUND`, con el mismo mensaje que una
+  inexistente, como en el menú.
+- **`ACTIVE_ORDER_EXISTS`:** el `ApiErrorResponse` lleva además `activeOrderId`, el pedido
+  que hay que recoger o cancelar. Ningún otro error incluye ese campo.
+- **400 `INVALID_ORDER_REQUEST`:**
+  - Falta `Idempotency-Key` o no cumple el formato de la 020.
+  - Un producto aparece repetido en `items`: se rechaza, no se suman las cantidades.
+  - El cuerpo no es JSON, o le faltan tipos o campos.
+- **409 `PRODUCT_UNAVAILABLE`, con el mismo mensaje en todos los casos:**
+  - El producto no existe, está inactivo o es de otra cafetería.
+  - No tiene fila del día o está marcado no disponible.
+- **Nota:** se recorta. Si queda vacía se guarda `null` y cuenta como `null` en el hash: `""`,
+  espacios y sin nota son la misma solicitud. El límite de 200 cuenta caracteres, como
+  `length()` en PostgreSQL.
+- **`request_hash`:** SHA-256 hex de la cafetería, los ítems ordenados por producto y la nota
+  recortada. Los mismos ítems en otro orden son la misma solicitud.
+- **Repetición (200):** devuelve el pedido con su estado actual y sus ítems, en el formato del
+  201, aunque ya haya terminado o la cafetería esté cerrada.
+- **Campos ignorados:** precios, totales y cualquier otro campo del cuerpo; el BFF ni
+  siquiera los reenvía.
+- **Datos copiados al crear:** `client_name`, `client_code` (código institucional) y
+  `client_type`. `client_document` queda en `null`.
+- **Carreras:** las resuelven los índices únicos de la 020. La solicitud que pierde se
+  revierte entera, y una lectura nueva la convierte en 200, si es la misma solicitud, o en 409.
+- **503 `ORDER_TEMPORARILY_UNAVAILABLE`, con `Retry-After`:** fallo temporal de la base de
+  datos. Se reintenta con la misma clave.
 
 **Cierre diario:** sin endpoint público. Tarea cada 5 minutos y al arrancar; toma pedidos
 activos anteriores al inicio del día con `FOR UPDATE SKIP LOCKED`. Es idempotente.
