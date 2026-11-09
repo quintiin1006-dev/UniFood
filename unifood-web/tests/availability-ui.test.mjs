@@ -41,9 +41,16 @@ function render(state = {}) {
   );
 }
 
-test("panel renders all five categories in order, independent rails and clean empty groups", () => {
+test("panel renders all six categories in order, independent rails and clean empty groups", () => {
   const markup = render();
-  const labels = ["Del día", "Corriente", "Ejecutivo", "Especial", "Desayuno"];
+  const labels = [
+    "Del día",
+    "Corriente",
+    "Ejecutivo",
+    "Especial",
+    "Desayuno",
+    "Bebida",
+  ];
   const positions = labels.map((label) => markup.indexOf(`>${label}</h3>`));
   assert.ok(positions.every((position) => position >= 0));
   assert.deepEqual(
@@ -53,7 +60,7 @@ test("panel renders all five categories in order, independent rails and clean em
   assert.match(markup, /aria-label="Productos de Corriente"/);
   assert.equal(
     (markup.match(/No hay productos en esta categoría/g) ?? []).length,
-    4,
+    5,
   );
   assert.match(markup, /Almuerzo corriente/);
   assert.match(markup, /15\.000/);
@@ -162,10 +169,36 @@ for (const count of [0, 1, 6]) {
     );
     assert.equal(
       (markup.match(/No hay productos en esta categoría/g) ?? []).length,
-      count === 0 ? 5 : 4,
+      count === 0 ? 6 : 5,
     );
   });
 }
+
+test("BEBIDA products get their own rail, label, price and availability switch", () => {
+  const data = availabilityFixture({ open: true });
+  const beverage = data.categories.find(
+    ({ category }) => category === "BEBIDA",
+  );
+  beverage.items = [
+    {
+      id: "00000000-0000-0000-0000-000000000031",
+      name: "Jugo natural",
+      price: 4500,
+      description: null,
+      image: null,
+      available: true,
+    },
+  ];
+  const markup = render({ data });
+  assert.match(markup, />Bebida<\/h3>/);
+  assert.match(markup, /aria-label="Productos de Bebida"/);
+  assert.match(markup, /Jugo natural/);
+  assert.match(markup, /4\.500/);
+  assert.match(
+    markup,
+    /aria-checked="true" aria-label="Disponibilidad de Jugo natural"/,
+  );
+});
 
 test("browser availability API sends no identity or cafeteria and validates acknowledgements", async () => {
   const calls = [];
@@ -231,4 +264,27 @@ test("WORKER header is module-aware and keeps order search out of Availability",
   );
   assert.match(nav, /aria-current="page" aria-label="Disponibilidad"/);
   assert.ok(!nav.includes("Inventario"));
+});
+
+test("the availability contract requires the six categories in the backend order", () => {
+  const { parseToday } = availabilityLoader()(
+    "features/availability/contracts.ts",
+  );
+  const today = availabilityFixture();
+  assert.deepEqual(
+    parseToday(today).categories.map(({ category }) => category),
+    ["DEL_DIA", "CORRIENTE", "EJECUTIVO", "ESPECIAL", "DESAYUNO", "BEBIDA"],
+  );
+  // The shape from before 019, or BEBIDA out of place, fails closed.
+  assert.equal(
+    parseToday({ ...today, categories: today.categories.slice(0, 5) }),
+    null,
+  );
+  assert.equal(
+    parseToday({
+      ...today,
+      categories: [today.categories[5], ...today.categories.slice(0, 5)],
+    }),
+    null,
+  );
 });

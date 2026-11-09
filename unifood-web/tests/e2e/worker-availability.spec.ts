@@ -132,10 +132,17 @@ test("WORKER operates confirmed daily states, persists reloads and navigates bet
   await enter(page);
   await expect(page.getByRole("search")).toHaveCount(0);
   await expect(
-    page
-      .getByRole("heading", { level: 3 })
-      .filter({ hasText: /^(Del día|Corriente|Ejecutivo|Especial|Desayuno)$/ }),
-  ).toHaveText(["Del día", "Corriente", "Ejecutivo", "Especial", "Desayuno"]);
+    page.getByRole("heading", { level: 3 }).filter({
+      hasText: /^(Del día|Corriente|Ejecutivo|Especial|Desayuno|Bebida)$/,
+    }),
+  ).toHaveText([
+    "Del día",
+    "Corriente",
+    "Ejecutivo",
+    "Especial",
+    "Desayuno",
+    "Bebida",
+  ]);
   await expect(
     page.getByText("No hay productos en esta categoría.", { exact: true }),
   ).toBeVisible();
