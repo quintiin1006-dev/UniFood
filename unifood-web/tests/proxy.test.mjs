@@ -64,6 +64,8 @@ test("proxy matcher covers public session readers and protected routes without g
     "/super-admin",
     "/api/orders",
     "/api/me/orders/00000000-0000-0000-0000-000000000001/cancel",
+    "/api/me/context",
+    "/api/me/menu?cafeteriaId=00000000-0000-0000-0000-000000000001",
   ])
     assert.equal(
       unstable_doesProxyMatch({ config, nextConfig: {}, url }),
