@@ -367,10 +367,12 @@ class AvailabilityApiPostgresTest {
         .andExpect(jsonPath("$.businessDate").value(DAY.toString()))
         .andExpect(jsonPath("$.cafeteria.id").value(CAFE.toString()))
         .andExpect(jsonPath("$.cafeteria.open").value(false))
-        .andExpect(jsonPath("$.categories", hasSize(5)))
+        .andExpect(jsonPath("$.categories", hasSize(6)))
         .andExpect(
             jsonPath("$.categories[*].category")
-                .value(contains("DEL_DIA", "CORRIENTE", "EJECUTIVO", "ESPECIAL", "DESAYUNO")))
+                .value(
+                    contains(
+                        "DEL_DIA", "CORRIENTE", "EJECUTIVO", "ESPECIAL", "DESAYUNO", "BEBIDA")))
         .andExpect(jsonPath("$.categories[1].items[*].name").value(contains("A lunch", "Z lunch")))
         .andExpect(jsonPath("$.categories[1].items[0].available").value(false))
         .andExpect(jsonPath("$.categories[1].items[0].*", hasSize(6)))
@@ -610,7 +612,7 @@ class AvailabilityApiPostgresTest {
   }
 
   @Test
-  void emptyActiveCatalogStillReturnsAllFiveEmptyGroups() throws Exception {
+  void emptyActiveCatalogStillReturnsAllSixEmptyGroups() throws Exception {
     var activeItems =
         jdbc.queryForList(
             "SELECT id FROM public.lunches WHERE cafeteria_id=? AND is_active", UUID.class, CAFE);
@@ -618,7 +620,7 @@ class AvailabilityApiPostgresTest {
       jdbc.update("UPDATE public.lunches SET is_active=false WHERE cafeteria_id=?", CAFE);
       mvc.perform(get("/api/worker/availability/today").with(worker(WORKER)))
           .andExpect(status().isOk())
-          .andExpect(jsonPath("$.categories", hasSize(5)))
+          .andExpect(jsonPath("$.categories", hasSize(6)))
           .andExpect(jsonPath("$.categories[*].items[*]", hasSize(0)));
     } finally {
       for (UUID item : activeItems)

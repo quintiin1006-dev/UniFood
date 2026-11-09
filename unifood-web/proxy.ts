@@ -120,5 +120,7 @@ export const config = {
     "/super-admin/:path*",
     "/api/orders/:path*",
     "/api/me/orders/:path*",
+    "/api/me/context",
+    "/api/me/menu",
   ],
 };

@@ -397,9 +397,9 @@ El BFF y Spring usan las mismas rutas. Errores con `ApiErrorResponse`:
 
 | Método y ruta                                         | Uso                                     | Errores                                                                                                              |
 | ----------------------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/me/context`                                 | Sedes, cafeterías activas y preferencia | —                                                                                                                    |
+| `GET /api/me/context`                                 | Sedes, cafeterías activas y preferencia | 404 `CLIENT_PROFILE_NOT_FOUND`                                                                                       |
 | `PUT /api/me/preference`                              | Guarda sede y cafetería                 | 403 `CAFETERIA_NOT_SUBSCRIBED`, 404 `SITE_NOT_FOUND`, 409 `CAFETERIA_SITE_MISMATCH`                                  |
-| `GET /api/me/menu?cafeteriaId=`                       | Menú del día                            | 403 `CAFETERIA_NOT_SUBSCRIBED`, `INSTITUTION_MISMATCH`                                                               |
+| `GET /api/me/menu?cafeteriaId=`                       | Menú del día, con `ETag`                | 404 `CAFETERIA_NOT_FOUND`, 403 `CAFETERIA_NOT_SUBSCRIBED`, 400 `INVALID_REQUEST`                                     |
 | `POST /api/me/orders`                                 | Crea pedido, con `Idempotency-Key`      | Ver abajo                                                                                                            |
 | `GET /api/me/orders/current`                          | Pedido activo o `null`                  | —                                                                                                                    |
 | `GET /api/me/orders?cursor=&limit=20`                 | Historial                               | —                                                                                                                    |
@@ -425,6 +425,11 @@ El BFF y Spring usan las mismas rutas. Errores con `ApiErrorResponse`:
 }
 ```
 
+**Contexto implementado (B13, 2026-11-08):** la forma de arriba más `fullName` y
+`activeOrder: { "id": "…" } | null`, y **sin `preference`** hasta que exista en la base.
+Solo lista cafeterías activas de sedes activas de la institución del cliente, con `open`
+según `cafeteria_daily_states` de hoy en America/Bogota. Nunca incluye el documento.
+
 **Menú**
 
 ```json
@@ -448,6 +453,22 @@ El BFF y Spring usan las mismas rutas. Errores con `ApiErrorResponse`:
   ]
 }
 ```
+
+**Menú implementado (B14, 2026-11-08):**
+
+- Todas las categorías del enum que tengan productos activos, en el orden de los filtros
+  de §6: `DEL_DIA`, `DESAYUNO`, `CORRIENTE`, `EJECUTIVO`, `ESPECIAL` y `BEBIDA`.
+- **Cafetería cerrada hoy:** se devuelven sus productos activos con `cafeteria.open: false`
+  y `available: false` en cada uno, para ver el menú sin poder pedir (§6).
+- **Cafetería inexistente o de otra institución: 404 `CAFETERIA_NOT_FOUND`, con el mismo
+  mensaje en los dos casos.** Sustituye al 403 `INSTITUTION_MISMATCH` anterior, para no
+  revelar que existe una cafetería de otra institución.
+- **Cafetería inactiva de la propia institución:** 403 `CAFETERIA_NOT_SUBSCRIBED`, con
+  mensaje fijo (§5).
+- `ETag` fuerte sobre el contenido y `Cache-Control: no-cache, private`. Con un
+  `If-None-Match` igual responde 304 sin cuerpo. El BFF reenvía `If-None-Match`, `ETag` y
+  el 304.
+- `imageUrl` va en `null` hasta el PR de pantallas.
 
 **Crear pedido**
 

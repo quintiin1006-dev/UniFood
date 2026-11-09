@@ -4,12 +4,11 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.Instant;
-import java.util.UUID;
 
 @Entity
 @Table(name = "clients")
@@ -18,28 +17,28 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ClientEntity {
 
-    @Id
-    @Column(name = "id", nullable = false)
-    private UUID id;
+  @Id
+  @Column(name = "id", nullable = false)
+  private UUID id;
 
-    @Column(name = "user_id", nullable = false, unique = true)
-    private UUID userId;
+  @Column(name = "user_id", nullable = false, unique = true)
+  private UUID userId;
 
-    @Column(name = "institution_id", nullable = false)
-    private UUID institutionId;
+  @Column(name = "institution_id", nullable = false)
+  private UUID institutionId;
 
-    @Column(name = "full_name", nullable = false, length = 150)
-    private String fullName;
+  @Column(name = "full_name", nullable = false, length = 150)
+  private String fullName;
 
-    @Column(name = "document", nullable = false, unique = true, length = 30)
-    private String document;
+  @Column(name = "document", unique = true, length = 30)
+  private String document;
 
-    @Column(name = "phone", length = 30)
-    private String phone;
+  @Column(name = "phone", length = 30)
+  private String phone;
 
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt;
+  @Column(name = "created_at", nullable = false)
+  private Instant createdAt;
 
-    @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
+  @Column(name = "updated_at", nullable = false)
+  private Instant updatedAt;
 }
