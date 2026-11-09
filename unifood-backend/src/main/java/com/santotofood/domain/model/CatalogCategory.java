@@ -6,5 +6,6 @@ public enum CatalogCategory {
   CORRIENTE,
   EJECUTIVO,
   ESPECIAL,
-  DESAYUNO
+  DESAYUNO,
+  BEBIDA
 }
