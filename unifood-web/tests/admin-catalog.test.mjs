@@ -293,3 +293,40 @@ test("catalog state suppresses stale responses, exposes retry and drops protecte
   store.dispose();
   retry.dispose();
 });
+
+test("BEBIDA (019) is accepted by the contract, the form, the filter and the screen", () => {
+  const beverage = {
+    id: "10000000-0000-0000-0000-000000000099",
+    name: "Jugo natural",
+    description: null,
+    price: "4500.00",
+    category: "BEBIDA",
+    imageUrl: null,
+    active: true,
+    version: "0",
+  };
+  const parsed = parseAdminCatalog({ products: [beverage] });
+  assert.equal(parsed.products[0].category, "BEBIDA");
+  const { validateCatalogForm } = load("features/admin-catalog/commands.ts");
+  assert.deepEqual(
+    validateCatalogForm({
+      name: "Jugo natural",
+      description: null,
+      price: "4500",
+      category: "BEBIDA",
+    }),
+    {},
+  );
+  assert.equal(
+    filterCatalog(parsed.products, {
+      search: "",
+      category: "BEBIDA",
+      status: "all",
+    }).length,
+    1,
+  );
+  const html = render({ data: { products: [beverage] } });
+  assert.match(html, /<option value="BEBIDA">Bebida<\/option>/);
+  assert.match(html, />Bebida</);
+  assert.match(html, /Jugo natural/);
+});

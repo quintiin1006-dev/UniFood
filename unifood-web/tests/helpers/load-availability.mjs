@@ -78,6 +78,7 @@ export function availabilityFixture({
       "EJECUTIVO",
       "ESPECIAL",
       "DESAYUNO",
+      "BEBIDA",
     ].map((category, i) => ({
       category,
       items:

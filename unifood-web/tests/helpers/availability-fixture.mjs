@@ -37,6 +37,7 @@ export function browserAvailabilityFixture() {
           item(29, "Desayuno", "https://unknown.example.invalid/product.jpg"),
         ],
       },
+      { category: "BEBIDA", items: [item(30, "Jugo natural")] },
     ],
   };
 }
