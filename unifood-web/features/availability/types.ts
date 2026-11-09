@@ -1,9 +1,12 @@
+// Same order as the Java CatalogCategory enum, which the worker availability API follows.
+// BEBIDA (019) goes last, as "Bebidas" does in the filters of docs/decisiones.md §6.
 export const CATALOG_CATEGORIES = [
   "DEL_DIA",
   "CORRIENTE",
   "EJECUTIVO",
   "ESPECIAL",
   "DESAYUNO",
+  "BEBIDA",
 ] as const;
 export type CatalogCategory = (typeof CATALOG_CATEGORIES)[number];
 export const CATEGORY_LABELS: Record<CatalogCategory, string> = {
@@ -12,6 +15,7 @@ export const CATEGORY_LABELS: Record<CatalogCategory, string> = {
   EJECUTIVO: "Ejecutivo",
   ESPECIAL: "Especial",
   DESAYUNO: "Desayuno",
+  BEBIDA: "Bebida",
 };
 export type AvailabilityItem = {
   id: string;
