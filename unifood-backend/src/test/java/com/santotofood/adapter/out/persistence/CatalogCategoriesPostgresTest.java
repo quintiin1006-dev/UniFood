@@ -99,6 +99,8 @@ class CatalogCategoriesPostgresTest {
             Integer.class));
     assertTrue(auditTypeUsage().isEmpty(), "The read-only audit must also work before 012");
     executeScript(Path.of("supabase/migrations/012_catalog_categories.sql"));
+    // 019 only adds BEBIDA to the enum, so the database matches CatalogCategory again.
+    executeScript(Path.of("supabase/migrations/019_catalog_category_bebida.sql"));
     emf =
         new Configuration()
             .addAnnotatedClass(LunchEntity.class)
@@ -212,8 +214,8 @@ class CatalogCategoriesPostgresTest {
   }
 
   @Test
-  void enumContainsExactlyTheFiveApprovedCategories() {
-    var expected = List.of("DEL_DIA", "CORRIENTE", "EJECUTIVO", "ESPECIAL", "DESAYUNO");
+  void enumContainsExactlyTheApprovedCategories() {
+    var expected = List.of("DEL_DIA", "CORRIENTE", "EJECUTIVO", "ESPECIAL", "DESAYUNO", "BEBIDA");
     assertEquals(
         expected,
         jdbc.queryForList(
