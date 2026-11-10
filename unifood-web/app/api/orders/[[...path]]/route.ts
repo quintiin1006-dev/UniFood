@@ -6,7 +6,8 @@ import {
   temporaryAuthResponse,
 } from "@/features/auth/server/failures";
 
-const actions = new Set(["prepare", "ready", "call", "deliver", "cancel"]);
+// The worker does not cancel (docs/decisiones.md §6); a rejection with a reason arrives in B18.
+const actions = new Set(["prepare", "ready", "call", "deliver"]);
 
 async function forward(
   request: Request,

@@ -102,32 +102,3 @@ export async function advanceOrder(order: Order): Promise<Order> {
 
   return mapBackendOrder(updatedBackendOrder);
 }
-
-export async function cancelOrder(order: Order): Promise<Order> {
-  if (order.status !== "pending") {
-    throw new Error("Solo un pedido pendiente puede cancelarse.");
-  }
-
-  const response = await fetch(`/api/orders/${order.id}/cancel`, {
-    method: "PATCH",
-  });
-
-  if (!response.ok) {
-    const message = await readErrorMessage(
-      response,
-      "No se pudo cancelar el pedido.",
-    );
-
-    const error = new Error(message) as Error & {
-      status?: number;
-    };
-
-    error.status = response.status;
-
-    throw error;
-  }
-
-  const updatedBackendOrder: BackendOrder = await response.json();
-
-  return mapBackendOrder(updatedBackendOrder);
-}

@@ -40,7 +40,12 @@ export function mapBackendOrder(
   return {
     id: backendOrder.id,
     student: backendOrder.clientName,
-    studentId: backendOrder.clientDocument ?? "",
+    clientCode: backendOrder.clientCode ?? null,
+    clientType:
+      backendOrder.clientType === "STUDENT" ||
+      backendOrder.clientType === "STAFF"
+        ? backendOrder.clientType
+        : null,
     createdAt: backendOrder.createdAt,
     updatedAt: backendOrder.updatedAt,
     deliveredAt: backendOrder.deliveredAt ?? undefined,

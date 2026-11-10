@@ -3,7 +3,6 @@
 import {
   ArrowRight,
   UserRound,
-  XCircle,
 } from "lucide-react";
 
 import {
@@ -17,6 +16,7 @@ import {
   formatRelativeTime,
 } from "@/lib/orderTime";
 
+import { clientIdentity } from "@/features/orders/utils/clientIdentity";
 import type { Order } from "@/types/order";
 
 import styles from "./OrderCard.module.css";
@@ -25,7 +25,6 @@ interface OrderCardProps {
   order: Order;
   onOpen: (order: Order) => void;
   onAction: (order: Order) => void;
-  onCancel: (order: Order) => void;
   busy?: boolean;
 }
 
@@ -33,7 +32,6 @@ export default function OrderCard({
   order,
   onOpen,
   onAction,
-  onCancel,
   busy = false,
 }: OrderCardProps) {
   const ActionIcon =
@@ -42,8 +40,7 @@ export default function OrderCard({
   const actionLabel =
     ACTION_LABELS[order.status];
 
-  const isPending =
-    order.status === "pending";
+  const identity = clientIdentity(order);
 
   const isDelivered =
     order.status === "delivered";
@@ -75,9 +72,7 @@ export default function OrderCard({
             {order.student}
           </strong>
 
-          <span>
-            ID: {order.studentId}
-          </span>
+          {identity && <span>{identity}</span>}
         </div>
 
         <div className={styles.time}>
@@ -153,43 +148,6 @@ export default function OrderCard({
             </span>
           )}
       </button>
-
-      {/* Cancelar pedido */}
-      {isPending && (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() =>
-            onCancel(order)
-          }
-          aria-label={`Cancelar pedido de ${order.student}`}
-          style={{
-            width: "100%",
-            marginTop: "8px",
-            border: "1px solid #fecaca",
-            borderRadius: "12px",
-            padding: "9px 12px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "7px",
-            background: "#fff7f7",
-            color: "#dc2626",
-            fontSize: "13px",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          <XCircle
-            size={16}
-            strokeWidth={2.2}
-          />
-
-          <span>
-            Cancelar pedido
-          </span>
-        </button>
-      )}
     </article>
   );
 }

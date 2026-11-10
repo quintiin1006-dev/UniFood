@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 
+import { clientIdentity } from "@/features/orders/utils/clientIdentity";
 import type { Order } from "@/types/order";
 
 import styles from "./CallsBoard.module.css";
@@ -107,7 +108,7 @@ export default function CallsBoard({
         order.student
           .toLowerCase()
           .includes(query) ||
-        order.studentId
+        (order.clientCode ?? "")
           .toLowerCase()
           .includes(query) ||
         order.items.some((item) =>
@@ -212,12 +213,9 @@ export default function CallsBoard({
                             {order.student}
                           </strong>
 
-                          <span>
-                            ID:{" "}
-                            {
-                              order.studentId
-                            }
-                          </span>
+                          {clientIdentity(order) && (
+                            <span>{clientIdentity(order)}</span>
+                          )}
                         </div>
                       </button>
 
@@ -335,7 +333,9 @@ export default function CallsBoard({
                   <div className={styles.detailStudentInfo}>
                     <small>ENTREGAR A</small>
                     <strong>{selectedOrder.student}</strong>
-                    <span>ID: {selectedOrder.studentId || "No registrado"}</span>
+                    {clientIdentity(selectedOrder) && (
+                      <span>{clientIdentity(selectedOrder)}</span>
+                    )}
                   </div>
                   {selectedOrder.status === "called" && (
                     <span className={styles.calledBadge}><Check size={13} aria-hidden="true" /> Avisado</span>

@@ -406,7 +406,7 @@ test("BFF denies every operational route for non-workers and administrative comb
   const orderId = "00000000-0000-0000-0000-000000000001";
   const operations = [
     [],
-    ...["prepare", "ready", "call", "deliver", "cancel"].map((action) => [
+    ...["prepare", "ready", "call", "deliver"].map((action) => [
       orderId,
       action,
     ]),

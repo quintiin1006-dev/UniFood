@@ -20,7 +20,10 @@ export interface OrderItem {
 export interface Order {
   id: string;
   student: string;
-  studentId: string;
+  // B20: the worker sees the institutional code or, without one, the client type; never the
+  // document.
+  clientCode: string | null;
+  clientType: "STUDENT" | "STAFF" | null;
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];

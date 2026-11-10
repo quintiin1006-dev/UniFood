@@ -74,7 +74,58 @@ test("worker order actions expose the structured cancellation conflict as a func
   );
 });
 
-test("complete API flow, backend priority rejection, cancellation and terminal states", async () => {
+test("the worker BFF refuses a cancel action without reaching the session or Spring", async (t) => {
+  const original = global.fetch;
+  t.after(() => {
+    global.fetch = original;
+  });
+  let calls = 0;
+  global.fetch = async () => {
+    calls++;
+    return Response.json({});
+  };
+  const response = await route.PATCH(
+    new Request(`http://localhost:3100/api/orders/${id}/cancel`, {
+      method: "PATCH",
+      headers: { origin: "http://localhost:3100", host: "localhost:3100" },
+    }),
+    { params: Promise.resolve({ path: [id, "cancel"] }) },
+  );
+  assert.equal(response.status, 404);
+  assert.equal(calls, 0);
+});
+
+test("the worker sees the institutional code or the client type, never the document", () => {
+  const identity = load("features/orders/utils/clientIdentity.ts");
+  const mapped = mapper.mapBackendOrder({
+    ...fixture,
+    clientCode: "1234567",
+    clientType: "STUDENT",
+    clientDocument: "PRIVATE-DOCUMENT",
+  });
+  assert.equal(mapped.clientCode, "1234567");
+  assert.equal(mapped.clientType, "STUDENT");
+  assert.ok(!JSON.stringify(mapped).includes("PRIVATE-DOCUMENT"));
+  assert.equal(identity.clientIdentity(mapped), "Código: 1234567");
+  assert.equal(
+    identity.clientIdentity({ clientCode: null, clientType: "STAFF" }),
+    "Docente o administrativo",
+  );
+  assert.equal(
+    identity.clientIdentity({ clientCode: null, clientType: "STUDENT" }),
+    "Estudiante",
+  );
+  assert.equal(
+    identity.clientIdentity(mapper.mapBackendOrder({ ...fixture })),
+    "",
+  );
+  assert.equal(
+    mapper.mapBackendOrder({ ...fixture, clientType: "OTHER" }).clientType,
+    null,
+  );
+});
+
+test("complete API flow, backend priority rejection and terminal states", async () => {
   const original = global.fetch;
   const requests = [];
   let rejectPriority = true;
@@ -91,7 +142,6 @@ test("complete API flow, backend priority rejection, cancellation and terminal s
       ready: "READY",
       call: "CALLED",
       deliver: "DELIVERED",
-      cancel: "CANCELLED",
     };
     return Response.json({
       ...fixture,
@@ -113,11 +163,8 @@ test("complete API flow, backend priority rejection, cancellation and terminal s
     const count = requests.length;
     await api.advanceOrder(order);
     assert.equal(requests.length, count);
-    assert.equal(
-      (await api.cancelOrder(mapper.mapBackendOrder(fixture))).status,
-      "cancelled",
-    );
-    await assert.rejects(api.cancelOrder(order), /pendiente/);
+    // The worker no longer cancels (docs/decisiones.md §6): there is no API for it.
+    assert.equal(api.cancelOrder, undefined);
     assert.ok(requests.every(([url]) => url.startsWith("/api/orders")));
     assert.equal(requests[0][0], "/api/orders");
     assert.equal(mapper.mapOrderStatus("NOT_COLLECTED"), "not_collected");

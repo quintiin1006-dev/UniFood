@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   advanceOrder,
-  cancelOrder,
   getOperationalOrders,
 } from "@/features/orders/api/orderApi";
 import type { Order } from "@/types/order";
@@ -128,7 +127,7 @@ export function useOrders(enabled = true) {
   }, []);
 
   const mutate = useCallback(
-    async (order: Order, cancel: boolean): Promise<Order | null> => {
+    async (order: Order): Promise<Order | null> => {
       if (pending.current.has(order.id)) return null;
       clearActionError();
       const current = latestOrders.current.find((item) => item.id === order.id);
@@ -148,9 +147,7 @@ export function useOrders(enabled = true) {
       ++revision.current;
       setBusyOrderIds([...pending.current]);
       try {
-        const updated = await (cancel
-          ? cancelOrder(current)
-          : advanceOrder(current));
+        const updated = await advanceOrder(current);
         replaceOrders(
           latestOrders.current.map((item) =>
             item.id === updated.id ? updated : item,
@@ -164,8 +161,7 @@ export function useOrders(enabled = true) {
             ? cause.message
             : "No se pudo actualizar el pedido.";
         setIsPriorityError(
-          !cancel &&
-            current.status === "pending" &&
+          current.status === "pending" &&
             apiError.status === 409 &&
             /pedido anterior/i.test(message),
         );
@@ -180,12 +176,9 @@ export function useOrders(enabled = true) {
     [clearActionError, refresh, replaceOrders],
   );
 
+  // The worker only advances orders; cancelling is the client's (docs/decisiones.md §6).
   const handleOrderAction = useCallback(
-    (order: Order) => mutate(order, false),
-    [mutate],
-  );
-  const handleOrderCancel = useCallback(
-    (order: Order) => mutate(order, true),
+    (order: Order) => mutate(order),
     [mutate],
   );
 
@@ -197,7 +190,6 @@ export function useOrders(enabled = true) {
     isPriorityError,
     busyOrderIds,
     handleOrderAction,
-    handleOrderCancel,
     clearActionError,
   };
 }
