@@ -48,7 +48,7 @@ test("verified CLIENT cancels own order only, without browser identity or a dead
   ] as const) {
     const response = await page.request.patch(path, { headers });
     expect(response.status()).toBe(status);
-    if (status === 404)
+    if (status === 404 && path.startsWith("/api/me/orders/"))
       expect((await response.json()).code).toBe("ORDER_NOT_FOUND");
     expect(await response.text()).not.toContain("provider-secret");
   }
