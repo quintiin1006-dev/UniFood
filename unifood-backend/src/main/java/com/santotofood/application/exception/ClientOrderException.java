@@ -4,8 +4,9 @@ import com.santotofood.shared.error.ErrorCode;
 import java.util.UUID;
 
 /**
- * Order creation refusals with fixed Spanish messages (docs/decisiones.md §11). They never say
- * whether another institution's cafeteria or product exists, nor which product failed.
+ * Client order refusals with fixed Spanish messages (docs/decisiones.md §11). They never say
+ * whether another institution's cafeteria or product exists, which product failed, or whether
+ * another client's order exists.
  */
 public class ClientOrderException extends RuntimeException {
   public enum Kind {
@@ -96,6 +97,23 @@ public class ClientOrderException extends RuntimeException {
         Kind.UNAVAILABLE,
         ErrorCode.ORDER_TEMPORARILY_UNAVAILABLE,
         "No pudimos crear tu pedido en este momento. Inténtalo nuevamente.");
+  }
+
+  public static ClientOrderException readForbidden() {
+    return new ClientOrderException(
+        Kind.FORBIDDEN, "FORBIDDEN", "No tienes permisos para ver pedidos.", null);
+  }
+
+  /** Same message whether the order belongs to someone else or does not exist. */
+  public static ClientOrderException orderNotFound() {
+    return of(Kind.NOT_FOUND, ErrorCode.ORDER_NOT_FOUND, "No encontramos ese pedido.");
+  }
+
+  public static ClientOrderException readUnavailable() {
+    return of(
+        Kind.UNAVAILABLE,
+        ErrorCode.ORDER_TEMPORARILY_UNAVAILABLE,
+        "No pudimos cargar tus pedidos en este momento. Inténtalo nuevamente.");
   }
 
   public Kind getKind() {

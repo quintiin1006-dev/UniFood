@@ -11,6 +11,9 @@ import com.santotofood.adapter.in.web.error.GlobalExceptionHandler;
 import com.santotofood.adapter.in.web.mapper.OrderResponseMapper;
 import com.santotofood.application.model.*;
 import com.santotofood.application.port.in.CancelOrderUseCase;
+import com.santotofood.application.port.in.GetOwnCurrentOrderUseCase;
+import com.santotofood.application.port.in.GetOwnOrderHistoryUseCase;
+import com.santotofood.application.port.in.GetOwnOrderUseCase;
 import com.santotofood.application.port.out.AuthorizationQueryPort;
 import com.santotofood.application.service.OrderService;
 import com.santotofood.domain.model.*;
@@ -52,6 +55,7 @@ class ClientOrderCancellationApiTest {
   @Autowired OrderRepository orders;
   @Autowired OrderItemRepository items;
   @Autowired TimeProvider clock;
+  @Autowired GetOwnOrderUseCase ownOrders;
   MockMvc mvc;
   final UUID userId = UUID.randomUUID();
   final UUID orderId = UUID.randomUUID();
@@ -91,6 +95,21 @@ class ClientOrderCancellationApiTest {
     }
 
     @Bean
+    GetOwnOrderUseCase detail() {
+      return mock(GetOwnOrderUseCase.class);
+    }
+
+    @Bean
+    GetOwnCurrentOrderUseCase current() {
+      return mock(GetOwnCurrentOrderUseCase.class);
+    }
+
+    @Bean
+    GetOwnOrderHistoryUseCase history() {
+      return mock(GetOwnOrderHistoryUseCase.class);
+    }
+
+    @Bean
     CancelOrderUseCase cancel(
         OrderRepository orders, OrderItemRepository items, TimeProvider clock) {
       return new OrderService(orders, items, clock);
@@ -99,8 +118,29 @@ class ClientOrderCancellationApiTest {
 
   @BeforeEach
   void setup() {
-    reset(queries, orders, items, clock);
+    reset(queries, orders, items, clock, ownOrders);
     mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+    // The response is the client's own view of the order, read after the cancellation.
+    when(ownOrders.getOwnOrder(userId, orderId))
+        .thenReturn(
+            new ClientOrder(
+                orderId,
+                "CANCELLED",
+                BigDecimal.ONE,
+                null,
+                Instant.parse("2026-01-01T00:00:00Z"),
+                List.of(),
+                new ClientOrder.Cafeteria(UUID.randomUUID(), "Cafetería Central"),
+                "CLIENT",
+                null,
+                new ClientOrder.Timeline(
+                    Instant.parse("2026-01-01T01:00:00Z"),
+                    null,
+                    0,
+                    null,
+                    null,
+                    null,
+                    Instant.parse("2026-01-01T01:00:00Z"))));
     when(queries.findUserAuthorization(userId))
         .thenReturn(Optional.of(new UserAuthorization(true, Set.of("CLIENT"), List.of())));
     when(queries.findOrderOwner(orderId)).thenReturn(Optional.of(new OrderOwner(userId)));
@@ -148,9 +188,24 @@ class ClientOrderCancellationApiTest {
                 .content("{\"email\":\"other@example.invalid\"}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(orderId.toString()))
-        .andExpect(jsonPath("$.status").value("CANCELLED"));
+        .andExpect(jsonPath("$.status").value("CANCELLED"))
+        .andExpect(jsonPath("$.cancellationSource").value("CLIENT"))
+        .andExpect(jsonPath("$.clientDocument").doesNotExist())
+        .andExpect(jsonPath("$.clientId").doesNotExist())
+        .andExpect(header().string("Cache-Control", "no-store"));
     verify(queries).findUserAuthorization(userId);
     verify(orders).save(any());
+    verify(ownOrders).getOwnOrder(userId, orderId);
+  }
+
+  @Test
+  void repeatingTheClientsOwnCancellationIsOkWithoutSavingAgain() throws Exception {
+    storedOrder(OrderStatus.PENDING);
+    mvc.perform(patch(path).with(identity())).andExpect(status().isOk());
+    mvc.perform(patch(path).with(identity()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("CANCELLED"));
+    verify(orders, times(1)).save(any());
   }
 
   @Test

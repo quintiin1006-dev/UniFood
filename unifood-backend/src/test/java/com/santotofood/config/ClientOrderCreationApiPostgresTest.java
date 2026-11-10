@@ -15,10 +15,13 @@ import com.santotofood.adapter.in.web.error.GlobalExceptionHandler;
 import com.santotofood.adapter.in.web.mapper.OrderResponseMapper;
 import com.santotofood.adapter.out.persistence.AuthorizationPersistenceAdapter;
 import com.santotofood.adapter.out.persistence.ClientOrderPersistenceAdapter;
-import com.santotofood.adapter.out.time.SystemTimeProvider;
 import com.santotofood.application.port.in.CancelOrderUseCase;
+import com.santotofood.application.port.in.GetOwnCurrentOrderUseCase;
+import com.santotofood.application.port.in.GetOwnOrderHistoryUseCase;
+import com.santotofood.application.port.in.GetOwnOrderUseCase;
 import com.santotofood.application.service.ClientOrderCreationService;
 import com.santotofood.domain.model.BusinessDate;
+import com.santotofood.domain.port.out.TimeProvider;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -64,6 +67,8 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
  */
 @Timeout(120)
 class ClientOrderCreationApiPostgresTest {
+  // A fixed clock: "today" never moves under the seeded daily state, even across midnight.
+  static final Instant NOW = Instant.parse("2026-11-20T17:00:00Z");
   static final UUID OPEN = UUID.randomUUID();
   static final UUID CLOSED = UUID.randomUUID();
   static final UUID INACTIVE = UUID.randomUUID();
@@ -121,6 +126,26 @@ class ClientOrderCreationApiPostgresTest {
     CancelOrderUseCase cancel() {
       return mock(CancelOrderUseCase.class);
     }
+
+    @Bean
+    TimeProvider clock() {
+      return () -> NOW;
+    }
+
+    @Bean
+    GetOwnOrderUseCase detail() {
+      return mock(GetOwnOrderUseCase.class);
+    }
+
+    @Bean
+    GetOwnCurrentOrderUseCase current() {
+      return mock(GetOwnCurrentOrderUseCase.class);
+    }
+
+    @Bean
+    GetOwnOrderHistoryUseCase history() {
+      return mock(GetOwnOrderHistoryUseCase.class);
+    }
   }
 
   @BeforeAll
@@ -146,7 +171,6 @@ class ClientOrderCreationApiPostgresTest {
         OrderAuthorization.class,
         AuthorizationPersistenceAdapter.class,
         ClientOrderPersistenceAdapter.class,
-        SystemTimeProvider.class,
         ClientOrderCreationService.class,
         OrderResponseMapper.class,
         ClientOrderController.class,
@@ -239,7 +263,7 @@ class ClientOrderCreationApiPostgresTest {
   }
 
   static java.time.LocalDate today() {
-    return BusinessDate.from(Instant.now()).value();
+    return BusinessDate.from(NOW).value();
   }
 
   static void staff(UUID id, String role, UUID cafeteria) {
@@ -448,7 +472,10 @@ class ClientOrderCreationApiPostgresTest {
             .andExpect(jsonPath("$.items[1].quantity").value(2))
             .andExpect(jsonPath("$.items[1].unitPrice").value("4500.00"))
             .andExpect(jsonPath("$.items[1].subtotal").value("9000.00"))
-            .andExpect(jsonPath("$.*", hasSize(6)))
+            // The 6 fields of B15, then the ones B16 appends.
+            .andExpect(jsonPath("$.*", hasSize(16)))
+            .andExpect(jsonPath("$.cafeteria.name").value("Cafetería Central"))
+            .andExpect(jsonPath("$.cancellationSource").value(nullValue()))
             .andExpect(content().string(not(containsString("DOC-PRIVATE"))))
             .andReturn();
 

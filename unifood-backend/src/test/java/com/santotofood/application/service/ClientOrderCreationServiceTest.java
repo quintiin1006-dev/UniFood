@@ -80,7 +80,16 @@ class ClientOrderCreationServiceTest {
             call ->
                 Optional.of(
                     new ClientOrder(
-                        call.getArgument(0), "PENDING", BigDecimal.TEN, null, NOW, List.of())));
+                        call.getArgument(0),
+                        "PENDING",
+                        BigDecimal.TEN,
+                        null,
+                        NOW,
+                        List.of(),
+                        new ClientOrder.Cafeteria(CAFETERIA, "Cafetería Central"),
+                        null,
+                        null,
+                        new ClientOrder.Timeline(NOW, null, 0, null, null, null, null))));
   }
 
   static OrderRequest request(String note, Line... lines) {
