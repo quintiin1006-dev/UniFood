@@ -401,8 +401,9 @@ El BFF y Spring usan las mismas rutas. Errores con `ApiErrorResponse`:
 | `PUT /api/me/preference`                              | Guarda sede y cafetería                 | 403 `CAFETERIA_NOT_SUBSCRIBED`, 404 `SITE_NOT_FOUND`, 409 `CAFETERIA_SITE_MISMATCH`                                  |
 | `GET /api/me/menu?cafeteriaId=`                       | Menú del día, con `ETag`                | 404 `CAFETERIA_NOT_FOUND`, 403 `CAFETERIA_NOT_SUBSCRIBED`, 400 `INVALID_REQUEST`                                     |
 | `POST /api/me/orders`                                 | Crea pedido, con `Idempotency-Key`      | Ver abajo                                                                                                            |
-| `GET /api/me/orders/current`                          | Pedido activo o `null`                  | —                                                                                                                    |
-| `GET /api/me/orders?cursor=&limit=20`                 | Historial                               | —                                                                                                                    |
+| `GET /api/me/orders/current`                          | Pedido activo o `null`, con `ETag`      | —                                                                                                                    |
+| `GET /api/me/orders?cursor=&limit=20`                 | Historial                               | 400 `INVALID_ORDER_REQUEST`                                                                                          |
+| `GET /api/me/orders/{id}`                             | Detalle de un pedido propio             | 404 `ORDER_NOT_FOUND`                                                                                                |
 | `PATCH /api/me/orders/{id}/cancel`                    | Cancela en PENDING                      | 404 `ORDER_NOT_FOUND`, 409 `ORDER_ALREADY_PREPARING`, `INVALID_ORDER_STATE`                                          |
 | `PATCH /api/orders/{id}/reject`                       | Rechazo del worker `{reason}`           | 400 `REJECTION_REASON_REQUIRED`, 403 `FORBIDDEN`, 409 `INVALID_ORDER_STATE`                                          |
 | `PATCH /api/super-admin/cafeterias/{id}/subscription` | `{subscribed, expectedSubscribed}`      | 403 `SUPER_ADMIN_FORBIDDEN`, 404 `CAFETERIA_NOT_FOUND`, 409 `SUBSCRIPTION_STATE_CHANGED`                             |
@@ -545,6 +546,47 @@ según `cafeteria_daily_states` de hoy en America/Bogota. Nunca incluye el docum
   revierte entera, y una lectura nueva la convierte en 200, si es la misma solicitud, o en 409.
 - **503 `ORDER_TEMPORARILY_UNAVAILABLE`, con `Retry-After`:** fallo temporal de la base de
   datos. Se reintenta con la misma clave.
+
+**Pedido actual, historial y detalle implementados (B16, decidido el 2026-11-09):**
+
+- **Respuesta del pedido**, la misma en crear, pedido actual, detalle y cancelación: los campos
+  de B15 sin cambios, seguidos de `cafeteria {id, name}`, `cancellationSource`,
+  `rejectionReason`, `updatedAt`, `calledAt`, `reminderCount`, `lastRemindedAt`,
+  `deliveredAt`, `notCollectedAt` y `cancelledAt`. Nunca lleva el documento, `clientId` ni
+  `rejected_by`. `orders` no guarda cuándo pasó a preparación ni a listo.
+- **Pedido actual:**
+  - Sin pedido activo responde 200 con `null`.
+  - El `ETag` sale de una consulta mínima: id, estado, `updated_at` y `version`. Los dos
+    últimos cambian con cada UPDATE, incluidos el recordatorio y el rechazo.
+  - Con un `If-None-Match` igual responde 304 sin leer el pedido ni sus ítems.
+  - `Cache-Control: no-cache, private`. La lectura es una transacción REPEATABLE READ de
+    solo lectura, así el `ETag` y el cuerpo describen lo mismo.
+- **Historial:**
+  - Más reciente primero, por `created_at DESC, id DESC` sobre `idx_orders_client_history`,
+    con los terminales incluidos. Formato: `{orders, nextCursor}`; `nextCursor` es `null` en
+    la última página.
+  - Cada elemento lleva `id`, `status`, `total`, `createdAt`, `cafeteriaName`, `itemCount` y
+    `summary`.
+  - `itemCount` suma unidades. `summary` nombra hasta 2 productos por nombre, con su
+    cantidad, y «y N más» cuenta los productos distintos restantes, no las unidades:
+    «3× Arepa de queso, 1× Corriente del día y 1 más».
+  - `limit` es 20 por defecto y admite de 1 a 50. El cursor es opaco.
+  - Un `limit` fuera de rango o un cursor que no se decodifica exactamente es 400
+    `INVALID_ORDER_REQUEST`, el mismo código de crear pedido; no hay un segundo código. Un
+    cursor bien formado pero ajeno solo recorre los pedidos del cliente de la sesión.
+- **Detalle:** un pedido de otro cliente, uno inexistente y un id mal formado responden el
+  mismo 404 `ORDER_NOT_FOUND`, con el mismo mensaje.
+- **Cuenta sin fila en `clients`:** 403 `FORBIDDEN` antes de validar la solicitud, como en
+  crear pedido.
+- **Filtro:** cada consulta SQL filtra por el usuario o el cliente de la sesión, no en memoria.
+- **Cancelación (revisada contra §6):**
+  - Solo en PENDING, sin plazo y solo el dueño. `cancellation_source = 'CLIENT'`.
+  - Desde PREPARING, 409 `ORDER_ALREADY_PREPARING`. Desde los demás estados, 409
+    `INVALID_ORDER_STATE`, también si la terminó la cafetería o el cierre diario.
+  - **Repetir la cancelación** de un pedido que ya canceló el propio cliente responde 200
+    con el pedido, sin escribir otra vez.
+  - Spring responde con el pedido del cliente, sin el documento. El BFF sigue devolviendo
+    solo `{id, status}`.
 
 **Cierre diario:** sin endpoint público. Tarea cada 5 minutos y al arrancar; toma pedidos
 activos anteriores al inicio del día con `FOR UPDATE SKIP LOCKED`. Es idempotente.
