@@ -177,7 +177,7 @@ public class OrderService
   @Transactional
   public Order cancelOwnOrder(UUID orderId) {
     Order order = findOrder(orderId);
-    order.cancelByClient(timeProvider.now());
+    if (!order.cancelByClient(timeProvider.now())) return loadOrderItems(order);
     return loadOrderItems(orderRepository.save(order));
   }
 

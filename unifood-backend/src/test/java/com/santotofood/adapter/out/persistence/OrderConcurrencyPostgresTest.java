@@ -516,8 +516,16 @@ class OrderConcurrencyPostgresTest {
       var b = pool.submit(run);
       start.countDown();
       List<Object> results = List.of(a.get(15, TimeUnit.SECONDS), b.get(15, TimeUnit.SECONDS));
-      assertEquals(1, results.stream().filter(Order.class::isInstance).count());
-      assertEquals(1, results.stream().filter(DomainException.class::isInstance).count());
+      if (action.equals("cancel")) {
+        // The client's own cancellation is idempotent (B16): the second sees it done and does not
+        // write again, so both answer the order and the row moves exactly once.
+        assertEquals(2, results.stream().filter(Order.class::isInstance).count());
+        Long revision = tx.execute(s -> orders.findById(id).orElseThrow().getRevision());
+        assertEquals(1L, revision.longValue());
+      } else {
+        assertEquals(1, results.stream().filter(Order.class::isInstance).count());
+        assertEquals(1, results.stream().filter(DomainException.class::isInstance).count());
+      }
       assertEquals(after, state(id));
       assertCancelledAt(id, after.equals("CANCELLED") ? NOW : null);
     }

@@ -82,18 +82,26 @@ class ClientOrderCancellationServiceTest {
   }
 
   @Test
-  void repeatedClientCancellationCannotReplaceTheKnownTimeOrSaveAgain() {
+  void repeatedClientCancellationReturnsTheOrderWithoutReplacingTheTimeOrSavingAgain() {
     Order order = order(OrderStatus.PENDING);
     when(orders.save(order)).thenReturn(order);
     when(items.findByOrderId(id)).thenReturn(List.of());
     service.cancelOwnOrder(id);
     when(clock.now()).thenReturn(now.plusSeconds(60));
 
-    assertThrows(InvalidOrderStateException.class, () -> service.cancelOwnOrder(id));
+    assertSame(order, service.cancelOwnOrder(id));
+    assertEquals(OrderStatus.CANCELLED, order.getStatus());
     assertEquals(now, order.getCancelledAt());
     assertEquals(now, order.getUpdatedAt());
-    verify(orders).save(order);
-    verify(items).findByOrderId(id);
+    verify(orders, times(1)).save(order);
+  }
+
+  @Test
+  void anOrderCancelledByTheCafeteriaIsStillAConflictForTheClient() {
+    Order order = order(OrderStatus.CANCELLED);
+    order.restoreConcurrencyState(1L, false);
+    assertThrows(InvalidOrderStateException.class, () -> service.cancelOwnOrder(id));
+    verify(orders, never()).save(any());
   }
 
   @ParameterizedTest

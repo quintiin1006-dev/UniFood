@@ -203,10 +203,16 @@ public class Order {
     cancelPending(now, true);
   }
 
-  /** Client cancellation has no additional deadline. */
-  public void cancelByClient(Instant now) {
+  /**
+   * Client cancellation has no additional deadline. Repeating it after the client already cancelled
+   * changes nothing and returns false; a cancellation by anyone else is still a conflict.
+   */
+  public boolean cancelByClient(Instant now) {
+    requireInstant(now);
+    if (status == OrderStatus.CANCELLED && cancelledByClient) return false;
     cancelPending(now, false);
     cancelledByClient = true;
+    return true;
   }
 
   private void cancelPending(Instant now, boolean enforceDeadline) {
