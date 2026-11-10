@@ -26,7 +26,7 @@ El Route Handler reenvía las acciones PATCH al backend sin reenviar el Origin d
 
 - Pendiente → preparación → listo → llamado → entregado.
 - El backend autoriza pasar a preparación únicamente al primer pendiente de la cafetería (createdAt e id). El frontend conserva el orden recibido y no omite esa validación, incluso cuando hay una búsqueda activa.
-- Cancelar desde worker requiere un pedido pendiente; el backend valida también el plazo de cancelación.
+- El worker no cancela pedidos (docs/decisiones.md §6). Hasta el rechazo con motivo (B18), un PENDING solo lo terminan el cliente o el cierre diario.
 - Las órdenes se consultan cada 10 segundos, al recuperar el foco y después de cada acción. Las solicitudes anteriores no pueden sobrescribir una mutación y se bloquean acciones simultáneas sobre el mismo pedido.
 - Los conflictos muestran el mensaje real del backend. Solo un rechazo de preparación por un pedido anterior se identifica como prioridad.
 - CANCELLED y NOT_COLLECTED son terminales y no aparecen como pendientes.
@@ -34,7 +34,7 @@ El Route Handler reenvía las acciones PATCH al backend sin reenviar el Origin d
 
 ## Verificación
 
-La cancelación propia usa `PATCH /api/me/orders/{orderId}/cancel`, tanto en backend como en BFF. Exige CLIENT activo como único rol vigente. El backend resuelve el propietario por `orders.client_id → clients.user_id → users.id` y lo compara con el subject autenticado; ningún email, clientId, body o parámetro del navegador concede permisos. La regla PENDING vive en `Order` y esta operación CLIENT no aplica un deadline adicional. Las operaciones worker conservan su política y su deadline.
+La cancelación propia usa `PATCH /api/me/orders/{orderId}/cancel`, tanto en backend como en BFF. Exige CLIENT activo como único rol vigente. El backend resuelve el propietario por `orders.client_id → clients.user_id → users.id` y lo compara con el subject autenticado; ningún email, clientId, body o parámetro del navegador concede permisos. La regla PENDING vive en `Order` y esta operación CLIENT no aplica un deadline adicional. El worker no tiene operación de cancelar.
 
 El backend devuelve 200 con `OrderResponse`; el BFF entrega únicamente `{id, status: "CANCELLED"}`. Sin sesión: 401; cuenta no elegible: 403; pedido inexistente, ajeno o sin cliente vinculado para un CLIENT elegible: 404 (`ORDER_NOT_FOUND`); cualquier estado diferente de PENDING en un pedido propio: 409 (`INVALID_ORDER_STATE`). Los errores del backend usan `ApiErrorResponse`; el BFF mantiene esos estados con mensajes fijos y el mismo formato de error, sin copiar bodies ni headers upstream. Fallos de conexión, redirects o respuestas inválidas producen 502. La cancelación sigue sin interfaz y el historial CLIENT queda pendiente de una consulta de pedidos propios.
 
@@ -46,6 +46,6 @@ npm run lint
 npm run build
 ```
 
-Las pruebas usan respuestas simuladas: cubren todas las transiciones, prioridad, cancelación, estados terminales, errores y el proxy. Para verificar la integración real, usar pedidos de prueba y comprobar: rechazo al preparar el segundo pendiente, éxito del primero, avance hasta entregado, persistencia al recargar y cancelación permitida/rechazada según plazo.
+Las pruebas usan respuestas simuladas: cubren todas las transiciones, prioridad, estados terminales, errores y el proxy. Para verificar la integración real, usar pedidos de prueba y comprobar: rechazo al preparar el segundo pendiente, éxito del primero, avance hasta entregado y persistencia al recargar.
 
 En la revisión del 27 de septiembre de 2026 no hubo conexión a localhost:8080 desde el entorno de trabajo. La integración con la base de datos y el backend en ejecución queda pendiente de esa disponibilidad. CORS se identificó como una limitación de configuración; no se pudo confirmar como causa única del fallo observado.

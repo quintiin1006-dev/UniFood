@@ -149,7 +149,7 @@ Los destinos son `/cuenta` para CLIENT, `/worker` para WORKER, `/admin` para ADM
 
 Brand, logout y la navegación de AuthScreen reciben contexto explícito. La variante panel presenta una composición desktop y no ofrece registro estudiantil. CLIENT conserva su sesión temporal durante OTP/reset y vuelve al login contextual en la misma pantalla. El panel solicita un enlace, valida PKCE y `PASSWORD_RECOVERY`, actualiza directamente en Supabase y vuelve a `/panel/login?password=updated` tras finalizar la sesión. Ninguna recuperación admite returnTo arbitrario ni redirige automáticamente por una sesión normal. La comprobación del rol se repite al iniciar sesión. `PanelAuthHero`, `AuthField` y el guard de hidratación se comparten sin cambiar la política del login.
 
-Hallazgo pendiente fuera de esta fase: `InstitutionController` exige autenticación, pero sus consultas por dominio o ID no filtran por rol ni pertenencia institucional. La política de visibilidad de instituciones debe definirse antes de cambiar esos endpoints.
+`InstitutionController` (`/api/institutions/*`) se eliminó el 2026-11-10: ningún código de la web, del registro ni de los paneles lo consumía, y sus consultas no filtraban por rol ni institución. Spring responde 404 a esas rutas. Si un panel SUPER_ADMIN necesita instituciones, tendrá su propio contrato con rol exigido.
 
 ## Perfil CLIENT y autoridad de negocio
 
