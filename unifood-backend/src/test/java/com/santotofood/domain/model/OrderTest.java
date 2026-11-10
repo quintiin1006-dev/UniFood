@@ -2,7 +2,6 @@ package com.santotofood.domain.model;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.santotofood.domain.exception.CancellationDeadlineExpiredException;
 import com.santotofood.domain.exception.InvalidOrderStateException;
 import com.santotofood.domain.exception.NotCollectedRequirementsException;
 import com.santotofood.domain.exception.ReminderLimitReachedException;
@@ -29,9 +28,9 @@ class OrderTest {
         CAFETERIA_ID,
         CLIENT_ID,
         "Juan Pérez",
-        "1234567890",
+        "1234567",
+        "STUDENT",
         new BigDecimal("15000.00"),
-        CREATED_AT.plusSeconds(600),
         CREATED_AT);
   }
 
@@ -318,67 +317,10 @@ class OrderTest {
   }
 
   @Test
-  void shouldCancelPendingOrderBeforeDeadline() {
+  void shouldCancelPendingOrderByClientWithoutAnyDeadline() {
     Order order = createPendingOrder();
-
-    Instant cancelledAt = CREATED_AT.plusSeconds(300);
-
-    order.cancel(cancelledAt);
-
-    assertEquals(OrderStatus.CANCELLED, order.getStatus());
-    assertEquals(cancelledAt, order.getUpdatedAt());
-    assertEquals(cancelledAt, order.getCancelledAt());
-    assertFalse(order.isCancelledByClient());
-  }
-
-  @Test
-  void shouldAllowCancellationExactlyAtDeadline() {
-    Order order = createPendingOrder();
-
-    Instant deadline = order.getCancellationDeadline();
-
-    order.cancel(deadline);
-
-    assertEquals(OrderStatus.CANCELLED, order.getStatus());
-    assertEquals(deadline, order.getUpdatedAt());
-    assertEquals(deadline, order.getCancelledAt());
-  }
-
-  @Test
-  void shouldRejectCancellationAfterDeadline() {
-    Order order = createPendingOrder();
-
-    Instant afterDeadline = order.getCancellationDeadline().plusMillis(1);
-
-    CancellationDeadlineExpiredException exception =
-        assertThrows(CancellationDeadlineExpiredException.class, () -> order.cancel(afterDeadline));
-
-    assertEquals(ErrorCode.CANCELLATION_DEADLINE_EXPIRED, exception.getCode());
-
-    assertEquals("El tiempo para cancelar el pedido ha expirado", exception.getMessage());
-
-    assertEquals(OrderStatus.PENDING, order.getStatus());
-    assertNull(order.getCancelledAt());
-  }
-
-  @Test
-  void shouldRejectCancellationWhenOrderIsNotPending() {
-    Order order = createPendingOrder();
-
-    order.prepare(CREATED_AT.plusSeconds(60));
-
-    InvalidOrderStateException exception =
-        assertThrows(
-            InvalidOrderStateException.class, () -> order.cancel(CREATED_AT.plusSeconds(120)));
-
-    assertEquals(ErrorCode.INVALID_ORDER_STATE, exception.getCode());
-    assertNull(order.getCancelledAt());
-  }
-
-  @Test
-  void shouldRecordClientCancellationAfterDeadlineAndPreserveItsFirstTime() {
-    Order order = createPendingOrder();
-    Instant cancelledAt = order.getCancellationDeadline().plusSeconds(60);
+    // Hours after creation: the client has no deadline and the worker no longer cancels.
+    Instant cancelledAt = CREATED_AT.plusSeconds(6 * 3600);
 
     assertTrue(order.cancelByClient(cancelledAt));
 
@@ -394,6 +336,21 @@ class OrderTest {
   }
 
   @Test
+  void shouldRejectClientCancellationOnceTheOrderIsPreparing() {
+    Order order = createPendingOrder();
+
+    order.prepare(CREATED_AT.plusSeconds(60));
+
+    var exception =
+        assertThrows(
+            InvalidOrderStateException.class,
+            () -> order.cancelByClient(CREATED_AT.plusSeconds(120)));
+
+    assertEquals(ErrorCode.ORDER_ALREADY_PREPARING, exception.getCode());
+    assertNull(order.getCancelledAt());
+  }
+
+  @Test
   void shouldReconstituteKnownCancellationTimeWithoutUsingLastUpdate() {
     Instant cancelledAt = CREATED_AT.plusSeconds(300);
     Instant laterUpdate = cancelledAt.plusSeconds(3600);
@@ -403,10 +360,10 @@ class OrderTest {
             CAFETERIA_ID,
             CLIENT_ID,
             "Juan Pérez",
-            "1234567890",
+            "1234567",
+            "STUDENT",
             OrderStatus.CANCELLED,
             new BigDecimal("15000.00"),
-            null,
             null,
             0,
             null,
@@ -419,6 +376,8 @@ class OrderTest {
     assertEquals(cancelledAt, order.getCancelledAt());
     assertEquals(laterUpdate, order.getUpdatedAt());
     assertEquals(OrderStatus.CANCELLED, order.getStatus());
+    assertEquals("1234567", order.getClientCode());
+    assertEquals("STUDENT", order.getClientType());
   }
 
   @Test
@@ -430,30 +389,13 @@ class OrderTest {
             CAFETERIA_ID,
             CLIENT_ID,
             "Juan Pérez",
-            "1234567890",
+            null,
+            null,
             OrderStatus.CANCELLED,
             new BigDecimal("15000.00"),
             null,
-            null,
             0,
             null,
-            null,
-            null,
-            null,
-            CREATED_AT,
-            laterUpdate);
-    Order legacyComplete =
-        Order.reconstitute(
-            ORDER_ID,
-            CAFETERIA_ID,
-            CLIENT_ID,
-            "Juan Pérez",
-            "1234567890",
-            OrderStatus.CANCELLED,
-            new BigDecimal("15000.00"),
-            null,
-            null,
-            0,
             null,
             null,
             null,
@@ -465,18 +407,16 @@ class OrderTest {
             CAFETERIA_ID,
             CLIENT_ID,
             "Juan Pérez",
-            "1234567890",
+            null,
+            null,
             OrderStatus.CANCELLED,
             new BigDecimal("15000.00"),
-            null,
             CREATED_AT,
             laterUpdate);
 
     assertNull(explicitUnknown.getCancelledAt());
-    assertNull(legacyComplete.getCancelledAt());
     assertNull(legacyShort.getCancelledAt());
     assertEquals(laterUpdate, explicitUnknown.getUpdatedAt());
-    assertEquals(laterUpdate, legacyComplete.getUpdatedAt());
     assertEquals(laterUpdate, legacyShort.getUpdatedAt());
   }
 

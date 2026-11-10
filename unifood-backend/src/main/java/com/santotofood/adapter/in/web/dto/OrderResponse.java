@@ -6,15 +6,16 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+/** Worker order: name, institutional code and client type, never the document (B20). */
 public record OrderResponse(
     UUID id,
     UUID cafeteriaId,
     UUID clientId,
     String clientName,
-    String clientDocument,
+    String clientCode,
+    String clientType,
     OrderStatus status,
     BigDecimal total,
-    Instant cancellationDeadline,
     Instant createdAt,
     Instant updatedAt,
     Instant deliveredAt,

@@ -10,9 +10,15 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.Formula;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+/**
+ * Worker view of an order. {@code client_document} and {@code cancellation_deadline} are not
+ * mapped: the worker never sees the document (B20) and no longer cancels, and an unmapped column is
+ * never rewritten, so their history stays intact.
+ */
 @Entity
 @Table(name = "orders", schema = "public")
 public class OrderEntity {
@@ -53,8 +59,17 @@ public class OrderEntity {
   @Column(name = "client_name", nullable = false)
   private String clientName;
 
-  @Column(name = "client_document")
-  private String clientDocument;
+  // Read-only. Orders with the 021 copy (client_type is set) keep it, even a null code for staff
+  // without one; older orders resolve both from their client, if it still exists.
+  @Formula(
+      "(CASE WHEN client_type IS NOT NULL THEN client_code"
+          + " ELSE (SELECT c.institutional_code FROM public.clients c WHERE c.id = client_id) END)")
+  private String clientCode;
+
+  @Formula(
+      "(COALESCE(client_type,"
+          + " (SELECT c.client_type FROM public.clients c WHERE c.id = client_id)))")
+  private String clientType;
 
   @Enumerated(EnumType.STRING)
   @JdbcTypeCode(SqlTypes.NAMED_ENUM)
@@ -63,9 +78,6 @@ public class OrderEntity {
 
   @Column(name = "total", nullable = false)
   private BigDecimal total;
-
-  @Column(name = "cancellation_deadline")
-  private Instant cancellationDeadline;
 
   @Column(name = "called_at")
   private Instant calledAt;
@@ -98,45 +110,8 @@ public class OrderEntity {
       UUID cafeteriaId,
       UUID clientId,
       String clientName,
-      String clientDocument,
       OrderStatus status,
       BigDecimal total,
-      Instant cancellationDeadline,
-      Instant calledAt,
-      int reminderCount,
-      Instant lastRemindedAt,
-      Instant deliveredAt,
-      Instant notCollectedAt,
-      Instant createdAt,
-      Instant updatedAt) {
-    this(
-        id,
-        cafeteriaId,
-        clientId,
-        clientName,
-        clientDocument,
-        status,
-        total,
-        cancellationDeadline,
-        calledAt,
-        reminderCount,
-        lastRemindedAt,
-        deliveredAt,
-        notCollectedAt,
-        null,
-        createdAt,
-        updatedAt);
-  }
-
-  public OrderEntity(
-      UUID id,
-      UUID cafeteriaId,
-      UUID clientId,
-      String clientName,
-      String clientDocument,
-      OrderStatus status,
-      BigDecimal total,
-      Instant cancellationDeadline,
       Instant calledAt,
       int reminderCount,
       Instant lastRemindedAt,
@@ -149,10 +124,8 @@ public class OrderEntity {
     this.cafeteriaId = cafeteriaId;
     this.clientId = clientId;
     this.clientName = clientName;
-    this.clientDocument = clientDocument;
     this.status = status;
     this.total = total;
-    this.cancellationDeadline = cancellationDeadline;
     this.calledAt = calledAt;
     this.reminderCount = reminderCount;
     this.lastRemindedAt = lastRemindedAt;
@@ -195,12 +168,12 @@ public class OrderEntity {
     this.clientName = clientName;
   }
 
-  public String getClientDocument() {
-    return clientDocument;
+  public String getClientCode() {
+    return clientCode;
   }
 
-  public void setClientDocument(String clientDocument) {
-    this.clientDocument = clientDocument;
+  public String getClientType() {
+    return clientType;
   }
 
   public OrderStatus getStatus() {
@@ -217,14 +190,6 @@ public class OrderEntity {
 
   public void setTotal(BigDecimal total) {
     this.total = total;
-  }
-
-  public Instant getCancellationDeadline() {
-    return cancellationDeadline;
-  }
-
-  public void setCancellationDeadline(Instant cancellationDeadline) {
-    this.cancellationDeadline = cancellationDeadline;
   }
 
   public Instant getCalledAt() {

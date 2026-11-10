@@ -205,7 +205,6 @@ class OrderConcurrencyPostgresTest {
       case "deliver" -> service.deliverOrder(id);
       case "not-collected" -> service.markOrderNotCollected(id);
       case "cancel" -> service.cancelOwnOrder(id);
-      case "worker-cancel" -> service.cancelOrder(id);
       case "remind" -> service.remindStudent(id);
       default -> throw new AssertionError(action);
     };
@@ -492,7 +491,6 @@ class OrderConcurrencyPostgresTest {
   @CsvSource({
     "PENDING,prepare,PREPARING",
     "PENDING,cancel,CANCELLED",
-    "PENDING,worker-cancel,CANCELLED",
     "PREPARING,ready,READY",
     "READY,call,CALLED",
     "CALLED,deliver,DELIVERED",
@@ -572,14 +570,15 @@ class OrderConcurrencyPostgresTest {
   void staleCopiesAndLaterUpdatesCannotReplaceTheWinningCancellationInstant() throws Exception {
     UUID id = order(cafeteria(), "PENDING", 0);
     Order stale = tx.execute(s -> orders.findById(id).orElseThrow());
-    Order cancelled = mutate(id, "worker-cancel");
+    Order cancelled = mutate(id, "cancel");
     assertEquals(NOW, cancelled.getCancelledAt());
     assertCancelledAt(id, NOW);
     stale.cancelByClient(NOW.plusSeconds(60));
     assertThrows(
         jakarta.persistence.OptimisticLockException.class,
         () -> tx.execute(s -> orders.save(stale)));
-    assertThrows(DomainException.class, () -> mutate(id, "cancel"));
+    // A repeat is idempotent (B16) and keeps the winning instant.
+    assertEquals(NOW, mutate(id, "cancel").getCancelledAt());
     sql("UPDATE public.orders SET total=2 WHERE id='" + id + "'");
     assertEquals("CANCELLED", state(id));
     assertCancelledAt(id, NOW);

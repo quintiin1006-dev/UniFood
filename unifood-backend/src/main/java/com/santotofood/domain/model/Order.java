@@ -1,6 +1,5 @@
 package com.santotofood.domain.model;
 
-import com.santotofood.domain.exception.CancellationDeadlineExpiredException;
 import com.santotofood.domain.exception.InvalidOrderStateException;
 import com.santotofood.domain.exception.NotCollectedRequirementsException;
 import com.santotofood.domain.exception.OrderConflictException;
@@ -36,13 +35,15 @@ public class Order {
   private UUID clientId;
 
   private String clientName;
-  private String clientDocument;
+
+  /** Institutional code and client type the worker sees; never the client's document (B20). */
+  private String clientCode;
+
+  private String clientType;
 
   private OrderStatus status;
 
   private BigDecimal total;
-
-  private Instant cancellationDeadline;
 
   private Instant calledAt;
   private int reminderCount;
@@ -61,9 +62,9 @@ public class Order {
       UUID cafeteriaId,
       UUID clientId,
       String clientName,
-      String clientDocument,
+      String clientCode,
+      String clientType,
       BigDecimal total,
-      Instant cancellationDeadline,
       Instant createdAt) {
     requireInstant(createdAt);
 
@@ -71,10 +72,10 @@ public class Order {
     this.cafeteriaId = cafeteriaId;
     this.clientId = clientId;
     this.clientName = clientName;
-    this.clientDocument = clientDocument;
+    this.clientCode = clientCode;
+    this.clientType = clientType;
     this.status = OrderStatus.PENDING;
     this.total = total;
-    this.cancellationDeadline = cancellationDeadline;
 
     this.calledAt = null;
     this.reminderCount = 0;
@@ -199,40 +200,25 @@ public class Order {
     updatedAt = now;
   }
 
-  public void cancel(Instant now) {
-    cancelPending(now, true);
-  }
-
   /**
-   * Client cancellation has no additional deadline. Repeating it after the client already cancelled
-   * changes nothing and returns false; a cancellation by anyone else is still a conflict.
+   * Only the client cancels, while PENDING and without a deadline (docs/decisiones.md §6).
+   * Repeating it after the client already cancelled changes nothing and returns false; an order
+   * ended by anyone else is still a conflict.
    */
   public boolean cancelByClient(Instant now) {
     requireInstant(now);
     if (status == OrderStatus.CANCELLED && cancelledByClient) return false;
-    cancelPending(now, false);
-    cancelledByClient = true;
-    return true;
-  }
-
-  private void cancelPending(Instant now, boolean enforceDeadline) {
-    requireInstant(now);
-
-    if (!enforceDeadline && status == OrderStatus.PREPARING) {
+    if (status == OrderStatus.PREPARING) {
       throw new OrderConflictException(ErrorCode.ORDER_ALREADY_PREPARING);
     }
     if (status != OrderStatus.PENDING) {
       throw new InvalidOrderStateException("Solo un pedido pendiente puede cancelarse");
     }
-
-    if (enforceDeadline && cancellationDeadline != null && now.isAfter(cancellationDeadline)) {
-
-      throw new CancellationDeadlineExpiredException();
-    }
-
     status = OrderStatus.CANCELLED;
     cancelledAt = now;
     updatedAt = now;
+    cancelledByClient = true;
+    return true;
   }
 
   public static Order reconstitute(
@@ -240,22 +226,14 @@ public class Order {
       UUID cafeteriaId,
       UUID clientId,
       String clientName,
-      String clientDocument,
+      String clientCode,
+      String clientType,
       OrderStatus status,
       BigDecimal total,
-      Instant cancellationDeadline,
       Instant createdAt,
       Instant updatedAt) {
     Order order =
-        new Order(
-            id,
-            cafeteriaId,
-            clientId,
-            clientName,
-            clientDocument,
-            total,
-            cancellationDeadline,
-            createdAt);
+        new Order(id, cafeteriaId, clientId, clientName, clientCode, clientType, total, createdAt);
 
     order.status = status;
     order.updatedAt = updatedAt;
@@ -268,45 +246,10 @@ public class Order {
       UUID cafeteriaId,
       UUID clientId,
       String clientName,
-      String clientDocument,
+      String clientCode,
+      String clientType,
       OrderStatus status,
       BigDecimal total,
-      Instant cancellationDeadline,
-      Instant calledAt,
-      int reminderCount,
-      Instant lastRemindedAt,
-      Instant deliveredAt,
-      Instant notCollectedAt,
-      Instant createdAt,
-      Instant updatedAt) {
-    return reconstitute(
-        id,
-        cafeteriaId,
-        clientId,
-        clientName,
-        clientDocument,
-        status,
-        total,
-        cancellationDeadline,
-        calledAt,
-        reminderCount,
-        lastRemindedAt,
-        deliveredAt,
-        notCollectedAt,
-        null,
-        createdAt,
-        updatedAt);
-  }
-
-  public static Order reconstitute(
-      UUID id,
-      UUID cafeteriaId,
-      UUID clientId,
-      String clientName,
-      String clientDocument,
-      OrderStatus status,
-      BigDecimal total,
-      Instant cancellationDeadline,
       Instant calledAt,
       int reminderCount,
       Instant lastRemindedAt,
@@ -316,15 +259,7 @@ public class Order {
       Instant createdAt,
       Instant updatedAt) {
     Order order =
-        new Order(
-            id,
-            cafeteriaId,
-            clientId,
-            clientName,
-            clientDocument,
-            total,
-            cancellationDeadline,
-            createdAt);
+        new Order(id, cafeteriaId, clientId, clientName, clientCode, clientType, total, createdAt);
 
     order.status = status;
     order.calledAt = calledAt;
