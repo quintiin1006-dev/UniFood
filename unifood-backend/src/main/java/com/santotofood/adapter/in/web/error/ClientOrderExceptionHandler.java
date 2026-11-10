@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
- * Order creation errors. Only {@link ClientOrderException} is handled here, so the cancel endpoint
- * on the same controller keeps the global handling it already had.
+ * Client order errors of create and the B16 reads. Only {@link ClientOrderException} is handled
+ * here, so the cancel endpoint's domain conflicts keep the global handling they already had.
  */
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice(assignableTypes = ClientOrderController.class)

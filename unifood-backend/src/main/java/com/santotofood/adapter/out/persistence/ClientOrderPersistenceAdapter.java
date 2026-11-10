@@ -2,14 +2,19 @@ package com.santotofood.adapter.out.persistence;
 
 import com.santotofood.application.model.ClientOrder;
 import com.santotofood.application.port.out.ClientOrderCommandPort;
+import com.santotofood.application.port.out.ClientOrderQueryPort;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.Array;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -18,10 +23,11 @@ import java.util.UUID;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ClientOrderPersistenceAdapter implements ClientOrderCommandPort {
+public class ClientOrderPersistenceAdapter implements ClientOrderCommandPort, ClientOrderQueryPort {
   private static final String CLIENT = sql("ordering-client.sql");
   private static final String BY_KEY = sql("by-idempotency-key.sql");
   private static final String ACTIVE_ORDER = sql("active-order.sql");
@@ -33,6 +39,12 @@ public class ClientOrderPersistenceAdapter implements ClientOrderCommandPort {
   private static final String LOCK_AVAILABILITY = sql("lock-availability.sql");
   private static final String INSERT_ORDER = sql("insert-order.sql");
   private static final String INSERT_ITEM = sql("insert-item.sql");
+  private static final String CURRENT_TAG = sql("current-tag.sql");
+  private static final String OWN_ORDER = sql("own-order.sql");
+  private static final String OWN_ORDER_ITEMS = sql("own-order-items.sql");
+  private static final String READING_CLIENT = sql("reading-client.sql");
+  private static final String HISTORY_FIRST = sql("history-first.sql");
+  private static final String HISTORY_AFTER = sql("history-after.sql");
   private final JdbcTemplate jdbc;
 
   public ClientOrderPersistenceAdapter(JdbcTemplate jdbc) {
@@ -79,30 +91,126 @@ public class ClientOrderPersistenceAdapter implements ClientOrderCommandPort {
 
   @Override
   public Optional<ClientOrder> findOrder(UUID orderId) {
-    var items =
-        jdbc.query(
-            ORDER_ITEMS,
-            (row, number) ->
-                new ClientOrder.Item(
-                    row.getString("lunch_name"),
-                    row.getInt("quantity"),
-                    row.getBigDecimal("unit_price"),
-                    row.getBigDecimal("subtotal")),
-            orderId);
+    var items = jdbc.query(ORDER_ITEMS, ClientOrderPersistenceAdapter::item, orderId);
+    return jdbc.query(ORDER, (row, number) -> order(row, items), orderId).stream().findFirst();
+  }
+
+  @Override
+  public Optional<CurrentTag> findCurrentTag(UUID userId) {
     return jdbc
         .query(
-            ORDER,
+            CURRENT_TAG,
             (row, number) ->
-                new ClientOrder(
+                new CurrentTag(
                     row.getObject("id", UUID.class),
                     row.getString("status"),
-                    row.getBigDecimal("total"),
-                    row.getString("note"),
-                    row.getObject("created_at", OffsetDateTime.class).toInstant(),
-                    items),
-            orderId)
+                    instant(row, "updated_at"),
+                    row.getLong("version")),
+            userId)
         .stream()
         .findFirst();
+  }
+
+  @Override
+  public Optional<ClientOrder> findOwnOrder(UUID userId, UUID orderId) {
+    var order =
+        jdbc.query(OWN_ORDER, (row, number) -> order(row, List.of()), orderId, userId).stream()
+            .findFirst();
+    if (order.isEmpty()) return order;
+    var items = jdbc.query(OWN_ORDER_ITEMS, ClientOrderPersistenceAdapter::item, orderId, userId);
+    var found = order.get();
+    return Optional.of(
+        new ClientOrder(
+            found.id(),
+            found.status(),
+            found.total(),
+            found.note(),
+            found.createdAt(),
+            items,
+            found.cafeteria(),
+            found.cancellationSource(),
+            found.rejectionReason(),
+            found.timeline()));
+  }
+
+  @Override
+  public Optional<UUID> findClient(UUID userId) {
+    return jdbc
+        .query(READING_CLIENT, (row, number) -> row.getObject("id", UUID.class), userId)
+        .stream()
+        .findFirst();
+  }
+
+  @Override
+  public List<HistoryRow> findHistory(UUID clientId, Position after, int limit) {
+    RowMapper<HistoryRow> mapper =
+        (row, number) ->
+            new HistoryRow(
+                row.getObject("id", UUID.class),
+                row.getString("status"),
+                row.getBigDecimal("total"),
+                instant(row, "created_at"),
+                row.getString("cafeteria_name"),
+                row.getInt("units"),
+                row.getInt("products"),
+                array(row, "first_names", String.class),
+                array(row, "first_quantities", Integer.class));
+    if (after == null) return jdbc.query(HISTORY_FIRST, mapper, clientId, limit);
+    return jdbc.query(
+        HISTORY_AFTER,
+        mapper,
+        clientId,
+        after.createdAt().atOffset(ZoneOffset.UTC),
+        after.id(),
+        limit);
+  }
+
+  private static ClientOrder order(ResultSet row, List<ClientOrder.Item> items)
+      throws SQLException {
+    return new ClientOrder(
+        row.getObject("id", UUID.class),
+        row.getString("status"),
+        row.getBigDecimal("total"),
+        row.getString("note"),
+        instant(row, "created_at"),
+        items,
+        new ClientOrder.Cafeteria(
+            row.getObject("cafeteria_id", UUID.class), row.getString("cafeteria_name")),
+        row.getString("cancellation_source"),
+        row.getString("rejection_reason"),
+        new ClientOrder.Timeline(
+            instant(row, "updated_at"),
+            instant(row, "called_at"),
+            row.getInt("reminder_count"),
+            instant(row, "last_reminded_at"),
+            instant(row, "delivered_at"),
+            instant(row, "not_collected_at"),
+            instant(row, "cancelled_at")));
+  }
+
+  private static ClientOrder.Item item(ResultSet row, int number) throws SQLException {
+    return new ClientOrder.Item(
+        row.getString("lunch_name"),
+        row.getInt("quantity"),
+        row.getBigDecimal("unit_price"),
+        row.getBigDecimal("subtotal"));
+  }
+
+  private static Instant instant(ResultSet row, String column) throws SQLException {
+    var value = row.getObject(column, OffsetDateTime.class);
+    return value == null ? null : value.toInstant();
+  }
+
+  /** An order without items aggregates to NULL arrays. */
+  private static <T> List<T> array(ResultSet row, String column, Class<T> type)
+      throws SQLException {
+    Array array = row.getArray(column);
+    if (array == null) return List.of();
+    try {
+      return Arrays.stream((Object[]) array.getArray()).map(type::cast).toList();
+    } finally {
+      array.free();
+    }
   }
 
   @Override

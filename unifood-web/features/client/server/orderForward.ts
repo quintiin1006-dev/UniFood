@@ -106,6 +106,118 @@ export async function forwardCreateOrder(request: Request) {
   });
 }
 
+// Spring's opaque history cursor and its 1-50 page size (docs/decisiones.md §11).
+const CURSOR = /^[A-Za-z0-9_-]{1,96}$/;
+const LIMIT = /^[0-9]{1,2}$/;
+
+/** GET /api/me/orders/current (B16): polled, so If-None-Match, ETag and 304 cross the BFF. */
+export function forwardCurrentOrder(request: Request) {
+  return forwardRead(
+    "/api/me/orders/current",
+    request.headers.get("if-none-match"),
+  );
+}
+
+/** GET /api/me/orders (B16): only a well-formed cursor and limit reach Spring. */
+export function forwardOrderHistory(request: Request) {
+  const params = new URL(request.url).searchParams;
+  const cursor = params.get("cursor") || "";
+  const limit = params.get("limit") || "";
+  if (
+    (cursor && !CURSOR.test(cursor)) ||
+    (limit && (!LIMIT.test(limit) || Number(limit) < 1 || Number(limit) > 50))
+  )
+    return Promise.resolve(invalid());
+  const query = new URLSearchParams();
+  if (cursor) query.set("cursor", cursor);
+  if (limit) query.set("limit", limit);
+  const search = query.size ? `?${query}` : "";
+  return forwardRead(`/api/me/orders${search}`, null);
+}
+
+/** GET /api/me/orders/{id} (B16): a malformed id names no order, the same 404 as Spring. */
+export async function forwardOwnOrder(
+  _request: Request,
+  context: { params: Promise<{ orderId: string }> },
+) {
+  const { orderId } = await context.params;
+  if (!UUID.test(orderId))
+    return fail(404, "No encontramos ese pedido.", "ORDER_NOT_FOUND");
+  return forwardRead(`/api/me/orders/${orderId.toLowerCase()}`, null);
+}
+
+async function forwardRead(path: string, ifNoneMatch: string | null) {
+  let auth: Awaited<ReturnType<typeof getAuth>>;
+  try {
+    auth = await getAuth();
+  } catch (cause) {
+    if (isAuthServiceUnavailable(cause)) return temporaryAuthResponse();
+    throw cause;
+  }
+  if (!auth) return fail(401, "Sesión no válida.", "UNAUTHORIZED");
+  if (
+    !isClient(auth.profile) ||
+    auth.profile.roles.some((role) => role !== "CLIENT")
+  )
+    return fail(403, "No tienes permisos de cliente.", "FORBIDDEN");
+
+  // The bearer comes from the verified session; a browser Authorization is never read.
+  const headers: Record<string, string> = {
+    authorization: `Bearer ${auth.accessToken}`,
+    accept: "application/json",
+  };
+  if (ifNoneMatch && ifNoneMatch.length <= 512)
+    headers["if-none-match"] = ifNoneMatch;
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(`${serverApiUrl()}${path}`, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+      redirect: "error",
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch {
+    return fail(
+      502,
+      "No pudimos conectar con UniFood. Inténtalo nuevamente.",
+      "BACKEND_UNAVAILABLE",
+    );
+  }
+
+  // Only these headers cross the BFF; cookies and internal headers stay behind.
+  const out = new Headers({
+    "Cache-Control": upstream.headers.get("cache-control") || "no-store",
+  });
+  const etag = upstream.headers.get("etag");
+  if (etag) out.set("ETag", etag);
+  const retryAfter = upstream.headers.get("retry-after");
+  if (retryAfter) out.set("Retry-After", retryAfter);
+  if (upstream.status === 304 && ifNoneMatch)
+    return new Response(null, { status: 304, headers: out });
+
+  const json = (upstream.headers.get("content-type") || "").includes(
+    "application/json",
+  );
+  const known =
+    upstream.status === 200 ||
+    (upstream.status >= 400 && upstream.status < 500) ||
+    upstream.status === 503;
+  // Spring's own answers pass through; anything unexpected becomes a generic 502.
+  if (!json || !known)
+    return fail(
+      502,
+      "No pudimos cargar tus pedidos en este momento. Inténtalo nuevamente.",
+      "BACKEND_UNAVAILABLE",
+    );
+  out.set("Content-Type", "application/json");
+  return new Response(await upstream.text(), {
+    status: upstream.status,
+    headers: out,
+  });
+}
+
 /** The body rebuilt from the allowed fields only, or null when its shape is wrong. */
 async function readOrder(request: Request): Promise<OrderBody | null> {
   if (
