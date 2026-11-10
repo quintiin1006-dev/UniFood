@@ -15,6 +15,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -94,6 +96,13 @@ public class GlobalExceptionHandler {
         "INVALID_REQUEST",
         "El cuerpo de la solicitud no tiene un formato válido",
         request);
+  }
+
+  /** A route that does not exist, such as the removed worker cancellation, is a plain 404. */
+  @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+  public ResponseEntity<ApiErrorResponse> handleNoResource(
+      Exception exception, HttpServletRequest request) {
+    return buildResponse(HttpStatus.NOT_FOUND, "NOT_FOUND", "Recurso no encontrado", request);
   }
 
   @ExceptionHandler(AccessDeniedException.class)
