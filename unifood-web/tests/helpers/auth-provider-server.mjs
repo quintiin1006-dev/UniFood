@@ -915,6 +915,45 @@ createServer(async (request, response) => {
         dashboardUiFixture(url.searchParams, scenario),
       );
     }
+    if (
+      url.pathname === "/api/super-admin/cafeterias" &&
+      request.method === "GET"
+    ) {
+      if (
+        !profile.active ||
+        profile.roles.length !== 1 ||
+        profile.roles[0] !== "SUPER_ADMIN"
+      )
+        return json(response, 403, {
+          code: "SUPER_ADMIN_FORBIDDEN",
+          message: "PRIVATE",
+        });
+      return json(response, 200, {
+        institutions: [
+          {
+            id: "00000000-0000-0000-0000-0000000000a1",
+            name: "Universidad Santo Tomás",
+            active: true,
+            sites: [
+              {
+                id: "00000000-0000-0000-0000-0000000000b1",
+                name: "Sede Principal",
+                city: "Villavicencio",
+                active: true,
+                cafeterias: [
+                  {
+                    id: "00000000-0000-0000-0000-000000000002",
+                    name: "Cafetería Central",
+                    subscribed: true,
+                    hasActiveAdmin: true,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+    }
     if (url.pathname === "/api/admin/profile" && request.method === "GET") {
       const state = adminProfileState(profile);
       state.gets++;

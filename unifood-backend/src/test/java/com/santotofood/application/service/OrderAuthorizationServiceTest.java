@@ -93,6 +93,40 @@ class OrderAuthorizationServiceTest {
     verify(queries, times(4)).findUserAuthorization(userId);
   }
 
+  static Stream<UserAuthorization> invalidSuperAdmins() {
+    UUID cafeteria = UUID.randomUUID();
+    return Stream.of(
+        new UserAuthorization(false, Set.of("SUPER_ADMIN"), List.of()),
+        new UserAuthorization(true, Set.of("SUPER_ADMIN"), List.of(cafeteria)),
+        new UserAuthorization(true, Set.of("SUPER_ADMIN", "ADMIN"), List.of()),
+        new UserAuthorization(true, Set.of("SUPER_ADMIN", "WORKER"), List.of()),
+        new UserAuthorization(true, Set.of("SUPER_ADMIN", "CLIENT"), List.of()),
+        new UserAuthorization(true, Set.of("ADMIN"), List.of(cafeteria)),
+        new UserAuthorization(true, Set.of("WORKER"), List.of(cafeteria)),
+        new UserAuthorization(true, Set.of("CLIENT"), List.of()),
+        new UserAuthorization(true, Set.of(), List.of()));
+  }
+
+  @ParameterizedTest
+  @MethodSource("invalidSuperAdmins")
+  void onlyAnActiveExclusiveUnassignedSuperAdminPasses(UserAuthorization user) {
+    when(queries.findUserAuthorization(userId)).thenReturn(Optional.of(user));
+    assertFalse(authorization.superAdmin(userId));
+  }
+
+  @Test
+  void superAdminDecisionUsesFreshFactsOnEveryCall() {
+    when(queries.findUserAuthorization(userId))
+        .thenReturn(
+            Optional.of(new UserAuthorization(true, Set.of("SUPER_ADMIN"), List.of())),
+            Optional.of(new UserAuthorization(false, Set.of("SUPER_ADMIN"), List.of())),
+            Optional.empty());
+    assertTrue(authorization.superAdmin(userId));
+    assertFalse(authorization.superAdmin(userId));
+    assertFalse(authorization.superAdmin(userId));
+    verify(queries, times(3)).findUserAuthorization(userId);
+  }
+
   @Test
   void queryFailureCannotProduceAnAuthorizationDecision() {
     when(queries.findUserAuthorization(userId)).thenThrow(new IllegalStateException("unavailable"));

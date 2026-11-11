@@ -39,6 +39,18 @@ public class OrderAuthorizationService {
         .isPresent();
   }
 
+  /** Active, exclusive SUPER_ADMIN without cafeteria assignments, read fresh on every call. */
+  public boolean superAdmin(UUID userId) {
+    return queries
+        .findUserAuthorization(userId)
+        .filter(
+            user ->
+                user.active()
+                    && user.roles().equals(Set.of("SUPER_ADMIN"))
+                    && user.cafeteriaIds().isEmpty())
+        .isPresent();
+  }
+
   public boolean clientOrder(UUID userId, UUID orderId) {
     if (!client(userId)) return false;
     var owner =

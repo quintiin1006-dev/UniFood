@@ -38,6 +38,10 @@ public class OrderAuthorization {
     return authenticatedUser(authentication).map(authorization::client).orElse(false);
   }
 
+  public boolean superAdmin(Authentication authentication) {
+    return authenticatedUser(authentication).map(authorization::superAdmin).orElse(false);
+  }
+
   public boolean clientOrder(Authentication authentication, UUID orderId) {
     return authenticatedUser(authentication)
         .map(userId -> authorization.clientOrder(userId, orderId))
