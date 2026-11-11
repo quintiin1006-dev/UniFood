@@ -97,6 +97,16 @@ public class OrderEntity {
   @Column(name = "cancelled_at")
   private Instant cancelledAt;
 
+  // 021: CLIENT, WORKER or SYSTEM; the trigger keeps them immutable once set.
+  @Column(name = "cancellation_source")
+  private String cancellationSource;
+
+  @Column(name = "rejection_reason")
+  private String rejectionReason;
+
+  @Column(name = "rejected_by")
+  private UUID rejectedBy;
+
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 
@@ -238,6 +248,24 @@ public class OrderEntity {
 
   public void setCancelledAt(Instant cancelledAt) {
     this.cancelledAt = cancelledAt;
+  }
+
+  public String getCancellationSource() {
+    return cancellationSource;
+  }
+
+  public String getRejectionReason() {
+    return rejectionReason;
+  }
+
+  public UUID getRejectedBy() {
+    return rejectedBy;
+  }
+
+  public void setCancellation(String source, String reason, UUID rejectedBy) {
+    this.cancellationSource = source;
+    this.rejectionReason = reason;
+    this.rejectedBy = rejectedBy;
   }
 
   public Instant getCreatedAt() {

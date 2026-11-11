@@ -290,11 +290,17 @@ Gmail antes de la `@`: se usan los alias `+admin` y `+worker`, que llegan al mis
   piloto. Producto sin foto: inicial sobre azul suave.
 - Cancelación: el cliente cancela **solo mientras el pedido esté PENDING, sin plazo** por
   tiempo (confirmado el 2026-11-08).
-- Rechazo: el worker puede rechazar **solo en PENDING**, con motivo obligatorio. **El worker
-  no cancela** (confirmado el 2026-11-08). La ruta `PATCH /api/orders/{id}/cancel` del worker,
-  su botón y su plazo de cancelación se retiraron el 2026-11-10, antes del rechazo.
-- **Hasta el PR de rechazo con motivo (B18), el worker no puede anular un pedido PENDING.**
-  Ese pedido solo lo terminan el cliente, cancelándolo, o el cierre diario del sistema.
+- **Rechazo (B18, cambio decidido por el dueño del producto el 2026-11-10):** el worker puede
+  rechazar un pedido **en PENDING y en PREPARING**, con motivo obligatorio que el cliente ve.
+  Sustituye a la regla anterior de «solo en PENDING».
+  - Motivo: un pedido en preparación puede no poder completarse (por ejemplo, se acabó un
+    ingrediente) y no debe quedar sin salida.
+  - **No se rechaza** en READY ni en CALLED (ahí ya existe «No recogido»), ni en los
+    terminales DELIVERED, CANCELLED o NOT_COLLECTED.
+  - El pedido rechazado queda CANCELLED con `cancellation_source = 'WORKER'`,
+    `rejection_reason`, `rejected_by` y `cancelled_at`. El cliente queda libre para crear otro.
+- **El worker no cancela** (confirmado el 2026-11-08): la ruta `PATCH /api/orders/{id}/cancel`
+  del worker, su botón y su plazo se retiraron el 2026-11-10. Su única salida es el rechazo.
 - **El worker ve nombre, código institucional y tipo de cliente, nunca el documento (B20).**
   Los pedidos con la copia de la 021 la usan; los anteriores toman código y tipo del cliente.
   Sin código se muestra el tipo («Estudiante» o «Docente o administrativo»).
@@ -413,7 +419,7 @@ El BFF y Spring usan las mismas rutas. Errores con `ApiErrorResponse`:
 | `GET /api/me/orders?cursor=&limit=20`                 | Historial                               | 400 `INVALID_ORDER_REQUEST`                                                                                          |
 | `GET /api/me/orders/{id}`                             | Detalle de un pedido propio             | 404 `ORDER_NOT_FOUND`                                                                                                |
 | `PATCH /api/me/orders/{id}/cancel`                    | Cancela en PENDING                      | 404 `ORDER_NOT_FOUND`, 409 `ORDER_ALREADY_PREPARING`, `INVALID_ORDER_STATE`                                          |
-| `PATCH /api/orders/{id}/reject`                       | Rechazo del worker `{reason}`           | 400 `REJECTION_REASON_REQUIRED`, 403 `FORBIDDEN`, 409 `INVALID_ORDER_STATE`                                          |
+| `PATCH /api/orders/{id}/reject`                       | Rechazo del worker `{reason}`           | 400 `REJECTION_REASON_REQUIRED`, `REJECTION_REASON_TOO_LONG`, 403 `FORBIDDEN`, 409 `INVALID_ORDER_STATE`             |
 | `PATCH /api/super-admin/cafeterias/{id}/subscription` | `{subscribed, expectedSubscribed}`      | 403 `SUPER_ADMIN_FORBIDDEN`, 404 `CAFETERIA_NOT_FOUND`, 409 `SUBSCRIPTION_STATE_CHANGED`                             |
 | `POST /api/super-admin/credentials`                   | `{email, fullName, role, cafeteriaId}`  | 400 `CREDENTIAL_INVALID_REQUEST`, 403 `SUPER_ADMIN_FORBIDDEN`, 409 `EMAIL_ALREADY_REGISTERED`, `CAFETERIA_HAS_ADMIN` |
 
@@ -595,6 +601,36 @@ según `cafeteria_daily_states` de hoy en America/Bogota. Nunca incluye el docum
     con el pedido, sin escribir otra vez.
   - Spring responde con el pedido del cliente, sin el documento. El BFF sigue devolviendo
     solo `{id, status}`.
+
+**Rechazo del worker implementado (B18, decidido el 2026-11-10):**
+
+- **Quién:** solo un WORKER activo asignado a la cafetería del pedido. El worker que rechaza
+  sale del JWT verificado. **Un pedido de otra cafetería y uno inexistente devuelven el mismo
+  403 `FORBIDDEN`**, sin revelar si el pedido existe. Cliente, ADMIN o SUPER_ADMIN: 403. Sin
+  sesión o con un token inválido: 401.
+- **Cuándo:** desde PENDING o PREPARING (§6). Desde cualquier otro estado, 409
+  `INVALID_ORDER_STATE`, con el pedido intacto.
+- **Motivo:** se recorta **antes** de validar, así que `"   "` es 400
+  `REJECTION_REASON_REQUIRED`, igual que un motivo ausente o de menos de 3 caracteres. Más
+  de 200 es 400 `REJECTION_REASON_TOO_LONG`. Cuenta caracteres como `length()` de
+  PostgreSQL. La 021 admite hasta 300, así que no hizo falta migración. El motivo se valida
+  antes que el estado.
+- **Escritura:** status `CANCELLED`, `cancellation_source = 'WORKER'`, `rejection_reason`,
+  `rejected_by` (id del worker), `cancelled_at` del `TimeProvider` y `cancelled_by_client =
+false`. La `version` sube como en las demás transiciones (JPA y el trigger de la 008),
+  bajo el mismo bloqueo de fila, así que un rechazo y una cancelación del cliente
+  simultáneos dan un ganador y un 409.
+- **Repetición:** si el mismo worker rechaza otra vez un pedido que ya rechazó, la respuesta
+  es 200 con el pedido, sin escribir y conservando el motivo original, que la 021 hace
+  inmutable. Es coherente con la cancelación repetida del cliente. Si lo rechazó otro worker,
+  o lo terminó el cliente o el cierre diario, es 409.
+- **Lo que ve el cliente:** `GET /api/me/orders/current`, `/api/me/orders` y
+  `/api/me/orders/{id}` siguen el contrato de B16. El pedido rechazado deja de ser el actual
+  (`null`). El detalle trae `cancellationSource: "WORKER"` y `rejectionReason`, y el
+  historial lo lista como CANCELLED. Nunca exponen `rejected_by` ni datos del worker.
+- **BFF:** `app/api/orders` acepta la acción `reject` con `sameOrigin`, sesión, rol WORKER y
+  Bearer, como las demás. Solo reenvía `{reason}` ya recortado, y rechaza un motivo inválido
+  sin llamar a Spring.
 
 **Cierre diario:** sin endpoint público. Tarea cada 5 minutos y al arrancar; toma pedidos
 activos anteriores al inicio del día con `FOR UPDATE SKIP LOCKED`. Es idempotente.

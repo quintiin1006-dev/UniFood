@@ -1,6 +1,7 @@
 package com.santotofood.domain.model;
 
 import com.santotofood.domain.exception.InvalidOrderStateException;
+import com.santotofood.domain.exception.InvalidRejectionReasonException;
 import com.santotofood.domain.exception.NotCollectedRequirementsException;
 import com.santotofood.domain.exception.OrderConflictException;
 import com.santotofood.domain.exception.ReminderLimitReachedException;
@@ -20,11 +21,28 @@ public class Order {
   private Long revision;
   private boolean cancelledByClient;
 
+  /** Who ended a cancelled order and why (021). Immutable once set; never shown to the worker. */
+  private String cancellationSource;
+
+  private String rejectionReason;
+  private UUID rejectedBy;
+
   /** Restore only when reconstituting an aggregate from persistence. */
   public void restoreConcurrencyState(Long revision, boolean cancelledByClient) {
     this.revision = revision;
     this.cancelledByClient = cancelledByClient;
   }
+
+  /** Restore only when reconstituting an aggregate from persistence. */
+  public void restoreCancellation(
+      String cancellationSource, String rejectionReason, UUID rejectedBy) {
+    this.cancellationSource = cancellationSource;
+    this.rejectionReason = rejectionReason;
+    this.rejectedBy = rejectedBy;
+  }
+
+  public static final int MIN_REJECTION_REASON_LENGTH = 3;
+  public static final int MAX_REJECTION_REASON_LENGTH = 200;
 
   private static final int MAX_REMINDERS = 3;
 
@@ -218,7 +236,44 @@ public class Order {
     cancelledAt = now;
     updatedAt = now;
     cancelledByClient = true;
+    cancellationSource = "CLIENT";
     return true;
+  }
+
+  /**
+   * The worker rejects while PENDING or PREPARING, with a reason the client will see
+   * (docs/decisiones.md §6). The reason is trimmed before it is checked, so blanks are missing.
+   * Repeating it after the same worker already rejected changes nothing and returns false, keeping
+   * the first reason; an order ended by anyone else is still a conflict.
+   */
+  public boolean rejectByWorker(UUID workerId, String reason, Instant now) {
+    requireInstant(now);
+    if (workerId == null) throw new IllegalArgumentException("El worker es obligatorio");
+    String trimmed = normalizeRejectionReason(reason);
+    if (status == OrderStatus.CANCELLED
+        && "WORKER".equals(cancellationSource)
+        && workerId.equals(rejectedBy)) return false;
+    if (status != OrderStatus.PENDING && status != OrderStatus.PREPARING) {
+      throw new InvalidOrderStateException(
+          "Solo un pedido pendiente o en preparación puede rechazarse");
+    }
+    status = OrderStatus.CANCELLED;
+    cancelledAt = now;
+    updatedAt = now;
+    cancelledByClient = false;
+    cancellationSource = "WORKER";
+    rejectionReason = trimmed;
+    rejectedBy = workerId;
+    return true;
+  }
+
+  /** Trimmed reason of 3 to 200 characters, counted like PostgreSQL's length(). */
+  public static String normalizeRejectionReason(String reason) {
+    String trimmed = reason == null ? "" : reason.strip();
+    int length = trimmed.codePointCount(0, trimmed.length());
+    if (length < MIN_REJECTION_REASON_LENGTH) throw InvalidRejectionReasonException.required();
+    if (length > MAX_REJECTION_REASON_LENGTH) throw InvalidRejectionReasonException.tooLong();
+    return trimmed;
   }
 
   public static Order reconstitute(

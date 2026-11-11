@@ -44,7 +44,9 @@ class OrderControllerApiErrorTest {
             callStudentUseCase,
             deliverOrderUseCase,
             getOrdersByCafeteriaUseCase,
-            orderResponseMapper);
+            mock(com.santotofood.application.port.in.RejectOrderUseCase.class),
+            orderResponseMapper,
+            mock(com.santotofood.config.OrderAuthorization.class));
 
     mockMvc =
         MockMvcBuilders.standaloneSetup(orderController)

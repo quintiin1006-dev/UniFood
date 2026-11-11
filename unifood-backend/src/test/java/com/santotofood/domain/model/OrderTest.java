@@ -447,4 +447,118 @@ class OrderTest {
 
     assertEquals(OrderStatus.PENDING, order.getStatus());
   }
+
+  // ---------------------------------------------------------------- B18 rejection
+
+  private static final UUID WORKER_ID = UUID.fromString("44444444-4444-4444-4444-444444444444");
+
+  @Test
+  void shouldRejectPendingAndPreparingOrdersWithTheTrimmedReason() {
+    for (boolean preparing : new boolean[] {false, true}) {
+      Order order = createPendingOrder();
+      if (preparing) order.prepare(CREATED_AT.plusSeconds(30));
+      Instant rejectedAt = CREATED_AT.plusSeconds(60);
+
+      assertTrue(order.rejectByWorker(WORKER_ID, "  Se acabó el pollo  ", rejectedAt));
+
+      assertEquals(OrderStatus.CANCELLED, order.getStatus());
+      assertEquals("WORKER", order.getCancellationSource());
+      assertEquals("Se acabó el pollo", order.getRejectionReason());
+      assertEquals(WORKER_ID, order.getRejectedBy());
+      assertEquals(rejectedAt, order.getCancelledAt());
+      assertEquals(rejectedAt, order.getUpdatedAt());
+      assertFalse(order.isCancelledByClient());
+    }
+  }
+
+  @Test
+  void shouldRejectEveryOtherStateAsAConflictWithoutChangingIt() {
+    Order ready = createPendingOrder();
+    ready.prepare(CREATED_AT.plusSeconds(10));
+    ready.markReady(CREATED_AT.plusSeconds(20));
+    Order called = createCalledOrder();
+    Order delivered = createCalledOrder();
+    delivered.deliver(CREATED_AT.plusSeconds(400));
+    Order clientCancelled = createPendingOrder();
+    clientCancelled.cancelByClient(CREATED_AT.plusSeconds(30));
+    for (Order order : new Order[] {ready, called, delivered, clientCancelled}) {
+      OrderStatus before = order.getStatus();
+      var exception =
+          assertThrows(
+              InvalidOrderStateException.class,
+              () ->
+                  order.rejectByWorker(WORKER_ID, "Sin ingredientes", CREATED_AT.plusSeconds(500)));
+      assertEquals(ErrorCode.INVALID_ORDER_STATE, exception.getCode());
+      assertEquals(before, order.getStatus());
+      assertNull(order.getRejectionReason());
+    }
+  }
+
+  @Test
+  void repeatingTheSameWorkersRejectionChangesNothingButAnotherWorkerConflicts() {
+    Order order = createPendingOrder();
+    Instant rejectedAt = CREATED_AT.plusSeconds(60);
+    order.rejectByWorker(WORKER_ID, "Se acabó el pollo", rejectedAt);
+
+    assertFalse(
+        order.rejectByWorker(WORKER_ID, "Otro motivo distinto", rejectedAt.plusSeconds(60)));
+    assertEquals("Se acabó el pollo", order.getRejectionReason());
+    assertEquals(rejectedAt, order.getCancelledAt());
+    assertEquals(rejectedAt, order.getUpdatedAt());
+
+    assertThrows(
+        InvalidOrderStateException.class,
+        () -> order.rejectByWorker(UUID.randomUUID(), "Se acabó el pollo", rejectedAt));
+  }
+
+  @Test
+  void shouldTrimTheReasonBeforeCheckingItsLength() {
+    for (String reason : new String[] {null, "", "   ", "\t\n", "ab", "  ab  "}) {
+      Order order = createPendingOrder();
+      var exception =
+          assertThrows(
+              com.santotofood.domain.exception.InvalidRejectionReasonException.class,
+              () -> order.rejectByWorker(WORKER_ID, reason, CREATED_AT.plusSeconds(60)));
+      assertEquals(
+          ErrorCode.REJECTION_REASON_REQUIRED, exception.getCode(), String.valueOf(reason));
+      assertEquals(OrderStatus.PENDING, order.getStatus());
+    }
+    Order order = createPendingOrder();
+    // 200 characters, counted like PostgreSQL: each "ñ" is one.
+    assertTrue(order.rejectByWorker(WORKER_ID, "ñ".repeat(200), CREATED_AT.plusSeconds(60)));
+    Order tooLong = createPendingOrder();
+    var exception =
+        assertThrows(
+            com.santotofood.domain.exception.InvalidRejectionReasonException.class,
+            () -> tooLong.rejectByWorker(WORKER_ID, " " + "a".repeat(201) + " ", CREATED_AT));
+    assertEquals(ErrorCode.REJECTION_REASON_TOO_LONG, exception.getCode());
+  }
+
+  @Test
+  void anInvalidReasonIsReportedBeforeTheStateConflict() {
+    Order called = createCalledOrder();
+    var exception =
+        assertThrows(
+            com.santotofood.domain.exception.InvalidRejectionReasonException.class,
+            () -> called.rejectByWorker(WORKER_ID, " ", CREATED_AT.plusSeconds(500)));
+    assertEquals(ErrorCode.REJECTION_REASON_REQUIRED, exception.getCode());
+  }
+
+  @Test
+  void aRejectedOrderCannotBePreparedOrCancelledByTheClient() {
+    Order order = createPendingOrder();
+    order.rejectByWorker(WORKER_ID, "Se acabó el pollo", CREATED_AT.plusSeconds(60));
+    assertThrows(InvalidOrderStateException.class, () -> order.prepare(CREATED_AT.plusSeconds(90)));
+    assertThrows(
+        InvalidOrderStateException.class, () -> order.cancelByClient(CREATED_AT.plusSeconds(90)));
+  }
+
+  @Test
+  void theClientsCancellationRecordsItsSource() {
+    Order order = createPendingOrder();
+    order.cancelByClient(CREATED_AT.plusSeconds(60));
+    assertEquals("CLIENT", order.getCancellationSource());
+    assertNull(order.getRejectionReason());
+    assertNull(order.getRejectedBy());
+  }
 }

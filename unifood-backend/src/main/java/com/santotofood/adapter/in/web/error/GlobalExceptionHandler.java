@@ -3,6 +3,7 @@ package com.santotofood.adapter.in.web.error;
 import com.santotofood.application.exception.OrderNotFoundException;
 import com.santotofood.application.exception.OrderProcessingSequenceException;
 import com.santotofood.domain.exception.DomainException;
+import com.santotofood.domain.exception.InvalidRejectionReasonException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import org.slf4j.Logger;
@@ -29,6 +30,14 @@ public class GlobalExceptionHandler {
 
     return buildResponse(
         HttpStatus.NOT_FOUND, exception.getCode().name(), exception.getMessage(), request);
+  }
+
+  /** Input, not state: a missing, short or long rejection reason is a 400, not a 409. */
+  @ExceptionHandler(InvalidRejectionReasonException.class)
+  public ResponseEntity<ApiErrorResponse> handleInvalidRejectionReason(
+      InvalidRejectionReasonException exception, HttpServletRequest request) {
+    return buildResponse(
+        HttpStatus.BAD_REQUEST, exception.getCode().name(), exception.getMessage(), request);
   }
 
   @ExceptionHandler(DomainException.class)

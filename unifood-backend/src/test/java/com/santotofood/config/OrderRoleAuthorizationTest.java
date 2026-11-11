@@ -56,6 +56,7 @@ class OrderRoleAuthorizationTest {
   @Autowired MarkOrderReadyUseCase ready;
   @Autowired CallStudentUseCase call;
   @Autowired DeliverOrderUseCase deliver;
+  @Autowired RejectOrderUseCase reject;
   MockMvc mvc;
   final UUID userId = UUID.randomUUID();
   final UUID cafeteriaId = UUID.randomUUID();
@@ -100,6 +101,11 @@ class OrderRoleAuthorizationTest {
     }
 
     @Bean
+    RejectOrderUseCase reject() {
+      return mock(RejectOrderUseCase.class);
+    }
+
+    @Bean
     OrderResponseMapper mapper() {
       return mock(OrderResponseMapper.class);
     }
@@ -111,7 +117,7 @@ class OrderRoleAuthorizationTest {
 
   @BeforeEach
   void setup() {
-    reset(queries, list, prepare, ready, call, deliver);
+    reset(queries, list, prepare, ready, call, deliver, reject);
     mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     when(queries.findOrderCafeteria(orderId)).thenReturn(Optional.of(cafeteriaId));
   }
@@ -136,7 +142,7 @@ class OrderRoleAuthorizationTest {
                 .with(identity("CLIENT")))
         .andExpect(status().isOk())
         .andExpect(content().json("[]"));
-    for (String action : List.of("prepare", "ready", "call", "deliver")) {
+    for (String action : List.of("prepare", "ready", "call", "deliver", "reject")) {
       mvc.perform(patch("/api/orders/" + orderId + "/" + action).with(identity("CLIENT")))
           .andExpect(status().isOk());
     }
@@ -145,7 +151,8 @@ class OrderRoleAuthorizationTest {
     verify(ready).markOrderReady(orderId);
     verify(call).callStudent(orderId);
     verify(deliver).deliverOrder(orderId);
-    verify(queries, times(5)).findUserAuthorization(userId);
+    verify(reject).rejectOrder(orderId, userId, null);
+    verify(queries, times(6)).findUserAuthorization(userId);
   }
 
   @Test
@@ -157,7 +164,7 @@ class OrderRoleAuthorizationTest {
             .getResponse()
             .getStatus();
     assertEquals(404, status);
-    verifyNoInteractions(list, prepare, ready, call, deliver);
+    verifyNoInteractions(list, prepare, ready, call, deliver, reject);
   }
 
   @ParameterizedTest
@@ -177,12 +184,12 @@ class OrderRoleAuthorizationTest {
         .andExpect(jsonPath("$.code").value("FORBIDDEN"))
         .andExpect(jsonPath("$.path").value("/api/orders"))
         .andExpect(jsonPath("$.timestamp").exists());
-    for (String action : List.of("prepare", "ready", "call", "deliver")) {
+    for (String action : List.of("prepare", "ready", "call", "deliver", "reject")) {
       mvc.perform(patch("/api/orders/" + orderId + "/" + action).with(identity(claimedRole)))
           .andExpect(status().isForbidden())
           .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
-    verifyNoInteractions(list, prepare, ready, call, deliver);
+    verifyNoInteractions(list, prepare, ready, call, deliver, reject);
   }
 
   @Test
@@ -191,7 +198,7 @@ class OrderRoleAuthorizationTest {
     mvc.perform(get("/api/orders").param("cafeteriaId", cafeteriaId.toString()))
         .andExpect(status().isUnauthorized());
     mvc.perform(patch("/api/orders/" + orderId + "/prepare")).andExpect(status().isUnauthorized());
-    verifyNoInteractions(queries, list, prepare, ready, call, deliver);
+    verifyNoInteractions(queries, list, prepare, ready, call, deliver, reject);
   }
 
   @Test
@@ -206,7 +213,7 @@ class OrderRoleAuthorizationTest {
         .andExpect(jsonPath("$.length()").value(1))
         .andExpect(header().string("Cache-Control", "no-store"));
     verify(queries).findUserAuthorization(userId);
-    verifyNoInteractions(list, prepare, ready, call, deliver);
+    verifyNoInteractions(list, prepare, ready, call, deliver, reject);
   }
 
   @ParameterizedTest
@@ -223,11 +230,11 @@ class OrderRoleAuthorizationTest {
                 .param("cafeteriaId", cafeteriaId.toString())
                 .with(identity("WORKER")))
         .andExpect(status().isForbidden());
-    for (String action : List.of("prepare", "ready", "call", "deliver")) {
+    for (String action : List.of("prepare", "ready", "call", "deliver", "reject")) {
       mvc.perform(patch("/api/orders/" + orderId + "/" + action).with(identity("WORKER")))
           .andExpect(status().isForbidden());
     }
-    verifyNoInteractions(list, prepare, ready, call, deliver);
+    verifyNoInteractions(list, prepare, ready, call, deliver, reject);
   }
 
   @Test
@@ -244,7 +251,7 @@ class OrderRoleAuthorizationTest {
     mvc.perform(patch("/api/orders/" + orderId + "/prepare").with(identity("WORKER")))
         .andExpect(status().isForbidden());
     verify(queries, times(3)).findUserAuthorization(userId);
-    verifyNoInteractions(list, prepare, ready, call, deliver);
+    verifyNoInteractions(list, prepare, ready, call, deliver, reject);
   }
 
   @ParameterizedTest
@@ -280,11 +287,11 @@ class OrderRoleAuthorizationTest {
                 .param("cafeteriaId", cafeteriaId.toString())
                 .with(identity("WORKER")))
         .andExpect(status().isForbidden());
-    for (String action : List.of("prepare", "ready", "call", "deliver")) {
+    for (String action : List.of("prepare", "ready", "call", "deliver", "reject")) {
       mvc.perform(patch("/api/orders/" + orderId + "/" + action).with(identity("WORKER")))
           .andExpect(status().isForbidden());
     }
-    verifyNoInteractions(list, prepare, ready, call, deliver);
+    verifyNoInteractions(list, prepare, ready, call, deliver, reject);
   }
 
   @Test
