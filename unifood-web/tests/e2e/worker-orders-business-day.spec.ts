@@ -11,7 +11,8 @@ test("Pedidos Entregados shows today, excludes a 27-day-old delivery and refetch
   const base = {
     cafeteriaId: "00000000-0000-0000-0000-000000000002",
     clientId: null,
-    clientDocument: null,
+    clientCode: null,
+    clientType: null,
     status: "DELIVERED",
     total: 10000,
     createdAt: "2026-01-01T10:00:00Z",

@@ -8,7 +8,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.santotofood.adapter.in.web.OrderController;
 import com.santotofood.adapter.in.web.mapper.OrderResponseMapper;
 import com.santotofood.application.port.in.CallStudentUseCase;
-import com.santotofood.application.port.in.CancelOrderUseCase;
 import com.santotofood.application.port.in.DeliverOrderUseCase;
 import com.santotofood.application.port.in.GetOrdersByCafeteriaUseCase;
 import com.santotofood.application.port.in.MarkOrderReadyUseCase;
@@ -33,8 +32,6 @@ class OrderControllerApiErrorTest {
 
     DeliverOrderUseCase deliverOrderUseCase = mock(DeliverOrderUseCase.class);
 
-    CancelOrderUseCase cancelOrderUseCase = mock(CancelOrderUseCase.class);
-
     GetOrdersByCafeteriaUseCase getOrdersByCafeteriaUseCase =
         mock(GetOrdersByCafeteriaUseCase.class);
 
@@ -46,7 +43,6 @@ class OrderControllerApiErrorTest {
             markOrderReadyUseCase,
             callStudentUseCase,
             deliverOrderUseCase,
-            cancelOrderUseCase,
             getOrdersByCafeteriaUseCase,
             orderResponseMapper);
 

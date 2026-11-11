@@ -43,11 +43,12 @@ test("verified CLIENT cancels own order only, without browser identity or a dead
     ["/api/me/orders/00000000-0000-0000-0000-000000000011/cancel", 404],
     ["/api/me/orders/00000000-0000-0000-0000-000000000012/cancel", 404],
     ["/api/me/orders/00000000-0000-0000-0000-000000000013/cancel", 404],
-    ["/api/orders/00000000-0000-0000-0000-000000000001/cancel", 403],
+    // The worker cancel action no longer exists: the BFF refuses it as an unknown route.
+    ["/api/orders/00000000-0000-0000-0000-000000000001/cancel", 404],
   ] as const) {
     const response = await page.request.patch(path, { headers });
     expect(response.status()).toBe(status);
-    if (status === 404)
+    if (status === 404 && path.startsWith("/api/me/orders/"))
       expect((await response.json()).code).toBe("ORDER_NOT_FOUND");
     expect(await response.text()).not.toContain("provider-secret");
   }

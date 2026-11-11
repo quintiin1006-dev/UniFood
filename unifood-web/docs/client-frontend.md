@@ -93,20 +93,20 @@ Lax (Secure en producción). `proxy.ts` renueva cookies, pero no autoriza roles.
 Las páginas y BFF autorizan por separado; Spring valida JWT y las reglas de negocio.
 No se transmite el access token a los componentes del navegador.
 
-| Servicio comprobado                                                                         | Alcance                                                                             |
-| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `POST /api/auth/[action]`                                                                   | login, register, institution, verify, resend, recover, reset, logout                |
-| RPC `current_auth_profile`                                                                  | id, email, fullName, active, roles; no incluye institución/sede                     |
-| RPC `is_institutional_email`                                                                | Admisión del correo; no es un catálogo                                              |
-| Spring `GET /api/institutions/by-domain?domain=…` y `GET /api/institutions/{institutionId}` | Consulta con autenticación; sin BFF de catálogo actualmente                         |
-| `GET /api/orders` en Next                                                                   | Solo WORKER; resuelve cafetería mediante contexto del backend                       |
-| Spring `GET /api/worker/context`                                                            | Cafetería asignada al WORKER activo                                                 |
-| Spring `GET /api/orders?cafeteriaId=…`                                                      | Listado autorizado de la cafetería, no listado CLIENT                               |
-| `PATCH /api/orders/{id}/{prepare,ready,call,deliver,cancel}`                                | Operaciones WORKER, expuestas mediante BFF                                          |
-| `PATCH /api/me/orders/{orderId}/cancel`                                                     | CLIENT activo, pedido propio y PENDING; BFF devuelve solo `{id,status:"CANCELLED"}` |
+| Servicio comprobado                                   | Alcance                                                                             |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `POST /api/auth/[action]`                             | login, register, institution, verify, resend, recover, reset, logout                |
+| RPC `current_auth_profile`                            | id, email, fullName, active, roles; no incluye institución/sede                     |
+| RPC `is_institutional_email`                          | Admisión del correo; no es un catálogo                                              |
+| Spring `/api/institutions/*`                          | Eliminado el 2026-11-10: nadie lo consumía; responde 404                            |
+| `GET /api/orders` en Next                             | Solo WORKER; resuelve cafetería mediante contexto del backend                       |
+| Spring `GET /api/worker/context`                      | Cafetería asignada al WORKER activo                                                 |
+| Spring `GET /api/orders?cafeteriaId=…`                | Listado autorizado de la cafetería, no listado CLIENT                               |
+| `PATCH /api/orders/{id}/{prepare,ready,call,deliver}` | Operaciones WORKER, expuestas mediante BFF; el worker no cancela                    |
+| `PATCH /api/me/orders/{orderId}/cancel`               | CLIENT activo, pedido propio y PENDING; BFF devuelve solo `{id,status:"CANCELLED"}` |
 
 La cancelación CLIENT devuelve 401/403/404/409 según sesión, elegibilidad,
-propiedad y estado. No aplica el plazo adicional de cancelación del trabajador.
+propiedad y estado. No tiene plazo; el worker ya no cancela (docs/decisiones.md §6).
 Su UI espera una consulta real de pedidos propios; no debe pedir IDs manuales
 ni reutilizar el listado de otro rol. El locking frente a preparación concurrente
 sigue siendo una limitación documentada del backend existente.

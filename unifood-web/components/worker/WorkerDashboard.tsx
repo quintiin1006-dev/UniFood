@@ -32,20 +32,12 @@ export default function WorkerDashboard() {
     actionError,
     isPriorityError,
     handleOrderAction,
-    handleOrderCancel,
     clearActionError,
   } = useOrders(activeModule === "orders" || activeModule === "calls");
 
   const [
     selectedOrder,
     setSelectedOrder,
-  ] = useState<Order | null>(
-    null
-  );
-
-  const [
-    orderToCancel,
-    setOrderToCancel,
   ] = useState<Order | null>(
     null
   );
@@ -96,7 +88,7 @@ export default function WorkerDashboard() {
               .includes(query);
 
           const matchesId =
-            order.studentId
+            (order.clientCode ?? "")
               .toLowerCase()
               .includes(query);
 
@@ -147,7 +139,7 @@ export default function WorkerDashboard() {
               .includes(query);
 
           const matchesId =
-            order.studentId
+            (order.clientCode ?? "")
               .toLowerCase()
               .includes(query);
 
@@ -213,56 +205,6 @@ export default function WorkerDashboard() {
     };
 
   /* =========================================================
-     SOLICITAR CANCELACIÓN
-     ========================================================= */
-
-  const onRequestCancel =
-    (order: Order) => {
-      if (
-        order.status !==
-        "pending"
-      ) {
-        return;
-      }
-
-      setOrderToCancel(
-        order
-      );
-    };
-
-  /* =========================================================
-     CONFIRMAR CANCELACIÓN
-     ========================================================= */
-
-  const onConfirmCancel =
-    async () => {
-      if (!orderToCancel) {
-        return;
-      }
-
-      const cancelledOrder =
-        await handleOrderCancel(
-          orderToCancel
-        );
-
-      if (!cancelledOrder) {
-        return;
-      }
-
-      setOrderToCancel(
-        null
-      );
-
-      setSelectedOrder(
-        (currentOrder) =>
-          currentOrder?.id ===
-          cancelledOrder.id
-            ? null
-            : currentOrder
-      );
-    };
-
-  /* =========================================================
      CAMBIO DE MÓDULO
      ========================================================= */
 
@@ -281,7 +223,6 @@ export default function WorkerDashboard() {
       setSearch("");
 
       clearActionError();
-      setOrderToCancel(null);
     };
 
   /* =========================================================
@@ -352,9 +293,6 @@ export default function WorkerDashboard() {
             }
             onAction={
               onOrderAction
-            }
-            onCancel={
-              onRequestCancel
             }
           />
         );
@@ -477,176 +415,6 @@ export default function WorkerDashboard() {
             onOrderAction
           }
         />
-      )}
-
-      {/* =====================================================
-          MODAL DE CANCELACIÓN
-          ===================================================== */}
-
-      {orderToCancel && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="cancel-order-title"
-          style={{
-            position:
-              "fixed",
-            inset: 0,
-            zIndex: 9998,
-            display:
-              "flex",
-            alignItems:
-              "center",
-            justifyContent:
-              "center",
-            background:
-              "rgba(0, 0, 0, 0.28)",
-            backdropFilter:
-              "blur(5px)",
-            padding:
-              "24px",
-          }}
-        >
-          <div
-            style={{
-              width:
-                "min(440px, 100%)",
-              background:
-                "#ffffff",
-              borderRadius:
-                "24px",
-              padding:
-                "28px",
-              boxShadow:
-                "0 24px 70px rgba(0,0,0,.25)",
-            }}
-          >
-            <h2
-              id="cancel-order-title"
-              style={{
-                margin:
-                  "0 0 10px",
-                fontSize:
-                  "20px",
-                fontWeight:
-                  700,
-                color:
-                  "#172033",
-              }}
-            >
-              ¿Cancelar pedido?
-            </h2>
-
-            <p
-              style={{
-                margin:
-                  "0 0 8px",
-                fontSize:
-                  "15px",
-                lineHeight:
-                  1.5,
-                color:
-                  "#5d6678",
-              }}
-            >
-              Vas a cancelar
-              el pedido de{" "}
-              <strong style={{ fontSize: "16px", fontWeight: 600 }}>
-                {
-                  orderToCancel.student
-                }
-              </strong>
-              .
-            </p>
-
-            <p
-              style={{
-                margin:
-                  "0 0 24px",
-                fontSize:
-                  "14px",
-                lineHeight:
-                  1.5,
-                color:
-                  "#7a8394",
-              }}
-            >
-              Esta acción es
-              definitiva. El
-              pedido dejará de
-              aparecer en la
-              lista de pedidos
-              activos.
-            </p>
-
-            <div
-              style={{
-                display:
-                  "grid",
-                gridTemplateColumns:
-                  "1fr 1fr",
-                gap: "10px",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() =>
-                  setOrderToCancel(
-                    null
-                  )
-                }
-                style={{
-                  border:
-                    "1px solid #d9dee8",
-                  borderRadius:
-                    "var(--radius-control)",
-                  padding:
-                    "13px 18px",
-                  background:
-                    "#ffffff",
-                  color:
-                    "#172033",
-                  fontSize:
-                    "14px",
-                  fontWeight:
-                    600,
-                  cursor:
-                    "pointer",
-                }}
-              >
-                Volver
-              </button>
-
-              <button
-                type="button"
-                onClick={
-                  onConfirmCancel
-                }
-                disabled={busyOrderIds.includes(orderToCancel.id)}
-                style={{
-                  border:
-                    "none",
-                  borderRadius:
-                    "var(--radius-control)",
-                  padding:
-                    "13px 18px",
-                  background:
-                    "#dc2626",
-                  color:
-                    "#ffffff",
-                  fontSize:
-                    "14px",
-                  fontWeight:
-                    600,
-                  cursor:
-                    "pointer",
-                }}
-              >
-                Cancelar pedido
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* =====================================================

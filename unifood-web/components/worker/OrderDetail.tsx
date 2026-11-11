@@ -15,6 +15,7 @@ import {
 import type {
   Order,
 } from "@/types/order";
+import { clientIdentity } from "@/features/orders/utils/clientIdentity";
 
 import {
   formatRelativeTime,
@@ -219,9 +220,9 @@ export default function OrderDetail({
               {order.student}
             </h2>
 
-            <p>
-              ID: {order.studentId}
-            </p>
+            {clientIdentity(order) && (
+              <p>{clientIdentity(order)}</p>
+            )}
           </div>
         </div>
 

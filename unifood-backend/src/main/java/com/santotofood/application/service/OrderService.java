@@ -160,21 +160,6 @@ public class OrderService
 
   @Override
   @Transactional
-  public Order cancelOrder(UUID orderId) {
-
-    Order order = findOrder(orderId);
-
-    Instant now = timeProvider.now();
-
-    order.cancel(now);
-
-    Order savedOrder = orderRepository.save(order);
-
-    return loadOrderItems(savedOrder);
-  }
-
-  @Override
-  @Transactional
   public Order cancelOwnOrder(UUID orderId) {
     Order order = findOrder(orderId);
     if (!order.cancelByClient(timeProvider.now())) return loadOrderItems(order);

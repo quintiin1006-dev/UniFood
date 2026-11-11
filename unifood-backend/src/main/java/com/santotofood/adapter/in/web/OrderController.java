@@ -3,7 +3,6 @@ package com.santotofood.adapter.in.web;
 import com.santotofood.adapter.in.web.dto.OrderResponse;
 import com.santotofood.adapter.in.web.mapper.OrderResponseMapper;
 import com.santotofood.application.port.in.CallStudentUseCase;
-import com.santotofood.application.port.in.CancelOrderUseCase;
 import com.santotofood.application.port.in.DeliverOrderUseCase;
 import com.santotofood.application.port.in.GetOrdersByCafeteriaUseCase;
 import com.santotofood.application.port.in.MarkOrderReadyUseCase;
@@ -25,7 +24,6 @@ public class OrderController {
   private final MarkOrderReadyUseCase markOrderReadyUseCase;
   private final CallStudentUseCase callStudentUseCase;
   private final DeliverOrderUseCase deliverOrderUseCase;
-  private final CancelOrderUseCase cancelOrderUseCase;
   private final GetOrdersByCafeteriaUseCase getOrdersByCafeteriaUseCase;
   private final OrderResponseMapper orderResponseMapper;
 
@@ -76,15 +74,6 @@ public class OrderController {
   public ResponseEntity<OrderResponse> deliverOrder(@PathVariable UUID orderId) {
 
     Order updatedOrder = deliverOrderUseCase.deliverOrder(orderId);
-
-    return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
-  }
-
-  @PatchMapping("/{orderId}/cancel")
-  @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
-  public ResponseEntity<OrderResponse> cancelOrder(@PathVariable UUID orderId) {
-
-    Order updatedOrder = cancelOrderUseCase.cancelOrder(orderId);
 
     return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
   }

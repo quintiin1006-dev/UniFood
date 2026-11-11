@@ -164,10 +164,10 @@ class ClientOrderCancellationApiTest {
             UUID.randomUUID(),
             UUID.randomUUID(),
             "Fixture",
-            "12345",
+            "1234567",
+            "STUDENT",
             status,
             BigDecimal.ONE,
-            created.plusSeconds(1),
             created,
             created);
     when(orders.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));

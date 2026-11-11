@@ -24,10 +24,10 @@ export interface BackendOrder {
   cafeteriaId: string;
   clientId: string | null;
   clientName: string;
-  clientDocument: string | null;
+  clientCode: string | null;
+  clientType: "STUDENT" | "STAFF" | null;
   status: BackendOrderStatus;
   total: number;
-  cancellationDeadline: string | null;
   createdAt: string;
   updatedAt: string;
   deliveredAt?: string | null;

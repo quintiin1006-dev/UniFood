@@ -291,8 +291,16 @@ Gmail antes de la `@`: se usan los alias `+admin` y `+worker`, que llegan al mis
 - Cancelación: el cliente cancela **solo mientras el pedido esté PENDING, sin plazo** por
   tiempo (confirmado el 2026-11-08).
 - Rechazo: el worker puede rechazar **solo en PENDING**, con motivo obligatorio. **El worker
-  no cancela** (confirmado el 2026-11-08): la ruta actual `PATCH /api/orders/{id}/cancel`
-  del worker se sustituye por el rechazo cuando este se implemente.
+  no cancela** (confirmado el 2026-11-08). La ruta `PATCH /api/orders/{id}/cancel` del worker,
+  su botón y su plazo de cancelación se retiraron el 2026-11-10, antes del rechazo.
+- **Hasta el PR de rechazo con motivo (B18), el worker no puede anular un pedido PENDING.**
+  Ese pedido solo lo terminan el cliente, cancelándolo, o el cierre diario del sistema.
+- **El worker ve nombre, código institucional y tipo de cliente, nunca el documento (B20).**
+  Los pedidos con la copia de la 021 la usan; los anteriores toman código y tipo del cliente.
+  Sin código se muestra el tipo («Estudiante» o «Docente o administrativo»).
+- **Listado del worker:** los pedidos activos de cualquier día más los entregados hoy
+  (America/Bogota), solo de la cafetería asignada en `cafeteria_users`. Un pedido activo
+  atascado de otro día nunca queda invisible.
 - **Pedido activo:** PENDING, PREPARING, READY y CALLED. Terminales: DELIVERED,
   NOT_COLLECTED y CANCELLED. La base lo garantiza con el índice único parcial
   `uq_orders_one_active_per_client` (020): un estado terminal cierra el pedido para siempre,

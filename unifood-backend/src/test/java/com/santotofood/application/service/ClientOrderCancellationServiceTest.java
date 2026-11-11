@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.santotofood.application.exception.OrderNotFoundException;
-import com.santotofood.domain.exception.CancellationDeadlineExpiredException;
 import com.santotofood.domain.exception.InvalidOrderStateException;
 import com.santotofood.domain.model.Order;
 import com.santotofood.domain.model.OrderStatus;
@@ -15,7 +14,6 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 class ClientOrderCancellationServiceTest {
   final OrderRepository orders = mock(OrderRepository.class);
@@ -33,10 +31,10 @@ class ClientOrderCancellationServiceTest {
             UUID.randomUUID(),
             UUID.randomUUID(),
             "Fixture client",
-            "12345",
+            "1234567",
+            "STUDENT",
             status,
             BigDecimal.ONE,
-            created.plusSeconds(1),
             created,
             created);
     when(orders.findByIdForUpdate(id)).thenReturn(Optional.of(order));
@@ -45,7 +43,7 @@ class ClientOrderCancellationServiceTest {
   }
 
   @Test
-  void pendingClientOrderIsSavedEvenAfterTheLegacyDeadline() {
+  void pendingClientOrderIsCancelledWithoutAnyDeadline() {
     Order order = order(OrderStatus.PENDING);
     when(orders.save(order)).thenReturn(order);
     when(items.findByOrderId(id)).thenReturn(List.of());
@@ -54,26 +52,6 @@ class ClientOrderCancellationServiceTest {
     assertTrue(order.isCancelledByClient());
     assertEquals(now, order.getCancelledAt());
     assertEquals(now, order.getUpdatedAt());
-    var sequence = inOrder(orders, clock);
-    sequence.verify(orders).findByIdForUpdate(id);
-    sequence.verify(clock).now();
-    sequence.verify(orders).save(order);
-    verifyNoMoreInteractions(orders);
-  }
-
-  @Test
-  void workerCancellationRecordsTheClockTimeAtItsExistingDeadline() {
-    Order order = order(OrderStatus.PENDING);
-    Instant atDeadline = order.getCancellationDeadline();
-    when(clock.now()).thenReturn(atDeadline);
-    when(orders.save(order)).thenReturn(order);
-    when(items.findByOrderId(id)).thenReturn(List.of());
-
-    assertSame(order, service.cancelOrder(id));
-    assertEquals(OrderStatus.CANCELLED, order.getStatus());
-    assertFalse(order.isCancelledByClient());
-    assertEquals(atDeadline, order.getCancelledAt());
-    assertEquals(atDeadline, order.getUpdatedAt());
     var sequence = inOrder(orders, clock);
     sequence.verify(orders).findByIdForUpdate(id);
     sequence.verify(clock).now();
@@ -125,9 +103,11 @@ class ClientOrderCancellationServiceTest {
   }
 
   @Test
-  void workerCancellationStillEnforcesItsExistingDeadline() {
+  void missingOperationTimeCannotCancelOrSave() {
     Order order = order(OrderStatus.PENDING);
-    assertThrows(CancellationDeadlineExpiredException.class, () -> service.cancelOrder(id));
+    when(clock.now()).thenReturn(null);
+
+    assertThrows(IllegalArgumentException.class, () -> service.cancelOwnOrder(id));
     assertEquals(OrderStatus.PENDING, order.getStatus());
     assertNull(order.getCancelledAt());
     assertEquals(created, order.getUpdatedAt());
@@ -135,22 +115,18 @@ class ClientOrderCancellationServiceTest {
     verifyNoInteractions(items);
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = {false, true})
-  void missingOperationTimeCannotCancelOrSaveForEitherActor(boolean client) {
-    Order order = order(OrderStatus.PENDING);
-    when(clock.now()).thenReturn(null);
-
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> {
-          if (client) service.cancelOwnOrder(id);
-          else service.cancelOrder(id);
-        });
-    assertEquals(OrderStatus.PENDING, order.getStatus());
-    assertNull(order.getCancelledAt());
-    assertEquals(created, order.getUpdatedAt());
-    verify(orders, never()).save(any());
-    verifyNoInteractions(items);
+  @Test
+  void theWorkerHasNoCancellationLeft() {
+    var methods =
+        Arrays.stream(com.santotofood.application.port.in.CancelOrderUseCase.class.getMethods())
+            .map(java.lang.reflect.Method::getName)
+            .toList();
+    assertEquals(List.of("cancelOwnOrder"), methods);
+    assertTrue(
+        Arrays.stream(OrderService.class.getMethods())
+            .noneMatch(method -> method.getName().equals("cancelOrder")));
+    assertTrue(
+        Arrays.stream(Order.class.getMethods())
+            .noneMatch(method -> method.getName().equals("cancel")));
   }
 }
