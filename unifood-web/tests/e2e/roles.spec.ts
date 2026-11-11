@@ -52,12 +52,17 @@ for (const [name, target] of [
         )
       ).status(),
     ).toBe(403);
-    if (target === "/super-admin")
+    if (target === "/super-admin") {
       await expect(
-        page.getByText(
-          "El panel de administración estará disponible más adelante.",
-        ),
+        page.getByRole("heading", { name: "Cafeterías" }),
       ).toBeVisible();
+      await expect(
+        page.getByRole("rowheader", { name: "Cafetería Central" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Cerrar sesión" }),
+      ).toBeVisible();
+    }
   });
 }
 

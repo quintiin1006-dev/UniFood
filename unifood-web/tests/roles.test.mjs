@@ -23,7 +23,11 @@ const uiMocks = {
   "next/link": {
     default: ({ children, ...props }) => createElement("a", props, children),
   },
-  "lucide-react": { BadgeCheck: () => null },
+  "lucide-react": {
+    BadgeCheck: () => null,
+    Building2: () => null,
+    CircleAlert: () => null,
+  },
   "@/features/auth/components/Brand": {
     default: () => null,
     Waves: () => null,
@@ -104,7 +108,8 @@ function load(
   new Function("require", "module", "exports", "fetch", source)(
     (name) => {
       if (name in mocks) return mocks[name];
-      if (name === "react/jsx-runtime") return require(name);
+      if (name === "react" || name === "react/jsx-runtime")
+        return require(name);
       if (name.endsWith(".module.css")) return { default: {} };
       if (name === "./Brand")
         return uiMocks["@/features/auth/components/Brand"];

@@ -1,0 +1,46 @@
+/* Only the table; shell, header, badges and feedback come from Admin.module.css. */
+.card {
+  margin-top: 24px;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-line);
+  border-radius: 14px;
+  box-shadow: var(--admin-shadow);
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.table caption {
+  text-align: left;
+  padding: 16px 20px 4px;
+  color: var(--admin-muted);
+  font-size: 13px;
+}
+.table th,
+.table td {
+  padding: 12px 20px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid #edf0f5;
+}
+.table th {
+  font-size: 12px;
+  font-weight: 650;
+  color: #42648b;
+  white-space: nowrap;
+}
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.table td small {
+  display: block;
+  color: var(--admin-muted);
+  font-size: 12px;
+}
+.empty {
+  margin: 0;
+  padding: 28px 20px;
+  color: var(--admin-muted);
+}

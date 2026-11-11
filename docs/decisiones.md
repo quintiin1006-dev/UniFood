@@ -239,6 +239,59 @@ Gmail antes de la `@`: se usan los alias `+admin` y `+worker`, que llegan al mis
   abierta la fecha en que se ejecutó, y en America/Bogota.
 - `tests/order-schema.test.mjs` ejecuta esta misma secuencia en una base local.
 
+**Cuenta SUPER_ADMIN de staging** (provisional para la demo, decidido el 2026-11-10). Todo
+en `unifood-staging`, con 001-021 aplicadas; nunca en el proyecto real. Como máximo **dos
+cuentas** (§2). El script local de §10 sigue **pendiente** y es el que se usará antes del
+piloto. `CORREO` es un marcador: la dirección real se escribe solo en el SQL Editor y nunca
+se versiona.
+
+1. **Comprobar el tope** antes de crear nada:
+
+   ```sql
+   SELECT count(*) FROM public.user_roles ur
+   JOIN public.roles r ON r.id = ur.role_id WHERE r.name = 'SUPER_ADMIN';
+   ```
+
+   Si devuelve 2, parar: no se crea una tercera cuenta.
+
+2. **Preautorizar**, justo antes del paso 3 y nunca con anticipación (vale 15 minutos y un
+   solo uso). SUPER_ADMIN no lleva institución ni tipo de cliente:
+
+   ```sql
+   SELECT public.preauthorize_identity('CORREO', 'SUPER_ADMIN');
+   ```
+
+3. En seguida, en Authentication > Users > Add user > Create new user, el mismo correo, una
+   contraseña propia y **Auto Confirm User** marcado. No envía correo.
+4. **Rol y activación, sin cafetería**, en una sola transacción: en el SQL Editor, pega
+   `SET unifood.seed_target = 'staging';` seguido del contenido de
+   `scripts/supabase/seed-super-admin.sql`, con `CORREO` sustituido. El script bloquea las
+   escrituras de roles hasta el `COMMIT`, comprueba el tope dentro de la transacción
+   (`DO $$ … RAISE EXCEPTION`), asigna el rol y activa la cuenta. Si falla, no aplica nada:
+   - `SUPER_ADMIN_LIMIT`: ya hay dos. Borra la identidad recién creada en Authentication >
+     Users.
+   - `SUPER_ADMIN_IDENTITY_MISSING`: el correo no coincide con la identidad del paso 3.
+5. **Comprobación:**
+
+   ```sql
+   SELECT u.email, u.is_active, u.email_confirmed_at IS NOT NULL AS confirmed,
+          (SELECT count(*) FROM public.cafeteria_users cu WHERE cu.user_id = u.id) AS cafeterias
+   FROM public.users u
+   JOIN public.user_roles ur ON ur.user_id = u.id
+   JOIN public.roles r ON r.id = ur.role_id
+   WHERE r.name = 'SUPER_ADMIN';
+   ```
+
+   Esperado: como máximo dos filas, activas, confirmadas y con 0 cafeterías. Entra por
+   `/panel/login` y llega a `/super-admin`. Se recomienda 2FA y no compartir la contraseña.
+
+- `tests/super-admin-seed.test.mjs` ejecuta el script en una base local: dos cuentas, el
+  rechazo de la tercera y la negativa fuera de staging.
+- **GRANT:** comprobado en staging con la conexión de administración (no con la sesión de
+  Spring): el rol postgres es dueño de las tablas y funciones, por lo que no hacen falta
+  GRANT. Confirmar con `select current_user` desde Spring antes del piloto en el proyecto
+  real.
+
 ## 4. Flujo del cliente
 
 1. Registro en dos pasos con OTP (§3) e inicio de sesión. El dominio del correo determina
@@ -402,7 +455,8 @@ cafetería tomará el siguiente número libre cuando se implemente.
   son datos distintos. Se elimina tras el piloto.
 - `orders.client_document`: historial intacto. Los pedidos nuevos usan `client_code`.
 - SUPER_ADMIN: script local con la API de administración y SQL parametrizado; correos como
-  parámetro, nunca versionados. Rechaza una tercera cuenta.
+  parámetro, nunca versionados. Rechaza una tercera cuenta. **Pendiente**: mientras tanto,
+  staging usa el procedimiento manual de §3, «Cuenta SUPER_ADMIN de staging».
 
 ## 11. Contratos de API
 
@@ -420,6 +474,7 @@ El BFF y Spring usan las mismas rutas. Errores con `ApiErrorResponse`:
 | `GET /api/me/orders/{id}`                             | Detalle de un pedido propio             | 404 `ORDER_NOT_FOUND`                                                                                                |
 | `PATCH /api/me/orders/{id}/cancel`                    | Cancela en PENDING                      | 404 `ORDER_NOT_FOUND`, 409 `ORDER_ALREADY_PREPARING`, `INVALID_ORDER_STATE`                                          |
 | `PATCH /api/orders/{id}/reject`                       | Rechazo del worker `{reason}`           | 400 `REJECTION_REASON_REQUIRED`, `REJECTION_REASON_TOO_LONG`, 403 `FORBIDDEN`, 409 `INVALID_ORDER_STATE`             |
+| `GET /api/super-admin/cafeterias`                     | Instituciones, sedes y cafeterías       | 403 `SUPER_ADMIN_FORBIDDEN`                                                                                          |
 | `PATCH /api/super-admin/cafeterias/{id}/subscription` | `{subscribed, expectedSubscribed}`      | 403 `SUPER_ADMIN_FORBIDDEN`, 404 `CAFETERIA_NOT_FOUND`, 409 `SUBSCRIPTION_STATE_CHANGED`                             |
 | `POST /api/super-admin/credentials`                   | `{email, fullName, role, cafeteriaId}`  | 400 `CREDENTIAL_INVALID_REQUEST`, 403 `SUPER_ADMIN_FORBIDDEN`, 409 `EMAIL_ALREADY_REGISTERED`, `CAFETERIA_HAS_ADMIN` |
 
@@ -631,6 +686,25 @@ false`. La `version` sube como en las demás transiciones (JPA y el trigger de l
 - **BFF:** `app/api/orders` acepta la acción `reject` con `sameOrigin`, sesión, rol WORKER y
   Bearer, como las demás. Solo reenvía `{reason}` ya recortado, y rechaza un motivo inválido
   sin llamar a Spring.
+
+**Listado de SUPER_ADMIN implementado (decidido el 2026-11-10), solo lectura:**
+
+- **Quién:** cuenta activa con rol SUPER_ADMIN exclusivo y sin cafetería asignada, leído de la
+  base en cada llamada; nunca del JWT. Sin sesión o con token inválido: 401. CLIENT, WORKER,
+  ADMIN, SUPER_ADMIN inactivo o con otro rol: 403 `SUPER_ADMIN_FORBIDDEN`.
+- **Respuesta:** instituciones `{id, name, active, sites}`, sedes
+  `{id, name, city, active, cafeterias}` y cafeterías `{id, name, subscribed, hasActiveAdmin}`,
+  bajo `institutions` y por nombre. Incluye instituciones sin sedes y sedes sin cafeterías,
+  activas o no.
+- `subscribed` es `cafeterias.is_active` (§5); no hay un segundo campo `active` en la
+  cafetería. `hasActiveAdmin` es verdadero si un ADMIN activo está asignado en
+  `cafeteria_users`.
+- Lectura `REPEATABLE READ` de solo lectura, con `Cache-Control: no-store`. 503
+  `SUPER_ADMIN_TEMPORARILY_UNAVAILABLE` con `Retry-After` ante un fallo temporal.
+- **BFF:** `app/api/super-admin/**` con sesión (`getAuth()`), rol SUPER_ADMIN y Bearer de la
+  sesión. `sameOrigin` se exige a todo método que no sea GET o HEAD, como en el resto de BFF:
+  el navegador no envía `Origin` en un GET del mismo origen.
+- Sin escrituras: el interruptor de suscripción y las credenciales quedan para otro PR.
 
 **Cierre diario:** sin endpoint público. Tarea cada 5 minutos y al arrancar; toma pedidos
 activos anteriores al inicio del día con `FOR UPDATE SKIP LOCKED`. Es idempotente.
