@@ -102,3 +102,33 @@ export async function advanceOrder(order: Order): Promise<Order> {
 
   return mapBackendOrder(updatedBackendOrder);
 }
+
+/** B18: PENDING or PREPARING only; the client will see the reason. */
+export async function rejectOrder(
+  order: Order,
+  reason: string,
+): Promise<Order> {
+  if (order.status !== "pending" && order.status !== "preparing")
+    throw new Error(
+      "Solo un pedido pendiente o en preparación puede rechazarse.",
+    );
+
+  const response = await fetch(`/api/orders/${order.id}/reject`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ reason }),
+  });
+
+  if (!response.ok) {
+    const message = await readErrorMessage(
+      response,
+      "No se pudo rechazar el pedido.",
+    );
+    const error = new Error(message) as Error & { status?: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  const updatedBackendOrder: BackendOrder = await response.json();
+  return mapBackendOrder(updatedBackendOrder);
+}

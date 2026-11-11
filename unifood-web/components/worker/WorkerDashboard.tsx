@@ -15,6 +15,7 @@ import BottomNav, {
 } from "@/components/worker/BottomNav";
 
 import { useOrders } from "@/features/orders/hooks/useOrders";
+import { RejectOrderDialog } from "@/features/orders/components/RejectOrderDialog";
 
 import type { Order } from "@/types/order";
 import { AvailabilityPanel } from "@/features/availability/components/AvailabilityPanel";
@@ -32,6 +33,7 @@ export default function WorkerDashboard() {
     actionError,
     isPriorityError,
     handleOrderAction,
+    handleOrderReject,
     clearActionError,
   } = useOrders(activeModule === "orders" || activeModule === "calls");
 
@@ -41,6 +43,8 @@ export default function WorkerDashboard() {
   ] = useState<Order | null>(
     null
   );
+
+  const [orderToReject, setOrderToReject] = useState<Order | null>(null);
 
   const [search, setSearch] =
     useState("");
@@ -220,6 +224,8 @@ export default function WorkerDashboard() {
         null
       );
 
+      setOrderToReject(null);
+
       setSearch("");
 
       clearActionError();
@@ -294,6 +300,7 @@ export default function WorkerDashboard() {
             onAction={
               onOrderAction
             }
+            onReject={setOrderToReject}
           />
         );
       }
@@ -414,6 +421,21 @@ export default function WorkerDashboard() {
           onAction={
             onOrderAction
           }
+        />
+      )}
+
+      {activeModule === "orders" && orderToReject && (
+        <RejectOrderDialog
+          order={orderToReject}
+          onClose={() => setOrderToReject(null)}
+          onConfirm={async (order, reason) => {
+            const result = await handleOrderReject(order, reason);
+            if ("order" in result)
+              setSelectedOrder((current) =>
+                current?.id === result.order.id ? null : current,
+              );
+            return result;
+          }}
         />
       )}
 

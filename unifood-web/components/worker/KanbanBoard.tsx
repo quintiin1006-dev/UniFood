@@ -17,6 +17,7 @@ interface KanbanBoardProps {
   busyOrderIds: string[];
   onOpenOrder: (order: Order) => void;
   onAction: (order: Order) => void;
+  onReject?: (order: Order) => void;
 }
 
 interface Column {
@@ -58,6 +59,7 @@ export default function KanbanBoard({
   busyOrderIds,
   onOpenOrder,
   onAction,
+  onReject,
 }: KanbanBoardProps) {
   return (
     <section className={styles.board}>
@@ -166,6 +168,7 @@ export default function KanbanBoard({
                       onAction={() =>
                         onAction(order)
                       }
+                      onReject={onReject}
                     />
                   )
                 )

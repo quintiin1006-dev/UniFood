@@ -6,8 +6,38 @@ import {
   temporaryAuthResponse,
 } from "@/features/auth/server/failures";
 
-// The worker does not cancel (docs/decisiones.md §6); a rejection with a reason arrives in B18.
-const actions = new Set(["prepare", "ready", "call", "deliver"]);
+import { checkRejectionReason } from "@/features/orders/rejectionReason";
+
+// The worker does not cancel; it rejects PENDING or PREPARING with a reason (decisiones §6).
+const actions = new Set(["prepare", "ready", "call", "deliver", "reject"]);
+const MAX_REJECT_BODY_BYTES = 2048;
+
+/** Only `{reason}` crosses the BFF, already trimmed and within 3-200 characters. */
+async function rejectBody(request: Request) {
+  const declared = Number(request.headers.get("content-length") || 0);
+  let reason: unknown = null;
+  if (declared <= MAX_REJECT_BODY_BYTES) {
+    try {
+      const text = await request.text();
+      if (new TextEncoder().encode(text).length <= MAX_REJECT_BODY_BYTES) {
+        const parsed: unknown = JSON.parse(text);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
+          reason = (parsed as Record<string, unknown>).reason;
+      }
+    } catch {
+      reason = null;
+    }
+  }
+  const check = checkRejectionReason(reason);
+  if (!check.ok)
+    return {
+      error: Response.json(
+        { status: 400, code: check.code, message: check.message },
+        { status: 400, headers: { "Cache-Control": "no-store" } },
+      ),
+    };
+  return { body: JSON.stringify({ reason: check.reason }) };
+}
 
 async function forward(
   request: Request,
@@ -48,6 +78,13 @@ async function forward(
       { message: "No tienes permisos de trabajador." },
       { status: 403 },
     );
+
+  let body: string | undefined;
+  if (isAction && path[1] === "reject") {
+    const parsed = await rejectBody(request);
+    if (parsed.error) return parsed.error;
+    body = parsed.body;
+  }
 
   const base = serverApiUrl();
   const url = new URL(
@@ -90,10 +127,13 @@ async function forward(
       // Only the authenticated backend context selects the cafeteria, never request parameters.
       url.searchParams.set("cafeteriaId", workerContext.cafeteriaId);
     }
+    if (body !== undefined) headers.set("content-type", "application/json");
     const response = await fetch(url, {
       method: request.method,
       headers,
+      ...(body !== undefined ? { body } : {}),
       cache: "no-store",
+      redirect: "error",
       signal: AbortSignal.timeout(15000),
     });
     return new Response(response.body, {

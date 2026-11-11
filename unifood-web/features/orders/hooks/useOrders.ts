@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   advanceOrder,
   getOperationalOrders,
+  rejectOrder,
 } from "@/features/orders/api/orderApi";
 import type { Order } from "@/types/order";
 
@@ -176,10 +177,54 @@ export function useOrders(enabled = true) {
     [clearActionError, refresh, replaceOrders],
   );
 
-  // The worker only advances orders; cancelling is the client's (docs/decisiones.md §6).
+  // The worker advances orders or rejects them with a reason; cancelling is the client's (§6).
   const handleOrderAction = useCallback(
     (order: Order) => mutate(order),
     [mutate],
+  );
+
+  /** B18: the error stays in the dialog that asked for it, not in the global alert. */
+  const handleOrderReject = useCallback(
+    async (
+      order: Order,
+      reason: string,
+    ): Promise<{ order: Order } | { error: string }> => {
+      if (pending.current.has(order.id))
+        return { error: "Ya estamos procesando este pedido." };
+      const current = latestOrders.current.find((item) => item.id === order.id);
+      if (
+        !current ||
+        (current.status !== "pending" && current.status !== "preparing")
+      )
+        return {
+          error:
+            "El pedido cambió de estado y ya no se puede rechazar. Revisa el estado actualizado.",
+        };
+      pending.current.add(order.id);
+      ++revision.current;
+      setBusyOrderIds([...pending.current]);
+      try {
+        const updated = await rejectOrder(current, reason);
+        replaceOrders(
+          latestOrders.current.map((item) =>
+            item.id === updated.id ? updated : item,
+          ),
+        );
+        return { order: updated };
+      } catch (cause) {
+        return {
+          error:
+            cause instanceof Error
+              ? cause.message
+              : "No se pudo rechazar el pedido.",
+        };
+      } finally {
+        pending.current.delete(order.id);
+        setBusyOrderIds([...pending.current]);
+        void refresh();
+      }
+    },
+    [refresh, replaceOrders],
   );
 
   return {
@@ -190,6 +235,7 @@ export function useOrders(enabled = true) {
     isPriorityError,
     busyOrderIds,
     handleOrderAction,
+    handleOrderReject,
     clearActionError,
   };
 }

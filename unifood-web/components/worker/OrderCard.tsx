@@ -16,6 +16,7 @@ import {
   formatRelativeTime,
 } from "@/lib/orderTime";
 
+import { RejectOrderButton } from "@/features/orders/components/RejectOrderDialog";
 import { clientIdentity } from "@/features/orders/utils/clientIdentity";
 import type { Order } from "@/types/order";
 
@@ -25,6 +26,7 @@ interface OrderCardProps {
   order: Order;
   onOpen: (order: Order) => void;
   onAction: (order: Order) => void;
+  onReject?: (order: Order) => void;
   busy?: boolean;
 }
 
@@ -32,6 +34,7 @@ export default function OrderCard({
   order,
   onOpen,
   onAction,
+  onReject,
   busy = false,
 }: OrderCardProps) {
   const ActionIcon =
@@ -148,6 +151,10 @@ export default function OrderCard({
             </span>
           )}
       </button>
+
+      {onReject && (
+        <RejectOrderButton order={order} busy={busy} onReject={onReject} />
+      )}
     </article>
   );
 }

@@ -1,0 +1,150 @@
+/* Same look as the worker panel's former cancel dialog and button, without new tokens. */
+.rejectButton {
+  width: 100%;
+  margin-top: 8px;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: #fff7f7;
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rejectButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(5px);
+  padding: 24px;
+}
+
+.dialog {
+  width: min(440px, 100%);
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
+}
+
+.title {
+  margin: 0 0 10px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #172033;
+}
+
+.text {
+  margin: 0 0 16px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #5d6678;
+}
+
+.label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #172033;
+}
+
+.field {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d9dee8;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 15px;
+  color: #172033;
+  resize: vertical;
+}
+
+.field:focus-visible {
+  outline: 2px solid #0b63ce;
+  outline-offset: 1px;
+}
+
+.field[aria-invalid="true"] {
+  border-color: #dc2626;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 13px;
+  color: #7a8394;
+}
+
+.counter,
+.counterOver {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: #7a8394;
+}
+
+.counterOver {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.error {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: #dc2626;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.secondary,
+.primary {
+  border-radius: var(--radius-control);
+  padding: 13px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondary {
+  border: 1px solid #d9dee8;
+  background: #ffffff;
+  color: #172033;
+}
+
+.primary {
+  border: none;
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.secondary:disabled,
+.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
