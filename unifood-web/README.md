@@ -26,7 +26,7 @@ El Route Handler reenvía las acciones PATCH al backend sin reenviar el Origin d
 
 - Pendiente → preparación → listo → llamado → entregado.
 - El backend autoriza pasar a preparación únicamente al primer pendiente de la cafetería (createdAt e id). El frontend conserva el orden recibido y no omite esa validación, incluso cuando hay una búsqueda activa.
-- El worker no cancela pedidos (docs/decisiones.md §6). Hasta el rechazo con motivo (B18), un PENDING solo lo terminan el cliente o el cierre diario.
+- El worker no cancela pedidos: los rechaza con motivo en PENDING o PREPARING (docs/decisiones.md §6, B18). El cliente ve el motivo.
 - Las órdenes se consultan cada 10 segundos, al recuperar el foco y después de cada acción. Las solicitudes anteriores no pueden sobrescribir una mutación y se bloquean acciones simultáneas sobre el mismo pedido.
 - Los conflictos muestran el mensaje real del backend. Solo un rechazo de preparación por un pedido anterior se identifica como prioridad.
 - CANCELLED y NOT_COLLECTED son terminales y no aparecen como pendientes.
