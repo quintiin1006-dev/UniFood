@@ -27,6 +27,8 @@ public class OrderMapper {
             order.getUpdatedAt());
     entity.setVersion(order.getRevision());
     entity.setCancelledByClient(order.isCancelledByClient());
+    entity.setCancellation(
+        order.getCancellationSource(), order.getRejectionReason(), order.getRejectedBy());
     return entity;
   }
 
@@ -51,6 +53,8 @@ public class OrderMapper {
             entity.getCreatedAt(),
             entity.getUpdatedAt());
     order.restoreConcurrencyState(entity.getVersion(), entity.isCancelledByClient());
+    order.restoreCancellation(
+        entity.getCancellationSource(), entity.getRejectionReason(), entity.getRejectedBy());
     return order;
   }
 }

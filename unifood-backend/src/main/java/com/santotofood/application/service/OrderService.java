@@ -10,6 +10,7 @@ import com.santotofood.application.port.in.GetOrdersByCafeteriaUseCase;
 import com.santotofood.application.port.in.MarkOrderNotCollectedUseCase;
 import com.santotofood.application.port.in.MarkOrderReadyUseCase;
 import com.santotofood.application.port.in.PrepareOrderUseCase;
+import com.santotofood.application.port.in.RejectOrderUseCase;
 import com.santotofood.application.port.in.RemindStudentUseCase;
 import com.santotofood.domain.exception.OrderConflictException;
 import com.santotofood.domain.model.BusinessDate;
@@ -36,6 +37,7 @@ public class OrderService
         DeliverOrderUseCase,
         MarkOrderNotCollectedUseCase,
         CancelOrderUseCase,
+        RejectOrderUseCase,
         GetOrdersByCafeteriaUseCase {
 
   private final OrderRepository orderRepository;
@@ -156,6 +158,15 @@ public class OrderService
     Order savedOrder = orderRepository.save(order);
 
     return loadOrderItems(savedOrder);
+  }
+
+  @Override
+  @Transactional
+  public Order rejectOrder(UUID orderId, UUID workerId, String reason) {
+    // The row lock serializes it with the client's cancellation and the worker's transitions.
+    Order order = findOrder(orderId);
+    if (!order.rejectByWorker(workerId, reason, timeProvider.now())) return loadOrderItems(order);
+    return loadOrderItems(orderRepository.save(order));
   }
 
   @Override

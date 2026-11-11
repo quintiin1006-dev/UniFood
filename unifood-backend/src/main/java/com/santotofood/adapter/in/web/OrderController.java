@@ -1,18 +1,23 @@
 package com.santotofood.adapter.in.web;
 
 import com.santotofood.adapter.in.web.dto.OrderResponse;
+import com.santotofood.adapter.in.web.dto.RejectOrderRequest;
 import com.santotofood.adapter.in.web.mapper.OrderResponseMapper;
 import com.santotofood.application.port.in.CallStudentUseCase;
 import com.santotofood.application.port.in.DeliverOrderUseCase;
 import com.santotofood.application.port.in.GetOrdersByCafeteriaUseCase;
 import com.santotofood.application.port.in.MarkOrderReadyUseCase;
 import com.santotofood.application.port.in.PrepareOrderUseCase;
+import com.santotofood.application.port.in.RejectOrderUseCase;
+import com.santotofood.config.OrderAuthorization;
 import com.santotofood.domain.model.Order;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -25,7 +30,9 @@ public class OrderController {
   private final CallStudentUseCase callStudentUseCase;
   private final DeliverOrderUseCase deliverOrderUseCase;
   private final GetOrdersByCafeteriaUseCase getOrdersByCafeteriaUseCase;
+  private final RejectOrderUseCase rejectOrderUseCase;
   private final OrderResponseMapper orderResponseMapper;
+  private final OrderAuthorization orderAuthorization;
 
   @GetMapping
   @PreAuthorize("@orderAuthorization.cafeteria(authentication, #cafeteriaId)")
@@ -75,6 +82,26 @@ public class OrderController {
 
     Order updatedOrder = deliverOrderUseCase.deliverOrder(orderId);
 
+    return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
+  }
+
+  /**
+   * B18: PENDING or PREPARING only, with a reason the client sees. The worker who rejects comes
+   * from the verified JWT; another cafeteria's order and a missing one get the same 403.
+   */
+  @PatchMapping("/{orderId}/reject")
+  @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
+  public ResponseEntity<OrderResponse> rejectOrder(
+      Authentication authentication,
+      @PathVariable UUID orderId,
+      @RequestBody(required = false) RejectOrderRequest request) {
+    UUID workerId =
+        orderAuthorization
+            .authenticatedUser(authentication)
+            .orElseThrow(() -> new AccessDeniedException("Worker identity unavailable"));
+    Order updatedOrder =
+        rejectOrderUseCase.rejectOrder(
+            orderId, workerId, request == null ? null : request.reason());
     return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
   }
 }
