@@ -16,6 +16,9 @@ import {
   clientMenuResponse,
   singleCafeteriaContext,
 } from "../fixtures/client-menu.ts";
+import { createClientOrderFixture } from "./client-order-fixture.mjs";
+
+const createClientOrder = createClientOrderFixture(clientMenuResponse);
 
 const fixtures = Object.entries({
   client: ["CLIENT"],
@@ -1145,6 +1148,31 @@ createServer(async (request, response) => {
         );
       const menu = clientMenuResponse(url.searchParams.get("cafeteriaId"));
       return json(response, menu.status, menu.body);
+    }
+    // POST /api/me/orders, from tests/helpers/client-order-fixture.mjs.
+    if (url.pathname === "/api/me/orders" && request.method === "POST") {
+      if (
+        !profile.active ||
+        profile.roles.length !== 1 ||
+        profile.roles[0] !== "CLIENT"
+      )
+        return json(response, 403, { code: "FORBIDDEN", message: "PRIVATE" });
+      let raw = "";
+      for await (const chunk of request) raw += chunk;
+      let body = null;
+      try {
+        body = JSON.parse(raw);
+      } catch {
+        // An invalid body is answered by the fixture as INVALID_ORDER_REQUEST.
+      }
+      const result = createClientOrder({
+        clientId: profile.id,
+        key: request.headers["idempotency-key"],
+        body,
+      });
+      // A dropped connection simulates a response lost after the order was created.
+      if (result.drop) return request.socket.destroy();
+      return json(response, result.status, result.body);
     }
     if (url.pathname === "/api/me/profile" && request.method === "GET") {
       profileAudit.backendProfileReads++;
