@@ -262,6 +262,32 @@ ADMIN](../docs/admin-product-images.md) documenta configuración backend, bucket
 privado, permisos, límites de despliegue, recuperación y limpieza. Las pruebas
 locales no acreditan políticas ni credenciales de un proyecto Storage real.
 
+## Registro de migraciones aplicadas
+
+`public.schema_migrations` registra qué migración se aplicó en cada base: versión,
+nombre, fecha, operador (`applied_by`), rol de base de datos, checksum y origen
+(`script` o `baseline`). Está cerrada al navegador (RLS sin policies y `REVOKE`).
+Es distinta de `supabase_migrations.schema_migrations`, la tabla del CLI de Supabase
+que lee `list_migrations`; esa sigue vacía porque no usamos `supabase db push`.
+
+`scripts/supabase/apply-migrations.ps1` es la única vía de escritura:
+
+1. `$env:UNIFOOD_MIGRATIONS_DB_URL` apunta a la base, **sin contraseña** (se pide al
+   ejecutar). `UNIFOOD_MIGRATIONS_OPERATOR` es opcional; por defecto, el usuario de Windows.
+   `psql` debe estar en el PATH (o en `UNIFOOD_PSQL`).
+2. `-PlanOnly` muestra proyecto, host, base, rol y el plan sin aplicar nada.
+3. Sin `-PlanOnly`, pide escribir el ref del proyecto. La primera vez en una base solo
+   ejecuta `bootstrap-schema-migrations.sql`, que crea la tabla y registra como `baseline`
+   lo que detecta instalado; si encuentra un hueco, aborta. Se vuelve a ejecutar para
+   aplicar lo pendiente.
+4. Cada migración se registra en su propia transacción, justo después de `BEGIN`.
+   019 (`ALTER TYPE ... ADD VALUE`) nunca corre dentro de una transacción: el script la
+   rechaza si gana un `BEGIN`, y su fila se escribe después (019 es idempotente).
+5. Se detiene si una migración aplicada cambió (checksum), si falta su archivo o si queda
+   una pendiente por debajo de la última aplicada (`-AllowOutOfOrder 022` tras revisarla).
+
+Las filas `baseline` no tienen fecha real ni checksum: el script no puede verificarlas.
+
 ## Pruebas locales
 
 Instalar dependencias del monorepo, Java 21, Node y binarios nativos PostgreSQL (initdb,
