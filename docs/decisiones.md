@@ -371,6 +371,13 @@ se versiona.
   entrega sigue siendo un reintento, nunca un pedido nuevo.
 - Cierre diario (America/Bogota): PENDING pasa a CANCELLED por el sistema; PREPARING, READY
   o CALLED pasan a NOT_COLLECTED. La cola FIFO solo considera pedidos del día.
+  - **Automático desde B19 (2026-11-10):** Spring lo ejecuta al arrancar y luego cada hora,
+    porque en la demo el backend se apaga de noche y al encenderlo cierra lo del día anterior.
+    El script manual queda como herramienta de emergencia (§11).
+  - Los pedidos ya terminados no se tocan, incluidos los rechazos del worker (B18,
+    `cancellation_source = 'WORKER'`).
+  - Se salta las reglas del worker para NOT_COLLECTED (CALLED con 3 recordatorios), igual que
+    el script: un pedido olvidado de otro día se cierra en el estado que esté.
 - Historial de solo lectura, sin «repetir pedido».
 
 ## 7. Notificaciones
@@ -706,10 +713,34 @@ false`. La `version` sube como en las demás transiciones (JPA y el trigger de l
   el navegador no envía `Origin` en un GET del mismo origen.
 - Sin escrituras: el interruptor de suscripción y las credenciales quedan para otro PR.
 
-**Cierre diario:** sin endpoint público. Tarea cada 5 minutos y al arrancar; toma pedidos
-activos anteriores al inicio del día con `FOR UPDATE SKIP LOCKED`. Es idempotente.
+**Cierre diario automático (B19, implementado el 2026-11-10):**
 
-**Cierre manual hasta tener la tarea** (`scripts/supabase/close-stale-orders.sql`): aplica la
+- **Cuándo:** al arrancar el backend y luego **cada hora** (`orders.daily-close.interval`,
+  `PT1H` por defecto, variable `DAILY_CLOSE_INTERVAL`). **Cambia lo de antes, «cada 5
+  minutos»:** en la demo el backend se apaga de noche y la ejecución al arrancar cierra lo
+  pendiente, así que una hora basta. A cambio, con el backend ya encendido a medianoche, un
+  pedido viejo puede seguir activo hasta una hora.
+- **Interruptor:** `orders.daily-close.enabled` (`DAILY_CLOSE_ENABLED`, `true` por defecto).
+  Con `false` el trabajo no se registra. Se define como variable del proceso; el `.env` que
+  lee `start-backend.ps1` no la admite.
+- **Regla:** la misma del script manual, con dos `UPDATE … FOR UPDATE SKIP LOCKED` en una
+  transacción READ COMMITTED de 15 s. Pedidos creados antes del inicio del día en
+  America/Bogota: PENDING pasa a CANCELLED (`cancellation_source = 'SYSTEM'`, `cancelled_at`);
+  PREPARING, READY y CALLED pasan a NOT_COLLECTED (`not_collected_at`). Los de hoy y los
+  terminados, incluidos los rechazos del worker, no se tocan. Cada pedido cerrado sube su
+  `version` (008).
+- **Fechas:** el inicio del día, `cancelled_at` y `not_collected_at` salen del `TimeProvider`,
+  no de `now()` de la base, como en las demás transiciones de Spring.
+- **Concurrencia:** `SKIP LOCKED` basta y no hay otra dependencia. Dos instancias no cierran
+  la misma fila: una salta lo que la otra tiene bloqueado, y lo que ya cerró deja de estar
+  activo. Una fila que un worker tiene bloqueada se cierra en la siguiente ejecución, y un
+  worker que llegue después del cierre recibe el 409 de modificación concurrente.
+- **Log:** solo cuántos pedidos cerró de cada tipo, sin ids ni datos personales. Un fallo se
+  registra con su tipo y se reintenta en la siguiente ejecución.
+- **Sin endpoint:** `CloseStaleOrdersUseCase` queda listo para un futuro endpoint de admin,
+  que no se expone todavía.
+
+**Cierre manual de emergencia** (`scripts/supabase/close-stale-orders.sql`): aplica la
 misma regla a los pedidos activos creados antes del inicio del día en America/Bogota.
 PENDING pasa a CANCELLED con `cancellation_source = 'SYSTEM'` y `cancelled_at`; PREPARING,
 READY y CALLED pasan a NOT_COLLECTED con `not_collected_at`. Cada pedido cerrado sube su
@@ -718,8 +749,8 @@ momento se saltan hasta la siguiente ejecución.
 
 - Por defecto es un **ensayo**: solo lista qué cerraría. Cierra de verdad con
   `SET unifood.close_stale_orders = 'apply';` en la misma ejecución.
-- Ejecutarlo al empezar cada día de ensayo, antes de abrir la cafetería: libera a los
-  clientes que dejaron un pedido activo el día anterior (020).
+- Solo hace falta si el trabajo automático está desactivado o fallando: Spring ya lo hace al
+  arrancar. Libera a los clientes que dejaron un pedido activo el día anterior (020).
 - Límite: un NOT_COLLECTED del cierre no se distingue de uno marcado por el worker, porque
   `not_collected_at` no guarda quién lo marcó.
 

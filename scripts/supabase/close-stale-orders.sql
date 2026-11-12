@@ -1,5 +1,6 @@
--- Manual daily close (docs/decisiones.md §6 and §11) until Spring runs it on a schedule.
--- Needs migrations 001-021.
+-- EMERGENCY manual daily close (docs/decisiones.md §6 and §11). Since B19 Spring runs the
+-- same rule at startup and every hour; use this only if that job is disabled
+-- (DAILY_CLOSE_ENABLED=false) or failing. Needs migrations 001-021.
 --
 -- Closes active orders created before today's business day in America/Bogota:
 --   PENDING                   -> CANCELLED, cancellation_source = 'SYSTEM', cancelled_at = now()

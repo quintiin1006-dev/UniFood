@@ -47,6 +47,12 @@ El archivo admite exclusivamente las entradas existentes del backend:
 | `PRODUCT_IMAGES_CONNECT_TIMEOUT_SECONDS` | Opcional; entero de 1 a 10; default 5 |
 | `PRODUCT_IMAGES_OPERATION_TIMEOUT_SECONDS` | Opcional; entero de 1 a 30; default 20 |
 | `PRODUCT_IMAGES_CLEANUP_ENABLED` | Opcional; `true` o `false`; default Spring sigue siendo `true` |
+| `DAILY_CLOSE_ENABLED` | Opcional; `false` apaga el cierre diario automático (B19); default `true`. Solo como variable del proceso: `start-backend.ps1` no la admite en `.env` |
+| `DAILY_CLOSE_INTERVAL` | Opcional; duración ISO-8601 entre ejecuciones del cierre; default `PT1H`. Solo como variable del proceso |
+
+Para apagar el cierre diario en local: `$env:DAILY_CLOSE_ENABLED = 'false'` en la misma
+consola antes de `.\start-backend.ps1`. Spring no lo registra y el log no muestra
+«Cierre diario».
 
 Las variables NO vacias ya definidas en el proceso tienen prioridad sobre `.env`.
 Una variable del proceso con solo espacios se considera invalida, no un motivo
