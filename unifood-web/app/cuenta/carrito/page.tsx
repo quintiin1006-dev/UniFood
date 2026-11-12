@@ -6,5 +6,5 @@ export const metadata = { title: "Carrito | UniFood" };
 export default async function ClientCartPage() {
   const { profile } = await requireAuth();
   if (!isClient(profile)) redirect(destination(profile));
-  return <ClientCart initialTime={new Date().toISOString()} />;
+  return <ClientCart />;
 }

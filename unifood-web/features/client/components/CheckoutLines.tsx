@@ -8,15 +8,14 @@ export default function CheckoutLines({
   lines: CheckoutSummary["lines"];
 }) {
   return (
-    <ul className={styles.lines} aria-label="Platos del pedido">
+    <ul className={styles.lines} aria-label="Productos del pedido">
       {lines.map((line) => (
         <li key={line.id}>
           <div>
             <strong>
               {line.quantity} × {line.name}
             </strong>
-            <p>{currency.format(line.unitPrice)} por plato</p>
-            {line.notes && <p className={styles.lineNotes}>{line.notes}</p>}
+            <p>{currency.format(line.unitPrice)} por unidad</p>
           </div>
           <span>{currency.format(line.quantity * line.unitPrice)}</span>
         </li>

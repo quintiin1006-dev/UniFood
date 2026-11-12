@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { House, UserRound, ShoppingCart, ReceiptText } from "lucide-react";
 import { useClientCart } from "./ClientCartProvider";
-import { findDemoSite } from "../mocks/catalog";
+import { cafeteriaHref } from "../domain/context";
 import styles from "./ClientShell.module.css";
 
 export default function ClientBottomNav() {
@@ -14,13 +14,14 @@ export default function ClientBottomNav() {
     pathname === "/cuenta/carrito" || pathname.startsWith("/cuenta/carrito/");
   const { count, cart } = useClientCart();
   const query = useSearchParams();
-  const site = findDemoSite(query.get("sede") ?? cart.siteId ?? undefined);
+  // The server validates this id against the context; an unknown one returns to the selection.
+  const cafeteriaId = query.get("cafeteria") ?? cart.cafeteriaId;
 
   return (
     <nav className={styles.nav} aria-label="Navegación del estudiante">
       <div className={styles.navInner}>
         <Link
-          href={site ? `/cuenta?sede=${site.id}` : "/cuenta"}
+          href={cafeteriaId ? cafeteriaHref(cafeteriaId) : "/cuenta"}
           className={styles.navItem}
           aria-current={!profileActive && !cartActive ? "page" : undefined}
         >
@@ -40,7 +41,7 @@ export default function ClientBottomNav() {
           href="/cuenta/carrito"
           className={styles.navItem}
           aria-current={cartActive ? "page" : undefined}
-          aria-label={`Carrito${count ? `, ${count} ${count === 1 ? "plato" : "platos"}` : ""}`}
+          aria-label={`Carrito${count ? `, ${count} ${count === 1 ? "unidad" : "unidades"}` : ""}`}
         >
           <span className={styles.cartIcon}>
             <ShoppingCart size={22} aria-hidden="true" />
