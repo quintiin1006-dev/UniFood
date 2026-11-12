@@ -52,6 +52,13 @@ public class GlobalExceptionHandler {
           case ORDER_ALREADY_PREPARING -> "La orden ya está en preparación y no puede cancelarse.";
           case ORDER_CONCURRENT_MODIFICATION ->
               "El pedido cambió mientras lo procesabas. Actualiza y vuelve a intentarlo.";
+          case INVALID_ORDER_STATE ->
+              "El pedido ya cambió de estado. Actualiza el tablero y vuelve a intentarlo.";
+          case REMINDER_TOO_EARLY ->
+              "Debes esperar al menos 5 minutos antes de enviar otro recordatorio";
+          case REMINDER_LIMIT_REACHED -> "Este pedido ya alcanzó el máximo de 3 recordatorios";
+          case NOT_COLLECTED_REQUIREMENTS_NOT_MET ->
+              "El pedido solo puede marcarse como no recogido después de enviar los 3 recordatorios";
           default -> exception.getMessage();
         },
         request);

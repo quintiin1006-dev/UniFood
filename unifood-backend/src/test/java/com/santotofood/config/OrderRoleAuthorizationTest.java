@@ -57,6 +57,8 @@ class OrderRoleAuthorizationTest {
   @Autowired CallStudentUseCase call;
   @Autowired DeliverOrderUseCase deliver;
   @Autowired RejectOrderUseCase reject;
+  @Autowired RemindStudentUseCase remind;
+  @Autowired MarkOrderNotCollectedUseCase notCollected;
   MockMvc mvc;
   final UUID userId = UUID.randomUUID();
   final UUID cafeteriaId = UUID.randomUUID();
@@ -106,6 +108,16 @@ class OrderRoleAuthorizationTest {
     }
 
     @Bean
+    RemindStudentUseCase remind() {
+      return mock(RemindStudentUseCase.class);
+    }
+
+    @Bean
+    MarkOrderNotCollectedUseCase notCollected() {
+      return mock(MarkOrderNotCollectedUseCase.class);
+    }
+
+    @Bean
     OrderResponseMapper mapper() {
       return mock(OrderResponseMapper.class);
     }
@@ -117,7 +129,7 @@ class OrderRoleAuthorizationTest {
 
   @BeforeEach
   void setup() {
-    reset(queries, list, prepare, ready, call, deliver, reject);
+    reset(queries, list, prepare, ready, call, deliver, reject, remind, notCollected);
     mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     when(queries.findOrderCafeteria(orderId)).thenReturn(Optional.of(cafeteriaId));
   }
@@ -142,7 +154,8 @@ class OrderRoleAuthorizationTest {
                 .with(identity("CLIENT")))
         .andExpect(status().isOk())
         .andExpect(content().json("[]"));
-    for (String action : List.of("prepare", "ready", "call", "deliver", "reject")) {
+    for (String action :
+        List.of("prepare", "ready", "call", "remind", "deliver", "not-collected", "reject")) {
       mvc.perform(patch("/api/orders/" + orderId + "/" + action).with(identity("CLIENT")))
           .andExpect(status().isOk());
     }
@@ -152,7 +165,9 @@ class OrderRoleAuthorizationTest {
     verify(call).callStudent(orderId);
     verify(deliver).deliverOrder(orderId);
     verify(reject).rejectOrder(orderId, userId, null);
-    verify(queries, times(6)).findUserAuthorization(userId);
+    verify(remind).remindStudent(orderId);
+    verify(notCollected).markOrderNotCollected(orderId);
+    verify(queries, times(8)).findUserAuthorization(userId);
   }
 
   @Test
@@ -164,7 +179,7 @@ class OrderRoleAuthorizationTest {
             .getResponse()
             .getStatus();
     assertEquals(404, status);
-    verifyNoInteractions(list, prepare, ready, call, deliver, reject);
+    verifyNoInteractions(list, prepare, ready, call, deliver, reject, remind, notCollected);
   }
 
   @ParameterizedTest
@@ -184,12 +199,13 @@ class OrderRoleAuthorizationTest {
         .andExpect(jsonPath("$.code").value("FORBIDDEN"))
         .andExpect(jsonPath("$.path").value("/api/orders"))
         .andExpect(jsonPath("$.timestamp").exists());
-    for (String action : List.of("prepare", "ready", "call", "deliver", "reject")) {
+    for (String action :
+        List.of("prepare", "ready", "call", "remind", "deliver", "not-collected", "reject")) {
       mvc.perform(patch("/api/orders/" + orderId + "/" + action).with(identity(claimedRole)))
           .andExpect(status().isForbidden())
           .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
-    verifyNoInteractions(list, prepare, ready, call, deliver, reject);
+    verifyNoInteractions(list, prepare, ready, call, deliver, reject, remind, notCollected);
   }
 
   @Test
@@ -198,7 +214,11 @@ class OrderRoleAuthorizationTest {
     mvc.perform(get("/api/orders").param("cafeteriaId", cafeteriaId.toString()))
         .andExpect(status().isUnauthorized());
     mvc.perform(patch("/api/orders/" + orderId + "/prepare")).andExpect(status().isUnauthorized());
-    verifyNoInteractions(queries, list, prepare, ready, call, deliver, reject);
+    mvc.perform(patch("/api/orders/" + orderId + "/remind")).andExpect(status().isUnauthorized());
+    mvc.perform(patch("/api/orders/" + orderId + "/not-collected"))
+        .andExpect(status().isUnauthorized());
+    verifyNoInteractions(
+        queries, list, prepare, ready, call, deliver, reject, remind, notCollected);
   }
 
   @Test
@@ -213,7 +233,7 @@ class OrderRoleAuthorizationTest {
         .andExpect(jsonPath("$.length()").value(1))
         .andExpect(header().string("Cache-Control", "no-store"));
     verify(queries).findUserAuthorization(userId);
-    verifyNoInteractions(list, prepare, ready, call, deliver, reject);
+    verifyNoInteractions(list, prepare, ready, call, deliver, reject, remind, notCollected);
   }
 
   @ParameterizedTest
@@ -230,11 +250,12 @@ class OrderRoleAuthorizationTest {
                 .param("cafeteriaId", cafeteriaId.toString())
                 .with(identity("WORKER")))
         .andExpect(status().isForbidden());
-    for (String action : List.of("prepare", "ready", "call", "deliver", "reject")) {
+    for (String action :
+        List.of("prepare", "ready", "call", "remind", "deliver", "not-collected", "reject")) {
       mvc.perform(patch("/api/orders/" + orderId + "/" + action).with(identity("WORKER")))
           .andExpect(status().isForbidden());
     }
-    verifyNoInteractions(list, prepare, ready, call, deliver, reject);
+    verifyNoInteractions(list, prepare, ready, call, deliver, reject, remind, notCollected);
   }
 
   @Test
@@ -251,7 +272,7 @@ class OrderRoleAuthorizationTest {
     mvc.perform(patch("/api/orders/" + orderId + "/prepare").with(identity("WORKER")))
         .andExpect(status().isForbidden());
     verify(queries, times(3)).findUserAuthorization(userId);
-    verifyNoInteractions(list, prepare, ready, call, deliver, reject);
+    verifyNoInteractions(list, prepare, ready, call, deliver, reject, remind, notCollected);
   }
 
   @ParameterizedTest
@@ -287,11 +308,56 @@ class OrderRoleAuthorizationTest {
                 .param("cafeteriaId", cafeteriaId.toString())
                 .with(identity("WORKER")))
         .andExpect(status().isForbidden());
-    for (String action : List.of("prepare", "ready", "call", "deliver", "reject")) {
+    for (String action :
+        List.of("prepare", "ready", "call", "remind", "deliver", "not-collected", "reject")) {
       mvc.perform(patch("/api/orders/" + orderId + "/" + action).with(identity("WORKER")))
           .andExpect(status().isForbidden());
     }
-    verifyNoInteractions(list, prepare, ready, call, deliver, reject);
+    verifyNoInteractions(list, prepare, ready, call, deliver, reject, remind, notCollected);
+  }
+
+  @Test
+  void reminderAndNotCollectedRulesReachTheWorkerAs409WithStableCodes() throws Exception {
+    when(queries.findUserAuthorization(userId)).thenReturn(worker(List.of(cafeteriaId)));
+    when(remind.remindStudent(orderId))
+        .thenThrow(new com.santotofood.domain.exception.ReminderTooEarlyException())
+        .thenThrow(new com.santotofood.domain.exception.ReminderLimitReachedException())
+        .thenThrow(new com.santotofood.domain.exception.InvalidOrderStateException("PRIVATE"));
+    when(notCollected.markOrderNotCollected(orderId))
+        .thenThrow(new com.santotofood.domain.exception.NotCollectedRequirementsException())
+        .thenThrow(new com.santotofood.domain.exception.InvalidOrderStateException("PRIVATE"));
+    for (String code :
+        List.of("REMINDER_TOO_EARLY", "REMINDER_LIMIT_REACHED", "INVALID_ORDER_STATE")) {
+      mvc.perform(patch("/api/orders/" + orderId + "/remind").with(identity("WORKER")))
+          .andExpect(status().isConflict())
+          .andExpect(jsonPath("$.code").value(code))
+          .andExpect(jsonPath("$.path").value("/api/orders/" + orderId + "/remind"));
+    }
+    for (String code : List.of("NOT_COLLECTED_REQUIREMENTS_NOT_MET", "INVALID_ORDER_STATE")) {
+      mvc.perform(patch("/api/orders/" + orderId + "/not-collected").with(identity("WORKER")))
+          .andExpect(status().isConflict())
+          .andExpect(jsonPath("$.code").value(code))
+          .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.not("PRIVATE")));
+    }
+  }
+
+  @Test
+  void anotherCafeteriasOrderAndAMissingOneGetTheSame403OnBothRoutes() throws Exception {
+    UUID missing = UUID.randomUUID();
+    UUID foreign = UUID.randomUUID();
+    when(queries.findUserAuthorization(userId)).thenReturn(worker(List.of(cafeteriaId)));
+    when(queries.findOrderCafeteria(missing)).thenReturn(Optional.empty());
+    when(queries.findOrderCafeteria(foreign)).thenReturn(Optional.of(UUID.randomUUID()));
+    for (UUID id : List.of(missing, foreign)) {
+      for (String action : List.of("remind", "not-collected")) {
+        mvc.perform(patch("/api/orders/" + id + "/" + action).with(identity("WORKER")))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+            .andExpect(
+                jsonPath("$.message").value("No tienes permisos para realizar esta operación"));
+      }
+    }
+    verifyNoInteractions(remind, notCollected);
   }
 
   @Test

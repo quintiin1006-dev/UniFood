@@ -1,6 +1,10 @@
 import type { Order } from "@/types/order";
 import type { BackendOrder } from "@/features/orders/types/backendOrder";
 import { mapBackendOrder } from "@/features/orders/utils/orderMapper";
+import {
+  calledOrderActionMessage,
+  type CalledOrderAction,
+} from "@/features/orders/calledOrderActions";
 
 function getActionEndpoint(order: Order): string | null {
   switch (order.status) {
@@ -101,6 +105,40 @@ export async function advanceOrder(order: Order): Promise<Order> {
   const updatedBackendOrder: BackendOrder = await response.json();
 
   return mapBackendOrder(updatedBackendOrder);
+}
+
+/** Reminder or manual "no recogido" of a CALLED order, with fixed messages per error code. */
+export async function runCalledOrderAction(
+  order: Order,
+  action: CalledOrderAction,
+): Promise<Order> {
+  let response: Response;
+  try {
+    response = await fetch(`/api/orders/${order.id}/${action}`, {
+      method: "PATCH",
+      cache: "no-store",
+      signal: AbortSignal.timeout(30000),
+    });
+  } catch {
+    throw Object.assign(new Error(calledOrderActionMessage(action, 0, null)), {
+      status: 0,
+    });
+  }
+
+  if (!response.ok) {
+    let code: unknown = null;
+    try {
+      code = ((await response.json()) as { code?: unknown } | null)?.code;
+    } catch {
+      code = null;
+    }
+    throw Object.assign(
+      new Error(calledOrderActionMessage(action, response.status, code)),
+      { status: response.status, code },
+    );
+  }
+
+  return mapBackendOrder((await response.json()) as BackendOrder);
 }
 
 /** B18: PENDING or PREPARING only; the client will see the reason. */

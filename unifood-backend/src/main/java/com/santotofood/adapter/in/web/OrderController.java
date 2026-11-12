@@ -6,9 +6,11 @@ import com.santotofood.adapter.in.web.mapper.OrderResponseMapper;
 import com.santotofood.application.port.in.CallStudentUseCase;
 import com.santotofood.application.port.in.DeliverOrderUseCase;
 import com.santotofood.application.port.in.GetOrdersByCafeteriaUseCase;
+import com.santotofood.application.port.in.MarkOrderNotCollectedUseCase;
 import com.santotofood.application.port.in.MarkOrderReadyUseCase;
 import com.santotofood.application.port.in.PrepareOrderUseCase;
 import com.santotofood.application.port.in.RejectOrderUseCase;
+import com.santotofood.application.port.in.RemindStudentUseCase;
 import com.santotofood.config.OrderAuthorization;
 import com.santotofood.domain.model.Order;
 import java.util.List;
@@ -28,7 +30,9 @@ public class OrderController {
   private final PrepareOrderUseCase prepareOrderUseCase;
   private final MarkOrderReadyUseCase markOrderReadyUseCase;
   private final CallStudentUseCase callStudentUseCase;
+  private final RemindStudentUseCase remindStudentUseCase;
   private final DeliverOrderUseCase deliverOrderUseCase;
+  private final MarkOrderNotCollectedUseCase markOrderNotCollectedUseCase;
   private final GetOrdersByCafeteriaUseCase getOrdersByCafeteriaUseCase;
   private final RejectOrderUseCase rejectOrderUseCase;
   private final OrderResponseMapper orderResponseMapper;
@@ -76,11 +80,31 @@ public class OrderController {
     return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
   }
 
+  /** CALLED only, at most 3 reminders and 5 minutes after the call or the previous reminder. */
+  @PatchMapping("/{orderId}/remind")
+  @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
+  public ResponseEntity<OrderResponse> remindStudent(@PathVariable UUID orderId) {
+
+    Order updatedOrder = remindStudentUseCase.remindStudent(orderId);
+
+    return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
+  }
+
   @PatchMapping("/{orderId}/deliver")
   @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
   public ResponseEntity<OrderResponse> deliverOrder(@PathVariable UUID orderId) {
 
     Order updatedOrder = deliverOrderUseCase.deliverOrder(orderId);
+
+    return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
+  }
+
+  /** CALLED with the 3 reminders sent; NOT_COLLECTED is terminal, so repeating it is a 409. */
+  @PatchMapping("/{orderId}/not-collected")
+  @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
+  public ResponseEntity<OrderResponse> markOrderNotCollected(@PathVariable UUID orderId) {
+
+    Order updatedOrder = markOrderNotCollectedUseCase.markOrderNotCollected(orderId);
 
     return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
   }

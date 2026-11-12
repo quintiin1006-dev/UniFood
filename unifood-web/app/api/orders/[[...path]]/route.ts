@@ -9,7 +9,16 @@ import {
 import { checkRejectionReason } from "@/features/orders/rejectionReason";
 
 // The worker does not cancel; it rejects PENDING or PREPARING with a reason (decisiones §6).
-const actions = new Set(["prepare", "ready", "call", "deliver", "reject"]);
+// "remind" and "not-collected" act on CALLED orders and, like the rest except reject, send no body.
+const actions = new Set([
+  "prepare",
+  "ready",
+  "call",
+  "remind",
+  "deliver",
+  "not-collected",
+  "reject",
+]);
 const MAX_REJECT_BODY_BYTES = 2048;
 
 /** Only `{reason}` crosses the BFF, already trimmed and within 3-200 characters. */

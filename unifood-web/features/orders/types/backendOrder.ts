@@ -33,4 +33,7 @@ export interface BackendOrder {
   deliveredAt?: string | null;
   items: BackendOrderItem[];
   requestedPickupAt?: string | null;
+  calledAt?: string | null;
+  reminderCount?: number;
+  lastRemindedAt?: string | null;
 }

@@ -67,6 +67,28 @@ class GlobalExceptionHandlerTest {
     assertFalse(conflict.getBody().message().contains("PRIVATE"));
   }
 
+  @Test
+  void reminderAndNotCollectedRulesAre409WithStableMessagesWhateverTheDomainSaid() {
+    GlobalExceptionHandler errors = new GlobalExceptionHandler();
+    MockHttpServletRequest req = new MockHttpServletRequest("PATCH", "/api/orders/id/remind");
+    var cases =
+        java.util.Map.of(
+            new com.santotofood.domain.exception.InvalidOrderStateException("PRIVATE_DETAIL"),
+            "El pedido ya cambió de estado. Actualiza el tablero y vuelve a intentarlo.",
+            new ReminderTooEarlyException(),
+            "Debes esperar al menos 5 minutos antes de enviar otro recordatorio",
+            new com.santotofood.domain.exception.ReminderLimitReachedException(),
+            "Este pedido ya alcanzó el máximo de 3 recordatorios",
+            new com.santotofood.domain.exception.NotCollectedRequirementsException(),
+            "El pedido solo puede marcarse como no recogido después de enviar los 3 recordatorios");
+    for (var entry : cases.entrySet()) {
+      var response = errors.handleDomainException(entry.getKey(), req);
+      assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+      assertEquals(entry.getKey().getCode().name(), response.getBody().code());
+      assertEquals(entry.getValue(), response.getBody().message());
+    }
+  }
+
   private GlobalExceptionHandler handler;
   private MockHttpServletRequest request;
 
