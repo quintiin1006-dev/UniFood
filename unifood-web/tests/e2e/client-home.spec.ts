@@ -156,8 +156,10 @@ for (const width of [320, 375, 390, 412, 430, 1280]) {
     await page.screenshot({ path: testInfo.outputPath(`menu-${width}.png`) });
 
     await page.getByRole("link", { name: /^Pechuga a la plancha/ }).click();
+    // The first visit compiles the route in next dev.
     await expect(page).toHaveURL(
       `/cuenta/producto/${PRODUCT.chicken}?cafeteria=${CAFETERIA_CENTRAL}`,
+      { timeout: 30_000 },
     );
     await expect(
       page.getByRole("heading", { name: "Pechuga a la plancha" }),
@@ -198,9 +200,10 @@ for (const width of [320, 375, 390, 412, 430, 1280]) {
     ).toBeVisible();
     await expect(page.getByText("1234567890", { exact: true })).toBeVisible();
     await assertNoOverflow(page);
-    // Inicio returns to the chosen cafeteria.
-    await nav(page).getByRole("link", { name: "Inicio", exact: true }).click();
-    await expect(page).toHaveURL(`/cuenta?cafeteria=${CAFETERIA_CENTRAL}`);
+    // Inicio returns to the chosen cafeteria. (In next dev, its indicator covers this link.)
+    await expect(
+      nav(page).getByRole("link", { name: "Inicio", exact: true }),
+    ).toHaveAttribute("href", `/cuenta?cafeteria=${CAFETERIA_CENTRAL}`);
     expect(errors).toEqual([]);
   });
 }
