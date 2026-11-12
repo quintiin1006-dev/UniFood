@@ -84,6 +84,54 @@ const uiMocks = {
   "@/features/client/components/ClientProduct": {
     default: () => createElement("div", {}, "Student product"),
   },
+  "@/features/client/components/MenuUnavailable": {
+    default: () => createElement("div", {}, "Student menu unavailable"),
+  },
+  "@/features/client/components/CafeteriaUnavailable": {
+    default: () => createElement("div", {}, "Student cafeteria unavailable"),
+  },
+  // Context and menu (B13, B14): one site, one cafeteria and one product.
+  "@/features/client/server/context": {
+    loadClientContext: async () => ({
+      status: "ok",
+      context: {
+        fullName: "Student",
+        institution: { id: "i1", name: "Universidad" },
+        sites: [
+          {
+            id: "s1",
+            name: "Sede",
+            cafeterias: [{ id: "c1", name: "Cafetería", open: true }],
+          },
+        ],
+        activeOrderId: null,
+      },
+    }),
+  },
+  "@/features/client/server/menu": {
+    loadCafeteriaMenu: async () => ({
+      status: "ok",
+      menu: {
+        cafeteria: { id: "c1", name: "Cafetería", open: true },
+        businessDate: "2026-11-20",
+        categories: [
+          {
+            id: "CORRIENTE",
+            products: [
+              {
+                id: "p1",
+                name: "Pechuga",
+                description: null,
+                price: 15000,
+                available: true,
+                category: "CORRIENTE",
+              },
+            ],
+          },
+        ],
+      },
+    }),
+  },
 };
 
 function load(
@@ -226,9 +274,9 @@ test("worker page only renders for active operational workers", async () => {
 test("every student route enforces an active CLIENT role", async () => {
   const props = {
     children: "Student content",
-    params: Promise.resolve({ mealId: "chicken" }),
+    params: Promise.resolve({ productId: "p1" }),
     searchParams: Promise.resolve({
-      sede: "principal",
+      cafeteria: "c1",
       categoria: "corriente",
     }),
   };
@@ -237,7 +285,7 @@ test("every student route enforces an active CLIENT role", async () => {
     "app/cuenta/page.tsx",
     "app/cuenta/perfil/page.tsx",
     "app/cuenta/menu/page.tsx",
-    "app/cuenta/producto/[mealId]/page.tsx",
+    "app/cuenta/producto/[productId]/page.tsx",
     "app/cuenta/carrito/page.tsx",
     "app/cuenta/carrito/resumen/page.tsx",
     "app/cuenta/perfil/contrasena/page.tsx",

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { CAFETERIA_CENTRAL, PRODUCT } from "../fixtures/client-menu";
 
 test.skip(
   !!process.env.PLAYWRIGHT_BASE_URL,
@@ -6,7 +7,7 @@ test.skip(
 );
 const lunch = new Date("2026-10-07T12:00:00-05:00");
 const pickup = "2026-10-07T17:30:00.000Z";
-const storageKey = "unifood.client.cart.v1";
+const storageKey = "unifood.client.cart.v2";
 async function login(page: Page, email = "client@example.invalid") {
   const origin = new URL(test.info().project.use.baseURL as string).origin;
   const response = await page.request.post("/api/auth/login", {
@@ -16,7 +17,9 @@ async function login(page: Page, email = "client@example.invalid") {
   expect(response.status()).toBe(200);
 }
 async function addChicken(page: Page) {
-  await page.goto("/cuenta/producto/chicken?sede=principal");
+  await page.goto(
+    `/cuenta/producto/${PRODUCT.chicken}?cafeteria=${CAFETERIA_CENTRAL}`,
+  );
   await page
     .getByRole("button", { name: "Agregar al carrito", exact: true })
     .click();
@@ -64,34 +67,15 @@ for (const width of [320, 375, 390, 412, 430, 1280]) {
     await expect(
       page.getByRole("status", { name: "Cantidad de Pechuga a la plancha" }),
     ).toHaveText("2");
-    await page
-      .getByRole("button", {
-        name: "Editar observaciones de Pechuga a la plancha",
-      })
-      .click();
-    const dialog = page.getByRole("dialog", { name: "Editar observaciones" });
-    await expect(
-      dialog.getByRole("textbox", { name: /Observaciones/ }),
-    ).toBeFocused();
-    await dialog
-      .getByRole("textbox", { name: /Observaciones/ })
-      .fill("Sin cubiertos, por favor");
-    await page.setViewportSize({ width, height: 460 });
-    await expect(dialog).toBeVisible();
-    await dialog.getByRole("button", { name: "Guardar observaciones" }).click();
-    await expect(dialog).toHaveCount(0);
-    await page.setViewportSize({ width, height: 844 });
-    await expect(
-      page.getByText("Sin cubiertos, por favor", { exact: true }),
-    ).toBeVisible();
     await noOverflow(page);
     await page.screenshot({
       path: testInfo.outputPath(`editable-cart-${width}.png`),
     });
     await page.getByRole("link", { name: "Continuar con el pedido" }).click();
+    // The summary now reads the menu through the BFF; the first visit compiles both in next dev.
     await expect(
       page.getByRole("heading", { name: "Resumen del pedido" }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 30_000 });
     await expect(
       page
         .getByRole("navigation", { name: "Navegación del estudiante" })
@@ -183,10 +167,10 @@ test("after-hours preview supports checkout with a twenty-minute margin and resp
 }) => {
   await page.clock.setFixedTime(new Date("2026-10-07T22:00:00-05:00"));
   await login(page);
-  await page.goto("/cuenta/producto/chicken?sede=principal");
+  await addChicken(page);
+  // The hours preview only exists on the cart and the test checkout now.
   const preview = page.getByRole("checkbox", { name: /^Probar sin horario/ });
   await preview.check();
-  await addChicken(page);
   await page.getByRole("link", { name: "Continuar con el pedido" }).click();
   await page.getByRole("combobox").selectOption("2026-10-08T16:30:00.000Z");
   await page.getByRole("checkbox", { name: /He revisado mi pedido/ }).check();
@@ -200,9 +184,7 @@ test("after-hours preview supports checkout with a twenty-minute margin and resp
   await expect(
     page.getByRole("button", { name: "Confirmar pedido" }),
   ).toBeDisabled();
-  await expect(page.getByRole("main").getByRole("alert")).toContainText(
-    "Disponible de",
-  );
+  await expect(page.getByText(/Ya no quedan horarios/)).toBeVisible();
 });
 
 test("checkout revalidates persisted changes before confirming and cannot confirm an empty cart", async ({
@@ -226,7 +208,7 @@ test("checkout revalidates persisted changes before confirming and cannot confir
     page.getByRole("checkbox", { name: /He revisado mi pedido/ }),
   ).not.toBeChecked();
   await expect(
-    page.getByRole("list", { name: "Platos del pedido" }),
+    page.getByRole("list", { name: "Productos del pedido" }),
   ).toContainText("3 × Pechuga");
   await page.getByRole("combobox").selectOption(pickup);
   await page.getByRole("checkbox", { name: /He revisado mi pedido/ }).check();
@@ -237,7 +219,7 @@ test("checkout revalidates persisted changes before confirming and cannot confir
   ).toBeVisible();
 });
 
-test("cart editing respects limits, notes can be cancelled and swiping reveals an explicit delete action", async ({
+test("cart editing respects the 10-unit limit and swiping reveals an explicit delete action", async ({
   page,
 }) => {
   await page.clock.setFixedTime(lunch);
@@ -246,24 +228,12 @@ test("cart editing respects limits, notes can be cancelled and swiping reveals a
   const increase = page.getByRole("button", {
     name: "Aumentar cantidad de Pechuga a la plancha",
   });
-  await increase.click();
-  await increase.click();
+  for (let count = 1; count < 10; count++) await increase.click();
   await expect(increase).toBeDisabled();
   await page
     .getByRole("button", { name: "Reducir cantidad de Pechuga a la plancha" })
     .click();
   await expect(increase).toBeEnabled();
-  const edit = page.getByRole("button", {
-    name: "Editar observaciones de Pechuga a la plancha",
-  });
-  await edit.click();
-  await page
-    .getByRole("dialog")
-    .getByRole("textbox")
-    .fill("Borrador sin guardar");
-  await page.keyboard.press("Escape");
-  await expect(edit).toBeFocused();
-  await expect(page.getByText("Borrador sin guardar")).toHaveCount(0);
   const item = page.locator("li").filter({
     has: page.getByRole("heading", { name: "Pechuga a la plancha" }),
   });

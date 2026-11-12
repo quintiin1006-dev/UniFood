@@ -1,24 +1,21 @@
 "use client";
 import Link from "next/link";
 import { ArrowRight, ShoppingBag, Trash2 } from "lucide-react";
-import { findDemoSite, getSiteMeals } from "../mocks/catalog";
 import { currency } from "../domain/catalog";
-import {
-  cartMealKind,
-  MIXED_MEALS_MESSAGE,
-  validateCart,
-} from "../domain/cart";
-import { useColombiaClock } from "../hooks/useColombiaClock";
+import { cafeteriaHref } from "../domain/context";
+import { cartItems, MAX_CART_UNITS, validateCart } from "../domain/cart";
+import { useCafeteriaMenu } from "../hooks/useCafeteriaMenu";
 import { useClientCart } from "./ClientCartProvider";
 import CartLineItem from "./CartLineItem";
 import styles from "./ClientShopping.module.css";
 
-export default function ClientCart({ initialTime }: { initialTime: string }) {
-  const { cart, ready, count, clear, ignoreServiceHours } = useClientCart();
-  const now = useColombiaClock(initialTime);
-  const site = findDemoSite(cart.siteId ?? undefined);
+export default function ClientCart() {
+  const { cart, ready, count, clear } = useClientCart();
+  const { state, retry } = useCafeteriaMenu(
+    ready && cart.lines.length ? cart.cafeteriaId : null,
+  );
   if (!ready) return <p role="status">Cargando tu carrito…</p>;
-  if (!site || !cart.lines.length)
+  if (!cart.cafeteriaId || !cart.lines.length)
     return (
       <section className={styles.empty}>
         <ShoppingBag size={48} strokeWidth={1.4} aria-hidden="true" />
@@ -29,51 +26,77 @@ export default function ClientCart({ initialTime }: { initialTime: string }) {
         </Link>
       </section>
     );
-  const meals = getSiteMeals(site);
-  const issue = validateCart(cart, now, ignoreServiceHours);
-  const total = cart.lines.reduce(
-    (sum, line) =>
-      sum +
-      (meals.find((meal) => meal.id === line.mealId)?.price ?? 0) *
-        line.quantity,
+  if (state.status === "idle" || state.status === "loading")
+    return <p role="status">Cargando tu carrito…</p>;
+  if (state.status !== "ok")
+    return (
+      <section className={styles.empty} role="alert">
+        <h1>
+          {state.status === "unavailable"
+            ? "Tu cafetería ya no está disponible"
+            : "No pudimos cargar tu carrito"}
+        </h1>
+        <p>
+          {state.status === "unavailable"
+            ? "Vacía el carrito y elige otra cafetería para continuar."
+            : "Intenta de nuevo en un momento. Tu carrito se conserva."}
+        </p>
+        {state.status === "unavailable" ? (
+          <button
+            type="button"
+            className={styles.primaryButton}
+            onClick={clear}
+          >
+            Vaciar carrito
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={styles.primaryButton}
+            onClick={retry}
+          >
+            Volver a intentar
+          </button>
+        )}
+      </section>
+    );
+  const { menu } = state;
+  const items = cartItems(cart, menu);
+  const issue = validateCart(cart, menu);
+  const total = items.reduce(
+    (sum, { line, product }) => sum + (product?.price ?? 0) * line.quantity,
     0,
   );
   return (
     <section className={styles.shopping} aria-labelledby="cart-title">
       <div>
         <h1 id="cart-title">Tu carrito</h1>
+        <p className={styles.description}>{menu.cafeteria.name}</p>
         <p className={styles.description}>
-          {site.cafeteria} · {site.name}
+          {count} de {MAX_CART_UNITS} unidades
         </p>
-        <p className={styles.description}>{count} de 3 platos completos</p>
       </div>
       <ul className={styles.cartList}>
-        {cart.lines.map((line) => {
-          const meal = meals.find((item) => item.id === line.mealId)!;
-          return (
-            <CartLineItem
-              key={line.id}
-              line={line}
-              meal={meal}
-              siteId={site.id}
-              now={now}
-            />
-          );
-        })}
+        {items.map(({ line, product }) => (
+          <CartLineItem
+            key={line.productId}
+            line={line}
+            product={product}
+            menu={menu}
+          />
+        ))}
       </ul>
       <div className={styles.cartTotal}>
         <span>Subtotal</span>
         <strong>{currency.format(total)}</strong>
       </div>
       <p className={styles.description}>
-        Pago en efectivo en caja al recoger. Revisa tus platos y elige la hora
-        de recogida en el siguiente paso.
+        Pago en efectivo en caja al recoger. El total final lo calcula la
+        cafetería al recibir tu pedido.
       </p>
       {issue && (
         <p className={styles.notice} aria-live="polite">
-          {!cartMealKind(cart)
-            ? MIXED_MEALS_MESSAGE
-            : "Revisa la disponibilidad de tus platos antes de continuar."}
+          {issue}
         </p>
       )}
       {issue ? (
@@ -85,7 +108,10 @@ export default function ClientCart({ initialTime }: { initialTime: string }) {
           Continuar con el pedido <ArrowRight size={19} aria-hidden="true" />
         </Link>
       )}
-      <Link className={styles.secondaryButton} href={`/cuenta?sede=${site.id}`}>
+      <Link
+        className={styles.secondaryButton}
+        href={cafeteriaHref(menu.cafeteria.id)}
+      >
         Seguir eligiendo
       </Link>
       <button type="button" className={styles.secondaryButton} onClick={clear}>

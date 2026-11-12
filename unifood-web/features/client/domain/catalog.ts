@@ -1,7 +1,10 @@
-import type { CatalogMeal, MealKind } from "../types";
+/**
+ * Display helpers. The service hours below only feed the test checkout's pickup slots,
+ * which PR 2 replaces; Inicio, Menú and Producto never show hours: the worker opens and
+ * closes the cafeteria and the backend answers CAFETERIA_CLOSED.
+ */
+export type MealKind = "breakfast" | "lunch";
 
-export const NOTES_LIMIT = 200;
-export const MAX_CART_MEALS = 3;
 export const COLOMBIA_TIME_ZONE = "America/Bogota";
 export const currency = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -34,54 +37,4 @@ export function serviceHours(kind: MealKind) {
 }
 export function serviceWindow(kind: MealKind): readonly [number, number] {
   return kind === "breakfast" ? [360, 510] : [690, 870];
-}
-export function serviceAvailability(
-  kind: MealKind,
-  siteId: string,
-  date: Date,
-  ignoreServiceHours = false,
-) {
-  if (kind === "breakfast" && siteId !== "principal")
-    return {
-      open: false,
-      reason: "Disponible únicamente en la Sede Principal",
-    };
-  if (process.env.NODE_ENV === "development" && ignoreServiceHours)
-    return { open: true, reason: "Horario de prueba activo" };
-  const { minutes } = colombiaTime(date);
-  const [start, end] = serviceWindow(kind);
-  return {
-    open: minutes >= start && minutes < end,
-    reason: `Disponible de ${serviceHours(kind)} · Hora de Colombia`,
-  };
-}
-export function mealAvailability(
-  meal: CatalogMeal,
-  siteId: string,
-  date: Date,
-  ignoreServiceHours = false,
-) {
-  if (!meal.availableDays.includes(colombiaTime(date).day))
-    return { open: false, reason: "Este plato no está disponible hoy" };
-  if (meal.stock <= 0) return { open: false, reason: "Agotado por hoy" };
-  return serviceAvailability(meal.kind, siteId, date, ignoreServiceHours);
-}
-
-/** Browse today's stocked offerings; ordering hours are checked separately on every add. */
-export function featuredMeals(meals: CatalogMeal[], date: Date): CatalogMeal[] {
-  const available = meals.filter(
-    (meal) =>
-      meal.stock > 0 && meal.availableDays.includes(colombiaTime(date).day),
-  );
-  const lunches = available.filter((meal) => meal.kind === "lunch");
-  const breakfasts = available.filter((meal) => meal.kind === "breakfast");
-  const initial = [...lunches.slice(0, 3), ...breakfasts.slice(0, 2)];
-  const remainder = available.filter((meal) => !initial.includes(meal));
-  const selection = [...initial, ...remainder].slice(0, 5);
-  if (colombiaTime(date).minutes < 510)
-    return [
-      ...selection.filter((meal) => meal.kind === "breakfast"),
-      ...selection.filter((meal) => meal.kind === "lunch"),
-    ];
-  return selection;
 }

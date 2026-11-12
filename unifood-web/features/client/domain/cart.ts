@@ -1,202 +1,162 @@
-import { findDemoSite, getSiteMeals } from "../mocks/catalog";
-import type { ClientCart, MealKind } from "../types";
-import { MAX_CART_MEALS, NOTES_LIMIT, mealAvailability } from "./catalog";
+import type { CafeteriaMenu, ClientCart, MenuProduct } from "../types";
+import { findProduct } from "./menu";
 
-export const emptyCart = (): ClientCart => ({ siteId: null, lines: [] });
+/** §6 limits. The backend enforces them again; these only avoid a rejected order. */
+export const MAX_PER_PRODUCT = 10;
+export const MAX_CART_UNITS = 15;
+
+export const emptyCart = (): ClientCart => ({ cafeteriaId: null, lines: [] });
 export const cartCount = (cart: ClientCart) =>
   cart.lines.reduce((total, line) => total + line.quantity, 0);
+export const quantityInCart = (cart: ClientCart, productId: string) =>
+  cart.lines.find((line) => line.productId === productId)?.quantity ?? 0;
+
 export type CartResult = { cart: ClientCart; error?: string };
-export const MIXED_MEALS_MESSAGE =
-  "Los desayunos y los almuerzos deben pedirse por separado. Retira un tipo de comida del carrito para continuar.";
 
-/** A null kind identifies an empty or mixed cart, including carts saved before this rule. */
-export function cartMealKind(cart: ClientCart): MealKind | null {
-  const site = findDemoSite(cart.siteId ?? undefined);
-  if (!site || !cart.lines.length) return null;
-  const meals = getSiteMeals(site);
-  const kinds = new Set(
-    cart.lines.map(
-      (line) => meals.find((meal) => meal.id === line.mealId)?.kind,
-    ),
-  );
-  return kinds.size === 1 ? ([...kinds][0] ?? null) : null;
-}
+export const OTHER_CAFETERIA_MESSAGE =
+  "Tu carrito tiene productos de otra cafetería. Vacíalo antes de cambiar.";
+export const CLOSED_MESSAGE =
+  "La cafetería está cerrada por ahora. Podrás pedir cuando abra.";
+export const UNAVAILABLE_MESSAGE =
+  "Este producto no está disponible por ahora.";
+export const PER_PRODUCT_MESSAGE = `Puedes pedir hasta ${MAX_PER_PRODUCT} unidades de cada producto.`;
+export const TOTAL_MESSAGE = `Tu pedido admite hasta ${MAX_CART_UNITS} unidades en total.`;
 
-/** Reducing a stale line is allowed; increasing it checks current availability again. */
-export function updateMeal(
-  cart: ClientCart,
-  lineId: string,
-  changes: Partial<Pick<ClientCart["lines"][number], "quantity" | "notes">>,
-  now: Date,
-  ignoreServiceHours = false,
-): CartResult {
-  const fail = (error: string) => ({ cart, error });
-  const line = cart.lines.find((item) => item.id === lineId);
-  if (!line)
-    return fail(
-      "Este plato ya no está en el carrito. Revisa el contenido actual.",
-    );
-  const quantity = changes.quantity ?? line.quantity;
-  const notes = changes.notes ?? line.notes;
-  if (
-    !Number.isInteger(quantity) ||
-    quantity < 1 ||
-    cartCount(cart) - line.quantity + quantity > MAX_CART_MEALS
-  )
-    return fail("Puedes agregar hasta 3 platos completos por pedido.");
-  if (notes.length > NOTES_LIMIT)
-    return fail(`Las observaciones admiten hasta ${NOTES_LIMIT} caracteres.`);
-  if (quantity > line.quantity) {
-    const remaining = {
-      ...cart,
-      lines: cart.lines.filter((item) => item.id !== lineId),
-    };
-    const result = addMeal(
-      remaining,
-      cart.siteId ?? "",
-      line.mealId,
-      quantity,
-      notes,
-      now,
-      lineId,
-      ignoreServiceHours,
-    );
-    if (result.error) return fail(result.error);
-  }
-  const lines: ClientCart["lines"] = [];
-  for (const item of cart.lines) {
-    const next =
-      item.id === lineId ? { ...item, quantity, notes: notes.trim() } : item;
-    const matching = lines.find(
-      (entry) => entry.mealId === next.mealId && entry.notes === next.notes,
-    );
-    if (matching) matching.quantity += next.quantity;
-    else lines.push({ ...next });
-  }
-  return { cart: { ...cart, lines } };
-}
-
-export function validateCart(
-  cart: ClientCart,
-  now: Date,
-  ignoreServiceHours = false,
-): string | null {
-  const safe = restoreCart(cart);
-  const site = findDemoSite(safe.siteId ?? undefined);
-  if (!site || !safe.lines.length)
-    return "Agrega al menos un plato válido a tu carrito.";
-  const meals = getSiteMeals(site);
-  if (!cartMealKind(safe)) return MIXED_MEALS_MESSAGE;
-  for (const line of safe.lines) {
-    const meal = meals.find((item) => item.id === line.mealId)!;
-    const availability = mealAvailability(
-      meal,
-      site.id,
-      now,
-      ignoreServiceHours,
-    );
-    if (!availability.open) return `${meal.name}: ${availability.reason}.`;
-    const quantity = safe.lines
-      .filter((item) => item.mealId === meal.id)
-      .reduce((total, item) => total + item.quantity, 0);
-    if (quantity > meal.stock)
-      return `${meal.name}: quedan ${meal.stock} unidades. Ajusta la cantidad.`;
-  }
+/** Why a product cannot be ordered right now, or null when it can. */
+export function orderBlocker(menu: CafeteriaMenu, product: MenuProduct) {
+  if (!menu.cafeteria.open) return CLOSED_MESSAGE;
+  if (!product.available) return UNAVAILABLE_MESSAGE;
   return null;
 }
 
-export function addMeal(
+/** The highest quantity this product may have in the cart, given the other lines. */
+export function maxQuantity(cart: ClientCart, productId: string) {
+  const others = cartCount(cart) - quantityInCart(cart, productId);
+  return Math.max(0, Math.min(MAX_PER_PRODUCT, MAX_CART_UNITS - others));
+}
+
+/**
+ * Sets a product's quantity (0 removes it). Raising it checks the current menu again;
+ * lowering it is always allowed, so a stale line can still be reduced or removed.
+ */
+export function setQuantity(
   cart: ClientCart,
-  siteId: string,
-  mealId: string,
+  menu: CafeteriaMenu | null,
+  productId: string,
   quantity: number,
-  notes: string,
-  now: Date,
-  lineId: string,
-  ignoreServiceHours = false,
 ): CartResult {
   const fail = (error: string) => ({ cart, error });
-  const site = findDemoSite(siteId);
-  const meal = site && getSiteMeals(site).find((item) => item.id === mealId);
-  if (!meal) return fail("Este plato ya no está disponible.");
-  if (cart.lines.length && cart.siteId !== siteId)
-    return fail("Vacía tu carrito antes de cambiar de cafetería.");
-  if (cart.lines.length && cartMealKind(cart) !== meal.kind)
-    return fail(MIXED_MEALS_MESSAGE);
-  const availability = mealAvailability(meal, siteId, now, ignoreServiceHours);
-  if (!availability.open) return fail(availability.reason);
-  if (
-    !Number.isInteger(quantity) ||
-    quantity < 1 ||
-    quantity + cartCount(cart) > MAX_CART_MEALS
-  )
-    return fail("Puedes agregar hasta 3 platos completos por pedido.");
-  if (notes.length > NOTES_LIMIT)
-    return fail(`Las observaciones admiten hasta ${NOTES_LIMIT} caracteres.`);
-  const existingQuantity = cart.lines
-    .filter((line) => line.mealId === mealId)
-    .reduce((total, line) => total + line.quantity, 0);
-  if (existingQuantity + quantity > meal.stock)
-    return fail("No hay suficientes unidades disponibles.");
-  const trimmed = notes.trim();
-  const matching = cart.lines.find(
-    (line) => line.mealId === mealId && line.notes === trimmed,
-  );
+  if (!Number.isInteger(quantity) || quantity < 0)
+    return fail("Elige una cantidad válida.");
+  const current = quantityInCart(cart, productId);
+  if (quantity > current) {
+    if (!menu) return fail("Espera a que cargue el menú.");
+    if (cart.lines.length && cart.cafeteriaId !== menu.cafeteria.id)
+      return fail(OTHER_CAFETERIA_MESSAGE);
+    const product = findProduct(menu, productId);
+    if (!product) return fail(UNAVAILABLE_MESSAGE);
+    const blocker = orderBlocker(menu, product);
+    if (blocker) return fail(blocker);
+    if (quantity > MAX_PER_PRODUCT) return fail(PER_PRODUCT_MESSAGE);
+    if (quantity > maxQuantity(cart, productId)) return fail(TOTAL_MESSAGE);
+  }
+  const lines = current
+    ? cart.lines
+        .map((line) =>
+          line.productId === productId ? { ...line, quantity } : line,
+        )
+        .filter((line) => line.quantity > 0)
+    : quantity > 0
+      ? [...cart.lines, { productId, quantity }]
+      : cart.lines;
+  if (!lines.length) return { cart: emptyCart() };
   return {
-    cart: {
-      siteId,
-      lines: matching
-        ? cart.lines.map((line) =>
-            line.id === matching.id
-              ? { ...line, quantity: line.quantity + quantity }
-              : line,
-          )
-        : [...cart.lines, { id: lineId, mealId, quantity, notes: trimmed }],
-    },
+    cart: { cafeteriaId: cart.cafeteriaId ?? menu!.cafeteria.id, lines },
   };
 }
 
-/** Treat browser storage as untrusted. Never persist or accept prices or identity fields. */
+export function addProduct(
+  cart: ClientCart,
+  menu: CafeteriaMenu,
+  productId: string,
+  quantity: number,
+): CartResult {
+  if (!Number.isInteger(quantity) || quantity < 1)
+    return { cart, error: "Elige una cantidad válida." };
+  return setQuantity(
+    cart,
+    menu,
+    productId,
+    quantityInCart(cart, productId) + quantity,
+  );
+}
+
+/** Cart lines joined with the current menu; a product that left the menu has none. */
+export function cartItems(cart: ClientCart, menu: CafeteriaMenu) {
+  return cart.lines.map((line) => ({
+    line,
+    product: findProduct(menu, line.productId) ?? null,
+  }));
+}
+
+/** Null when the cart can continue to checkout with this menu. */
+export function validateCart(
+  cart: ClientCart,
+  menu: CafeteriaMenu | null,
+): string | null {
+  const safe = restoreCart(cart);
+  if (!safe.lines.length) return "Agrega al menos un producto a tu carrito.";
+  if (!menu || menu.cafeteria.id !== safe.cafeteriaId)
+    return "No pudimos revisar el menú de tu cafetería.";
+  if (!menu.cafeteria.open) return CLOSED_MESSAGE;
+  for (const { line, product } of cartItems(safe, menu)) {
+    if (!product)
+      return "Un producto de tu carrito ya no está en el menú. Retíralo para continuar.";
+    if (!product.available)
+      return `${product.name} no está disponible por ahora. Retíralo para continuar.`;
+    if (line.quantity > MAX_PER_PRODUCT)
+      return `${product.name}: ${PER_PRODUCT_MESSAGE}`;
+  }
+  if (cartCount(safe) > MAX_CART_UNITS) return TOTAL_MESSAGE;
+  return null;
+}
+
+const ID = /^[A-Za-z0-9-]{1,80}$/;
+
+/**
+ * Browser storage is untrusted: only ids and quantities are kept, never prices, names or
+ * identity. Anything corrupt or over the limits restores an empty cart. Products are checked
+ * against the menu when the cart is shown, because the menu depends on the cafeteria.
+ */
 export function restoreCart(value: unknown): ClientCart {
   if (!value || typeof value !== "object") return emptyCart();
   const record = value as Partial<ClientCart>;
-  const site =
-    typeof record.siteId === "string" ? findDemoSite(record.siteId) : undefined;
   if (
-    !site ||
+    typeof record.cafeteriaId !== "string" ||
+    !ID.test(record.cafeteriaId) ||
     !Array.isArray(record.lines) ||
-    record.lines.length > MAX_CART_MEALS
+    record.lines.length > MAX_CART_UNITS
   )
     return emptyCart();
-  const meals = getSiteMeals(site);
   const ids = new Set<string>();
-  const cart = emptyCart();
-  cart.siteId = site.id;
-  for (const line of record.lines) {
+  const cart: ClientCart = { cafeteriaId: record.cafeteriaId, lines: [] };
+  for (const line of record.lines as unknown[]) {
+    const item = line as Partial<ClientCart["lines"][number]> | null;
     if (
-      !line ||
-      typeof line !== "object" ||
-      typeof line.id !== "string" ||
-      line.id.length > 80 ||
-      ids.has(line.id) ||
-      typeof line.mealId !== "string" ||
-      !Number.isInteger(line.quantity) ||
-      line.quantity < 1 ||
-      line.quantity > MAX_CART_MEALS ||
-      typeof line.notes !== "string" ||
-      line.notes.length > NOTES_LIMIT ||
-      !meals.some((meal) => meal.id === line.mealId)
+      !item ||
+      typeof item !== "object" ||
+      typeof item.productId !== "string" ||
+      !ID.test(item.productId) ||
+      ids.has(item.productId) ||
+      !Number.isInteger(item.quantity) ||
+      item.quantity! < 1 ||
+      item.quantity! > MAX_PER_PRODUCT
     )
       return emptyCart();
-    ids.add(line.id);
-    cart.lines.push({
-      id: line.id,
-      mealId: line.mealId,
-      quantity: line.quantity,
-      notes: line.notes,
-    });
+    ids.add(item.productId);
+    cart.lines.push({ productId: item.productId, quantity: item.quantity! });
   }
-  return cartCount(cart) <= MAX_CART_MEALS && cart.lines.length
+  return cart.lines.length && cartCount(cart) <= MAX_CART_UNITS
     ? cart
     : emptyCart();
 }

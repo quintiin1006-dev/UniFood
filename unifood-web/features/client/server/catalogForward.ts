@@ -22,14 +22,24 @@ export function forwardClientContext() {
 
 /** GET /api/me/menu?cafeteriaId=: only a well-formed cafeteria id reaches Spring. */
 export function forwardClientMenu(request: Request) {
-  const cafeteriaId = new URL(request.url).searchParams.get("cafeteriaId");
+  return forwardClientMenuFor(
+    new URL(request.url).searchParams.get("cafeteriaId"),
+    request.headers.get("if-none-match"),
+  );
+}
+
+/** The same forward for server components, which already know the cafeteria id. */
+export function forwardClientMenuFor(
+  cafeteriaId: string | null,
+  ifNoneMatch: string | null = null,
+) {
   if (!cafeteriaId || !UUID.test(cafeteriaId))
     return Promise.resolve(
       fail(400, "Selecciona una cafetería válida.", "INVALID_REQUEST"),
     );
   return forward(
     `/api/me/menu?cafeteriaId=${encodeURIComponent(cafeteriaId)}`,
-    request.headers.get("if-none-match"),
+    ifNoneMatch,
   );
 }
 

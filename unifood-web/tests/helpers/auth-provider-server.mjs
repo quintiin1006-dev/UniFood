@@ -11,6 +11,11 @@ import { adminCatalogFixture } from "./admin-catalog-fixture.mjs";
 import { dashboardUiFixture } from "./admin-dashboard-ui-fixture.mjs";
 import { productImageFixture } from "./product-image-fixture.mjs";
 import { workerProfileBusinessFixture } from "./worker-profile-fixture.mjs";
+import {
+  clientContext,
+  clientMenuResponse,
+  singleCafeteriaContext,
+} from "../fixtures/client-menu.ts";
 
 const fixtures = Object.entries({
   client: ["CLIENT"],
@@ -1118,6 +1123,28 @@ createServer(async (request, response) => {
           message: "PRIVATE",
         });
       }
+    }
+    // Client context and menu (B13, B14), from tests/fixtures/client-menu.ts.
+    if (
+      (url.pathname === "/api/me/context" || url.pathname === "/api/me/menu") &&
+      request.method === "GET"
+    ) {
+      if (
+        !profile.active ||
+        profile.roles.length !== 1 ||
+        profile.roles[0] !== "CLIENT"
+      )
+        return json(response, 403, { code: "FORBIDDEN", message: "PRIVATE" });
+      if (url.pathname === "/api/me/context")
+        return json(
+          response,
+          200,
+          profile.email.startsWith("estudiante.con.correo")
+            ? singleCafeteriaContext
+            : clientContext,
+        );
+      const menu = clientMenuResponse(url.searchParams.get("cafeteriaId"));
+      return json(response, menu.status, menu.body);
     }
     if (url.pathname === "/api/me/profile" && request.method === "GET") {
       profileAudit.backendProfileReads++;

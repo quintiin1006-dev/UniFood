@@ -3,8 +3,8 @@ import styles from "@/features/client/components/ClientShopping.module.css";
 export default function ProductNotFound() {
   return (
     <section className={styles.empty}>
-      <h1>No encontramos este plato</h1>
-      <p>Explora el menú de tu cafetería para elegir otro.</p>
+      <h1>Este producto no está disponible</h1>
+      <p>Ya no está en el menú de tu cafetería. Elige otro producto.</p>
       <Link className={styles.primaryButton} href="/cuenta">
         Volver al inicio
       </Link>

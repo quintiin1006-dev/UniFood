@@ -10,18 +10,21 @@ import {
 import Link from "next/link";
 import { CheckCircle2, X } from "lucide-react";
 import {
-  addMeal,
+  addProduct,
   cartCount,
   emptyCart,
   restoreCart,
-  updateMeal,
+  setQuantity,
 } from "../domain/cart";
 import { reviewCheckout, type CheckoutResult } from "../domain/checkout";
-import type { ClientCart } from "../types";
+import type { CafeteriaMenu, ClientCart } from "../types";
+import { forgetCachedCafeteria } from "../state";
 import ConfirmDialog from "./ConfirmDialog";
 import styles from "./ClientShopping.module.css";
 
-export const CART_STORAGE_KEY = "unifood.client.cart.v1";
+// v2 keys lines by real productId and cafeteriaId; v1 carts held mock ids and are dropped.
+export const CART_STORAGE_KEY = "unifood.client.cart.v2";
+const LEGACY_CART_STORAGE_KEY = "unifood.client.cart.v1";
 const HOURS_PREVIEW_KEY = "unifood.client.hours-preview.v1";
 type CartContextValue = {
   cart: ClientCart;
@@ -29,24 +32,22 @@ type CartContextValue = {
   count: number;
   ignoreServiceHours: boolean;
   setIgnoreServiceHours: (enabled: boolean) => void;
-  add: (
-    siteId: string,
-    mealId: string,
-    quantity: number,
-    notes: string,
-  ) => boolean;
-  remove: (id: string) => void;
+  add: (menu: CafeteriaMenu, productId: string, quantity: number) => boolean;
+  remove: (productId: string) => void;
+  /** Sets a line's quantity; null on success, otherwise the reason it was refused. */
   update: (
-    id: string,
-    changes: { quantity?: number; notes?: string },
+    menu: CafeteriaMenu | null,
+    productId: string,
+    quantity: number,
   ) => string | null;
   confirmCheckout: (
     expectedCart: ClientCart,
+    menu: CafeteriaMenu | null,
     pickupAt: string,
     accepted: boolean,
   ) => CheckoutResult;
   clear: () => void;
-  chooseSite: (siteId: string, proceed: () => void) => void;
+  chooseCafeteria: (cafeteriaId: string, proceed: () => void) => void;
 };
 const CartContext = createContext<CartContextValue | null>(null);
 export function useClientCart() {
@@ -81,7 +82,7 @@ export default function ClientCartProvider({
     message: string;
     success: boolean;
   } | null>(null);
-  const [pendingSite, setPendingSite] = useState<{
+  const [pendingCafeteria, setPendingCafeteria] = useState<{
     proceed: () => void;
   } | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -110,6 +111,7 @@ export default function ClientCartProvider({
     const read = () => {
       let next = emptyCart();
       try {
+        localStorage.removeItem(LEGACY_CART_STORAGE_KEY);
         const raw = localStorage.getItem(CART_STORAGE_KEY);
         const saved = raw ? JSON.parse(raw) : null;
         if (saved?.ownerId === userId) next = restoreCart(saved.cart);
@@ -150,6 +152,7 @@ export default function ClientCartProvider({
       } catch {
         /* Storage unavailable. */
       }
+      forgetCachedCafeteria();
     };
     const sync = (event: StorageEvent) => {
       if (event.key === CART_STORAGE_KEY || event.key === null) read();
@@ -167,21 +170,9 @@ export default function ClientCartProvider({
     const timer = setTimeout(() => setToast(null), 5500);
     return () => clearTimeout(timer);
   }, [toast]);
-  const add: CartContextValue["add"] = (siteId, mealId, quantity, notes) => {
+  const add: CartContextValue["add"] = (menu, productId, quantity) => {
     if (!ready) return false;
-    const id =
-      globalThis.crypto?.randomUUID?.() ??
-      `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const result = addMeal(
-      current.current,
-      siteId,
-      mealId,
-      quantity,
-      notes,
-      new Date(),
-      id,
-      ignoreServiceHours,
-    );
+    const result = addProduct(current.current, menu, productId, quantity);
     if (result.error) {
       setToast({ message: result.error, success: false });
       return false;
@@ -189,27 +180,21 @@ export default function ClientCartProvider({
     setToast({
       message:
         quantity === 1
-          ? "Plato agregado al carrito"
-          : `${quantity} platos agregados al carrito`,
+          ? "Producto agregado al carrito"
+          : `${quantity} unidades agregadas al carrito`,
       success: true,
     });
     persist(result.cart);
     return true;
   };
-  const remove = (id: string) => {
-    const lines = current.current.lines.filter((line) => line.id !== id);
-    persist(lines.length ? { ...current.current, lines } : emptyCart());
-    setToast({ message: "Plato eliminado del carrito", success: false });
+  const remove = (productId: string) => {
+    const result = setQuantity(current.current, null, productId, 0);
+    persist(result.cart);
+    setToast({ message: "Producto eliminado del carrito", success: false });
   };
-  const update: CartContextValue["update"] = (id, changes) => {
+  const update: CartContextValue["update"] = (menu, productId, quantity) => {
     if (!ready) return "Espera a que termine de cargar el carrito.";
-    const result = updateMeal(
-      current.current,
-      id,
-      changes,
-      new Date(),
-      ignoreServiceHours,
-    );
+    const result = setQuantity(current.current, menu, productId, quantity);
     if (result.error) {
       setToast({ message: result.error, success: false });
       return result.error;
@@ -220,6 +205,7 @@ export default function ClientCartProvider({
   };
   const confirmCheckout: CartContextValue["confirmCheckout"] = (
     expectedCart,
+    menu,
     pickupAt,
     accepted,
   ) => {
@@ -255,15 +241,22 @@ export default function ClientCartProvider({
     }
     return reviewCheckout(
       latest,
+      menu,
       pickupAt,
       accepted,
       new Date(),
       ignoreServiceHours,
     );
   };
-  const chooseSite: CartContextValue["chooseSite"] = (siteId, proceed) => {
-    if (current.current.lines.length && current.current.siteId !== siteId)
-      setPendingSite({ proceed });
+  const chooseCafeteria: CartContextValue["chooseCafeteria"] = (
+    cafeteriaId,
+    proceed,
+  ) => {
+    if (
+      current.current.lines.length &&
+      current.current.cafeteriaId !== cafeteriaId
+    )
+      setPendingCafeteria({ proceed });
     else proceed();
   };
   return (
@@ -279,7 +272,7 @@ export default function ClientCartProvider({
         update,
         confirmCheckout,
         clear: () => setConfirmClear(true),
-        chooseSite,
+        chooseCafeteria,
       }}
     >
       {children}
@@ -299,20 +292,20 @@ export default function ClientCartProvider({
           </div>
         )}
       </div>
-      {pendingSite && (
+      {pendingCafeteria && (
         <ConfirmDialog
           title="¿Cambiar de cafetería?"
           confirmLabel="Vaciar y cambiar"
-          onCancel={() => setPendingSite(null)}
+          onCancel={() => setPendingCafeteria(null)}
           onConfirm={() => {
             persist(emptyCart());
-            pendingSite.proceed();
-            setPendingSite(null);
+            pendingCafeteria.proceed();
+            setPendingCafeteria(null);
           }}
         >
           <p>
-            Tu carrito contiene platos de otra cafetería. Para continuar en esta
-            sede, necesitas vaciarlo.
+            Tu carrito tiene productos de otra cafetería. Para continuar en
+            esta, necesitas vaciarlo.
           </p>
         </ConfirmDialog>
       )}
@@ -326,7 +319,7 @@ export default function ClientCartProvider({
             setConfirmClear(false);
           }}
         >
-          <p>Se eliminarán todos los platos que has agregado.</p>
+          <p>Se eliminarán todos los productos que has agregado.</p>
         </ConfirmDialog>
       )}
     </CartContext.Provider>

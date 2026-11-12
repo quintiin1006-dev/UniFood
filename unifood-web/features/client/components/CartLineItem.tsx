@@ -1,38 +1,36 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { Minus, Plus, Pencil, Trash2 } from "lucide-react";
-import type { CartLine, CatalogMeal } from "../types";
-import { currency, MAX_CART_MEALS, mealAvailability } from "../domain/catalog";
-import { mealHref } from "../mocks/catalog";
+import { Minus, Plus, Trash2 } from "lucide-react";
+import type { CafeteriaMenu, CartLine, MenuProduct } from "../types";
+import { currency } from "../domain/catalog";
+import { maxQuantity, orderBlocker } from "../domain/cart";
+import { productHref } from "../domain/menu";
 import { useClientCart } from "./ClientCartProvider";
-import CartNotesDialog from "./CartNotesDialog";
+import ProductPlaceholder from "./ProductPlaceholder";
 import styles from "./ClientShopping.module.css";
 import cartStyles from "./ClientCart.module.css";
 
 export default function CartLineItem({
   line,
-  meal,
-  siteId,
-  now,
+  product,
+  menu,
 }: {
   line: CartLine;
-  meal: CatalogMeal;
-  siteId: string;
-  now: Date;
+  /** Null when the product left the menu: the line can only be removed. */
+  product: MenuProduct | null;
+  menu: CafeteriaMenu;
 }) {
-  const { cart, count, update, remove, ignoreServiceHours } = useClientCart();
-  const [editing, setEditing] = useState(false);
+  const { cart, update, remove } = useClientCart();
   const [revealed, setRevealed] = useState(false);
   const gesture = useRef<{ x: number; y: number } | null>(null);
-  const availability = mealAvailability(meal, siteId, now, ignoreServiceHours);
-  const totalQuantity = cart.lines
-    .filter((item) => item.mealId === meal.id)
-    .reduce((sum, item) => sum + item.quantity, 0);
+  const name = product?.name ?? "Producto que ya no está en el menú";
+  const blocker = product
+    ? orderBlocker(menu, product)
+    : "Ya no está en el menú. Retíralo para continuar.";
   const canIncrease =
-    availability.open && count < MAX_CART_MEALS && totalQuantity < meal.stock;
+    !blocker && line.quantity < maxQuantity(cart, line.productId);
   return (
     <li
       className={`${styles.cartLine} ${cartStyles.item}`}
@@ -58,24 +56,26 @@ export default function CartLineItem({
         if (dx > 60 && Math.abs(dy) < 30) setRevealed(false);
       }}
     >
-      <Image src={meal.image} alt="" width={82} height={88} />
+      <ProductPlaceholder name={name} size="line" />
       <div>
-        <Link href={mealHref(siteId, meal.id)}>
-          <h2>{meal.name}</h2>
-        </Link>
-        <p>Cantidad: {line.quantity}</p>
-        {line.notes && <p className={styles.lineNotes}>{line.notes}</p>}
-        <strong>{currency.format(meal.price * line.quantity)}</strong>
-        {!availability.open && <small>{availability.reason}</small>}
-        {totalQuantity > meal.stock && (
-          <small>Quedan {meal.stock} unidades. Reduce la cantidad.</small>
+        {product ? (
+          <Link href={productHref(menu.cafeteria.id, product.id)}>
+            <h2>{name}</h2>
+          </Link>
+        ) : (
+          <h2>{name}</h2>
         )}
+        <p>Cantidad: {line.quantity}</p>
+        {product && (
+          <strong>{currency.format(product.price * line.quantity)}</strong>
+        )}
+        {blocker && <small>{blocker}</small>}
       </div>
       <button
         type="button"
         className={styles.remove}
-        aria-label={`Eliminar ${meal.name}`}
-        onClick={() => remove(line.id)}
+        aria-label={`Eliminar ${name}`}
+        onClick={() => remove(line.productId)}
       >
         <Trash2 size={20} aria-hidden="true" />
       </button>
@@ -83,53 +83,36 @@ export default function CartLineItem({
         <div
           className={styles.quantity}
           role="group"
-          aria-label={`Cantidad de ${meal.name}`}
+          aria-label={`Cantidad de ${name}`}
         >
           <button
             type="button"
-            aria-label={`Reducir cantidad de ${meal.name}`}
+            aria-label={`Reducir cantidad de ${name}`}
             disabled={line.quantity <= 1}
-            onClick={() => update(line.id, { quantity: line.quantity - 1 })}
+            onClick={() => update(menu, line.productId, line.quantity - 1)}
           >
             <Minus size={17} aria-hidden="true" />
           </button>
-          <output aria-label={`Cantidad de ${meal.name}`}>
-            {line.quantity}
-          </output>
+          <output aria-label={`Cantidad de ${name}`}>{line.quantity}</output>
           <button
             type="button"
-            aria-label={`Aumentar cantidad de ${meal.name}`}
+            aria-label={`Aumentar cantidad de ${name}`}
             disabled={!canIncrease}
-            onClick={() => update(line.id, { quantity: line.quantity + 1 })}
+            onClick={() => update(menu, line.productId, line.quantity + 1)}
           >
             <Plus size={17} aria-hidden="true" />
           </button>
         </div>
-        <button
-          type="button"
-          className={cartStyles.editNotes}
-          aria-label={`Editar observaciones de ${meal.name}`}
-          onClick={() => setEditing(true)}
-        >
-          <Pencil size={16} aria-hidden="true" /> Observaciones
-        </button>
       </div>
       {revealed && (
         <div className={cartStyles.swipeActions}>
-          <button type="button" onClick={() => remove(line.id)}>
+          <button type="button" onClick={() => remove(line.productId)}>
             Confirmar eliminación
           </button>
           <button type="button" onClick={() => setRevealed(false)}>
             Conservar
           </button>
         </div>
-      )}
-      {editing && (
-        <CartNotesDialog
-          line={line}
-          name={meal.name}
-          onClose={() => setEditing(false)}
-        />
       )}
     </li>
   );

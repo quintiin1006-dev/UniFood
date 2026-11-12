@@ -35,10 +35,7 @@ export default function CheckoutConfirmation({
       <dl className={styles.details}>
         <div>
           <dt>Recoger en</dt>
-          <dd>
-            {summary.cafeteria}
-            <span>{summary.siteName}</span>
-          </dd>
+          <dd>{summary.cafeteria}</dd>
         </div>
         <div>
           <dt>Hora elegida · Colombia</dt>

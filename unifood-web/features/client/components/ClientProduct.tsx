@@ -1,138 +1,107 @@
 "use client";
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Clock3, Minus, Plus, ShoppingCart } from "lucide-react";
-import type { CartLine, CatalogMeal } from "../types";
-import type { DemoSite } from "../mocks/catalog";
+import { ArrowLeft, Minus, Plus, ShoppingCart } from "lucide-react";
+import { currency } from "../domain/catalog";
 import {
-  currency,
-  MAX_CART_MEALS,
-  NOTES_LIMIT,
-  mealAvailability,
-  serviceHours,
-} from "../domain/catalog";
-import { cartMealKind, MIXED_MEALS_MESSAGE } from "../domain/cart";
-import { useColombiaClock } from "../hooks/useColombiaClock";
+  MAX_CART_UNITS,
+  MAX_PER_PRODUCT,
+  maxQuantity,
+  OTHER_CAFETERIA_MESSAGE,
+  orderBlocker,
+  quantityInCart,
+} from "../domain/cart";
+import { categoryName, menuCategories, menuHref } from "../domain/menu";
+import type { CafeteriaMenu, MenuProduct } from "../types";
 import { useClientCart } from "./ClientCartProvider";
 import CafeteriaSelector from "./CafeteriaSelector";
+import ProductPlaceholder from "./ProductPlaceholder";
 import styles from "./ClientShopping.module.css";
 
 type ProductProps = {
-  site: DemoSite;
-  meal: CatalogMeal;
-  initialTime: string;
+  siteName: string;
+  menu: CafeteriaMenu;
+  product: MenuProduct;
 };
 
 export default function ClientProduct(props: ProductProps) {
   const { cart } = useClientCart();
-  const line =
-    cart.siteId === props.site.id
-      ? cart.lines.find((item) => item.mealId === props.meal.id)
-      : undefined;
+  const inCart =
+    cart.cafeteriaId === props.menu.cafeteria.id
+      ? quantityInCart(cart, props.product.id)
+      : 0;
+  // Remount when the stored quantity changes, so the selector starts from it.
   return (
     <ProductDetails
-      key={JSON.stringify([props.site.id, props.meal.id, line])}
+      key={`${props.product.id}-${inCart}`}
       {...props}
-      line={line}
+      inCart={inCart}
     />
   );
 }
 
 function ProductDetails({
-  site,
-  meal,
-  initialTime,
-  line,
-}: ProductProps & { line?: CartLine }) {
-  const { cart, count, ready, add, update, ignoreServiceHours } =
-    useClientCart();
-  const now = useColombiaClock(initialTime);
-  const [quantity, setQuantity] = useState(line?.quantity ?? 1);
-  const [notes, setNotes] = useState(line?.notes ?? "");
-  const availability = mealAvailability(meal, site.id, now, ignoreServiceHours);
-  const existing =
-    cart.siteId === site.id
-      ? cart.lines
-          .filter((line) => line.mealId === meal.id)
-          .reduce((sum, line) => sum + line.quantity, 0)
-      : 0;
-  const maximum = Math.max(
-    0,
-    Math.min(
-      MAX_CART_MEALS - count + (line?.quantity ?? 0),
-      meal.stock - existing + (line?.quantity ?? 0),
-    ),
-  );
+  siteName,
+  menu,
+  product,
+  inCart,
+}: ProductProps & { inCart: number }) {
+  const { cart, ready, add, update } = useClientCart();
+  const [quantity, setQuantity] = useState(inCart || 1);
   const conflict =
-    cart.lines.length > 0
-      ? cart.siteId !== site.id
-        ? "Vacía tu carrito antes de cambiar de cafetería."
-        : cartMealKind(cart) !== meal.kind
-          ? MIXED_MEALS_MESSAGE
-          : ""
+    cart.lines.length > 0 && cart.cafeteriaId !== menu.cafeteria.id
+      ? OTHER_CAFETERIA_MESSAGE
       : "";
+  const blocker = orderBlocker(menu, product);
+  const maximum = conflict ? 0 : maxQuantity(cart, product.id);
   const reason =
     conflict ||
-    (!availability.open
-      ? availability.reason
-      : maximum === 0
-        ? "Tu carrito ya alcanzó el límite de cantidad o las unidades disponibles."
-        : quantity > maximum
-          ? `Puedes seleccionar hasta ${maximum} unidad${maximum === 1 ? "" : "es"}.`
-          : "");
-  const unchanged =
-    !!line && quantity === line.quantity && notes.trim() === line.notes;
+    blocker ||
+    (maximum === 0
+      ? `Tu carrito ya tiene ${MAX_CART_UNITS} unidades, el máximo por pedido.`
+      : quantity > maximum
+        ? `Puedes seleccionar hasta ${maximum} unidad${maximum === 1 ? "" : "es"}.`
+        : "");
+  const unchanged = inCart > 0 && quantity === inCart;
+  const slug = menuCategories.find(({ id }) => id === product.category)!.slug;
   return (
     <section className={styles.shopping} aria-labelledby="product-title">
-      <Link
-        className={styles.back}
-        href={`/cuenta/menu?sede=${site.id}&categoria=${meal.kind === "breakfast" ? "desayunos" : "almuerzos"}`}
-      >
+      <Link className={styles.back} href={menuHref(menu.cafeteria.id, slug)}>
         <ArrowLeft size={22} aria-hidden="true" />
         Volver al menú
       </Link>
-      <CafeteriaSelector site={site} />
-      <div className={styles.productImage}>
-        <Image
-          src={meal.image}
-          alt={meal.name}
-          fill
-          sizes="(max-width: 680px) 100vw, 640px"
-          priority
-        />
-      </div>
+      <CafeteriaSelector siteName={siteName} cafeteria={menu.cafeteria} />
+      <ProductPlaceholder name={product.name} size="hero" />
       <div>
-        <p className={styles.eyebrow}>
-          {meal.kind === "breakfast" ? "Desayuno completo" : "Almuerzo"}
-        </p>
-        <h1 id="product-title">{meal.name}</h1>
-        <p className={styles.description}>{meal.description}</p>
+        <p className={styles.eyebrow}>{categoryName(product.category)}</p>
+        <h1 id="product-title">{product.name}</h1>
+        {product.description && (
+          <p className={styles.description}>{product.description}</p>
+        )}
         <strong className={styles.productPrice}>
-          {currency.format(meal.price)}
+          {currency.format(product.price)}
         </strong>
       </div>
-      <p className={styles.schedule}>
-        <Clock3 size={18} aria-hidden="true" />
-        {serviceHours(meal.kind)} · Colombia
-      </p>
       <form
         className={styles.productForm}
         onSubmit={(event) => {
           event.preventDefault();
           if (!ready || reason || unchanged) return;
-          if (line) update(line.id, { quantity, notes });
-          else add(site.id, meal.id, quantity, notes);
+          if (inCart) update(menu, product.id, quantity);
+          else add(menu, product.id, quantity);
         }}
       >
         <div className={styles.quantityRow}>
           <div>
             <label id="quantity-label">Cantidad</label>
-            <p>Máximo 3 platos completos por pedido.</p>
-            {line && (
+            <p>
+              Máximo {MAX_PER_PRODUCT} por producto y {MAX_CART_UNITS} por
+              pedido.
+            </p>
+            {inCart > 0 && (
               <p>
-                Ya tienes {line.quantity} en el carrito. Ajusta la cantidad y
-                guarda los cambios.
+                Ya tienes {inCart} en el carrito. Ajusta la cantidad y guarda
+                los cambios.
               </p>
             )}
           </div>
@@ -153,12 +122,7 @@ function ProductDetails({
             <button
               type="button"
               aria-label="Aumentar cantidad"
-              disabled={
-                !ready ||
-                quantity >= maximum ||
-                !availability.open ||
-                !!conflict
-              }
+              disabled={!ready || quantity >= maximum || !!blocker}
               onClick={() =>
                 setQuantity((value) => Math.min(maximum, value + 1))
               }
@@ -167,29 +131,11 @@ function ProductDetails({
             </button>
           </div>
         </div>
-        <div className={styles.notes}>
-          <label htmlFor="meal-notes">
-            Observaciones <span>(opcional)</span>
-          </label>
-          <textarea
-            id="meal-notes"
-            rows={3}
-            maxLength={NOTES_LIMIT}
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder="Cuéntanos algo que debamos tener en cuenta"
-            aria-describedby="notes-count"
-          />
-          <small id="notes-count">
-            {notes.length}/{NOTES_LIMIT} caracteres. No incluye cambios de
-            ingredientes.
-          </small>
-        </div>
         {reason && (
           <p
             className={styles.notice}
             role="status"
-            aria-label="Disponibilidad del plato"
+            aria-label="Disponibilidad del producto"
           >
             {reason}
           </p>
@@ -201,10 +147,8 @@ function ProductDetails({
         )}
         <div className={styles.purchase}>
           <div>
-            <span>
-              {line ? "Total actualizado del plato" : "Total del plato"}
-            </span>
-            <strong>{currency.format(meal.price * quantity)}</strong>
+            <span>{inCart ? "Total actualizado" : "Total del producto"}</span>
+            <strong>{currency.format(product.price * quantity)}</strong>
           </div>
           <button
             type="submit"
@@ -212,7 +156,7 @@ function ProductDetails({
             disabled={!ready || !!reason || unchanged}
           >
             <ShoppingCart size={20} aria-hidden="true" />
-            {line ? "Actualizar carrito" : "Agregar al carrito"}
+            {inCart ? "Actualizar carrito" : "Agregar al carrito"}
           </button>
         </div>
       </form>
