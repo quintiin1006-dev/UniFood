@@ -1,12 +1,10 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, type Request } from "@playwright/test";
 import { CAFETERIA_CENTRAL, PRODUCT } from "../fixtures/client-menu";
 
 test.skip(
   !!process.env.PLAYWRIGHT_BASE_URL,
   "Requires the controlled local auth provider",
 );
-const lunch = new Date("2026-10-07T12:00:00-05:00");
-const pickup = "2026-10-07T17:30:00.000Z";
 const storageKey = "unifood.client.cart.v2";
 async function login(page: Page, email = "client@example.invalid") {
   const origin = new URL(test.info().project.use.baseURL as string).origin;
@@ -29,7 +27,15 @@ async function addChicken(page: Page) {
     .click();
   await expect(
     page.getByRole("heading", { name: "Tu carrito", exact: true }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 30_000 });
+}
+async function openSummary(page: Page) {
+  await addChicken(page);
+  await page.getByRole("link", { name: "Continuar con el pedido" }).click();
+  // The summary reads the menu through the BFF; the first visit compiles it in next dev.
+  await expect(
+    page.getByRole("heading", { name: "Resumen del pedido" }),
+  ).toBeVisible({ timeout: 30_000 });
 }
 async function noOverflow(page: Page) {
   expect(
@@ -42,20 +48,45 @@ async function noOverflow(page: Page) {
     }),
   ).toBe(true);
 }
+/** Every POST /api/me/orders the browser sends, with the headers and body that matter. */
+function recordOrders(page: Page) {
+  const sent: { key: string | undefined; body: Record<string, unknown> }[] = [];
+  page.on("request", (request: Request) => {
+    if (
+      new URL(request.url()).pathname === "/api/me/orders" &&
+      request.method() === "POST"
+    )
+      sent.push({
+        key: request.headers()["idempotency-key"],
+        body: request.postDataJSON(),
+      });
+  });
+  return sent;
+}
+const confirmButton = (page: Page) =>
+  page.getByRole("button", { name: /^(Confirmar pedido|Reintentar envío)$/ });
+const accept = (page: Page) =>
+  page.getByRole("checkbox", { name: /He revisado mi pedido/ }).check();
+const alertBox = (page: Page) => page.getByRole("main").getByRole("alert");
+/** HH:mm in Bogotá, minutes ahead of the real clock. */
+function bogotaTime(minutesAhead: number) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Bogota",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date(Date.now() + minutesAhead * 60_000));
+  return parts;
+}
 
 for (const width of [320, 375, 390, 412, 430, 1280]) {
-  test(`editable cart and checkout fit ${width}px and preserve the cart after preview confirmation`, async ({
+  test(`cart and checkout fit ${width}px; confirming sends the order and empties the cart`, async ({
     page,
   }, testInfo) => {
     await page.setViewportSize({ width, height: 844 });
-    await page.clock.setFixedTime(lunch);
     const errors: string[] = [];
-    const operationalRequests: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
-    page.on("request", (request) => {
-      if (/\/api\/(orders|me\/orders)/.test(request.url()))
-        operationalRequests.push(request.url());
-    });
+    const sent = recordOrders(page);
     await login(page);
     await addChicken(page);
     await page
@@ -68,11 +99,7 @@ for (const width of [320, 375, 390, 412, 430, 1280]) {
       page.getByRole("status", { name: "Cantidad de Pechuga a la plancha" }),
     ).toHaveText("2");
     await noOverflow(page);
-    await page.screenshot({
-      path: testInfo.outputPath(`editable-cart-${width}.png`),
-    });
     await page.getByRole("link", { name: "Continuar con el pedido" }).click();
-    // The summary now reads the menu through the BFF; the first visit compiles both in next dev.
     await expect(
       page.getByRole("heading", { name: "Resumen del pedido" }),
     ).toBeVisible({ timeout: 30_000 });
@@ -81,128 +108,254 @@ for (const width of [320, 375, 390, 412, 430, 1280]) {
         .getByRole("navigation", { name: "Navegación del estudiante" })
         .getByRole("link", { name: /^Carrito/ }),
     ).toHaveAttribute("aria-current", "page");
-    const confirm = page.getByRole("button", {
-      name: "Confirmar pedido",
-      exact: true,
-    });
+    // No hours, slots or preview: the default is "lo antes posible".
+    await expect(page.getByText(/Probar sin horario/)).toHaveCount(0);
+    await expect(page.getByRole("combobox")).toHaveCount(0);
+    await expect(page.getByLabel("Lo antes posible")).toBeChecked();
+    await expect(page.locator("#pickup-time")).toHaveCount(0);
+    const confirm = confirmButton(page);
     await expect(confirm).toBeDisabled();
-    await page
-      .getByRole("combobox", { name: /Elige tu hora/ })
-      .selectOption(pickup);
-    await expect(confirm).toBeDisabled();
-    await page.getByRole("checkbox", { name: /He revisado mi pedido/ }).check();
+    await accept(page);
     await expect(confirm).toBeEnabled();
     await noOverflow(page);
-    await page.getByRole("main").evaluate((element) => {
-      element.scrollTop = 0;
-    });
     await page.screenshot({
       path: testInfo.outputPath(`checkout-${width}.png`),
     });
     await confirm.click();
     await expect(
-      page.getByRole("heading", { name: "Resumen confirmado" }),
-    ).toBeFocused();
-    await expect(
-      page.getByText(/todavía no se ha enviado un pedido/),
-    ).toBeVisible();
+      page.getByRole("heading", { name: "Pedido enviado" }),
+    ).toBeFocused({ timeout: 30_000 });
+    await expect(page.getByText("Lo antes posible")).toBeVisible();
     await expect(page.getByText(/30\.000/).last()).toBeVisible();
+    await expect(page.getByText(/Pechuga a la plancha/)).toBeVisible();
     await noOverflow(page);
     await page.screenshot({
       path: testInfo.outputPath(`confirmation-${width}.png`),
     });
-    await page
-      .getByRole("link", { name: "Volver al carrito", exact: true })
-      .click();
-    await expect(page).toHaveURL(/\/cuenta\/carrito$/);
+    // The BFF got the ids only, with a key; the cart is gone and cannot be sent twice.
+    expect(sent).toHaveLength(1);
+    expect(sent[0].key).toMatch(/^[A-Za-z0-9_-]{16,128}$/);
+    expect(sent[0].body).toEqual({
+      cafeteriaId: CAFETERIA_CENTRAL,
+      items: [{ productId: PRODUCT.chicken, quantity: 2 }],
+    });
     await expect(
-      page.getByRole("heading", { name: "Tu carrito", exact: true }),
+      page
+        .getByRole("navigation", { name: "Navegación del estudiante" })
+        .getByRole("link", { name: /^Carrito/ }),
+    ).toHaveAccessibleName("Carrito");
+    await page.getByRole("link", { name: "Volver al inicio" }).click();
+    await expect(page).toHaveURL(/\/cuenta/);
+    await page.goto("/cuenta/carrito/resumen");
+    await expect(
+      page.getByRole("heading", { name: "Tu carrito está vacío" }),
     ).toBeVisible();
-    await page.reload();
-    await expect(
-      page.getByRole("status", { name: "Cantidad de Pechuga a la plancha" }),
-    ).toHaveText("2");
     expect(errors).toEqual([]);
-    expect(operationalRequests).toEqual([]);
   });
 }
 
-test("checkout expires a selected pickup, rejects forged submission and shows the next estimate", async ({
+test("a note and a chosen pickup time travel with the order and appear in the confirmation", async ({
   page,
 }) => {
-  await page.clock.install({ time: new Date("2026-10-07T12:09:00-05:00") });
+  test.skip(
+    Number(bogotaTime(0).slice(0, 2)) * 60 + Number(bogotaTime(0).slice(3)) >
+      23 * 60 + 30,
+    "Too close to midnight in Bogotá to pick a time for today",
+  );
+  const sent = recordOrders(page);
   await login(page);
-  await addChicken(page);
-  await page.getByRole("link", { name: "Continuar con el pedido" }).click();
-  await page
-    .getByRole("combobox", { name: /Elige tu hora/ })
-    .selectOption(pickup);
-  await page.getByRole("checkbox", { name: /He revisado mi pedido/ }).check();
-  const confirm = page.getByRole("button", {
-    name: "Confirmar pedido",
-    exact: true,
-  });
-  await expect(confirm).toBeEnabled();
-  await page.clock.setSystemTime(new Date("2026-10-07T12:11:00-05:00"));
-  await page.clock.runFor(61_000);
-  await expect(confirm).toBeDisabled();
-  await expect(page.getByText(/La hora elegida ya no permite/)).toContainText(
-    /1:00/,
-  );
-  await page.locator("form").dispatchEvent("submit");
-  await expect(page.getByRole("main").getByRole("alert")).toContainText(
-    "al menos 20 minutos",
-  );
+  await openSummary(page);
+  await page.getByLabel("Elegir hora").check();
+  const time = page.locator("#pickup-time");
+  await expect(time).toHaveAttribute("min", /^\d\d:\d\d$/);
+  // Past times are refused in the browser and nothing is sent.
+  await time.fill("00:00");
+  await accept(page);
+  await confirmButton(page).click();
+  await expect(alertBox(page)).toContainText("posterior a la actual");
+  expect(sent).toHaveLength(0);
+  const later = bogotaTime(15);
+  await time.fill(later);
+  await page.getByLabel(/Nota para el pedido/).fill("Sin cebolla, por favor");
+  await confirmButton(page).click();
   await expect(
-    page.getByRole("heading", { name: "Resumen confirmado" }),
-  ).toHaveCount(0);
-  await page.clock.setSystemTime(new Date("2026-10-07T14:11:00-05:00"));
-  await page.clock.runFor(61_000);
-  await expect(page.getByRole("combobox")).toBeDisabled();
-  await expect(page.getByText(/Ya no quedan horarios/)).toBeVisible();
+    page.getByRole("heading", { name: "Pedido enviado" }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Sin cebolla, por favor")).toBeVisible();
+  await expect(page.getByText(/Colombia/).first()).toBeVisible();
+  expect(sent).toHaveLength(1);
+  expect(sent[0].body.note).toBe("Sin cebolla, por favor");
+  // ISO-8601 with the Bogotá offset, for today.
+  expect(sent[0].body.requestedPickupAt).toMatch(
+    new RegExp(`^\\d{4}-\\d\\d-\\d\\dT${later}:00-05:00$`),
+  );
 });
 
-test("after-hours preview supports checkout with a twenty-minute margin and respects disabling preview", async ({
+test("the note is limited to 200 characters in the browser", async ({
   page,
 }) => {
-  await page.clock.setFixedTime(new Date("2026-10-07T22:00:00-05:00"));
+  const sent = recordOrders(page);
   await login(page);
-  await addChicken(page);
-  // The hours preview only exists on the cart and the test checkout now.
-  const preview = page.getByRole("checkbox", { name: /^Probar sin horario/ });
-  await preview.check();
-  await page.getByRole("link", { name: "Continuar con el pedido" }).click();
-  await page.getByRole("combobox").selectOption("2026-10-08T16:30:00.000Z");
-  await page.getByRole("checkbox", { name: /He revisado mi pedido/ }).check();
+  await openSummary(page);
+  const note = page.getByLabel(/Nota para el pedido/);
+  await note.fill("a".repeat(201));
+  await expect(page.getByText("201/200 caracteres")).toBeVisible();
+  await accept(page);
+  await confirmButton(page).click();
+  await expect(alertBox(page)).toContainText("hasta 200 caracteres");
+  expect(sent).toHaveLength(0);
+  await note.fill("a".repeat(200));
+  await confirmButton(page).click();
   await expect(
-    page.getByRole("button", { name: "Confirmar pedido" }),
-  ).toBeEnabled();
-  await preview.uncheck();
+    page.getByRole("heading", { name: "Pedido enviado" }),
+  ).toBeVisible({ timeout: 30_000 });
+});
+
+test("each rejection shows a fixed Spanish message with its next step and keeps the cart", async ({
+  page,
+}) => {
+  const sent = recordOrders(page);
+  await login(page);
+  await openSummary(page);
+  const cases: [string, RegExp, string | null][] = [
+    ["CAFETERIA_CLOSED", /La cafetería está cerrada/, "Ir al menú"],
+    ["PRODUCT_UNAVAILABLE", /ya no está disponible/, "Revisar carrito"],
+    ["ACTIVE_ORDER_EXISTS", /pedido en curso/, "Ir al inicio"],
+    ["INVALID_PICKUP_TIME", /hora de recogida ya no es válida/, null],
+    ["IDEMPOTENCY_KEY_CONFLICT", /Tu pedido cambió/, null],
+    [
+      "ORDER_LIMIT_EXCEEDED",
+      /10 unidades por producto y 15/,
+      "Revisar carrito",
+    ],
+    ["INVALID_ORDER_REQUEST", /No pudimos validar/, "Revisar carrito"],
+    ["CAFETERIA_NOT_SUBSCRIBED", /Elige otra/, "Elegir cafetería"],
+    ["CAFETERIA_NOT_FOUND", /Elige otra/, "Elegir cafetería"],
+    ["FORBIDDEN", /no puede crear pedidos/, "Ir al inicio"],
+    ["ORDER_TEMPORARILY_UNAVAILABLE", /carrito se conserva/, null],
+  ];
+  const note = page.getByLabel(/Nota para el pedido/);
+  await accept(page);
+  for (const [code, message, action] of cases) {
+    await note.fill(`__error:${code}`);
+    await confirmButton(page).click();
+    await expect(alertBox(page)).toContainText(message, { timeout: 30_000 });
+    await expect(alertBox(page)).not.toContainText(
+      /PRIVATE|Spring|activeOrder/,
+    );
+    if (action)
+      await expect(
+        alertBox(page).getByRole("link", { name: action }),
+      ).toBeVisible();
+    // Nothing was created and the cart is untouched.
+    await expect(
+      page.getByRole("heading", { name: "Pedido enviado" }),
+    ).toHaveCount(0);
+    expect(
+      await page.evaluate((key) => localStorage.getItem(key), storageKey),
+    ).toContain(PRODUCT.chicken);
+  }
+  expect(sent).toHaveLength(cases.length);
+});
+
+test("a retry after a temporary failure reuses the Idempotency-Key; changing the order uses a new one", async ({
+  page,
+}) => {
+  const sent = recordOrders(page);
+  await login(page);
+  await openSummary(page);
+  const note = page.getByLabel(/Nota para el pedido/);
+  await accept(page);
+  await note.fill("__fail-once");
+  await confirmButton(page).click();
+  await expect(alertBox(page)).toContainText("Revisa tu conexión", {
+    timeout: 30_000,
+  });
   await expect(
-    page.getByRole("checkbox", { name: /He revisado mi pedido/ }),
-  ).not.toBeChecked();
+    page.getByRole("button", { name: "Reintentar envío" }),
+  ).toBeVisible();
+  // The cart is intact, and the same content goes out with the same key.
+  await page.getByRole("button", { name: "Reintentar envío" }).click();
   await expect(
-    page.getByRole("button", { name: "Confirmar pedido" }),
-  ).toBeDisabled();
-  await expect(page.getByText(/Ya no quedan horarios/)).toBeVisible();
+    page.getByRole("heading", { name: "Pedido enviado" }),
+  ).toBeVisible({ timeout: 30_000 });
+  expect(sent).toHaveLength(2);
+  expect(sent[1].key).toBe(sent[0].key);
+  expect(sent[1].body).toEqual(sent[0].body);
+});
+
+test("a response lost after the order was created is recovered with the same key", async ({
+  page,
+}) => {
+  const sent = recordOrders(page);
+  await login(page);
+  await openSummary(page);
+  await accept(page);
+  await page.getByLabel(/Nota para el pedido/).fill("__lose-response");
+  await confirmButton(page).click();
+  await expect(alertBox(page)).toContainText("Revisa tu conexión", {
+    timeout: 30_000,
+  });
+  await page.getByRole("button", { name: "Reintentar envío" }).click();
+  // The backend answers 200 for the repeated key: the same order, counted as a success.
+  await expect(
+    page.getByRole("heading", { name: "Pedido enviado" }),
+  ).toBeVisible({ timeout: 30_000 });
+  expect(sent).toHaveLength(2);
+  expect(sent[1].key).toBe(sent[0].key);
+  await expect(
+    page
+      .getByRole("navigation", { name: "Navegación del estudiante" })
+      .getByRole("link", { name: /^Carrito/ }),
+  ).toHaveAccessibleName("Carrito");
+});
+
+test("editing the note after a failure starts a new attempt with a new key", async ({
+  page,
+}) => {
+  const sent = recordOrders(page);
+  await login(page);
+  await openSummary(page);
+  await accept(page);
+  const note = page.getByLabel(/Nota para el pedido/);
+  await note.fill("__fail-once");
+  await confirmButton(page).click();
+  await expect(alertBox(page)).toBeVisible({ timeout: 30_000 });
+  await note.fill("Con servilletas");
+  await confirmButton(page).click();
+  await expect(
+    page.getByRole("heading", { name: "Pedido enviado" }),
+  ).toBeVisible({ timeout: 30_000 });
+  expect(sent).toHaveLength(2);
+  expect(sent[1].key).not.toBe(sent[0].key);
+});
+
+test("a double click sends the order once", async ({ page }) => {
+  const sent = recordOrders(page);
+  await login(page);
+  await openSummary(page);
+  await accept(page);
+  await confirmButton(page).dblclick();
+  await expect(
+    page.getByRole("heading", { name: "Pedido enviado" }),
+  ).toBeVisible({ timeout: 30_000 });
+  expect(sent).toHaveLength(1);
 });
 
 test("checkout revalidates persisted changes before confirming and cannot confirm an empty cart", async ({
   page,
 }) => {
-  await page.clock.setFixedTime(lunch);
+  const sent = recordOrders(page);
   await login(page);
-  await addChicken(page);
-  await page.getByRole("link", { name: "Continuar con el pedido" }).click();
-  await page.getByRole("combobox").selectOption(pickup);
-  await page.getByRole("checkbox", { name: /He revisado mi pedido/ }).check();
+  await openSummary(page);
+  await accept(page);
   // A same-tab storage write deliberately skips the storage event: submit must reread it.
   await page.evaluate((key) => {
     const saved = JSON.parse(localStorage.getItem(key)!);
     saved.cart.lines[0].quantity = 3;
     localStorage.setItem(key, JSON.stringify(saved));
   }, storageKey);
-  await page.getByRole("button", { name: "Confirmar pedido" }).click();
+  await confirmButton(page).click();
   await expect(page.getByText(/El carrito cambió/)).toBeVisible();
   await expect(
     page.getByRole("checkbox", { name: /He revisado mi pedido/ }),
@@ -210,19 +363,18 @@ test("checkout revalidates persisted changes before confirming and cannot confir
   await expect(
     page.getByRole("list", { name: "Productos del pedido" }),
   ).toContainText("3 × Pechuga");
-  await page.getByRole("combobox").selectOption(pickup);
-  await page.getByRole("checkbox", { name: /He revisado mi pedido/ }).check();
+  await accept(page);
   await page.evaluate((key) => localStorage.removeItem(key), storageKey);
-  await page.getByRole("button", { name: "Confirmar pedido" }).click();
+  await confirmButton(page).click();
   await expect(
     page.getByRole("heading", { name: "Tu carrito está vacío" }),
   ).toBeVisible();
+  expect(sent).toHaveLength(0);
 });
 
 test("cart editing respects the 10-unit limit and swiping reveals an explicit delete action", async ({
   page,
 }) => {
-  await page.clock.setFixedTime(lunch);
   await login(page);
   await addChicken(page);
   const increase = page.getByRole("button", {

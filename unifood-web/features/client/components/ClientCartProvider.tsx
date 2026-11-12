@@ -16,8 +16,8 @@ import {
   restoreCart,
   setQuantity,
 } from "../domain/cart";
-import { reviewCheckout, type CheckoutResult } from "../domain/checkout";
 import type { CafeteriaMenu, ClientCart } from "../types";
+import { clearAttempt } from "../idempotency";
 import { forgetCachedCafeteria } from "../state";
 import ConfirmDialog from "./ConfirmDialog";
 import styles from "./ClientShopping.module.css";
@@ -25,13 +25,12 @@ import styles from "./ClientShopping.module.css";
 // v2 keys lines by real productId and cafeteriaId; v1 carts held mock ids and are dropped.
 export const CART_STORAGE_KEY = "unifood.client.cart.v2";
 const LEGACY_CART_STORAGE_KEY = "unifood.client.cart.v1";
-const HOURS_PREVIEW_KEY = "unifood.client.hours-preview.v1";
 type CartContextValue = {
   cart: ClientCart;
   ready: boolean;
+  /** The signed-in client, which scopes everything saved in the browser. */
+  ownerId: string;
   count: number;
-  ignoreServiceHours: boolean;
-  setIgnoreServiceHours: (enabled: boolean) => void;
   add: (menu: CafeteriaMenu, productId: string, quantity: number) => boolean;
   remove: (productId: string) => void;
   /** Sets a line's quantity; null on success, otherwise the reason it was refused. */
@@ -40,12 +39,13 @@ type CartContextValue = {
     productId: string,
     quantity: number,
   ) => string | null;
-  confirmCheckout: (
-    expectedCart: ClientCart,
-    menu: CafeteriaMenu | null,
-    pickupAt: string,
-    accepted: boolean,
-  ) => CheckoutResult;
+  /**
+   * The cart as stored right now, which another tab may have changed; the in-memory cart
+   * when storage is unavailable.
+   */
+  latestCart: () => ClientCart;
+  /** Empties the cart after the backend accepted the order. */
+  completeOrder: () => void;
   clear: () => void;
   chooseCafeteria: (cafeteriaId: string, proceed: () => void) => void;
 };
@@ -67,17 +67,6 @@ export default function ClientCartProvider({
   const current = useRef<ClientCart>(emptyCart());
   const storageSynced = useRef(false);
   const [ready, setReady] = useState(false);
-  const [ignoreServiceHours, setHoursPreview] = useState(false);
-  const setIgnoreServiceHours = (enabled: boolean) => {
-    if (process.env.NODE_ENV !== "development") return;
-    setHoursPreview(enabled);
-    try {
-      if (enabled) sessionStorage.setItem(HOURS_PREVIEW_KEY, userId);
-      else sessionStorage.removeItem(HOURS_PREVIEW_KEY);
-    } catch {
-      // The preview still works in memory when browser storage is unavailable.
-    }
-  };
   const [toast, setToast] = useState<{
     message: string;
     success: boolean;
@@ -126,27 +115,12 @@ export default function ClientCartProvider({
       setReady(true);
     };
     const timer = setTimeout(() => {
-      if (process.env.NODE_ENV === "development") {
-        try {
-          const owner = sessionStorage.getItem(HOURS_PREVIEW_KEY);
-          setHoursPreview(owner === userId);
-          if (owner && owner !== userId)
-            sessionStorage.removeItem(HOURS_PREVIEW_KEY);
-        } catch {
-          // Start with normal hours if browser storage is unavailable.
-        }
-      }
       read();
     }, 0);
     const logout = () => {
       current.current = emptyCart();
       setCart(emptyCart());
-      setHoursPreview(false);
-      try {
-        sessionStorage.removeItem(HOURS_PREVIEW_KEY);
-      } catch {
-        // Storage unavailable.
-      }
+      clearAttempt();
       try {
         localStorage.removeItem(CART_STORAGE_KEY);
       } catch {
@@ -203,14 +177,7 @@ export default function ClientCartProvider({
     persist(result.cart);
     return null;
   };
-  const confirmCheckout: CartContextValue["confirmCheckout"] = (
-    expectedCart,
-    menu,
-    pickupAt,
-    accepted,
-  ) => {
-    if (!ready)
-      return { ok: false, error: "Espera a que termine de cargar el carrito." };
+  const latestCart = () => {
     let latest = current.current;
     try {
       if (storageSynced.current) {
@@ -226,27 +193,21 @@ export default function ClientCartProvider({
     } catch {
       // The in-memory cart remains usable when storage is unavailable.
     }
-    if (JSON.stringify(latest) !== JSON.stringify(expectedCart)) {
+    if (JSON.stringify(latest) !== JSON.stringify(current.current)) {
       current.current = latest;
       setCart(latest);
+      // The summary remounts with the new cart, so the notice lives here.
       setToast({
-        message: "El carrito cambió. Revisa el resumen actualizado.",
+        message:
+          "El carrito cambió. Revisa el resumen actualizado y vuelve a confirmar.",
         success: false,
       });
-      return {
-        ok: false,
-        error:
-          "El carrito cambió. Revisa el resumen actualizado y vuelve a confirmar.",
-      };
     }
-    return reviewCheckout(
-      latest,
-      menu,
-      pickupAt,
-      accepted,
-      new Date(),
-      ignoreServiceHours,
-    );
+    return latest;
+  };
+  const completeOrder = () => {
+    persist(emptyCart());
+    clearAttempt();
   };
   const chooseCafeteria: CartContextValue["chooseCafeteria"] = (
     cafeteriaId,
@@ -264,13 +225,13 @@ export default function ClientCartProvider({
       value={{
         cart,
         ready,
+        ownerId: userId,
         count: cartCount(cart),
-        ignoreServiceHours,
-        setIgnoreServiceHours,
         add,
         remove,
         update,
-        confirmCheckout,
+        latestCart,
+        completeOrder,
         clear: () => setConfirmClear(true),
         chooseCafeteria,
       }}

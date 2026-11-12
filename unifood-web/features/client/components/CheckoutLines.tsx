@@ -1,16 +1,13 @@
 import { currency } from "../domain/catalog";
-import type { CheckoutSummary } from "../domain/checkout";
 import styles from "./ClientCheckout.module.css";
 
-export default function CheckoutLines({
-  lines,
-}: {
-  lines: CheckoutSummary["lines"];
-}) {
+type Line = { id?: string; name: string; quantity: number; unitPrice: number };
+
+export default function CheckoutLines({ lines }: { lines: Line[] }) {
   return (
     <ul className={styles.lines} aria-label="Productos del pedido">
-      {lines.map((line) => (
-        <li key={line.id}>
+      {lines.map((line, index) => (
+        <li key={line.id ?? `${line.name}-${index}`}>
           <div>
             <strong>
               {line.quantity} × {line.name}
