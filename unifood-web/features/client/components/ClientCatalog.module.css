@@ -58,10 +58,19 @@
   object-fit: cover;
   border-radius: 16px;
 }
-.siteCard > svg {
+.siteCard > svg:last-child {
   flex-shrink: 0;
   color: #7484aa;
   margin-left: auto;
+}
+.siteCard > svg:first-child {
+  width: 56px;
+  height: 56px;
+  padding: 14px;
+  flex-shrink: 0;
+  border-radius: 16px;
+  background: #e6efff;
+  color: #2f5fb3;
 }
 .siteText {
   display: grid;
@@ -115,9 +124,18 @@
   font-size: 13px;
   color: var(--client-muted);
 }
-.cafeteriaSelector > svg {
+.cafeteriaSelector > svg:last-child {
   margin-left: auto;
   flex-shrink: 0;
+}
+.cafeteriaSelector > svg:first-child {
+  width: 48px;
+  height: 48px;
+  padding: 10px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: #e6efff;
+  color: #2f5fb3;
 }
 .hero {
   position: relative;

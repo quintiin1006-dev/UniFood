@@ -1,20 +1,22 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { cafeteriaHref } from "../domain/context";
 import { useClientCart } from "./ClientCartProvider";
 
-export default function SiteLink({
-  siteId,
+/** Choosing another cafeteria asks before emptying a cart that belongs to a different one. */
+export default function CafeteriaLink({
+  cafeteriaId,
   children,
   className,
 }: {
-  siteId: string;
+  cafeteriaId: string;
   children: React.ReactNode;
   className?: string;
 }) {
   const router = useRouter();
-  const { chooseSite, ready } = useClientCart();
-  const href = `/cuenta?sede=${siteId}`;
+  const { chooseCafeteria, ready } = useClientCart();
+  const href = cafeteriaHref(cafeteriaId);
   return (
     <Link
       className={className}
@@ -23,7 +25,7 @@ export default function SiteLink({
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
           return;
         event.preventDefault();
-        if (ready) chooseSite(siteId, () => router.push(href));
+        if (ready) chooseCafeteria(cafeteriaId, () => router.push(href));
       }}
     >
       {children}

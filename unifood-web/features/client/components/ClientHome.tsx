@@ -1,98 +1,162 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
-import { Coffee, Utensils, Clock3 } from "lucide-react";
-import { getSiteMeals, type DemoSite } from "../mocks/catalog";
+import { Clock3, UtensilsCrossed } from "lucide-react";
+import { currency } from "../domain/catalog";
 import {
-  featuredMeals,
-  serviceAvailability,
-  serviceHours,
-} from "../domain/catalog";
-import { useColombiaClock } from "../hooks/useColombiaClock";
+  CLOSED_NOTICE,
+  EMPTY_CATEGORY,
+  menuCategories,
+  menuHref,
+  productHref,
+} from "../domain/menu";
+import type { CafeteriaMenu, MenuCategoryId, MenuProduct } from "../types";
 import CafeteriaSelector from "./CafeteriaSelector";
-import MealCarousel from "./MealCarousel";
-import { useClientCart } from "./ClientCartProvider";
+import { RememberCafeteria } from "./CafeteriaMemory";
+import ProductPlaceholder from "./ProductPlaceholder";
 import styles from "./ClientCatalog.module.css";
+import menuStyles from "./ClientMenu.module.css";
 
 export default function ClientHome({
+  ownerId,
   fullName,
-  site,
-  initialTime,
+  siteName,
+  menu,
 }: {
+  ownerId: string;
   fullName: string | null;
-  site: DemoSite;
-  initialTime: string;
+  siteName: string;
+  menu: CafeteriaMenu;
 }) {
-  const now = useColombiaClock(initialTime);
-  const { ignoreServiceHours } = useClientCart();
+  const [filter, setFilter] = useState<MenuCategoryId | null>(null);
   const firstName = fullName?.trim().split(/\s+/)[0];
-  const featured = featuredMeals(getSiteMeals(site), now);
+  const { cafeteria } = menu;
+  const visible = menuCategories.filter(
+    (category) => !filter || category.id === filter,
+  );
   return (
     <section className={styles.home} aria-labelledby="client-home-title">
+      <RememberCafeteria ownerId={ownerId} cafeteriaId={cafeteria.id} />
       <div className={styles.pageHeading}>
         <h1 id="client-home-title">
           ¡Hola{firstName ? `, ${firstName}` : ""}!
         </h1>
         <p>¿Qué te gustaría comer hoy?</p>
       </div>
-      <CafeteriaSelector site={site} />
-      <MealCarousel
-        key={`${site.id}-${featured.map((meal) => meal.id).join("-")}`}
-        meals={featured}
-        siteId={site.id}
-      />
-      <div>
-        <h2 className={styles.sectionTitle}>Elige tu momento</h2>
-        <nav className={styles.mealTypes} aria-label="Tipos de comida">
-          {(["breakfast", "lunch"] as const).map((kind) => {
-            const breakfast = kind === "breakfast";
-            const availability = serviceAvailability(
-              kind,
-              site.id,
-              now,
-              ignoreServiceHours,
-            );
-            const Icon = breakfast ? Coffee : Utensils;
-            const content = (
-              <>
-                <Icon size={30} strokeWidth={1.7} aria-hidden="true" />
-                <strong>{breakfast ? "Desayunos" : "Almuerzos"}</strong>
-                <span>
-                  {breakfast && site.id !== "principal"
-                    ? "Disponible únicamente en la Sede Principal"
-                    : serviceHours(kind)}
-                </span>
-                {!availability.open && (
-                  <small>
-                    <Clock3 size={13} aria-hidden="true" />
-                    {breakfast && site.id !== "principal"
-                      ? "Otra sede"
-                      : "Fuera de horario"}
-                  </small>
-                )}
-              </>
-            );
-            return availability.open ? (
-              <Link
-                key={kind}
-                className={breakfast ? styles.breakfastType : styles.lunchType}
-                href={`/cuenta/menu?sede=${site.id}&categoria=${breakfast ? "desayunos" : "almuerzos"}`}
-              >
-                {content}
-              </Link>
-            ) : (
+      <CafeteriaSelector siteName={siteName} cafeteria={cafeteria} />
+      {!cafeteria.open && (
+        <p className={menuStyles.closed} role="status">
+          <Clock3 size={18} aria-hidden="true" />
+          {CLOSED_NOTICE}
+        </p>
+      )}
+      {menu.categories.length === 0 ? (
+        <div className={menuStyles.state}>
+          <UtensilsCrossed size={36} strokeWidth={1.5} aria-hidden="true" />
+          <h2>Aún no hay productos en el menú</h2>
+          <p>Vuelve a consultar más tarde.</p>
+        </div>
+      ) : (
+        <>
+          <ul className={menuStyles.filters} aria-label="Filtrar por categoría">
+            <li>
               <button
-                key={kind}
                 type="button"
-                className={breakfast ? styles.breakfastType : styles.lunchType}
-                disabled
+                aria-pressed={filter === null}
+                onClick={() => setFilter(null)}
               >
-                {content}
+                Todo
               </button>
+            </li>
+            {menuCategories.map((category) => (
+              <li key={category.id}>
+                <button
+                  type="button"
+                  aria-pressed={filter === category.id}
+                  onClick={() => setFilter(category.id)}
+                >
+                  {category.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {visible.map((category) => {
+            const products =
+              menu.categories.find(({ id }) => id === category.id)?.products ??
+              [];
+            // Open: carousel of what can be ordered now. Closed: the active products, to see (§6).
+            const shown = cafeteria.open
+              ? products.filter((product) => product.available)
+              : products;
+            if (!shown.length)
+              return (
+                <p key={category.id} className={menuStyles.compact}>
+                  <strong>{category.name}</strong>: {EMPTY_CATEGORY}.
+                </p>
+              );
+            const headingId = `category-${category.slug}`;
+            return (
+              <section
+                key={category.id}
+                className={menuStyles.category}
+                aria-labelledby={headingId}
+              >
+                <div className={menuStyles.categoryHeader}>
+                  <h2 id={headingId}>{category.name}</h2>
+                  <Link
+                    href={menuHref(cafeteria.id, category.slug)}
+                    aria-label={`Ver todo: ${category.name}`}
+                  >
+                    Ver todo
+                  </Link>
+                </div>
+                <ProductRail
+                  label={category.name}
+                  cafeteriaId={cafeteria.id}
+                  products={shown}
+                />
+              </section>
             );
           })}
-        </nav>
-        <p className={styles.scheduleNote}>Horarios de atención de Colombia.</p>
-      </div>
+          <Link
+            className={styles.secondaryButton}
+            href={menuHref(cafeteria.id)}
+          >
+            Ver el menú completo
+          </Link>
+        </>
+      )}
     </section>
+  );
+}
+
+function ProductRail({
+  label,
+  cafeteriaId,
+  products,
+}: {
+  label: string;
+  cafeteriaId: string;
+  products: MenuProduct[];
+}) {
+  return (
+    <ul
+      className={menuStyles.rail}
+      aria-label={`Productos: ${label}`}
+      aria-roledescription="carrusel"
+    >
+      {products.map((product) => (
+        <li key={product.id}>
+          <Link
+            className={menuStyles.railCard}
+            href={productHref(cafeteriaId, product.id)}
+          >
+            <ProductPlaceholder name={product.name} size="rail" />
+            <strong>{product.name}</strong>
+            <span>{currency.format(product.price)}</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
