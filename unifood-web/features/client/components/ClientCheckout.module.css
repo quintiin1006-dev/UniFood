@@ -95,7 +95,8 @@
   font-size: 15px;
   font-weight: 600;
 }
-.pickup select {
+.pickup select,
+.pickup input[type="time"] {
   width: 100%;
   min-width: 0;
   min-height: 52px;
@@ -107,7 +108,8 @@
   font: inherit;
   font-size: 16px;
 }
-.pickup select:disabled {
+.pickup select:disabled,
+.pickup input[type="time"]:disabled {
   opacity: 0.7;
 }
 .payment {
@@ -157,12 +159,6 @@
   margin-top: 2px;
   accent-color: var(--client-blue);
 }
-.previewNote {
-  margin: 0;
-  color: var(--client-muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
 .confirmationHeading {
   display: grid;
   justify-items: start;
@@ -193,4 +189,50 @@
   margin-top: 4px;
   font-weight: 400;
   font-size: 14px;
+}
+.choices {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+.pickup .choices label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin: 0;
+  cursor: pointer;
+}
+.choices input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--client-blue);
+}
+.noteField label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.noteField label span {
+  color: var(--client-muted);
+  font-weight: 400;
+}
+.noteField textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #dce5f4;
+  border-radius: 16px;
+  background: white;
+  color: var(--client-ink);
+  font: inherit;
+  font-size: 16px;
+  resize: vertical;
+}
+.noteField small {
+  display: block;
+  margin-top: 6px;
+  color: var(--client-muted);
+  font-size: 13px;
 }
