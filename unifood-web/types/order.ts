@@ -32,4 +32,6 @@ export interface Order {
   status: OrderStatus;
   calledAt?: string;
   deliveredAt?: string;
+  // Optional pickup time chosen by the client; informative, the queue stays FIFO.
+  requestedPickupAt?: string;
 }

@@ -54,6 +54,14 @@ public class ClientOrderException extends RuntimeException {
         Kind.BAD_REQUEST, ErrorCode.ORDER_NOTE_TOO_LONG, "La nota admite hasta 200 caracteres.");
   }
 
+  /** Malformed, without offset, already past or outside today's business day in Bogotá. */
+  public static ClientOrderException invalidPickupTime() {
+    return of(
+        Kind.BAD_REQUEST,
+        ErrorCode.INVALID_PICKUP_TIME,
+        "La hora de recogida debe ser más tarde el día de hoy.");
+  }
+
   public static ClientOrderException cafeteriaNotFound() {
     return of(Kind.NOT_FOUND, ErrorCode.CAFETERIA_NOT_FOUND, "No encontramos esa cafetería.");
   }

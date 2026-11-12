@@ -32,4 +32,5 @@ export interface BackendOrder {
   updatedAt: string;
   deliveredAt?: string | null;
   items: BackendOrderItem[];
+  requestedPickupAt?: string | null;
 }

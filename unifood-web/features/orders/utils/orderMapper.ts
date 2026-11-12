@@ -4,9 +4,7 @@ import type {
   BackendOrderStatus,
 } from "@/features/orders/types/backendOrder";
 
-export function mapOrderStatus(
-  status: BackendOrderStatus
-): Order["status"] {
+export function mapOrderStatus(status: BackendOrderStatus): Order["status"] {
   switch (status) {
     case "PENDING":
       return "pending";
@@ -34,9 +32,7 @@ export function mapOrderStatus(
   }
 }
 
-export function mapBackendOrder(
-  backendOrder: BackendOrder
-): Order {
+export function mapBackendOrder(backendOrder: BackendOrder): Order {
   return {
     id: backendOrder.id,
     student: backendOrder.clientName,
@@ -49,20 +45,17 @@ export function mapBackendOrder(
     createdAt: backendOrder.createdAt,
     updatedAt: backendOrder.updatedAt,
     deliveredAt: backendOrder.deliveredAt ?? undefined,
+    requestedPickupAt: backendOrder.requestedPickupAt ?? undefined,
     items: backendOrder.items.map((item) => ({
       id: item.id,
       name: item.lunchName,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
-      beverageChoice:
-        item.beverageChoice ?? undefined,
-      note:
-        item.note ?? undefined,
+      beverageChoice: item.beverageChoice ?? undefined,
+      note: item.note ?? undefined,
       subtotal: item.subtotal,
     })),
     total: backendOrder.total,
-    status: mapOrderStatus(
-      backendOrder.status
-    ),
+    status: mapOrderStatus(backendOrder.status),
   };
 }

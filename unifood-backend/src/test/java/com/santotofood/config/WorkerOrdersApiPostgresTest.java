@@ -436,6 +436,83 @@ class WorkerOrdersApiPostgresTest {
     assertEquals(before.get("cancellation_deadline"), after.get("cancellation_deadline"));
   }
 
+  // ---------------------------------------------------------------- pickup time (023)
+
+  static UUID orderPickingUpAt(Instant created, Instant pickup) {
+    return orderPickingUpAt("PENDING", created, pickup);
+  }
+
+  /**
+   * In the other cafeteria, so the exact listing of CAFE above stays as it is. Created after the
+   * "foreign" order, which therefore stays first in its FIFO queue.
+   */
+  static UUID orderPickingUpAt(String status, Instant created, Instant pickup) {
+    UUID id = order(OTHER_CAFE, null, status, created, null, null, null, "DOC-PRIVATE-P");
+    jdbc.update(
+        "UPDATE public.orders SET requested_pickup_at=? WHERE id=?",
+        pickup == null ? null : pickup.atOffset(ZoneOffset.UTC),
+        id);
+    return id;
+  }
+
+  static Instant pickupOf(UUID order) {
+    var value =
+        jdbc.queryForObject(
+            "SELECT requested_pickup_at FROM public.orders WHERE id=?",
+            java.time.OffsetDateTime.class,
+            order);
+    return value == null ? null : value.toInstant();
+  }
+
+  @Test
+  void thePickupTimeIsShownButTheQueueStaysInArrivalOrder() throws Exception {
+    // The first to arrive wants it later than the second: the queue still serves it first.
+    var lateWish = Instant.parse("2026-11-20T18:45:00Z");
+    var earlyWish = Instant.parse("2026-11-20T17:30:00Z");
+    UUID first = orderPickingUpAt(TODAY.plusSeconds(60), lateWish);
+    UUID second = orderPickingUpAt(TODAY.plusSeconds(120), earlyWish);
+    UUID asap = orderPickingUpAt(TODAY.plusSeconds(180), null);
+
+    var result =
+        mvc.perform(
+                get("/api/orders")
+                    .param("cafeteriaId", OTHER_CAFE.toString())
+                    .with(as(OTHER_WORKER)))
+            .andExpect(status().isOk())
+            .andReturn();
+    var ids = new java.util.ArrayList<String>();
+    var byId = new HashMap<String, JsonNode>();
+    for (var order :
+        JSON.readTree(result.getResponse().getContentAsString(StandardCharsets.UTF_8))) {
+      ids.add(order.get("id").asString());
+      byId.put(order.get("id").asString(), order);
+    }
+    assertTrue(ids.indexOf(first.toString()) < ids.indexOf(second.toString()), ids.toString());
+    assertTrue(ids.indexOf(second.toString()) < ids.indexOf(asap.toString()), ids.toString());
+    assertEquals(
+        "2026-11-20T18:45:00Z", byId.get(first.toString()).get("requestedPickupAt").asString());
+    assertEquals(
+        "2026-11-20T17:30:00Z", byId.get(second.toString()).get("requestedPickupAt").asString());
+    assertTrue(byId.get(asap.toString()).get("requestedPickupAt").isNull());
+  }
+
+  @Test
+  void workerTransitionsKeepThePickupTime() throws Exception {
+    var wish = Instant.parse("2026-11-20T18:15:00Z");
+    // Already in preparation: prepare itself is FIFO-bound and covered by the order tests.
+    UUID order = orderPickingUpAt("PREPARING", TODAY.plusSeconds(240), wish);
+    mvc.perform(patch("/api/orders/" + order + "/ready").with(as(OTHER_WORKER)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("READY"))
+        .andExpect(jsonPath("$.requestedPickupAt").value("2026-11-20T18:15:00Z"));
+    mvc.perform(patch("/api/orders/" + order + "/call").with(as(OTHER_WORKER)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("CALLED"))
+        .andExpect(jsonPath("$.requestedPickupAt").value("2026-11-20T18:15:00Z"));
+    // The JPA entity maps it read-only, so no transition rewrites the column.
+    assertEquals(wish, pickupOf(order));
+  }
+
   @Test
   void theWorkerCancellationRouteIsGone() throws Exception {
     UUID stale = ORDERS.get("stale");

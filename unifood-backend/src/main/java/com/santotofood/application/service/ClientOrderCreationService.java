@@ -9,6 +9,7 @@ import com.santotofood.application.port.out.ClientOrderCommandPort.LockedProduct
 import com.santotofood.application.port.out.ClientOrderCommandPort.NewItem;
 import com.santotofood.application.port.out.ClientOrderCommandPort.NewOrder;
 import com.santotofood.domain.model.BusinessDate;
+import com.santotofood.domain.model.PickupTime;
 import com.santotofood.domain.port.out.TimeProvider;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -87,6 +88,10 @@ public class ClientOrderCreationService implements CreateOwnOrderUseCase {
     // A key serves one request for good: replaying it after delivery is still a retry.
     var keyed = orders.findByIdempotencyKey(client.clientId(), idempotencyKey);
     if (keyed.isPresent()) return replay(keyed.get(), order.hash());
+    // After the replay: retrying a served request answers 200 even once its time has passed.
+    var now = clock.now();
+    if (order.pickup() != null && !order.pickup().isValidAt(now))
+      throw ClientOrderException.invalidPickupTime();
     orders
         .findActiveOrder(client.clientId())
         .ifPresent(
@@ -94,7 +99,7 @@ public class ClientOrderCreationService implements CreateOwnOrderUseCase {
               throw ClientOrderException.activeOrderExists(active);
             });
 
-    var date = BusinessDate.from(clock.now()).value();
+    var date = BusinessDate.from(now).value();
     // Lock order of §11: cafeteria (the subscription lives there), products by id, today's rows.
     var cafeteria =
         orders
@@ -123,7 +128,14 @@ public class ClientOrderCreationService implements CreateOwnOrderUseCase {
     var id = UUID.randomUUID();
     orders.insertOrder(
         new NewOrder(
-            id, cafeteria.id(), client, total, order.note(), idempotencyKey, order.hash()));
+            id,
+            cafeteria.id(),
+            client,
+            total,
+            order.note(),
+            order.pickup() == null ? null : order.pickup().value(),
+            idempotencyKey,
+            order.hash()));
     orders.insertItems(id, cafeteria.id(), items);
     return new CreatedOrder(stored(id), true);
   }
@@ -163,9 +175,11 @@ public class ClientOrderCreationService implements CreateOwnOrderUseCase {
 
   /**
    * The request as the server understands it. Items are sorted by product id and the note is
-   * trimmed, with blank meaning none, so reordering items or padding the note keeps the hash.
+   * trimmed, with blank meaning none, so reordering items or padding the note keeps the hash. The
+   * pickup time is the instant it names, whatever offset it was written in.
    */
-  record Normalized(UUID cafeteriaId, List<Line> items, String note, String hash) {
+  record Normalized(
+      UUID cafeteriaId, List<Line> items, String note, PickupTime pickup, String hash) {
 
     static Normalized of(String idempotencyKey, OrderRequest request) {
       if (idempotencyKey == null
@@ -199,18 +213,31 @@ public class ClientOrderCreationService implements CreateOwnOrderUseCase {
       if (note != null && note.codePointCount(0, note.length()) > MAX_NOTE_LENGTH)
         throw ClientOrderException.noteTooLong();
 
+      // Only its format here: whether it is still ahead today is checked after a replay.
+      PickupTime pickup = null;
+      if (request.requestedPickupAt() != null)
+        pickup =
+            PickupTime.parse(request.requestedPickupAt())
+                .orElseThrow(ClientOrderException::invalidPickupTime);
+
       return new Normalized(
           request.cafeteriaId(),
           List.copyOf(items),
           note,
-          hash(request.cafeteriaId(), items, note));
+          pickup,
+          hash(request.cafeteriaId(), items, pickup, note));
     }
 
-    /** SHA-256 hex of a canonical form; the note goes last, so it needs no escaping. */
-    private static String hash(UUID cafeteriaId, List<Line> items, String note) {
+    /**
+     * SHA-256 hex of a canonical form; the note goes last, so it needs no escaping. A pickup time
+     * adds one {@code @instant} line before it, which no item line can look like; without one the
+     * form is exactly B15's, so the keys already stored keep their hash.
+     */
+    private static String hash(UUID cafeteriaId, List<Line> items, PickupTime pickup, String note) {
       var canonical = new StringBuilder("order-v1\n").append(cafeteriaId).append('\n');
       for (var line : items)
         canonical.append(line.productId()).append(':').append(line.quantity()).append('\n');
+      if (pickup != null) canonical.append('@').append(pickup.value()).append('\n');
       canonical.append(note == null ? "-" : "+" + note);
       try {
         return HexFormat.of()

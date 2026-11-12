@@ -484,7 +484,7 @@ class ClientOrderQueryApiPostgresTest {
             .andExpect(jsonPath("$.updatedAt").isString())
             .andExpect(jsonPath("$.reminderCount").value(0))
             .andExpect(jsonPath("$.deliveredAt").value(nullValue()))
-            .andExpect(jsonPath("$.*", hasSize(16)))
+            .andExpect(jsonPath("$.*", hasSize(17)))
             .andReturn();
     private_(result);
   }
@@ -761,7 +761,7 @@ class ClientOrderQueryApiPostgresTest {
             .andExpect(jsonPath("$.note").value("Bien caliente"))
             .andExpect(jsonPath("$.total").value("30500.00"))
             .andExpect(jsonPath("$.items", hasSize(2)))
-            .andExpect(jsonPath("$.*", hasSize(16)))
+            .andExpect(jsonPath("$.*", hasSize(17)))
             .andReturn();
     private_(result);
     UUID system = order(user, NOW.minusSeconds(300), null, JUICE, 1);

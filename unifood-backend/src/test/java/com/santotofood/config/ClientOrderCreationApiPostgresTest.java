@@ -472,8 +472,8 @@ class ClientOrderCreationApiPostgresTest {
             .andExpect(jsonPath("$.items[1].quantity").value(2))
             .andExpect(jsonPath("$.items[1].unitPrice").value("4500.00"))
             .andExpect(jsonPath("$.items[1].subtotal").value("9000.00"))
-            // The 6 fields of B15, then the ones B16 appends.
-            .andExpect(jsonPath("$.*", hasSize(16)))
+            // The 6 fields of B15, the ones B16 appends and requestedPickupAt (023).
+            .andExpect(jsonPath("$.*", hasSize(17)))
             .andExpect(jsonPath("$.cafeteria.name").value("Cafetería Central"))
             .andExpect(jsonPath("$.cancellationSource").value(nullValue()))
             .andExpect(content().string(not(containsString("DOC-PRIVATE"))))
@@ -535,6 +535,107 @@ class ClientOrderCreationApiPostgresTest {
     assertNull(
         jdbc.queryForObject(
             "SELECT note FROM public.orders WHERE id=?::uuid", String.class, id(result)));
+  }
+
+  // ---------------------------------------------------------------- pickup time (023)
+
+  static String withPickup(String body, String pickup) {
+    return body.substring(0, body.length() - 1) + ",\"requestedPickupAt\":" + pickup + "}";
+  }
+
+  static Instant storedPickup(MvcResult result) throws Exception {
+    var value =
+        jdbc.queryForObject(
+            "SELECT requested_pickup_at FROM public.orders WHERE id=?::uuid",
+            java.time.OffsetDateTime.class,
+            id(result));
+    return value == null ? null : value.toInstant();
+  }
+
+  @Test
+  void withoutAPickupTimeTheOrderIsAsSoonAsPossible() throws Exception {
+    var result =
+        order(client(), key(), body(OPEN, null, JUICE, 1))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.requestedPickupAt").value(nullValue()))
+            .andReturn();
+    assertNull(storedPickup(result));
+  }
+
+  @Test
+  void aPickupTimeLaterTodayIsStoredAndReturned() throws Exception {
+    UUID user = client();
+    var result =
+        order(user, key(), withPickup(body(OPEN, null, JUICE, 1), "\"2026-11-20T13:30:00-05:00\""))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.requestedPickupAt").value("2026-11-20T18:30:00Z"))
+            .andReturn();
+    assertEquals(Instant.parse("2026-11-20T18:30:00Z"), storedPickup(result));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        // Past, now, tomorrow in Bogotá, without offset and malformed.
+        "\"2026-11-20T11:00:00-05:00\"",
+        "\"2026-11-20T17:00:00Z\"",
+        "\"2026-11-21T00:00:00-05:00\"",
+        "\"2026-11-20T13:30:00\"",
+        "\"pronto\""
+      })
+  void anInvalidPickupTimeIsRefusedAndNothingIsStored(String pickup) throws Exception {
+    UUID user = client();
+    expectError(
+        order(user, key(), withPickup(body(OPEN, null, JUICE, 1), pickup)),
+        400,
+        "INVALID_PICKUP_TIME");
+    assertEquals(0, orders(user));
+  }
+
+  @Test
+  void aPickupTimeThatIsNotAStringIsAMalformedRequest() throws Exception {
+    UUID user = client();
+    expectError(
+        order(user, key(), withPickup(body(OPEN, null, JUICE, 1), "1763659800")),
+        400,
+        "INVALID_ORDER_REQUEST");
+    assertEquals(0, orders(user));
+  }
+
+  @Test
+  void theSameKeyWithAnotherPickupTimeIsAConflictAndTheSameInstantIsARepeat() throws Exception {
+    UUID user = client();
+    String key = key();
+    var plain = body(OPEN, null, JUICE, 1);
+    var created =
+        order(user, key, withPickup(plain, "\"2026-11-20T13:30:00-05:00\""))
+            .andExpect(status().isCreated())
+            .andReturn();
+    // The same instant written in UTC is the same request.
+    order(user, key, withPickup(plain, "\"2026-11-20T18:30:00Z\""))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(id(created)));
+    expectError(
+        order(user, key, withPickup(plain, "\"2026-11-20T14:00:00-05:00\"")),
+        409,
+        "IDEMPOTENCY_KEY_CONFLICT");
+    expectError(order(user, key, plain), 409, "IDEMPOTENCY_KEY_CONFLICT");
+    assertEquals(1, orders(user));
+    assertEquals(Instant.parse("2026-11-20T18:30:00Z"), storedPickup(created));
+  }
+
+  @Test
+  void anOrderWithoutPickupTimeConflictsWithTheSameKeyAndATime() throws Exception {
+    UUID user = client();
+    String key = key();
+    var plain = body(OPEN, null, JUICE, 1);
+    order(user, key, plain).andExpect(status().isCreated());
+    expectError(
+        order(user, key, withPickup(plain, "\"2026-11-20T13:30:00-05:00\"")),
+        409,
+        "IDEMPOTENCY_KEY_CONFLICT");
+    order(user, key, withPickup(plain, "null")).andExpect(status().isOk());
+    assertEquals(1, orders(user));
   }
 
   // ---------------------------------------------------------------- idempotency

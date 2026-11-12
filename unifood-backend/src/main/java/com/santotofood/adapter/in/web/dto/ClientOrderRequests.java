@@ -15,8 +15,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Bounded decoding of the create-order body (docs/decisiones.md §11). Only {@code cafeteriaId},
- * {@code items[].productId}, {@code items[].quantity} and {@code note} are read: prices, totals or
- * any other field the browser sends are ignored, never trusted.
+ * {@code items[].productId}, {@code items[].quantity}, {@code note} and {@code requestedPickupAt}
+ * are read: prices, totals or any other field the browser sends are ignored, never trusted.
  */
 public final class ClientOrderRequests {
   public static final int MAX_BYTES = 8192;
@@ -50,9 +50,12 @@ public final class ClientOrderRequests {
       }
       var note = body.get("note");
       if (note != null && !(note instanceof String)) return null;
+      // Optional; only a string reaches the use case, which owns its format and range.
+      var pickup = body.get("requestedPickupAt");
+      if (pickup != null && !(pickup instanceof String)) return null;
       var cafeteriaId = uuid(body.get("cafeteriaId"));
       if (cafeteriaId == null) return null;
-      return new OrderRequest(cafeteriaId, List.copyOf(items), (String) note);
+      return new OrderRequest(cafeteriaId, List.copyOf(items), (String) note, (String) pickup);
     } catch (IOException | RuntimeException unreadable) {
       return null;
     }

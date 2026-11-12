@@ -5,7 +5,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/** An order as its client sees it (docs/decisiones.md §11): never the client's document. */
+/**
+ * An order as its client sees it (docs/decisiones.md §11): never the client's document. {@code
+ * requestedPickupAt} is null for "as soon as possible".
+ */
 public record ClientOrder(
     UUID id,
     String status,
@@ -16,7 +19,8 @@ public record ClientOrder(
     Cafeteria cafeteria,
     String cancellationSource,
     String rejectionReason,
-    Timeline timeline) {
+    Timeline timeline,
+    Instant requestedPickupAt) {
 
   public ClientOrder {
     items = List.copyOf(items);

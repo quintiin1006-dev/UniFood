@@ -6,7 +6,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/** Worker order: name, institutional code and client type, never the document (B20). */
+/**
+ * Worker order: name, institutional code and client type, never the document (B20). {@code
+ * requestedPickupAt} is null for "as soon as possible".
+ */
 public record OrderResponse(
     UUID id,
     UUID cafeteriaId,
@@ -19,4 +22,5 @@ public record OrderResponse(
     Instant createdAt,
     Instant updatedAt,
     Instant deliveredAt,
-    List<OrderItemResponse> items) {}
+    List<OrderItemResponse> items,
+    Instant requestedPickupAt) {}

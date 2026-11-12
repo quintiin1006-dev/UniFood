@@ -251,6 +251,84 @@ test("the session bearer and a rebuilt body are all that reach Spring", async ()
   });
 });
 
+test("an optional pickup time reaches Spring as typed; Spring owns its range", async () => {
+  for (const requestedPickupAt of [
+    "2026-11-20T13:30:00-05:00",
+    "2026-11-20T18:30:00Z",
+    // Malformed or past: still Spring's to refuse with INVALID_PICKUP_TIME.
+    "13:30",
+  ]) {
+    const { calls, POST } = route();
+    const response = await POST(
+      request({ body: order({ requestedPickupAt }) }),
+    );
+    assert.equal(response.status, 201);
+    assert.deepEqual(JSON.parse(calls[0].options.body), {
+      cafeteriaId: CAFETERIA,
+      items: [{ productId: JUICE, quantity: 2 }],
+      requestedPickupAt,
+    });
+  }
+  // Absent or null is "as soon as possible": the field is not forwarded.
+  for (const body of [order(), order({ requestedPickupAt: null })]) {
+    const { calls, POST } = route();
+    assert.equal((await POST(request({ body }))).status, 201);
+    assert.equal(
+      Object.hasOwn(JSON.parse(calls[0].options.body), "requestedPickupAt"),
+      false,
+    );
+  }
+});
+
+test("a pickup time that is not a short string is rejected before Spring", async () => {
+  for (const requestedPickupAt of [
+    1763659800,
+    true,
+    {},
+    ["2026-11-20T13:30:00-05:00"],
+    "x".repeat(65),
+  ]) {
+    const { calls, POST } = route();
+    const response = await POST(
+      request({ body: order({ requestedPickupAt }) }),
+    );
+    assert.equal(response.status, 400, String(requestedPickupAt));
+    assert.equal((await response.json()).code, "INVALID_ORDER_REQUEST");
+    assert.equal(calls.length, 0);
+  }
+});
+
+test("Spring's INVALID_PICKUP_TIME and the pickup time in the order pass through", async () => {
+  const refused = {
+    status: 400,
+    code: "INVALID_PICKUP_TIME",
+    message: "La hora de recogida debe ser más tarde el día de hoy.",
+    timestamp: "2026-11-20T17:00:00Z",
+    path: "/api/me/orders",
+  };
+  const { POST } = route({
+    fetchMock: async () => Response.json(refused, { status: 400 }),
+  });
+  const response = await POST(
+    request({
+      body: order({ requestedPickupAt: "2026-11-19T13:30:00-05:00" }),
+    }),
+  );
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), refused);
+
+  const withTime = { ...created, requestedPickupAt: "2026-11-20T18:30:00Z" };
+  const ok = route({
+    fetchMock: async () => Response.json(withTime, { status: 201 }),
+  });
+  const accepted = await ok.POST(
+    request({
+      body: order({ requestedPickupAt: "2026-11-20T13:30:00-05:00" }),
+    }),
+  );
+  assert.deepEqual(await accepted.json(), withTime);
+});
+
 test("Spring's created order and a replay pass through without internal headers", async () => {
   for (const status of [201, 200]) {
     const { POST } = route({

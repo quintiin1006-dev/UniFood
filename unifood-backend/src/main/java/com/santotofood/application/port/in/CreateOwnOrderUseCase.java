@@ -15,7 +15,16 @@ public interface CreateOwnOrderUseCase {
    */
   CreatedOrder createOwnOrder(UUID userId, String idempotencyKey, OrderRequest request);
 
-  record OrderRequest(UUID cafeteriaId, List<Line> items, String note) {}
+  /**
+   * {@code requestedPickupAt} is the raw ISO-8601 text, or {@code null} for "as soon as possible";
+   * the use case parses and validates it.
+   */
+  record OrderRequest(UUID cafeteriaId, List<Line> items, String note, String requestedPickupAt) {
+
+    public OrderRequest(UUID cafeteriaId, List<Line> items, String note) {
+      this(cafeteriaId, items, note, null);
+    }
+  }
 
   record Line(UUID productId, int quantity) {}
 

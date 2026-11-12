@@ -324,8 +324,16 @@ se versiona.
 
 ## 6. Pedido
 
-- Una sola cafetería, «lo antes posible»: sin hora programada, tiempo estimado ni turno.
-  Aparece de inmediato en el panel del worker.
+- Una sola cafetería. **Hora de recogida opcional (decidido por el dueño del producto el
+  2026-11-11; sustituye a «sin hora programada»):**
+  - Sin hora, el pedido es «lo antes posible» y aparece de inmediato en el panel del worker,
+    sin franjas horarias.
+  - Con hora (`requestedPickupAt`, 023), debe ser posterior a ahora y del día de negocio
+    actual en America/Bogota; si no, 400 `INVALID_PICKUP_TIME`.
+  - La hora es **solo informativa**: no cambia el orden FIFO de la cola ni el cierre diario.
+    La tarjeta del worker muestra «Recoger a las HH:mm» en hora de Bogotá.
+  - Sin tiempo estimado ni turno. No hay horario de cafetería en el backend ni en la web:
+    abrir y cerrar lo controla el worker con su botón (`CAFETERIA_CLOSED`).
 - Un pedido puede mezclar desayuno y almuerzo.
 - Un pedido activo por cliente. Una sola nota de hasta 200 caracteres, sin opciones ni
   extras.
@@ -475,7 +483,7 @@ El BFF y Spring usan las mismas rutas. Errores con `ApiErrorResponse`:
 | `GET /api/me/context`                                 | Sedes, cafeterías activas y preferencia | 404 `CLIENT_PROFILE_NOT_FOUND`                                                                                       |
 | `PUT /api/me/preference`                              | Guarda sede y cafetería                 | 403 `CAFETERIA_NOT_SUBSCRIBED`, 404 `SITE_NOT_FOUND`, 409 `CAFETERIA_SITE_MISMATCH`                                  |
 | `GET /api/me/menu?cafeteriaId=`                       | Menú del día, con `ETag`                | 404 `CAFETERIA_NOT_FOUND`, 403 `CAFETERIA_NOT_SUBSCRIBED`, 400 `INVALID_REQUEST`                                     |
-| `POST /api/me/orders`                                 | Crea pedido, con `Idempotency-Key`      | Ver abajo                                                                                                            |
+| `POST /api/me/orders`                                 | Crea pedido, con `Idempotency-Key`      | Ver abajo; con hora inválida, 400 `INVALID_PICKUP_TIME`                                                              |
 | `GET /api/me/orders/current`                          | Pedido activo o `null`, con `ETag`      | —                                                                                                                    |
 | `GET /api/me/orders?cursor=&limit=20`                 | Historial                               | 400 `INVALID_ORDER_REQUEST`                                                                                          |
 | `GET /api/me/orders/{id}`                             | Detalle de un pedido propio             | 404 `ORDER_NOT_FOUND`                                                                                                |
@@ -622,6 +630,24 @@ según `cafeteria_daily_states` de hoy en America/Bogota. Nunca incluye el docum
   revierte entera, y una lectura nueva la convierte en 200, si es la misma solicitud, o en 409.
 - **503 `ORDER_TEMPORARILY_UNAVAILABLE`, con `Retry-After`:** fallo temporal de la base de
   datos. Se reintenta con la misma clave.
+
+**Hora de recogida opcional (023, decidido el 2026-11-11):**
+
+- `POST /api/me/orders` acepta `requestedPickupAt` opcional: ISO-8601 con offset (`Z` o
+  `±hh:mm`). Ausente o `null` es «lo antes posible». Un valor que no es texto es 400
+  `INVALID_ORDER_REQUEST`; un texto sin offset, mal formado, no posterior a ahora (del
+  `TimeProvider`) o de otro día de negocio en America/Bogota es 400 `INVALID_PICKUP_TIME`.
+- **Orden:** el formato se valida con la forma (paso 2); el rango, justo después de la
+  repetición (paso 3), así que reintentar con la misma clave responde 200 aunque la hora ya
+  haya pasado.
+- **`request_hash`:** incluye el instante de la hora, no su offset: `13:30-05:00` y
+  `18:30Z` son la misma solicitud. Sin hora, la forma canónica es la de B15, así que las
+  claves ya guardadas siguen valiendo. La misma clave con otra hora, o con y sin hora, es 409
+  `IDEMPOTENCY_KEY_CONFLICT`.
+- **Respuestas:** el pedido del cliente y el del worker añaden al final `requestedPickupAt`,
+  nullable. El worker la recibe en el listado y en cada transición, que nunca la reescriben.
+- **BFF:** reenvía `requestedPickupAt` solo si es texto de hasta 64 caracteres; el formato y
+  el rango son de Spring.
 
 **Pedido actual, historial y detalle implementados (B16, decidido el 2026-11-09):**
 

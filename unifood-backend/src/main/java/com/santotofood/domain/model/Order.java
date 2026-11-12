@@ -41,6 +41,14 @@ public class Order {
     this.rejectedBy = rejectedBy;
   }
 
+  /** Optional pickup time the client asked for (023); informative, it never orders the queue. */
+  private Instant requestedPickupAt;
+
+  /** Restore only when reconstituting an aggregate from persistence. */
+  public void restoreRequestedPickupAt(Instant requestedPickupAt) {
+    this.requestedPickupAt = requestedPickupAt;
+  }
+
   public static final int MIN_REJECTION_REASON_LENGTH = 3;
   public static final int MAX_REJECTION_REASON_LENGTH = 200;
 

@@ -89,7 +89,8 @@ class ClientOrderCreationServiceTest {
                         new ClientOrder.Cafeteria(CAFETERIA, "Cafetería Central"),
                         null,
                         null,
-                        new ClientOrder.Timeline(NOW, null, 0, null, null, null, null))));
+                        new ClientOrder.Timeline(NOW, null, 0, null, null, null, null),
+                        null)));
   }
 
   static OrderRequest request(String note, Line... lines) {
@@ -336,6 +337,115 @@ class ClientOrderCreationServiceTest {
     assertEquals(
         "ORDER_TEMPORARILY_UNAVAILABLE",
         code(() -> service.createOwnOrder(USER, KEY, request(null, new Line(JUICE, 1)))));
+  }
+
+  // ------------------------------------------------------------------ requested pickup time
+
+  static OrderRequest pickupAt(String requestedPickupAt) {
+    return new OrderRequest(CAFETERIA, List.of(new Line(JUICE, 1)), null, requestedPickupAt);
+  }
+
+  NewOrder inserted() {
+    var order = ArgumentCaptor.forClass(NewOrder.class);
+    verify(port, atLeastOnce()).insertOrder(order.capture());
+    return order.getValue();
+  }
+
+  @Test
+  void withoutAPickupTimeTheOrderIsAsSoonAsPossible() {
+    assertTrue(service.createOwnOrder(USER, KEY, pickupAt(null)).created());
+    assertNull(inserted().requestedPickupAt());
+  }
+
+  @Test
+  void aValidPickupTimeIsStoredAsTheInstantItNames() {
+    assertTrue(service.createOwnOrder(USER, KEY, pickupAt("2026-11-20T13:30:00-05:00")).created());
+    assertEquals(Instant.parse("2026-11-20T18:30:00Z"), inserted().requestedPickupAt());
+  }
+
+  @Test
+  void aPastOrNowPickupTimeIsRefusedBeforeAnyLock() {
+    for (var past :
+        new String[] {
+          "2026-11-20T12:00:00-05:00", "2026-11-20T11:59:00-05:00", "2026-11-19T13:00Z"
+        })
+      assertEquals(
+          "INVALID_PICKUP_TIME", code(() -> service.createOwnOrder(USER, KEY, pickupAt(past))));
+    verify(port, never()).lockCafeteria(any(), any());
+    verify(port, never()).insertOrder(any());
+  }
+
+  @Test
+  void aPickupTimeOnAnotherBusinessDayIsRefused() {
+    for (var other :
+        new String[] {
+          // Midnight in Bogotá already belongs to tomorrow.
+          "2026-11-21T00:00:00-05:00", "2026-11-21T12:00:00-05:00", "2026-12-20T13:00:00-05:00"
+        })
+      assertEquals(
+          "INVALID_PICKUP_TIME", code(() -> service.createOwnOrder(USER, KEY, pickupAt(other))));
+    verify(port, never()).insertOrder(any());
+  }
+
+  @Test
+  void aMalformedOrOffsetlessPickupTimeIsRefused() {
+    for (var bad : new String[] {"", "13:30", "2026-11-20T13:30:00", "2026-11-20", "pronto"})
+      assertEquals(
+          "INVALID_PICKUP_TIME", code(() -> service.createOwnOrder(USER, KEY, pickupAt(bad))));
+    verify(port, never()).insertOrder(any());
+  }
+
+  @Test
+  void theHashWithoutAPickupTimeIsTheOneOfB15() throws Exception {
+    // Keys stored before 023 must keep replaying: the canonical form without a time is unchanged.
+    var canonical = "order-v1\n" + CAFETERIA + "\n" + JUICE + ":1\n-";
+    var expected =
+        java.util.HexFormat.of()
+            .formatHex(
+                java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(canonical.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+    assertEquals(expected, hashOf(pickupAt(null)));
+  }
+
+  @Test
+  void theHashIncludesThePickupInstantButNotItsOffset() {
+    var none = hashOf(pickupAt(null));
+    var oneThirty = hashOf(pickupAt("2026-11-20T13:30:00-05:00"));
+    assertNotEquals(none, oneThirty);
+    assertEquals(oneThirty, hashOf(pickupAt("2026-11-20T18:30:00Z")));
+    assertNotEquals(oneThirty, hashOf(pickupAt("2026-11-20T13:45:00-05:00")));
+  }
+
+  @Test
+  void theSameKeyWithAnotherPickupTimeConflicts() {
+    var hash = hashOf(pickupAt("2026-11-20T13:30:00-05:00"));
+    UUID existing = UUID.randomUUID();
+    when(port.findByIdempotencyKey(CLIENT.clientId(), KEY))
+        .thenReturn(Optional.of(new KeyedOrder(existing, hash)));
+    clearInvocations(port);
+
+    assertEquals(
+        existing, service.createOwnOrder(USER, KEY, pickupAt("2026-11-20T18:30Z")).order().id());
+    for (var other : new String[] {"2026-11-20T14:00:00-05:00", null})
+      assertEquals(
+          "IDEMPOTENCY_KEY_CONFLICT",
+          code(() -> service.createOwnOrder(USER, KEY, pickupAt(other))));
+    verify(port, never()).insertOrder(any());
+  }
+
+  @Test
+  void aReplayAnswersEvenAfterItsPickupTimePassed() {
+    // Served at 12:00 for 12:30; the retry arrives at 13:00 and is still the same request.
+    var hash = hashOf(pickupAt("2026-11-20T12:30:00-05:00"));
+    UUID existing = UUID.randomUUID();
+    when(port.findByIdempotencyKey(CLIENT.clientId(), KEY))
+        .thenReturn(Optional.of(new KeyedOrder(existing, hash)));
+    var later =
+        new ClientOrderCreationService(port, () -> Instant.parse("2026-11-20T18:00:00Z"), manager);
+
+    var replay = later.createOwnOrder(USER, KEY, pickupAt("2026-11-20T12:30:00-05:00"));
+    assertFalse(replay.created());
+    assertEquals(existing, replay.order().id());
   }
 
   @Test
