@@ -72,9 +72,10 @@ for (const width of [320, 375, 390, 412, 430, 1280]) {
       path: testInfo.outputPath(`editable-cart-${width}.png`),
     });
     await page.getByRole("link", { name: "Continuar con el pedido" }).click();
+    // The summary now reads the menu through the BFF; the first visit compiles both in next dev.
     await expect(
       page.getByRole("heading", { name: "Resumen del pedido" }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 30_000 });
     await expect(
       page
         .getByRole("navigation", { name: "Navegación del estudiante" })
