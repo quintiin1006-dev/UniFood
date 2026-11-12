@@ -423,3 +423,25 @@ test("a placed order is read defensively and optional fields may be absent", () 
     null,
   );
 });
+
+test("the key is a valid UUID even where crypto.randomUUID is missing (plain HTTP)", () => {
+  const format = /^[A-Za-z0-9_-]{16,128}$/;
+  const uuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+  const withValues = {
+    getRandomValues: (bytes) =>
+      bytes.forEach((_, i) => (bytes[i] = (i * 37 + 11) % 256)),
+  };
+  for (const api of [withValues, {}, undefined]) {
+    const key = idempotency.randomKey(api);
+    assert.match(key, uuid);
+    assert.match(key, format);
+  }
+  assert.equal(
+    idempotency.randomKey({
+      randomUUID: () => "11111111-2222-4333-8444-555555555555",
+    }),
+    "11111111-2222-4333-8444-555555555555",
+  );
+  assert.notEqual(idempotency.randomKey({}), idempotency.randomKey({}));
+});
