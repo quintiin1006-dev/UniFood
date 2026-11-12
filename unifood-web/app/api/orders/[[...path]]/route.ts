@@ -20,6 +20,7 @@ const actions = new Set([
   "reject",
 ]);
 const MAX_REJECT_BODY_BYTES = 2048;
+const LISTING_UNAVAILABLE = "No se pudo resolver la cafetería de tu cuenta.";
 
 /** Only `{reason}` crosses the BFF, already trimmed and within 3-200 characters. */
 async function rejectBody(request: Request) {
@@ -96,46 +97,17 @@ async function forward(
   }
 
   const base = serverApiUrl();
+  // The listing is one Spring call: it resolves the cafeteria from the database facts of that
+  // same request, so no query parameter or earlier context ever selects it.
   const url = new URL(
-    `${base}/api/orders${path.length ? `/${path.join("/")}` : ""}`,
+    isList
+      ? `${base}/api/worker/orders`
+      : `${base}/api/orders/${path.join("/")}`,
   );
 
   try {
     const headers = new Headers();
     headers.set("authorization", `Bearer ${auth.accessToken}`);
-    if (isList) {
-      const contextResponse = await fetch(`${base}/api/worker/context`, {
-        method: "GET",
-        headers,
-        cache: "no-store",
-        signal: AbortSignal.timeout(15000),
-      });
-      if (!contextResponse.ok) {
-        return Response.json(
-          { message: "No se pudo resolver la cafetería de tu cuenta." },
-          {
-            status: [401, 403].includes(contextResponse.status)
-              ? contextResponse.status
-              : 502,
-            headers: { "Cache-Control": "no-store" },
-          },
-        );
-      }
-      const workerContext = await contextResponse.json();
-      if (
-        typeof workerContext?.cafeteriaId !== "string" ||
-        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-          workerContext.cafeteriaId,
-        )
-      ) {
-        return Response.json(
-          { message: "No se pudo resolver la cafetería de tu cuenta." },
-          { status: 502, headers: { "Cache-Control": "no-store" } },
-        );
-      }
-      // Only the authenticated backend context selects the cafeteria, never request parameters.
-      url.searchParams.set("cafeteriaId", workerContext.cafeteriaId);
-    }
     if (body !== undefined) headers.set("content-type", "application/json");
     const response = await fetch(url, {
       method: request.method,
@@ -145,6 +117,23 @@ async function forward(
       redirect: "error",
       signal: AbortSignal.timeout(15000),
     });
+    if (
+      isList &&
+      (response.status !== 200 ||
+        !/^application\/json(?:\s*;|$)/i.test(
+          response.headers.get("content-type") ?? "",
+        ))
+    ) {
+      // Same fixed message as the former context step; no upstream body is public.
+      await response.body?.cancel().catch(() => {});
+      return Response.json(
+        { message: LISTING_UNAVAILABLE },
+        {
+          status: [401, 403].includes(response.status) ? response.status : 502,
+          headers: { "Cache-Control": "no-store" },
+        },
+      );
+    }
     return new Response(response.body, {
       status: response.status,
       headers: {

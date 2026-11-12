@@ -8,7 +8,12 @@ function setup(enabled = true) {
   const states = [];
   const requests = [];
   const effects = [];
-  let start, tick, focus;
+  let start, tick, focus, visibility;
+  const document = {
+    visibilityState: "visible",
+    addEventListener: (type, callback) => { if (type === "visibilitychange") visibility = callback; },
+    removeEventListener: (type, callback) => { if (type === "visibilitychange" && visibility === callback) visibility = undefined; },
+  };
   const loaded = { exports: {} };
   const react = {
     useState(value) {
@@ -31,11 +36,16 @@ function setup(enabled = true) {
     setInterval: (callback) => { tick = callback; },
     clearTimeout() {}, clearInterval() {},
     window: { addEventListener: (_, callback) => { focus = callback; }, removeEventListener() {} },
+    document,
   });
   loaded.exports.useOrders(enabled);
   const cleanup = effects[0]();
   start?.();
-  return { states, requests, tick, focus, cleanup, remount() { effects[0](); start(); } };
+  return {
+    states, requests, tick, focus, cleanup, document,
+    get visibility() { return visibility; },
+    remount() { effects[0](); start(); },
+  };
 }
 
 test("inactive order modules install no polling or focus listener", () => {
@@ -43,6 +53,7 @@ test("inactive order modules install no polling or focus listener", () => {
   assert.equal(app.requests.length, 0);
   assert.equal(app.tick, undefined);
   assert.equal(app.focus, undefined);
+  assert.equal(app.visibility, undefined);
 });
 
 test("slow order responses survive polling ticks and focus events", async () => {
@@ -87,4 +98,29 @@ test("effect cleanup invalidates old responses without blocking a remount", asyn
   await new Promise(setImmediate);
   assert.equal(app.states[0], orders);
   assert.equal(app.states[1], false);
+});
+
+test("a hidden tab does not poll and becoming visible reloads at once", async () => {
+  const app = setup();
+  app.requests[0].resolve([]);
+  await new Promise(setImmediate);
+  app.document.visibilityState = "hidden";
+  app.tick(); app.tick(); app.focus(); app.visibility();
+  assert.equal(app.requests.length, 1);
+  app.document.visibilityState = "visible";
+  app.visibility();
+  assert.equal(app.requests.length, 2);
+  const orders = [{ id: "after-return" }];
+  app.requests[1].resolve(orders);
+  await new Promise(setImmediate);
+  assert.equal(app.states[0], orders);
+  app.tick();
+  assert.equal(app.requests.length, 3);
+});
+
+test("cleanup removes the visibility listener", () => {
+  const app = setup();
+  assert.equal(typeof app.visibility, "function");
+  app.cleanup();
+  assert.equal(app.visibility, undefined);
 });

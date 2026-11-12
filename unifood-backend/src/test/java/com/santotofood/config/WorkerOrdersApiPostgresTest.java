@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.santotofood.adapter.in.web.OrderController;
+import com.santotofood.adapter.in.web.WorkerOrdersController;
 import com.santotofood.adapter.in.web.error.GlobalExceptionHandler;
 import com.santotofood.adapter.in.web.mapper.OrderResponseMapper;
 import com.santotofood.adapter.out.persistence.AuthorizationPersistenceAdapter;
@@ -180,6 +181,7 @@ class WorkerOrdersApiPostgresTest {
         AuthorizationPersistenceAdapter.class,
         OrderResponseMapper.class,
         OrderController.class,
+        WorkerOrdersController.class,
         GlobalExceptionHandler.class);
     context.refresh();
     mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
@@ -410,6 +412,59 @@ class WorkerOrdersApiPostgresTest {
     mvc.perform(get("/api/orders").param("cafeteriaId", OTHER_CAFE.toString()).with(as(WORKER)))
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+  }
+
+  // ---------------------------------------------------------------- single call
+
+  @Test
+  void theSingleCallListsTheSameOrdersAsTheTwoCallFlowWithoutTheDocument() throws Exception {
+    var single =
+        mvc.perform(
+                get("/api/worker/orders")
+                    .param("cafeteriaId", OTHER_CAFE.toString())
+                    .with(as(WORKER)))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andExpect(header().string("X-Business-Date", "2026-11-20"))
+            .andExpect(header().string("X-Next-Business-Date-At", "2026-11-21T05:00:00Z"))
+            .andReturn();
+    var body = single.getResponse().getContentAsString(StandardCharsets.UTF_8);
+    assertFalse(body.contains("DOC-PRIVATE"), body);
+    assertFalse(body.contains("ocument"), body);
+    var twoCalls =
+        mvc.perform(get("/api/orders").param("cafeteriaId", CAFE.toString()).with(as(WORKER)))
+            .andExpect(status().isOk())
+            .andReturn();
+    // The query parameter is ignored: the database assignment selects CAFE, never OTHER_CAFE.
+    assertEquals(listing(twoCalls).keySet(), listing(single).keySet());
+    assertFalse(listing(single).containsKey(ORDERS.get("foreign").toString()));
+  }
+
+  @Test
+  void eachWorkerGetsOnlyItsOwnCafeteriaFromTheSingleCall() throws Exception {
+    var other =
+        mvc.perform(get("/api/worker/orders").with(as(OTHER_WORKER)))
+            .andExpect(status().isOk())
+            .andReturn();
+    var ids = listing(other).keySet();
+    assertTrue(ids.contains(ORDERS.get("foreign").toString()), ids.toString());
+    for (String key : new String[] {"copied", "staff", "legacy", "stale", "deliveredToday"})
+      assertFalse(ids.contains(ORDERS.get(key).toString()), key);
+  }
+
+  @Test
+  void anInactiveWorkerAndAClientGetTheFixed403OnTheSingleCall() throws Exception {
+    UUID inactive = UUID.randomUUID();
+    staff(inactive, "WORKER", CAFE);
+    mvc.perform(get("/api/worker/orders").with(as(inactive))).andExpect(status().isOk());
+    jdbc.update("UPDATE public.users SET is_active=false WHERE id=?", inactive);
+    for (UUID subject : new UUID[] {inactive, INSTITUTION_READER_CLIENT, UUID.randomUUID()})
+      mvc.perform(get("/api/worker/orders").with(as(subject)))
+          .andExpect(status().isForbidden())
+          .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+          .andExpect(
+              jsonPath("$.message").value("No tienes permisos para realizar esta operación"));
+    mvc.perform(get("/api/worker/orders")).andExpect(status().isUnauthorized());
   }
 
   // ---------------------------------------------------------------- operations
