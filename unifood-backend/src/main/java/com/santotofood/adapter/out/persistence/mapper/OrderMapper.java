@@ -29,6 +29,9 @@ public class OrderMapper {
     entity.setCancelledByClient(order.isCancelledByClient());
     entity.setCancellation(
         order.getCancellationSource(), order.getRejectionReason(), order.getRejectedBy());
+    // A merge copies every attribute into the managed entity: without it the response would lose
+    // the pickup time, although the read-only column itself is never written.
+    entity.setRequestedPickupAt(order.getRequestedPickupAt());
     return entity;
   }
 
@@ -55,6 +58,7 @@ public class OrderMapper {
     order.restoreConcurrencyState(entity.getVersion(), entity.isCancelledByClient());
     order.restoreCancellation(
         entity.getCancellationSource(), entity.getRejectionReason(), entity.getRejectedBy());
+    order.restoreRequestedPickupAt(entity.getRequestedPickupAt());
     return order;
   }
 }

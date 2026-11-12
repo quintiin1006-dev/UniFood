@@ -9,8 +9,8 @@ import java.util.UUID;
 
 /**
  * docs/decisiones.md §11 order, shared by create, current, detail and cancel. B16 only appends
- * fields after the B15 ones. Amounts travel as decimal strings; the client's document is never part
- * of it.
+ * fields after the B15 ones, and {@code requestedPickupAt} (nullable) comes last. Amounts travel as
+ * decimal strings; the client's document is never part of it.
  */
 public record ClientOrderResponse(
     UUID id,
@@ -28,7 +28,8 @@ public record ClientOrderResponse(
     Instant lastRemindedAt,
     Instant deliveredAt,
     Instant notCollectedAt,
-    Instant cancelledAt) {
+    Instant cancelledAt,
+    Instant requestedPickupAt) {
 
   public record Item(String name, int quantity, String unitPrice, String subtotal) {}
 
@@ -60,7 +61,8 @@ public record ClientOrderResponse(
         timeline.lastRemindedAt(),
         timeline.deliveredAt(),
         timeline.notCollectedAt(),
-        timeline.cancelledAt());
+        timeline.cancelledAt(),
+        order.requestedPickupAt());
   }
 
   static String amount(BigDecimal value) {

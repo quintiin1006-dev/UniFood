@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, UserRound } from "lucide-react";
+import { ArrowRight, Clock, UserRound } from "lucide-react";
 
 import {
   ACTION_ICONS,
@@ -12,6 +12,7 @@ import { formatClockTime, formatRelativeTime } from "@/lib/orderTime";
 
 import { RejectOrderButton } from "@/features/orders/components/RejectOrderDialog";
 import { clientIdentity } from "@/features/orders/utils/clientIdentity";
+import { pickupLabel } from "@/features/orders/utils/pickupTime";
 import type { Order } from "@/types/order";
 
 import styles from "./OrderCard.module.css";
@@ -39,6 +40,8 @@ export default function OrderCard({
 
   const isDelivered = order.status === "delivered";
 
+  const pickup = pickupLabel(order.requestedPickupAt);
+
   return (
     <article
       className={`${styles.card} ${isDelivered ? styles.delivered : ""}`}
@@ -64,6 +67,15 @@ export default function OrderCard({
 
         <ArrowRight size={21} strokeWidth={2.2} className={styles.arrow} />
       </button>
+
+      {/* Hora de recogida pedida por el cliente: solo informativa */}
+      {pickup && (
+        <div className={styles.pickupTime}>
+          <Clock size={14} strokeWidth={2.3} aria-hidden="true" />
+
+          <span>{pickup}</span>
+        </div>
+      )}
 
       {/* Estado del estudiante */}
       {order.status === "called" && (

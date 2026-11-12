@@ -16,7 +16,11 @@ type OrderBody = {
   cafeteriaId: string;
   items: { productId: string; quantity: number }[];
   note?: string | null;
+  requestedPickupAt?: string;
 };
+
+// An ISO-8601 instant is far shorter; Spring checks its format, offset and range.
+const MAX_PICKUP_LENGTH = 64;
 
 const fail = (status: number, message: string, code: string) =>
   Response.json(
@@ -29,7 +33,8 @@ const invalid = () =>
 
 /**
  * POST /api/me/orders (B15). The session gives the identity and the bearer; the browser
- * only chooses a cafeteria, products, quantities and a note. Limits, prices, totals and
+ * only chooses a cafeteria, products, quantities, a note and an optional pickup time.
+ * Limits, the pickup time's range, prices, totals and
  * availability are Spring's: anything else in the body is dropped, never forwarded.
  */
 export async function forwardCreateOrder(request: Request) {
@@ -237,10 +242,21 @@ async function readOrder(request: Request): Promise<OrderBody | null> {
     return null;
   }
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const { cafeteriaId, items, note } = raw as Record<string, unknown>;
+  const { cafeteriaId, items, note, requestedPickupAt } = raw as Record<
+    string,
+    unknown
+  >;
   if (typeof cafeteriaId !== "string" || !UUID.test(cafeteriaId)) return null;
   if (!Array.isArray(items) || items.length === 0) return null;
   if (note !== undefined && note !== null && typeof note !== "string")
+    return null;
+  // Optional: absent or null is "as soon as possible"; a string goes to Spring as is.
+  if (
+    requestedPickupAt !== undefined &&
+    requestedPickupAt !== null &&
+    (typeof requestedPickupAt !== "string" ||
+      requestedPickupAt.length > MAX_PICKUP_LENGTH)
+  )
     return null;
   const lines: OrderBody["items"] = [];
   for (const item of items) {
@@ -255,5 +271,6 @@ async function readOrder(request: Request): Promise<OrderBody | null> {
     cafeteriaId,
     items: lines,
     ...(typeof note === "string" ? { note } : {}),
+    ...(typeof requestedPickupAt === "string" ? { requestedPickupAt } : {}),
   };
 }

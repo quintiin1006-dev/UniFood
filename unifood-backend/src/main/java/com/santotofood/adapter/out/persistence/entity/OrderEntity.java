@@ -107,6 +107,11 @@ public class OrderEntity {
   @Column(name = "rejected_by")
   private UUID rejectedBy;
 
+  // 023: optional pickup time, written once by the client's INSERT. Read-only here, so no worker
+  // transition or daily close can rewrite it; it never orders the queue.
+  @Column(name = "requested_pickup_at", insertable = false, updatable = false)
+  private Instant requestedPickupAt;
+
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 
@@ -266,6 +271,15 @@ public class OrderEntity {
     this.cancellationSource = source;
     this.rejectionReason = reason;
     this.rejectedBy = rejectedBy;
+  }
+
+  public Instant getRequestedPickupAt() {
+    return requestedPickupAt;
+  }
+
+  /** Only keeps the value across a merge; the column itself is never written from here. */
+  public void setRequestedPickupAt(Instant requestedPickupAt) {
+    this.requestedPickupAt = requestedPickupAt;
   }
 
   public Instant getCreatedAt() {

@@ -57,7 +57,8 @@ class ClientOrderQueryServiceTest {
         new ClientOrder.Cafeteria(UUID.randomUUID(), "Cafetería Central"),
         null,
         null,
-        new ClientOrder.Timeline(NOW, null, 0, null, null, null, null));
+        new ClientOrder.Timeline(NOW, null, 0, null, null, null, null),
+        null);
   }
 
   static CurrentTag tag(String status, long version) {

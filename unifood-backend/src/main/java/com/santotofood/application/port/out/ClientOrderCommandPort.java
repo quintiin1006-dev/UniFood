@@ -2,6 +2,7 @@ package com.santotofood.application.port.out;
 
 import com.santotofood.application.model.ClientOrder;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -59,6 +60,7 @@ public interface ClientOrderCommandPort {
       OrderingClient client,
       BigDecimal total,
       String note,
+      Instant requestedPickupAt,
       String idempotencyKey,
       String requestHash) {}
 

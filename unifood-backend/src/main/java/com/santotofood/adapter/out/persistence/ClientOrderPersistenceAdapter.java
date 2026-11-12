@@ -130,7 +130,8 @@ public class ClientOrderPersistenceAdapter implements ClientOrderCommandPort, Cl
             found.cafeteria(),
             found.cancellationSource(),
             found.rejectionReason(),
-            found.timeline()));
+            found.timeline(),
+            found.requestedPickupAt()));
   }
 
   @Override
@@ -185,7 +186,8 @@ public class ClientOrderPersistenceAdapter implements ClientOrderCommandPort, Cl
             instant(row, "last_reminded_at"),
             instant(row, "delivered_at"),
             instant(row, "not_collected_at"),
-            instant(row, "cancelled_at")));
+            instant(row, "cancelled_at")),
+        instant(row, "requested_pickup_at"));
   }
 
   private static ClientOrder.Item item(ResultSet row, int number) throws SQLException {
@@ -271,6 +273,9 @@ public class ClientOrderPersistenceAdapter implements ClientOrderCommandPort, Cl
         order.client().fullName(),
         order.total(),
         order.note(),
+        order.requestedPickupAt() == null
+            ? null
+            : order.requestedPickupAt().atOffset(ZoneOffset.UTC),
         order.idempotencyKey(),
         order.requestHash(),
         order.client().institutionalCode(),

@@ -140,7 +140,8 @@ class ClientOrderCancellationApiTest {
                     null,
                     null,
                     null,
-                    Instant.parse("2026-01-01T01:00:00Z"))));
+                    Instant.parse("2026-01-01T01:00:00Z")),
+                null));
     when(queries.findUserAuthorization(userId))
         .thenReturn(Optional.of(new UserAuthorization(true, Set.of("CLIENT"), List.of())));
     when(queries.findOrderOwner(orderId)).thenReturn(Optional.of(new OrderOwner(userId)));
