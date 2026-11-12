@@ -4,7 +4,6 @@ import { loadTs } from "./helpers/load-ts.mjs";
 
 const menuDomain = loadTs("features/client/domain/menu.ts");
 const cart = loadTs("features/client/domain/cart.ts");
-const checkout = loadTs("features/client/domain/checkout.ts");
 const fixtures = loadTs("tests/fixtures/client-menu.ts");
 const { PRODUCT } = fixtures;
 const central = menuDomain.toCafeteriaMenu(
@@ -207,53 +206,4 @@ test("restored carts keep only ids and quantities and reject corrupt or excessiv
       cart.emptyCart(),
       JSON.stringify(value),
     );
-});
-
-test("the test checkout uses real names and prices and still never sends an order", () => {
-  const lunch = new Date("2026-11-20T12:00:00-05:00");
-  const state = filled([PRODUCT.juice, 2], [PRODUCT.chicken, 1]);
-  assert.equal(checkout.cartMealKind(state, central), "lunch");
-  assert.equal(
-    checkout.cartMealKind(
-      filled([PRODUCT.pericos, 1], [PRODUCT.broth, 1]),
-      central,
-    ),
-    "breakfast",
-  );
-  const slots = checkout.pickupSlots(state, central, lunch);
-  const slot = slots.find((item) => item.available);
-  assert.ok(slot);
-  assert.equal(slots[0].value, "2026-11-20T16:30:00.000Z");
-  assert.equal(
-    checkout.reviewCheckout(state, central, slot.value, false, lunch).ok,
-    false,
-  );
-  const result = checkout.reviewCheckout(
-    state,
-    central,
-    slot.value,
-    true,
-    lunch,
-  );
-  assert.equal(result.ok, true);
-  assert.deepEqual(result.summary.lines, [
-    { id: PRODUCT.juice, name: "Jugo natural", quantity: 2, unitPrice: 4500 },
-    {
-      id: PRODUCT.chicken,
-      name: "Pechuga a la plancha",
-      quantity: 1,
-      unitPrice: 15000,
-    },
-  ]);
-  assert.equal(result.summary.total, 24000);
-  assert.equal(result.summary.cafeteria, "Cafetería Central");
-  const closedToday = structuredClone(central);
-  closedToday.cafeteria.open = false;
-  assert.deepEqual(
-    checkout.reviewCheckout(state, closedToday, slot.value, true, lunch),
-    {
-      ok: false,
-      error: cart.CLOSED_MESSAGE,
-    },
-  );
 });

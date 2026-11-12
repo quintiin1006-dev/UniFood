@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 import ClientBottomNav from "./ClientBottomNav";
-import ClientHoursPreview from "./ClientHoursPreview";
 import styles from "./ClientShell.module.css";
 
 export default function ClientShell({
@@ -43,10 +42,7 @@ export default function ClientShell({
         </div>
       </header>
       <main id="client-content" tabIndex={-1} className={styles.main}>
-        <div className={styles.content}>
-          <ClientHoursPreview />
-          {children}
-        </div>
+        <div className={styles.content}>{children}</div>
       </main>
       <ClientBottomNav />
     </div>

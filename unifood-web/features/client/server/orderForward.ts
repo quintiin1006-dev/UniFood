@@ -22,6 +22,15 @@ type OrderBody = {
 // An ISO-8601 instant is far shorter; Spring checks its format, offset and range.
 const MAX_PICKUP_LENGTH = 64;
 
+/** Server-side diagnostics only; logging must never break the answer. */
+function logServer(message: string, details: Record<string, unknown>) {
+  try {
+    console.error(message, details);
+  } catch {
+    // Nothing else to do.
+  }
+}
+
 const fail = (status: number, message: string, code: string) =>
   Response.json(
     { status, code, message },
@@ -75,7 +84,12 @@ export async function forwardCreateOrder(request: Request) {
       redirect: "error",
       signal: AbortSignal.timeout(15000),
     });
-  } catch {
+  } catch (cause) {
+    // Server log only (no body, no secrets): tells a refused connection from a bad answer.
+    logServer("[orders] POST /api/me/orders: backend not reached", {
+      name: (cause as Error)?.name,
+      code: (cause as { cause?: { code?: string } })?.cause?.code,
+    });
     // The order may exist anyway: retrying with the same key returns it, never a second one.
     return fail(
       502,
@@ -93,12 +107,18 @@ export async function forwardCreateOrder(request: Request) {
     (upstream.status >= 400 && upstream.status < 500) ||
     upstream.status === 503;
   // Spring's own answers pass through; anything unexpected becomes a generic 502.
-  if (!json || !known)
+  if (!json || !known) {
+    logServer("[orders] POST /api/me/orders: unexpected backend answer", {
+      status: upstream.status,
+      contentType: upstream.headers.get("content-type"),
+      wwwAuthenticate: upstream.headers.has("www-authenticate"),
+    });
     return fail(
       502,
       "No pudimos crear tu pedido en este momento. Inténtalo nuevamente.",
       "BACKEND_UNAVAILABLE",
     );
+  }
   const out = new Headers({
     "Cache-Control": "no-store",
     "Content-Type": "application/json",
