@@ -64,11 +64,8 @@ export default function KanbanBoard({
   return (
     <section className={styles.board}>
       {columns.map((column) => {
-        const columnOrders = orders.filter(
-          (order) =>
-            column.statuses.includes(
-              order.status
-            )
+        const columnOrders = orders.filter((order) =>
+          column.statuses.includes(order.status),
         );
 
         const visibleOrders =
@@ -76,12 +73,8 @@ export default function KanbanBoard({
             ? [...columnOrders]
                 .sort(
                   (a, b) =>
-                    new Date(
-                      b.deliveredAt ?? ""
-                    ).getTime() -
-                    new Date(
-                      a.deliveredAt ?? ""
-                    ).getTime()
+                    new Date(b.deliveredAt ?? "").getTime() -
+                    new Date(a.deliveredAt ?? "").getTime(),
                 )
                 .slice(0, 5)
             : columnOrders;
@@ -89,89 +82,39 @@ export default function KanbanBoard({
         const ColumnIcon = column.icon;
 
         return (
-          <article
-            key={column.id}
-            className={styles.column}
-          >
-            <header
-              className={
-                styles.columnHeader
-              }
-            >
-              <div
-                className={
-                  styles.columnHeading
-                }
-              >
+          <article key={column.id} className={styles.column}>
+            <header className={styles.columnHeader}>
+              <div className={styles.columnHeading}>
                 <ColumnIcon
-                  size={
-                    column.id ===
-                    "delivered"
-                      ? 30
-                      : 38
-                  }
-                  strokeWidth={
-                    column.id ===
-                    "delivered"
-                      ? 2.8
-                      : 2.1
-                  }
+                  size={column.id === "delivered" ? 30 : 38}
+                  strokeWidth={column.id === "delivered" ? 2.8 : 2.1}
                   className={
-                    column.id ===
-                    "delivered"
+                    column.id === "delivered"
                       ? styles.deliveredIcon
                       : styles.columnIcon
                   }
                 />
 
-                <span
-                  className={
-                    styles.columnTitle
-                  }
-                >
-                  {column.title}
-                </span>
+                <span className={styles.columnTitle}>{column.title}</span>
               </div>
 
-              <span
-                className={
-                  styles.columnCount
-                }
-              >
-                {visibleOrders.length}
-              </span>
+              <span className={styles.columnCount}>{visibleOrders.length}</span>
             </header>
 
-            <div
-              className={
-                styles.columnContent
-              }
-            >
+            <div className={styles.columnContent}>
               {visibleOrders.length === 0 ? (
-                <div
-                  className={
-                    styles.emptyColumn
-                  }
-                >
-                  No hay pedidos
-                </div>
+                <div className={styles.emptyColumn}>No hay pedidos</div>
               ) : (
-                visibleOrders.map(
-                  (order) => (
-                    <OrderCard
-                      key={order.id}
-                      order={order}
-                      busy={busyOrderIds.includes(order.id)}
-                      onOpen={() =>
-                        onOpenOrder(order)
-                      }
-                      onAction={() =>
-                        onAction(order)
-                      }
-                      onReject={onReject}
-                    />
-                  )
-                )
+                visibleOrders.map((order) => (
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    busy={busyOrderIds.includes(order.id)}
+                    onOpen={() => onOpenOrder(order)}
+                    onAction={() => onAction(order)}
+                    onReject={onReject}
+                  />
+                ))
               )}
             </div>
           </article>
