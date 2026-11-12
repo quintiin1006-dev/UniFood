@@ -5,7 +5,9 @@ import {
   advanceOrder,
   getOperationalOrders,
   rejectOrder,
+  runCalledOrderAction,
 } from "@/features/orders/api/orderApi";
+import type { CalledOrderAction } from "@/features/orders/calledOrderActions";
 import type { Order } from "@/types/order";
 
 export function useOrders(enabled = true) {
@@ -15,6 +17,10 @@ export function useOrders(enabled = true) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [isPriorityError, setIsPriorityError] = useState(false);
   const [busyOrderIds, setBusyOrderIds] = useState<string[]>([]);
+  // Which button of an order is in flight, so only that one says it is working.
+  const [busyActions, setBusyActions] = useState<
+    Record<string, CalledOrderAction>
+  >({});
   const pending = useRef(new Set<string>());
   const revision = useRef(0);
   const activeRefresh = useRef<number | null>(null);
@@ -227,6 +233,55 @@ export function useOrders(enabled = true) {
     [refresh, replaceOrders],
   );
 
+  /**
+   * Reminder or "no recogido" of a CALLED order. It shares the per-order lock with the other
+   * actions, so a double click or a click during another action sends nothing.
+   */
+  const handleCalledOrderAction = useCallback(
+    async (order: Order, action: CalledOrderAction): Promise<Order | null> => {
+      if (pending.current.has(order.id)) return null;
+      clearActionError();
+      const current = latestOrders.current.find((item) => item.id === order.id);
+      if (!current || current.status !== "called") {
+        setActionError(
+          "El pedido ya cambió de estado. Revisa el tablero actualizado.",
+        );
+        void refresh();
+        return null;
+      }
+      pending.current.add(order.id);
+      ++revision.current;
+      setBusyOrderIds([...pending.current]);
+      setBusyActions((actions) => ({ ...actions, [order.id]: action }));
+      try {
+        const updated = await runCalledOrderAction(current, action);
+        replaceOrders(
+          latestOrders.current.map((item) =>
+            item.id === updated.id ? updated : item,
+          ),
+        );
+        return updated;
+      } catch (cause) {
+        setActionError(
+          cause instanceof Error
+            ? cause.message
+            : "No se pudo actualizar el pedido.",
+        );
+        return null;
+      } finally {
+        pending.current.delete(order.id);
+        setBusyOrderIds([...pending.current]);
+        setBusyActions((actions) => {
+          const next = { ...actions };
+          delete next[order.id];
+          return next;
+        });
+        void refresh();
+      }
+    },
+    [clearActionError, refresh, replaceOrders],
+  );
+
   return {
     orders,
     loading,
@@ -234,8 +289,10 @@ export function useOrders(enabled = true) {
     actionError,
     isPriorityError,
     busyOrderIds,
+    busyActions,
     handleOrderAction,
     handleOrderReject,
+    handleCalledOrderAction,
     clearActionError,
   };
 }

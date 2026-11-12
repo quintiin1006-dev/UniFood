@@ -24,7 +24,10 @@ public class OrderResponseMapper {
         order.getUpdatedAt(),
         order.getDeliveredAt(),
         order.getItems().stream().map(this::toItemResponse).toList(),
-        order.getRequestedPickupAt());
+        order.getRequestedPickupAt(),
+        order.getCalledAt(),
+        order.getReminderCount(),
+        order.getLastRemindedAt());
   }
 
   private OrderItemResponse toItemResponse(OrderItem item) {

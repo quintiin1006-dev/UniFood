@@ -22,12 +22,14 @@ export default function WorkerDashboard() {
   const {
     orders,
     busyOrderIds,
+    busyActions,
     loading,
     error,
     actionError,
     isPriorityError,
     handleOrderAction,
     handleOrderReject,
+    handleCalledOrderAction,
     clearActionError,
   } = useOrders(activeModule === "orders" || activeModule === "calls");
 
@@ -37,7 +39,7 @@ export default function WorkerDashboard() {
 
   const [search, setSearch] = useState("");
 
-  const [, setNow] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
 
   /* =========================================================
      ACTUALIZACIÓN DE TIEMPOS
@@ -122,17 +124,22 @@ export default function WorkerDashboard() {
   };
 
   /* =========================================================
-     AVISAR NUEVAMENTE
+     AVISAR NUEVAMENTE Y NO RECOGIDO
 
-     Por ahora solamente frontend.
-
-     No hacemos fetch aquí porque la notificación
-     real deberá conectarse posteriormente con
-     el backend.
+     La lógica y los mensajes viven en features/orders;
+     el tablero se refresca al terminar.
      ========================================================= */
 
   const onRemindOrder = (order: Order) => {
-    console.info("Avisar nuevamente:", order.id);
+    void handleCalledOrderAction(order, "remind");
+  };
+
+  const onNotCollectedOrder = async (order: Order) => {
+    const updated = await handleCalledOrderAction(order, "not-collected");
+    if (updated)
+      setSelectedOrder((current) =>
+        current?.id === updated.id ? null : current,
+      );
   };
 
   /* =========================================================
@@ -213,6 +220,8 @@ export default function WorkerDashboard() {
       return (
         <CallsBoard
           busyOrderIds={busyOrderIds}
+          busyActions={busyActions}
+          now={now}
           orders={calledOrders}
           selectedOrder={
             orders.find(
@@ -225,6 +234,7 @@ export default function WorkerDashboard() {
           onSelectOrder={setSelectedOrder}
           onDeliver={onOrderAction}
           onRemind={onRemindOrder}
+          onNotCollected={onNotCollectedOrder}
         />
       );
     }

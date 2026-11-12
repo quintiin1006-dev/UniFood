@@ -8,7 +8,8 @@ import java.util.UUID;
 
 /**
  * Worker order: name, institutional code and client type, never the document (B20). {@code
- * requestedPickupAt} is null for "as soon as possible".
+ * requestedPickupAt} is null for "as soon as possible". {@code calledAt}, {@code reminderCount} and
+ * {@code lastRemindedAt} let the panel show the reminders and enable "No recogido".
  */
 public record OrderResponse(
     UUID id,
@@ -23,4 +24,7 @@ public record OrderResponse(
     Instant updatedAt,
     Instant deliveredAt,
     List<OrderItemResponse> items,
-    Instant requestedPickupAt) {}
+    Instant requestedPickupAt,
+    Instant calledAt,
+    int reminderCount,
+    Instant lastRemindedAt) {}

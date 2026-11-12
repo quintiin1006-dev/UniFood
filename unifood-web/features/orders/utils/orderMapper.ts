@@ -46,6 +46,12 @@ export function mapBackendOrder(backendOrder: BackendOrder): Order {
     updatedAt: backendOrder.updatedAt,
     deliveredAt: backendOrder.deliveredAt ?? undefined,
     requestedPickupAt: backendOrder.requestedPickupAt ?? undefined,
+    calledAt: backendOrder.calledAt ?? undefined,
+    reminderCount:
+      typeof backendOrder.reminderCount === "number"
+        ? backendOrder.reminderCount
+        : 0,
+    lastRemindedAt: backendOrder.lastRemindedAt ?? undefined,
     items: backendOrder.items.map((item) => ({
       id: item.id,
       name: item.lunchName,

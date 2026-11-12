@@ -31,6 +31,9 @@ export interface Order {
   total?: number;
   status: OrderStatus;
   calledAt?: string;
+  // Reminders sent after the call (at most 3); "No recogido" needs all of them.
+  reminderCount?: number;
+  lastRemindedAt?: string;
   deliveredAt?: string;
   // Optional pickup time chosen by the client; informative, the queue stays FIFO.
   requestedPickupAt?: string;
