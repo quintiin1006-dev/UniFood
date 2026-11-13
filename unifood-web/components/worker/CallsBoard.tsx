@@ -298,12 +298,14 @@ export default function CallsBoard({
                         key={item.id ?? `${item.name}-${index}`}
                         className={styles.product}
                       >
-                        <div
-                          className={styles.quantity}
-                          aria-label={`Cantidad: ${item.quantity}`}
-                        >
+                        {/* aria-label is not allowed on a plain div (axe):
+                            the visible «cant.» is read with its number. */}
+                        <div className={styles.quantity}>
                           <strong>{item.quantity}</strong>
-                          <span>cant.</span>
+                          <span>
+                            <span aria-hidden="true">cant.</span>
+                            <span className={styles.srOnly}>unidades</span>
+                          </span>
                         </div>
                         <div className={styles.productInfo}>
                           <h4>{item.name}</h4>
