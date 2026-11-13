@@ -426,13 +426,16 @@ test("late response after exit cannot replace a new history snapshot", async ({
   const requestArrived = new Promise<void>((resolve) => {
     arrived = resolve;
   });
-  let first = true;
+  // Hold every request of the first visit, not only the first one: in `next dev`, React
+  // Strict Mode mounts the panel twice, and the first request belongs to the discarded
+  // mount (it is aborted). Holding only that one let the real load through at once, so
+  // «Cargando historial…» never showed. Production mounts once.
+  let holding = true;
   await page.route(`**${root}*`, async (route) => {
-    if (!first) {
+    if (!holding) {
       await route.continue();
       return;
     }
-    first = false;
     const response = await route.fetch();
     arrived();
     await gate;
@@ -446,6 +449,7 @@ test("late response after exit cannot replace a new history snapshot", async ({
     await configure(page, {
       data: { ...workerHistoryFixture(), orders: [], hasHistory: false },
     });
+    holding = false;
     await enter(page);
     await expect(
       panel(page).getByText("Aún no hay pedidos finalizados este mes."),
