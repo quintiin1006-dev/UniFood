@@ -27,6 +27,7 @@ import type { Order } from "@/types/order";
 import { AvailabilityPanel } from "@/features/availability/components/AvailabilityPanel";
 import { WorkerHistoryPanel } from "@/features/worker-history/components/WorkerHistoryPanel";
 import { WorkerProfilePanel } from "@/features/worker-profile/components/WorkerProfilePanel";
+import motion from "@/features/orders/components/motion.module.css";
 import styles from "./WorkerDashboard.module.css";
 
 export default function WorkerDashboard() {
@@ -284,7 +285,7 @@ export default function WorkerDashboard() {
 
   return (
     <main
-      className={`worker-page${activeModule === "availability" ? ` ${styles.availabilityPage}` : activeModule === "history" ? ` ${styles.historyPage}` : activeModule === "profile" ? ` ${styles.profilePage}` : ""}`}
+      className={`worker-page ${motion.tokens}${activeModule === "availability" ? ` ${styles.availabilityPage}` : activeModule === "history" ? ` ${styles.historyPage}` : activeModule === "profile" ? ` ${styles.profilePage}` : ""}`}
     >
       <Header
         activeModule={activeModule}

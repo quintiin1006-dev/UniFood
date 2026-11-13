@@ -1,0 +1,17 @@
+/*
+ * Motion tokens of the worker panel (docs/ui-paneles.md §1.3, design-motion-principles with
+ * Emil Kowalski as primary lens and Jakub Krehel as secondary). Applied on the panel's root so
+ * every component inherits them; app/globals.css, shared with login and client, is untouched.
+ *
+ * Frequency gate: module switches, filters and search are instant (0 ms). Presses and hover
+ * colors use --motion-fast. An order that changes column, and alerts, use --motion-base. Dialogs
+ * use --motion-dialog. Only transform and opacity move; nothing starts at scale(0), nothing loops.
+ */
+.tokens {
+  --motion-instant: 0ms;
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-dialog: 220ms;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+}

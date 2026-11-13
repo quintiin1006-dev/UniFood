@@ -61,3 +61,29 @@
   outline: 3px solid #0b63ce;
   outline-offset: 2px;
 }
+
+/* Enter in 180 ms from 8 px above (Emil: fast, ease-out); it leaves at once when closed. */
+@keyframes alertIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+}
+
+@keyframes alertFade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .alert {
+    animation: alertIn var(--motion-base, 180ms) var(--ease-out, ease-out) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alert {
+    animation: alertFade var(--motion-fast, 120ms) linear both;
+  }
+}
