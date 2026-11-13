@@ -10,8 +10,9 @@ Auditorías y convenciones completas: `docs/auditorias/`, sección 7 de cada una
 - `unifood-backend/supabase/`: migraciones SQL manuales. Supabase Postgres, Auth y Storage.
 - Antes de tocar el frontend, leer `unifood-web/AGENTS.md` y consultar
   `node_modules/next/dist/docs/`: esta versión de Next difiere de versiones anteriores.
-- **Cliente:** `origin/feature/client-orders-v2` será la base del trabajo de cliente, creada
-  desde `origin/feature/client-orders`, que es de Jonathan y no se modifica.
+- **Cliente:** el trabajo de cliente se hace en ramas desde `develop` (por ejemplo
+  `jon/client-checkout`). `origin/feature/client-orders` es de Jonathan y no se modifica;
+  `feature/client-orders-v2` no existe (ver `docs/decisiones.md` §12).
 
 ## Comandos verificados
 
@@ -72,8 +73,9 @@ Por confirmar: `mvnw verify` completo, `start-backend.ps1`, suite e2e completa.
 
 ## Reglas de trabajo
 
-1. Cada tarea en su rama desde `develop` (`feature|fix|docs|refactor|test|chore/<tema>`),
-   con PR pequeño. Sin `git add .`: archivos por nombre.
+1. Cada tarea en su rama desde `develop`, con el prefijo de la persona: `jj/<tema>` o
+   `jon/<tema>`. Las ramas anteriores usaban `feature|fix|docs|refactor|test|chore/<tema>`.
+   PR pequeño. Sin `git add .`: archivos por nombre.
 2. Plan breve (archivos, riesgos, pruebas) y esperar aprobación antes de implementar.
 3. Ejecutar las verificaciones del área y reportar solo lo ejecutado.
 4. Ante una decisión de negocio o ambigüedad, preguntar. Si algo falla, parar y mostrarlo.

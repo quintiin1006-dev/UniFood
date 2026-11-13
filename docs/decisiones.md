@@ -305,6 +305,8 @@ se versiona.
   para cambiar.
 - La última sede y cafetería se guardan en el servidor; localStorage es solo caché. El
   servidor valida que la cafetería siga activa y, si no, devuelve a la selección.
+  **Pendiente (2026-11-12):** no existe todavía en el código: ni tabla de preferencia, ni
+  `PUT /api/me/preference`, ni `preference` en `GET /api/me/context` (§11).
 
 ## 5. Suscripción y estado de cafetería
 
@@ -312,8 +314,9 @@ se versiona.
 - **ABIERTA/CERRADA**: la fija el WORKER.
 - Cafetería no suscrita: no aparece para el cliente, ni en selección ni en su contexto.
   Su WORKER y ADMIN sí entran a su panel y configuran el catálogo.
-- El backend aplica la regla: menú, guardar preferencia y crear pedido rechazan cafeterías
-  no suscritas aunque se llame directo a la API, con código propio y mensaje fijo.
+- El backend aplica la regla: menú y crear pedido rechazan cafeterías no suscritas aunque se
+  llame directo a la API, con código propio y mensaje fijo. Guardar la preferencia hará lo mismo
+  cuando exista (pendiente, §4).
 - Al desactivar una cafetería, los pedidos en curso se atienden hasta su estado final,
   incluido el cierre diario. Solo se bloquean los pedidos nuevos.
 - Sin cafeterías activas en la sede: «Aún no hay cafeterías disponibles en tu sede».
@@ -425,8 +428,16 @@ aíslan sus estilos de `globals.css`.
 
 **Supabase Auth verificado por el responsable:** Confirm email activo; OTP de 6 dígitos con
 expiración de 900 s; plantilla «Confirm sign up» con `{{ .Token }}`; contraseña mínima de 8
-con letras y dígitos; Secure password change activo; anonymous sign-ins y manual linking
+con letras y dígitos en la configuración de Supabase; Secure password change activo; anonymous sign-ins y manual linking
 apagados; registro público abierto, porque la regla de dominio vive en el trigger de la 018.
+
+**Reglas de contraseña (aclarado el 2026-11-12, según el código):** la aplicación exige de 8 a
+128 caracteres con al menos una mayúscula, una minúscula y un número
+(`unifood-web/features/auth/validation.ts`), en el paso 2 del registro, la recuperación y el
+cambio forzado. La regla de Supabase verificada arriba («letras y dígitos») es más laxa: quien
+llame directo a la API de Auth podría omitir la mayúscula o la minúscula. **Pendiente:** subir
+la configuración de Supabase a «minúsculas, mayúsculas y dígitos», como pide
+`unifood-web/docs/auth.md`.
 
 **Correo:** SMTP personalizado con Resend activo, con remitente de pruebas
 `onboarding@resend.dev`, que solo entrega al correo dueño de la cuenta de Resend.
@@ -471,8 +482,10 @@ cafetería tomará el siguiente número libre cuando se implemente.
   `SpringDataInstitutionRepository`.
 - La 018 se corrige en su propio archivo, sin crear una 019, porque no está aplicada en
   ninguna base. Si se aplica en staging antes de corregirse, staging se reinicia.
-- `clients.document`: se quita `NOT NULL`, se deja de usar y no se copia al código, porque
-  son datos distintos. Se elimina tras el piloto.
+- `clients.document`: se quita `NOT NULL` y no se copia al código, porque son datos distintos.
+  El registro nuevo ya no lo llena. **Aclarado el 2026-11-12, según el código:**
+  `GET /api/me/profile` todavía lo devuelve (`sql/client/profile.sql`), en `null` para las
+  cuentas nuevas; el worker nunca lo ve (B20). Se deja de leer y se elimina tras el piloto.
 - `orders.client_document`: historial intacto. Los pedidos nuevos usan `client_code`.
 - SUPER_ADMIN: script local con la API de administración y SQL parametrizado; correos como
   parámetro, nunca versionados. Rechaza una tercera cuenta. **Pendiente**: mientras tanto,
@@ -483,10 +496,16 @@ cafetería tomará el siguiente número libre cuando se implemente.
 El BFF y Spring usan las mismas rutas. Errores con `ApiErrorResponse`:
 `{status, code, message, timestamp, path}`.
 
+**Estado (aclarado el 2026-11-12, según el código):** `PUT /api/me/preference` y el campo
+`preference` del contexto no existen todavía (§4). `PATCH …/subscription` y
+`POST /api/super-admin/credentials` tampoco: quedan pendientes de la Fase 4
+(`docs/propuesta-fase4-cobro.md` propone sustituir el primero por `PATCH …/visibility` y
+`PUT …/billing`). Sus contratos de abajo son el diseño previsto, no el implementado.
+
 | Método y ruta                                         | Uso                                     | Errores                                                                                                              |
 | ----------------------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `GET /api/me/context`                                 | Sedes, cafeterías activas y preferencia | 404 `CLIENT_PROFILE_NOT_FOUND`                                                                                       |
-| `PUT /api/me/preference`                              | Guarda sede y cafetería                 | 403 `CAFETERIA_NOT_SUBSCRIBED`, 404 `SITE_NOT_FOUND`, 409 `CAFETERIA_SITE_MISMATCH`                                  |
+| `PUT /api/me/preference` (**pendiente**, no existe)   | Guarda sede y cafetería                 | 403 `CAFETERIA_NOT_SUBSCRIBED`, 404 `SITE_NOT_FOUND`, 409 `CAFETERIA_SITE_MISMATCH`                                  |
 | `GET /api/me/menu?cafeteriaId=`                       | Menú del día, con `ETag`                | 404 `CAFETERIA_NOT_FOUND`, 403 `CAFETERIA_NOT_SUBSCRIBED`, 400 `INVALID_REQUEST`                                     |
 | `POST /api/me/orders`                                 | Crea pedido, con `Idempotency-Key`      | Ver abajo; con hora inválida, 400 `INVALID_PICKUP_TIME`                                                              |
 | `GET /api/me/orders/current`                          | Pedido activo o `null`, con `ETag`      | —                                                                                                                    |
@@ -498,8 +517,8 @@ El BFF y Spring usan las mismas rutas. Errores con `ApiErrorResponse`:
 | `PATCH /api/orders/{id}/remind`                       | Recordatorio del worker, en CALLED      | 403 `FORBIDDEN`, 409 `REMINDER_TOO_EARLY`, `REMINDER_LIMIT_REACHED`, `INVALID_ORDER_STATE`                           |
 | `PATCH /api/orders/{id}/not-collected`                | No recogido tras los 3 recordatorios    | 403 `FORBIDDEN`, 409 `NOT_COLLECTED_REQUIREMENTS_NOT_MET`, `INVALID_ORDER_STATE`                                     |
 | `GET /api/super-admin/cafeterias`                     | Instituciones, sedes y cafeterías       | 403 `SUPER_ADMIN_FORBIDDEN`                                                                                          |
-| `PATCH /api/super-admin/cafeterias/{id}/subscription` | `{subscribed, expectedSubscribed}`      | 403 `SUPER_ADMIN_FORBIDDEN`, 404 `CAFETERIA_NOT_FOUND`, 409 `SUBSCRIPTION_STATE_CHANGED`                             |
-| `POST /api/super-admin/credentials`                   | `{email, fullName, role, cafeteriaId}`  | 400 `CREDENTIAL_INVALID_REQUEST`, 403 `SUPER_ADMIN_FORBIDDEN`, 409 `EMAIL_ALREADY_REGISTERED`, `CAFETERIA_HAS_ADMIN` |
+| `PATCH /api/super-admin/cafeterias/{id}/subscription` | **Pendiente de Fase 4**, no existe      | 403 `SUPER_ADMIN_FORBIDDEN`, 404 `CAFETERIA_NOT_FOUND`, 409 `SUBSCRIPTION_STATE_CHANGED`                             |
+| `POST /api/super-admin/credentials`                   | **Pendiente de Fase 4**, no existe      | 400 `CREDENTIAL_INVALID_REQUEST`, 403 `SUPER_ADMIN_FORBIDDEN`, 409 `EMAIL_ALREADY_REGISTERED`, `CAFETERIA_HAS_ADMIN` |
 
 **Contexto**
 
@@ -778,7 +797,8 @@ false`. La `version` sube como en las demás transiciones (JPA y el trigger de l
 - **BFF:** `app/api/super-admin/**` con sesión (`getAuth()`), rol SUPER_ADMIN y Bearer de la
   sesión. `sameOrigin` se exige a todo método que no sea GET o HEAD, como en el resto de BFF:
   el navegador no envía `Origin` en un GET del mismo origen.
-- Sin escrituras: el interruptor de suscripción y las credenciales quedan para otro PR.
+- Sin escrituras: el interruptor de suscripción y las credenciales quedan pendientes de la
+  Fase 4.
 
 **Dashboard del admin sin sondeo (implementado el 2026-11-12, solo frontend):**
 
@@ -842,10 +862,14 @@ Hasta cambiarla, el panel solo muestra esa pantalla y Spring responde 403
 
 ## 12. Trabajo de cliente
 
-`origin/feature/client-orders` es de Jonathan Panesso y no se modifica. Su trabajo continúa
-en `feature/client-orders-v2`, creada desde esa rama para conservar la autoría. Se conserva
-la estructura del caso de uso y del BFF. Se retiran stock y horarios fijos, se usa una nota
-por pedido y se crean los endpoints que faltan.
+`origin/feature/client-orders` es de Jonathan Panesso y no se modifica.
+
+**Aclarado el 2026-11-12, según git:** `feature/client-orders-v2` no llegó a crearse. El trabajo
+de cliente se hizo en ramas nuevas **desde `develop`**, no desde la rama de Jonathan:
+`feature/client-create-order` (#94), `feature/client-order-reads` (#95),
+`feature/client-real-menu` (#101) y `jon/client-checkout` (#105); ninguna contiene
+`feature/client-orders`. Se retiraron stock y horarios fijos, se usa una nota por pedido y se
+crearon los endpoints que faltaban.
 
 ## 13. Línea de corte
 
