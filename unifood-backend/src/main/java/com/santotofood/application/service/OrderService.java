@@ -71,9 +71,13 @@ public class OrderService
     // Validate the authoritative state before FIFO; a cancelled queue is a domain conflict.
     order.prepare(now);
 
+    // §6: the queue only considers today's orders in America/Bogota, so a PENDING order left
+    // from another day (the daily close cancels it) never blocks today's first order.
+    var day = BusinessDate.from(now);
     Order firstPendingOrder =
         orderRepository
-            .findFirstPendingByCafeteriaId(order.getCafeteriaId())
+            .findFirstPendingByCafeteriaId(
+                order.getCafeteriaId(), day.dayStartInstant(), day.nextDayStartInstant())
             .orElseThrow(() -> new OrderProcessingSequenceException());
 
     if (!firstPendingOrder.getId().equals(order.getId())) {

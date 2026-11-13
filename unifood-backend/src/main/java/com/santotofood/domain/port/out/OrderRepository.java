@@ -24,5 +24,11 @@ public interface OrderRepository {
 
   List<Order> findOperational(UUID cafeteriaId, Instant start, Instant end);
 
-  Optional<Order> findFirstPendingByCafeteriaId(UUID cafeteriaId);
+  /**
+   * The head of the FIFO queue: the oldest PENDING order of the cafeteria created within the
+   * business day [dayStart, nextDayStart) in America/Bogota (§6). An older PENDING order never
+   * blocks today's queue; the daily close cancels it.
+   */
+  Optional<Order> findFirstPendingByCafeteriaId(
+      UUID cafeteriaId, Instant dayStart, Instant nextDayStart);
 }
