@@ -41,20 +41,24 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  let result: { data: { user: unknown }; error?: unknown };
+  // getClaims verifies the access token locally against the project's asymmetric JWKS (cached
+  // for 10 minutes per process) and refreshes the session first when it is about to expire, so
+  // cookies are renewed as before. It does not ask Auth whether the session was revoked: getAuth
+  // still does that with getUser, and Spring and current_auth_profile read the account per call.
+  let result: { data: { claims?: unknown } | null; error?: unknown };
   try {
-    result = await client.auth.getUser();
+    result = await client.auth.getClaims();
   } catch (error) {
     if (isTemporaryAuthFailure(error))
       return temporaryAuthResponse(
         request.nextUrl.pathname.startsWith("/api/"),
       );
-    result = { data: { user: null }, error };
+    result = { data: null, error };
   }
-  const {
-    data: { user },
-    error,
-  } = result;
+  const { error } = result;
+  const claims = result.data?.claims as { sub?: unknown } | null | undefined;
+  const user =
+    claims && typeof claims.sub === "string" && claims.sub ? claims : null;
   // Discard SDK writes on a transient failure, including attempted deletions.
   // The browser keeps exactly its incoming cookies and no protected content is rendered.
   if (error && isTemporaryAuthFailure(error))
