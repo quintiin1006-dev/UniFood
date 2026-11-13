@@ -36,4 +36,6 @@ export interface BackendOrder {
   calledAt?: string | null;
   reminderCount?: number;
   lastRemindedAt?: string | null;
+  // The client's free text (021); null without one.
+  note: string | null;
 }

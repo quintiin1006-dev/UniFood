@@ -706,6 +706,15 @@ según `cafeteria_daily_states` de hoy en America/Bogota. Nunca incluye el docum
   `GET /api/orders?cafeteriaId=` se conservan en Spring sin consumidores en la web.
 - El sondeo de 10 s se pausa con la pestaña oculta y recarga al volver a ser visible.
 
+**Observaciones del pedido visibles para el worker (implementado el 2026-11-12):**
+
+- La respuesta del pedido del worker (`OrderResponse`: listado y todas las transiciones de
+  `/api/orders/{id}/…`) añade al final `note`, el texto libre del cliente de la 021, o `null`.
+- Spring la lee de `orders.note` en modo solo lectura: ninguna transición del worker ni el cierre
+  diario la reescriben, y no se registra en logs. No hizo falta migración.
+- El panel la muestra tal cual, como texto plano con la etiqueta fija «Observaciones», con sus
+  saltos de línea y sin cortar, en la tarjeta, el detalle y la vista de llamados.
+
 **Rechazo del worker implementado (B18, decidido el 2026-11-10):**
 
 - **Quién:** solo un WORKER activo asignado a la cafetería del pedido. El worker que rechaza

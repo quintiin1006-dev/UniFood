@@ -27,7 +27,8 @@ public class OrderResponseMapper {
         order.getRequestedPickupAt(),
         order.getCalledAt(),
         order.getReminderCount(),
-        order.getLastRemindedAt());
+        order.getLastRemindedAt(),
+        order.getNote());
   }
 
   private OrderItemResponse toItemResponse(OrderItem item) {

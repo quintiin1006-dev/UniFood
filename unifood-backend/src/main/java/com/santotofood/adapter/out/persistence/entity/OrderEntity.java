@@ -112,6 +112,11 @@ public class OrderEntity {
   @Column(name = "requested_pickup_at", insertable = false, updatable = false)
   private Instant requestedPickupAt;
 
+  // 021: the client's free-text note, written once by the client's INSERT. Read-only here, like
+  // the pickup time, so no worker transition or daily close can rewrite it.
+  @Column(name = "note", insertable = false, updatable = false)
+  private String note;
+
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 
@@ -280,6 +285,14 @@ public class OrderEntity {
   /** Only keeps the value across a merge; the column itself is never written from here. */
   public void setRequestedPickupAt(Instant requestedPickupAt) {
     this.requestedPickupAt = requestedPickupAt;
+  }
+
+  public String getNote() {
+    return note;
+  }
+
+  public void setNote(String note) {
+    this.note = note;
   }
 
   public Instant getCreatedAt() {

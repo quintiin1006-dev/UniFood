@@ -49,6 +49,14 @@ public class Order {
     this.requestedPickupAt = requestedPickupAt;
   }
 
+  /** The client's free-text note (021), shown to the worker as plain text; never interpreted. */
+  private String note;
+
+  /** Restore only when reconstituting an aggregate from persistence. */
+  public void restoreNote(String note) {
+    this.note = note;
+  }
+
   public static final int MIN_REJECTION_REASON_LENGTH = 3;
   public static final int MAX_REJECTION_REASON_LENGTH = 200;
 

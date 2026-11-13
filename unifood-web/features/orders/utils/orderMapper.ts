@@ -52,6 +52,7 @@ export function mapBackendOrder(backendOrder: BackendOrder): Order {
         ? backendOrder.reminderCount
         : 0,
     lastRemindedAt: backendOrder.lastRemindedAt ?? undefined,
+    note: backendOrder.note ?? undefined,
     items: backendOrder.items.map((item) => ({
       id: item.id,
       name: item.lunchName,
