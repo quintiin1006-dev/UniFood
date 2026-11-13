@@ -18,7 +18,7 @@ public class ClientCatalogException extends RuntimeException {
 
   public static ClientCatalogException cafeteriaNotSubscribed() {
     return new ClientCatalogException(
-        ErrorCode.CAFETERIA_NOT_SUBSCRIBED, "Esta cafetería no está disponible en UniFood.");
+        ErrorCode.CAFETERIA_NOT_SUBSCRIBED, "Esta cafetería no está disponible en este momento.");
   }
 
   public ErrorCode getCode() {

@@ -384,7 +384,8 @@ class ClientCatalogApiPostgresTest {
         .andExpect(status().isForbidden())
         .andExpect(header().string("Cache-Control", "no-store"))
         .andExpect(jsonPath("$.code").value("CAFETERIA_NOT_SUBSCRIBED"))
-        .andExpect(jsonPath("$.message").value("Esta cafetería no está disponible en UniFood."));
+        .andExpect(
+            jsonPath("$.message").value("Esta cafetería no está disponible en este momento."));
   }
 
   @Test

@@ -15,5 +15,13 @@ export function useSuperAdmin() {
     void store.load();
     return store.dispose;
   }, [store]);
-  return { ...state, retry: store.load };
+  return {
+    ...state,
+    retry: store.load,
+    select: store.select,
+    setVisibility: store.setVisibility,
+    setBilling: store.setBilling,
+    refuse: store.refuse,
+    reloadAudit: store.loadAudit,
+  };
 }

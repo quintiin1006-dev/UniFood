@@ -147,7 +147,7 @@ test("Spring's safe errors keep their status, code and message", async () => {
     [
       403,
       "CAFETERIA_NOT_SUBSCRIBED",
-      "Esta cafetería no está disponible en UniFood.",
+      "Esta cafetería no está disponible en este momento.",
     ],
     [404, "CLIENT_PROFILE_NOT_FOUND", "No se encontró el perfil de tu cuenta."],
     [

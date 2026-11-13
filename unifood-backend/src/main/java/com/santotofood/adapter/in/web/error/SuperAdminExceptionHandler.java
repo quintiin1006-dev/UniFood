@@ -1,6 +1,7 @@
 package com.santotofood.adapter.in.web.error;
 
 import com.santotofood.adapter.in.web.SuperAdminCafeteriaController;
+import com.santotofood.application.exception.CafeteriaSettingsException;
 import com.santotofood.application.exception.SuperAdminForbiddenException;
 import com.santotofood.shared.error.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,6 +33,18 @@ public class SuperAdminExceptionHandler {
         ErrorCode.SUPER_ADMIN_FORBIDDEN,
         "No tienes permisos para la administración global.",
         request);
+  }
+
+  @ExceptionHandler(CafeteriaSettingsException.class)
+  public ResponseEntity<ApiErrorResponse> settings(
+      CafeteriaSettingsException exception, HttpServletRequest request) {
+    var status =
+        switch (exception.kind()) {
+          case BAD_REQUEST -> HttpStatus.BAD_REQUEST;
+          case NOT_FOUND -> HttpStatus.NOT_FOUND;
+          case CONFLICT -> HttpStatus.CONFLICT;
+        };
+    return response(status, exception.code(), exception.getMessage(), request);
   }
 
   @ExceptionHandler({

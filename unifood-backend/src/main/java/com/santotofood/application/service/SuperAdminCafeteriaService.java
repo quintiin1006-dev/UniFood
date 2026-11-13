@@ -1,6 +1,7 @@
 package com.santotofood.application.service;
 
 import com.santotofood.application.exception.SuperAdminForbiddenException;
+import com.santotofood.application.model.CafeteriaBilling;
 import com.santotofood.application.model.SuperAdminCafeteriaRow;
 import com.santotofood.application.model.SuperAdminInstitution;
 import com.santotofood.application.port.in.ListSuperAdminCafeteriasUseCase;
@@ -57,8 +58,13 @@ public class SuperAdminCafeteriaService implements ListSuperAdminCafeteriasUseCa
           new SuperAdminInstitution.Cafeteria(
               row.cafeteriaId(),
               row.cafeteriaName(),
-              Objects.requireNonNull(row.cafeteriaSubscribed(), "Cafeteria without state"),
-              row.cafeteriaHasActiveAdmin()));
+              Objects.requireNonNull(row.cafeteriaVisible(), "Cafeteria without state"),
+              row.cafeteriaHasActiveAdmin(),
+              CafeteriaBilling.stored(
+                  Objects.requireNonNull(row.billingModel(), "Cafeteria without billing"),
+                  row.perOrderFeeCop(),
+                  row.subscriptionFeeCop()),
+              Objects.requireNonNull(row.billingVersion(), "Cafeteria without billing")));
     }
     return institutions.values().stream().map(InstitutionBuilder::build).toList();
   }

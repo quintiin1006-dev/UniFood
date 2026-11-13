@@ -20,8 +20,8 @@ que lo contradiga. Los puntos marcados «pendiente» requieren confirmación.
 - **ADMIN**: gestiona catálogo y dashboard de su cafetería. No opera pedidos.
 - **SUPER_ADMIN**: solo dos cuentas (dueño del repositorio y Jonathan Panesso), sembradas
   por script o migración controlada, nunca por registro ni por la UI. Su panel crea
-  universidades, sedes, cafeterías y credenciales de ADMIN y WORKER, activa o desactiva
-  la suscripción de cada cafetería y muestra el dashboard de clientes. Se recomienda 2FA
+  universidades, sedes, cafeterías y credenciales de ADMIN y WORKER, decide la visibilidad
+  y registra el modelo de cobro de cada cafetería (§5) y muestra el dashboard de clientes. Se recomienda 2FA
   y no compartir contraseña.
 - **Credenciales de WORKER y ADMIN**: las crea SUPER_ADMIN sin depender del dominio del
   correo, con cambio obligatorio en el primer ingreso, mediante una preautorización en
@@ -308,22 +308,40 @@ se versiona.
   **Pendiente (2026-11-12):** no existe todavía en el código: ni tabla de preferencia, ni
   `PUT /api/me/preference`, ni `preference` en `GET /api/me/context` (§11).
 
-## 5. Suscripción y estado de cafetería
+## 5. Visibilidad y modelo de cobro de la cafetería
 
-- **ACTIVA/SUSCRITA**: interruptor booleano que solo SUPER_ADMIN cambia, sin vencimiento.
-- **ABIERTA/CERRADA**: la fija el WORKER.
-- Cafetería no suscrita: no aparece para el cliente, ni en selección ni en su contexto.
-  Su WORKER y ADMIN sí entran a su panel y configuran el catálogo.
-- El backend aplica la regla: menú y crear pedido rechazan cafeterías no suscritas aunque se
-  llame directo a la API, con código propio y mensaje fijo. Guardar la preferencia hará lo mismo
-  cuando exista (pendiente, §4).
-- Al desactivar una cafetería, los pedidos en curso se atienden hasta su estado final,
-  incluido el cierre diario. Solo se bloquean los pedidos nuevos.
-- Sin cafeterías activas en la sede: «Aún no hay cafeterías disponibles en tu sede».
-- Cada cambio del interruptor registra quién y cuándo, en la misma transacción.
-- **Demo (decidido el 2026-11-08):** ACTIVA/SUSCRITA se lee de `cafeterias.is_active`. La
-  tabla propia de suscripciones, con su historial de quién y cuándo, queda como **deuda
-  antes del piloto**: hasta entonces el cambio de suscripción no deja registro propio.
+Implementado el 2026-11-12 (PR G, migración 022). Sustituye «ACTIVA/SUSCRITA»: la
+suscripción no es obligatoria y el cobro no condiciona la visibilidad.
+
+- **VISIBLE/OCULTA:** interruptor de SUPER_ADMIN, en `cafeterias.is_active`, sin vencimiento.
+  Es también la actividad administrativa de la 009: hacerla visible exige un ADMIN activo
+  asignado (409 `CAFETERIA_REQUIRES_ADMIN`). Una cafetería oculta no aparece al cliente, ni en
+  selección ni en su contexto; su WORKER y su ADMIN sí entran a su panel y configuran el
+  catálogo.
+- El backend rechaza menú y crear pedido de una cafetería oculta aunque se llame directo a la
+  API, con 403 `CAFETERIA_NOT_SUBSCRIBED` (el código se conserva por compatibilidad) y el
+  mensaje fijo «Esta cafetería no está disponible en este momento.». Guardar la preferencia
+  hará lo mismo cuando exista (pendiente, §4).
+- Al ocultarla, los pedidos en curso se atienden hasta su estado final, incluido el cierre
+  diario: las transiciones del worker y el cierre no leen `is_active`. Solo se bloquean los
+  pedidos nuevos.
+- **ABIERTA/CERRADA**: la fija el WORKER, independiente de la visibilidad.
+- Sin cafeterías visibles en la sede: «Aún no hay cafeterías disponibles en tu sede».
+- **Modelo de cobro** (`cafeteria_billing_settings`, una fila por cafetería): «Sin cobro»,
+  «Suscripción» con monto mensual **opcional** (`subscription_fee_cop`, de $1 a
+  $100.000.000) o «Comisión por pedido» con monto **obligatorio** (`per_order_fee_cop`, de $1
+  a $1.000.000). Pesos enteros; cada monto solo con su modelo. Solo lo cambia SUPER_ADMIN y no
+  afecta la visibilidad: una cafetería visible puede estar «Sin cobro». **No se cobra nada en
+  el sistema**; el panel lo dice: «UniFood no cobra desde la aplicación; esto solo registra el
+  acuerdo.». La comisión no se calcula ni se guarda por pedido todavía: se añadirá como
+  snapshot en `orders`.
+- **Modelo inicial:** la 022 siembra «Sin cobro» para todas, también las visibles, y no toca
+  `is_active`. El super admin fija después el acuerdo real.
+- **Auditoría:** cada cambio de visibilidad o de cobro queda en `cafeteria_settings_audit`
+  (quién, cuándo, valor anterior y nuevo, con los dos montos), escrito por trigger en la misma
+  transacción, también si se hace por SQL manual (`source = 'SQL'`, sin autor). Es
+  inmutable: UPDATE, DELETE y TRUNCATE fallan con `cafeteria_settings_audit_immutable`.
+  Spring indica el autor con `SET LOCAL unifood.actor_id`.
 
 ## 6. Pedido
 
@@ -453,11 +471,13 @@ cada 5 minutos por IP; 60 s entre correos al mismo usuario; IP forwarding apagad
 BFF llama desde el servidor, todos comparten IP. El endurecimiento incluye límites propios
 por IP real y por cuenta, y CAPTCHA, sin activar IP forwarding por ahora.
 
-## 10. Migraciones 018 a 021
+## 10. Migraciones 018 a 023
 
-Renumeradas el 2026-11-08, consecutivas y sin saltos. Las suscripciones y las preferencias
-salen del bloque: la suscripción es deuda antes del piloto (§5) y la preferencia de sede y
-cafetería tomará el siguiente número libre cuando se implemente.
+Renumeradas el 2026-11-08, consecutivas y sin saltos. La preferencia de sede y cafetería
+tomará el siguiente número libre cuando se implemente. La 022 quedó reservada mientras se
+decidía el cobro y se escribió después de la 023: se aplica con
+`scripts/supabase/apply-migrations.ps1 -AllowOutOfOrder 022` (primero `-PlanOnly`), en bases
+temporales locales y `unifood-staging` antes que en el proyecto real.
 
 | #   | Archivo                         | Contenido                                                                                                                                                                                          |
 | --- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -465,6 +485,8 @@ cafetería tomará el siguiente número libre cuando se implemente.
 | 019 | `catalog_category_bebida`       | Solo `ALTER TYPE ... ADD VALUE IF NOT EXISTS 'BEBIDA'`, fuera de transacción                                                                                                                       |
 | 020 | `order_idempotency`             | `idempotency_key`, `request_hash`, único por cliente y clave, único parcial de pedido activo por cliente e índice del historial                                                                    |
 | 021 | `order_rejection_and_snapshots` | `note`, `cancellation_source`, `rejection_reason`, `rejected_by`, `client_code`, `client_type`                                                                                                     |
+| 022 | `cafeteria_visibility_billing`  | `cafeteria_billing_settings` (modelo, `per_order_fee_cop`, `subscription_fee_cop`, versión), `cafeteria_settings_audit` inmutable y triggers de auditoría y de fila por cafetería (§5)             |
+| 023 | `order_requested_pickup_time`   | `orders.requested_pickup_at` opcional (§6)                                                                                                                                                         |
 
 - 019-021: los pedidos existentes conservan su historia. `cancellation_source` se deduce
   exactamente del indicador `cancelled_by_client` de la 008; `client_code` y `client_type`
@@ -497,28 +519,29 @@ El BFF y Spring usan las mismas rutas. Errores con `ApiErrorResponse`:
 `{status, code, message, timestamp, path}`.
 
 **Estado (aclarado el 2026-11-12, según el código):** `PUT /api/me/preference` y el campo
-`preference` del contexto no existen todavía (§4). `PATCH …/subscription` y
-`POST /api/super-admin/credentials` tampoco: quedan pendientes de la Fase 4
-(`docs/propuesta-fase4-cobro.md` propone sustituir el primero por `PATCH …/visibility` y
-`PUT …/billing`). Sus contratos de abajo son el diseño previsto, no el implementado.
+`preference` del contexto no existen todavía (§4). `POST /api/super-admin/credentials`
+tampoco: queda pendiente, fuera de la Fase 4. Sus contratos de abajo son el diseño previsto, no
+el implementado. Las rutas de visibilidad, cobro e historial sí están implementadas (PR G).
 
-| Método y ruta                                         | Uso                                     | Errores                                                                                                              |
-| ----------------------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/me/context`                                 | Sedes, cafeterías activas y preferencia | 404 `CLIENT_PROFILE_NOT_FOUND`                                                                                       |
-| `PUT /api/me/preference` (**pendiente**, no existe)   | Guarda sede y cafetería                 | 403 `CAFETERIA_NOT_SUBSCRIBED`, 404 `SITE_NOT_FOUND`, 409 `CAFETERIA_SITE_MISMATCH`                                  |
-| `GET /api/me/menu?cafeteriaId=`                       | Menú del día, con `ETag`                | 404 `CAFETERIA_NOT_FOUND`, 403 `CAFETERIA_NOT_SUBSCRIBED`, 400 `INVALID_REQUEST`                                     |
-| `POST /api/me/orders`                                 | Crea pedido, con `Idempotency-Key`      | Ver abajo; con hora inválida, 400 `INVALID_PICKUP_TIME`                                                              |
-| `GET /api/me/orders/current`                          | Pedido activo o `null`, con `ETag`      | —                                                                                                                    |
-| `GET /api/me/orders?cursor=&limit=20`                 | Historial                               | 400 `INVALID_ORDER_REQUEST`                                                                                          |
-| `GET /api/me/orders/{id}`                             | Detalle de un pedido propio             | 404 `ORDER_NOT_FOUND`                                                                                                |
-| `PATCH /api/me/orders/{id}/cancel`                    | Cancela en PENDING                      | 404 `ORDER_NOT_FOUND`, 409 `ORDER_ALREADY_PREPARING`, `INVALID_ORDER_STATE`                                          |
-| `GET /api/worker/orders`                              | Listado operativo del worker            | 401, 403 `FORBIDDEN`                                                                                                 |
-| `PATCH /api/orders/{id}/reject`                       | Rechazo del worker `{reason}`           | 400 `REJECTION_REASON_REQUIRED`, `REJECTION_REASON_TOO_LONG`, 403 `FORBIDDEN`, 409 `INVALID_ORDER_STATE`             |
-| `PATCH /api/orders/{id}/remind`                       | Recordatorio del worker, en CALLED      | 403 `FORBIDDEN`, 409 `REMINDER_TOO_EARLY`, `REMINDER_LIMIT_REACHED`, `INVALID_ORDER_STATE`                           |
-| `PATCH /api/orders/{id}/not-collected`                | No recogido tras los 3 recordatorios    | 403 `FORBIDDEN`, 409 `NOT_COLLECTED_REQUIREMENTS_NOT_MET`, `INVALID_ORDER_STATE`                                     |
-| `GET /api/super-admin/cafeterias`                     | Instituciones, sedes y cafeterías       | 403 `SUPER_ADMIN_FORBIDDEN`                                                                                          |
-| `PATCH /api/super-admin/cafeterias/{id}/subscription` | **Pendiente de Fase 4**, no existe      | 403 `SUPER_ADMIN_FORBIDDEN`, 404 `CAFETERIA_NOT_FOUND`, 409 `SUBSCRIPTION_STATE_CHANGED`                             |
-| `POST /api/super-admin/credentials`                   | **Pendiente de Fase 4**, no existe      | 400 `CREDENTIAL_INVALID_REQUEST`, 403 `SUPER_ADMIN_FORBIDDEN`, 409 `EMAIL_ALREADY_REGISTERED`, `CAFETERIA_HAS_ADMIN` |
+| Método y ruta                                         | Uso                                                            | Errores                                                                                                                                               |
+| ----------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/me/context`                                 | Sedes, cafeterías activas y preferencia                        | 404 `CLIENT_PROFILE_NOT_FOUND`                                                                                                                        |
+| `PUT /api/me/preference` (**pendiente**, no existe)   | Guarda sede y cafetería                                        | 403 `CAFETERIA_NOT_SUBSCRIBED`, 404 `SITE_NOT_FOUND`, 409 `CAFETERIA_SITE_MISMATCH`                                                                   |
+| `GET /api/me/menu?cafeteriaId=`                       | Menú del día, con `ETag`                                       | 404 `CAFETERIA_NOT_FOUND`, 403 `CAFETERIA_NOT_SUBSCRIBED`, 400 `INVALID_REQUEST`                                                                      |
+| `POST /api/me/orders`                                 | Crea pedido, con `Idempotency-Key`                             | Ver abajo; con hora inválida, 400 `INVALID_PICKUP_TIME`                                                                                               |
+| `GET /api/me/orders/current`                          | Pedido activo o `null`, con `ETag`                             | —                                                                                                                                                     |
+| `GET /api/me/orders?cursor=&limit=20`                 | Historial                                                      | 400 `INVALID_ORDER_REQUEST`                                                                                                                           |
+| `GET /api/me/orders/{id}`                             | Detalle de un pedido propio                                    | 404 `ORDER_NOT_FOUND`                                                                                                                                 |
+| `PATCH /api/me/orders/{id}/cancel`                    | Cancela en PENDING                                             | 404 `ORDER_NOT_FOUND`, 409 `ORDER_ALREADY_PREPARING`, `INVALID_ORDER_STATE`                                                                           |
+| `GET /api/worker/orders`                              | Listado operativo del worker                                   | 401, 403 `FORBIDDEN`                                                                                                                                  |
+| `PATCH /api/orders/{id}/reject`                       | Rechazo del worker `{reason}`                                  | 400 `REJECTION_REASON_REQUIRED`, `REJECTION_REASON_TOO_LONG`, 403 `FORBIDDEN`, 409 `INVALID_ORDER_STATE`                                              |
+| `PATCH /api/orders/{id}/remind`                       | Recordatorio del worker, en CALLED                             | 403 `FORBIDDEN`, 409 `REMINDER_TOO_EARLY`, `REMINDER_LIMIT_REACHED`, `INVALID_ORDER_STATE`                                                            |
+| `PATCH /api/orders/{id}/not-collected`                | No recogido tras los 3 recordatorios                           | 403 `FORBIDDEN`, 409 `NOT_COLLECTED_REQUIREMENTS_NOT_MET`, `INVALID_ORDER_STATE`                                                                      |
+| `GET /api/super-admin/cafeterias`                     | Instituciones, sedes y cafeterías                              | 403 `SUPER_ADMIN_FORBIDDEN`                                                                                                                           |
+| `PATCH /api/super-admin/cafeterias/{id}/visibility`   | `{visible, expectedVisible}`                                   | 400 `SUPER_ADMIN_INVALID_REQUEST`, 403 `SUPER_ADMIN_FORBIDDEN`, 404 `CAFETERIA_NOT_FOUND`, 409 `VISIBILITY_STATE_CHANGED`, `CAFETERIA_REQUIRES_ADMIN` |
+| `PUT /api/super-admin/cafeterias/{id}/billing`        | `{model, perOrderFeeCop, subscriptionFeeCop, expectedVersion}` | 400 `BILLING_INVALID_REQUEST`, 403 `SUPER_ADMIN_FORBIDDEN`, 404 `CAFETERIA_NOT_FOUND`, 409 `BILLING_STATE_CHANGED`                                    |
+| `GET /api/super-admin/cafeterias/{id}/audit?limit=20` | Últimos cambios, el más reciente primero                       | 400 `SUPER_ADMIN_INVALID_REQUEST`, 403 `SUPER_ADMIN_FORBIDDEN`, 404 `CAFETERIA_NOT_FOUND`                                                             |
+| `POST /api/super-admin/credentials`                   | **Pendiente**, no existe                                       | 400 `CREDENTIAL_INVALID_REQUEST`, 403 `SUPER_ADMIN_FORBIDDEN`, 409 `EMAIL_ALREADY_REGISTERED`, `CAFETERIA_HAS_ADMIN`                                  |
 
 **Contexto**
 
@@ -786,19 +809,54 @@ false`. La `version` sube como en las demás transiciones (JPA y el trigger de l
   base en cada llamada; nunca del JWT. Sin sesión o con token inválido: 401. CLIENT, WORKER,
   ADMIN, SUPER_ADMIN inactivo o con otro rol: 403 `SUPER_ADMIN_FORBIDDEN`.
 - **Respuesta:** instituciones `{id, name, active, sites}`, sedes
-  `{id, name, city, active, cafeterias}` y cafeterías `{id, name, subscribed, hasActiveAdmin}`,
+  `{id, name, city, active, cafeterias}` y cafeterías
+  `{id, name, visible, hasActiveAdmin, billing: {model, perOrderFeeCop, subscriptionFeeCop, version}}`,
   bajo `institutions` y por nombre. Incluye instituciones sin sedes y sedes sin cafeterías,
   activas o no.
-- `subscribed` es `cafeterias.is_active` (§5); no hay un segundo campo `active` en la
-  cafetería. `hasActiveAdmin` es verdadero si un ADMIN activo está asignado en
-  `cafeteria_users`.
+- `visible` es `cafeterias.is_active` (§5) y **sustituye a `subscribed`**, retirado en el PR G
+  (su único consumidor era `features/super-admin`). `hasActiveAdmin` es verdadero si un ADMIN
+  activo está asignado en `cafeteria_users`. Los montos son pesos enteros o `null`.
 - Lectura `REPEATABLE READ` de solo lectura, con `Cache-Control: no-store`. 503
   `SUPER_ADMIN_TEMPORARILY_UNAVAILABLE` con `Retry-After` ante un fallo temporal.
 - **BFF:** `app/api/super-admin/**` con sesión (`getAuth()`), rol SUPER_ADMIN y Bearer de la
   sesión. `sameOrigin` se exige a todo método que no sea GET o HEAD, como en el resto de BFF:
   el navegador no envía `Origin` en un GET del mismo origen.
-- Sin escrituras: el interruptor de suscripción y las credenciales quedan pendientes de la
-  Fase 4.
+- Las credenciales siguen pendientes.
+
+**Visibilidad, cobro e historial de SUPER_ADMIN (PR G, implementado el 2026-11-12):**
+
+- **Quién:** la misma política del listado, leída de la base en cada llamada. 401 sin sesión o
+  con token inválido; 403 `SUPER_ADMIN_FORBIDDEN` para cualquier otra cuenta, que no escribe ni
+  audita nada. 503 `SUPER_ADMIN_TEMPORARILY_UNAVAILABLE` con `Retry-After` ante un fallo
+  temporal.
+- **Mutaciones:** `@Transactional(timeout = 15)` en READ COMMITTED. Toman primero la fila
+  guardia de la 009 (exclusiva para la visibilidad, compartida para el cobro), como el
+  aprovisionamiento, luego `FOR UPDATE` de la cafetería y su fila de cobro, y hacen
+  `SET LOCAL unifood.actor_id`. La invariante de la 009 se comprueba en el acto
+  (`SET CONSTRAINTS … IMMEDIATE`), así que una carrera también da 409
+  `CAFETERIA_REQUIRES_ADMIN`.
+- **Idempotencia:** repetir el valor actual responde 200 sin escribir ni auditar, aunque
+  `expectedVisible` o `expectedVersion` ya no coincidan (un reintento de algo que ya pasó). Si
+  el valor es otro y lo esperado no coincide: 409 `VISIBILITY_STATE_CHANGED` o
+  `BILLING_STATE_CHANGED`.
+- **Cuerpo estricto:** claves exactas. El cobro lleva siempre las cuatro claves; los montos son
+  enteros JSON o `null` (`1000.0`, `"1000"` o un decimal dan 400 `BILLING_INVALID_REQUEST`).
+  `updated_at` sale del `TimeProvider`; `changed_at` de la auditoría, de `now()` de la base.
+- **Historial:** `{entries: [{setting, oldValue, newValue, changedAt, changedBy: {name} | null,
+source}]}`. El nombre es el `full_name` del perfil de Auth o «Administrador global»; nunca
+  el correo ni el id. Un cambio por SQL no tiene autor y el panel lo muestra como «Cambio
+  manual (SQL)». La fila creada con la cafetería tiene `oldValue` `{}`.
+- **BFF:** `sameOrigin` en PATCH y PUT antes de leer la sesión, sesión y rol SUPER_ADMIN,
+  cuerpo de 1 KB como máximo validado con las reglas de la 022 y reenviado ya serializado. El
+  historial siempre pide `limit=20`; ninguna consulta del navegador llega a Spring. Solo pasan
+  los códigos de negocio conocidos; cualquier otro es 502, y un fallo temporal al guardar dice
+  «No pudimos guardar el cambio. Inténtalo de nuevo.».
+- **Panel:** «Gestionar» abre la configuración de una cafetería: interruptor «Visible para los
+  clientes» (al ocultar, diálogo de confirmación con «Los pedidos en curso se terminarán de
+  atender. Los clientes no podrán hacer pedidos nuevos en esta cafetería.»), «Modelo de
+  cobro» con «Comisión por pedido (COP)» o «Monto mensual (COP)» opcional, y «Últimos
+  cambios». Errores junto al control; «Cambios guardados.» en una región `aria-live`. Textos
+  de `docs/ui-paneles.md` SA1, SA2 y SA5.
 
 **Dashboard del admin sin sondeo (implementado el 2026-11-12, solo frontend):**
 
@@ -878,7 +936,8 @@ Lo que pasa a después de la demo, en orden:
 
 1. Dashboard de clientes.
 2. Crear cafeterías en panel: se siembran por script.
-3. Interruptor de suscripción en UI: se cambia por SQL controlado.
+3. Interruptor de visibilidad en UI: se cambia por SQL controlado (implementado en el PR G;
+   el SQL manual queda auditado con `source = 'SQL'`).
 4. Cambio obligatorio de contraseña y creación de credenciales: por script.
 5. Historial.
 6. Sonido y título de pestaña.

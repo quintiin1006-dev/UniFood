@@ -1,4 +1,4 @@
--- Read-only preflight after 007, usable before/after 008-018. No secrets or data repair.
+-- Read-only preflight after 007, usable before/after 008-023. No secrets or data repair.
 BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY;
 
 -- 018 aborts if a client uses another domain. The list mirrors its seed on purpose.
@@ -74,7 +74,8 @@ WITH business_tables AS (
     'users','roles','user_roles','clients','institutions','sites','cafeterias','cafeteria_users',
     'lunches','orders','order_items','payments','notifications','notification_preferences','cafeteria_profile_guard',
     'cafeteria_daily_states','daily_item_availability','catalog_image_assets','catalog_image_operations',
-    'institution_email_domains','client_code_corrections'])
+    'institution_email_domains','client_code_corrections',
+    'cafeteria_billing_settings','cafeteria_settings_audit'])
 )
 SELECT actor,relname AS unexpected_business_table_grant,privilege
 FROM business_tables
@@ -91,7 +92,8 @@ CROSS JOIN (VALUES ('SELECT'),('INSERT'),('UPDATE'),('REFERENCES')) privileges(p
 WHERE n.nspname='public' AND c.relkind IN ('r','p') AND c.relname=ANY(ARRAY[
   'users','roles','user_roles','clients','institutions','sites','cafeterias','cafeteria_users',
   'lunches','orders','order_items','payments','notifications','notification_preferences','cafeteria_profile_guard',
-  'cafeteria_daily_states','daily_item_availability','catalog_image_assets','catalog_image_operations'])
+  'cafeteria_daily_states','daily_item_availability','catalog_image_assets','catalog_image_operations',
+  'cafeteria_billing_settings','cafeteria_settings_audit'])
   AND has_column_privilege(actor,c.oid,a.attnum,privilege)
 ORDER BY actor,c.relname,a.attnum,privilege;
 
@@ -208,7 +210,9 @@ WHERE n.nspname='public' AND p.proname=ANY(ARRAY[
   'advance_order_version','cafeteria_profile_violations','lock_cafeteria_profiles','check_cafeteria_profiles',
   'derive_order_item_cafeteria','guard_order_cancellation_timestamp','is_institutional_email','current_auth_profile',
   'registration_rules','registration_domain_rule','valid_institutional_code','is_provisioned_identity',
-  'confirm_auth_profile','guard_auth_email_change','admin_set_client_code'])
+  'confirm_auth_profile','guard_auth_email_change','admin_set_client_code',
+  'cafeteria_settings_actor','cafeteria_billing_value','audit_cafeteria_visibility','audit_cafeteria_billing',
+  'reject_cafeteria_settings_audit_change','reject_cafeteria_billing_delete','create_cafeteria_billing_settings'])
   AND p.oid<>COALESCE(to_regprocedure('public.is_institutional_email(text)')::oid,0::oid)
   AND p.oid<>COALESCE(to_regprocedure('public.registration_rules(text)')::oid,0::oid)
   AND p.oid<>COALESCE(to_regprocedure('public.current_auth_profile()')::oid,0::oid)

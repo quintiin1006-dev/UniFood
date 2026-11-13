@@ -70,7 +70,7 @@ public class ClientOrderException extends RuntimeException {
     return of(
         Kind.FORBIDDEN,
         ErrorCode.CAFETERIA_NOT_SUBSCRIBED,
-        "Esta cafetería no está disponible en UniFood.");
+        "Esta cafetería no está disponible en este momento.");
   }
 
   public static ClientOrderException cafeteriaClosed() {
