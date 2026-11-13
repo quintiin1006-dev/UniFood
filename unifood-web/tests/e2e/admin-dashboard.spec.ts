@@ -462,7 +462,7 @@ for (const width of [390, 768, 1440])
       fullPage: true,
     });
   });
-for (const status of [401, 403, 503])
+for (const status of [401, 403])
   test(`error ${status} withdraws results and offers the appropriate action`, async ({
     page,
   }) => {
@@ -482,16 +482,63 @@ for (const status of [401, 403, 503])
     ).toHaveCount(status === 401 ? 1 : 0);
     await expect(
       view(page).getByRole("button", { name: "Reintentar", exact: true }),
-    ).toHaveCount(status === 503 ? 1 : 0);
+    ).toHaveCount(0);
     expect(await page.context().cookies()).toEqual(cookies);
-    if (status === 503) {
-      await configure(page, { mode: null });
-      await view(page)
-        .getByRole("button", { name: "Reintentar", exact: true })
-        .click();
-      await ready(page);
-    }
   });
+test("a failed «Actualizar» keeps the previous results and says so", async ({
+  page,
+}) => {
+  await login(page);
+  await ready(page);
+  await expect(view(page)).toContainText(/Actualizado a las \d{2}:\d{2}/);
+  const cookies = await page.context().cookies();
+  await configure(page, { mode: "503" });
+  await view(page)
+    .getByRole("button", { name: "Actualizar", exact: true })
+    .click();
+  await expect(
+    view(page).getByText(
+      "No pudimos actualizar el dashboard. Se muestran los datos anteriores.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    view(page).getByRole("heading", { name: "Resumen del período" }),
+  ).toHaveCount(1);
+  await expect(view(page).getByRole("alert")).toHaveCount(0);
+  expect(await page.context().cookies()).toEqual(cookies);
+  await configure(page, { mode: null });
+  await view(page)
+    .getByRole("button", { name: "Actualizar", exact: true })
+    .click();
+  await ready(page);
+  await expect(
+    view(page).getByText(
+      "No pudimos actualizar el dashboard. Se muestran los datos anteriores.",
+    ),
+  ).toHaveCount(0);
+});
+test("the dashboard does not reload by itself on focus or visibility", async ({
+  page,
+}) => {
+  await login(page);
+  await ready(page);
+  let requests = 0;
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/admin/dashboard") requests++;
+  });
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event("focus"));
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await page.waitForTimeout(1500);
+  expect(requests).toBe(0);
+  await view(page)
+    .getByRole("button", { name: "Actualizar", exact: true })
+    .click();
+  await ready(page);
+  expect(requests).toBe(1);
+});
 for (const width of [390, 768, 1440])
   test(`dashboard ${width}px: responsive, keyboard access, SVG and tables without global overflow`, async ({
     page,

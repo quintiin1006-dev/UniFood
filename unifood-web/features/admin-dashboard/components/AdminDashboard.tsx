@@ -1,6 +1,7 @@
 "use client";
 import { RefreshCw, CircleAlert } from "lucide-react";
 import { useAdminDashboard } from "../useAdminDashboard";
+import { updatedAtLabel } from "../presentation";
 import { DashboardPeriodLabel } from "./DashboardPeriodLabel";
 import { DashboardPeriodFilter } from "./DashboardPeriodFilter";
 import { DashboardSummary } from "./DashboardSummary";
@@ -13,9 +14,19 @@ import shell from "@/features/admin/components/Admin.module.css";
 import styles from "./AdminDashboard.module.css";
 
 export function AdminDashboard() {
-  const { filters, data, error, loading, referenceAsOf, load } =
-    useAdminDashboard();
+  const {
+    filters,
+    data,
+    error,
+    refreshError,
+    loading,
+    referenceAsOf,
+    updatedAt,
+    load,
+    refresh,
+  } = useAdminDashboard();
   const denied = !!error && [401, 403].includes(error.status);
+  const updated = data ? updatedAtLabel(updatedAt) : null;
   return (
     <section
       className={`${shell.section} ${styles.dashboard}`}
@@ -26,16 +37,30 @@ export function AdminDashboard() {
           <h1 id="admin-dashboard-title">Dashboard</h1>
           <p className={styles.intro}>Resumen de pedidos y productos</p>
         </div>
-        <button
-          type="button"
-          className={styles.refresh}
-          disabled={loading || denied}
-          onClick={() => void load()}
-        >
-          <RefreshCw size={16} aria-hidden="true" />
-          Actualizar
-        </button>
+        <div className={styles.refreshGroup}>
+          {updated && (
+            <span className={styles.updatedAt} aria-live="polite">
+              {updated}
+            </span>
+          )}
+          <button
+            type="button"
+            className={styles.refresh}
+            disabled={loading || denied}
+            aria-busy={loading}
+            onClick={() => void refresh()}
+          >
+            <RefreshCw size={16} aria-hidden="true" />
+            Actualizar
+          </button>
+        </div>
       </div>
+      {refreshError && (
+        <p className={styles.refreshError} role="status">
+          <CircleAlert size={16} aria-hidden="true" />
+          {refreshError}
+        </p>
+      )}
       <div className={styles.filterBar}>
         <DashboardPeriodFilter
           filters={filters}
@@ -46,7 +71,7 @@ export function AdminDashboard() {
         />
         {data && <DashboardPeriodLabel period={data.period} />}
       </div>
-      {loading && <DashboardLoading />}
+      {loading && !data && <DashboardLoading />}
       {error && (
         <div className={styles.error} role="alert">
           <CircleAlert size={23} aria-hidden="true" />
