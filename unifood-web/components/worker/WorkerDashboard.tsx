@@ -10,6 +10,17 @@ import BottomNav, { type WorkerModule } from "@/components/worker/BottomNav";
 
 import { useOrders } from "@/features/orders/hooks/useOrders";
 import { RejectOrderDialog } from "@/features/orders/components/RejectOrderDialog";
+import {
+  BoardAnnouncer,
+  BoardError,
+  BoardLoading,
+  SearchEmpty,
+  StaleListingBanner,
+} from "@/features/orders/components/BoardFeedback";
+import {
+  listingErrorView,
+  syncStatusLabel,
+} from "@/features/orders/listingStatus";
 
 import type { Order } from "@/types/order";
 import { AvailabilityPanel } from "@/features/availability/components/AvailabilityPanel";
@@ -24,14 +35,36 @@ export default function WorkerDashboard() {
     busyOrderIds,
     busyActions,
     loading,
-    error,
     actionError,
     isPriorityError,
     handleOrderAction,
     handleOrderReject,
     handleCalledOrderAction,
     clearActionError,
+    syncFailure,
+    lastSyncedAt,
+    announcement,
+    newOrderIds,
+    retry,
   } = useOrders(activeModule === "orders" || activeModule === "calls");
+
+  const [retrying, setRetrying] = useState(false);
+
+  const onRetry = () => {
+    setRetrying(true);
+    void retry().finally(() => setRetrying(false));
+  };
+
+  const clearSearch = () => {
+    setSearch("");
+    document.getElementById("worker-search-input")?.focus();
+  };
+
+  /* W1, W2 and L1: the same truthful states for Pedidos and Llamadas. */
+  const listingView = syncFailure ? listingErrorView(syncFailure) : null;
+  const listingBlocked =
+    !!listingView && (listingView.withdraw || lastSyncedAt === null);
+  const listingModule = activeModule === "orders" || activeModule === "calls";
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
@@ -170,41 +203,25 @@ export default function WorkerDashboard() {
          PEDIDOS
          ===================================================== */
 
-    if (activeModule === "orders") {
-      if (loading) {
-        return (
-          <section
-            style={{
-              flex: 1,
-              display: "grid",
-              placeItems: "center",
-              color: "rgba(255,255,255,.8)",
-            }}
-          >
-            <p>Cargando pedidos...</p>
-          </section>
-        );
-      }
+    if (listingModule && listingBlocked && listingView)
+      return (
+        <BoardError view={listingView} retrying={retrying} onRetry={onRetry} />
+      );
 
-      if (error) {
-        return (
-          <section
-            style={{
-              flex: 1,
-              display: "grid",
-              placeItems: "center",
-              color: "rgba(255,255,255,.8)",
-            }}
-          >
-            <p>{error}</p>
-          </section>
-        );
-      }
+    if (listingModule && loading && lastSyncedAt === null)
+      return <BoardLoading />;
+
+    if (activeModule === "orders") {
+      // W5: a search without matches says so instead of four «No hay pedidos».
+      if (search.trim() && filteredOrders.length === 0)
+        return <SearchEmpty query={search} onClear={clearSearch} />;
 
       return (
         <KanbanBoard
           busyOrderIds={busyOrderIds}
           orders={filteredOrders}
+          newOrderIds={newOrderIds}
+          now={now}
           onOpenOrder={setSelectedOrder}
           onAction={onOrderAction}
           onReject={setOrderToReject}
@@ -231,6 +248,7 @@ export default function WorkerDashboard() {
           }
           search={search}
           onSearchChange={setSearch}
+          onClearSearch={clearSearch}
           onSelectOrder={setSelectedOrder}
           onDeliver={onOrderAction}
           onRemind={onRemindOrder}
@@ -271,9 +289,21 @@ export default function WorkerDashboard() {
         activeModule={activeModule}
         search={search}
         onSearchChange={setSearch}
+        syncStatus={
+          listingModule
+            ? syncStatusLabel(lastSyncedAt, syncFailure !== null)
+            : undefined
+        }
       />
 
-      <div className="worker-main">{renderModule()}</div>
+      <div className="worker-main">
+        {listingModule && listingView && !listingBlocked && (
+          <StaleListingBanner retrying={retrying} onRetry={onRetry} />
+        )}
+        {renderModule()}
+      </div>
+
+      {listingModule && <BoardAnnouncer message={announcement} />}
 
       {/* =====================================================
           NAVEGACIÓN INFERIOR

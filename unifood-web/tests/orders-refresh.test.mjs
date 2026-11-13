@@ -43,6 +43,19 @@ function setup(enabled = true) {
       },
     },
   ).outputText;
+  const listingStatus = { exports: {} };
+  vm.runInNewContext(
+    ts.transpileModule(
+      fs.readFileSync("features/orders/listingStatus.ts", "utf8"),
+      {
+        compilerOptions: {
+          module: ts.ModuleKind.CommonJS,
+          target: ts.ScriptTarget.ES2022,
+        },
+      },
+    ).outputText,
+    { module: listingStatus, exports: listingStatus.exports, Intl, Date },
+  );
   vm.runInNewContext(source, {
     module: loaded,
     exports: loaded.exports,
@@ -50,16 +63,18 @@ function setup(enabled = true) {
     require: (name) =>
       name === "react"
         ? react
-        : {
-            getOperationalOrders: () =>
-              new Promise((resolve, reject) =>
-                requests.push({
-                  resolve: (orders) =>
-                    resolve({ orders, nextBusinessDateAt: null }),
-                  reject,
-                }),
-              ),
-          },
+        : name === "@/features/orders/listingStatus"
+          ? listingStatus.exports
+          : {
+              getOperationalOrders: () =>
+                new Promise((resolve, reject) =>
+                  requests.push({
+                    resolve: (orders) =>
+                      resolve({ orders, nextBusinessDateAt: null }),
+                    reject,
+                  }),
+                ),
+            },
     setTimeout: (callback) => {
       start = callback;
     },
@@ -176,4 +191,44 @@ test("cleanup removes the visibility listener", () => {
   assert.equal(typeof app.visibility, "function");
   app.cleanup();
   assert.equal(app.visibility, undefined);
+});
+
+// docs/ui-paneles.md, W1, W2, W8 and W11. Appended states: 7 syncFailure, 8 lastSyncedAt,
+// 9 announcement, 10 newOrderIds (a functional update in this harness).
+test("a temporary failure keeps the last orders and records a status; 403 withdraws them", async () => {
+  const app = setup();
+  const orders = [{ id: "a", student: "Ana", status: "pending" }];
+  app.requests[0].resolve(orders);
+  await new Promise(setImmediate);
+  assert.equal(app.states[7], null);
+  assert.equal(typeof app.states[8], "number");
+  app.tick();
+  app.requests[1].reject(Object.assign(new Error("x"), { status: 502 }));
+  await new Promise(setImmediate);
+  assert.equal(app.states[7].status, 502);
+  assert.equal(app.states[0], orders);
+  app.tick();
+  app.requests[2].reject(Object.assign(new Error("x"), { status: 403 }));
+  await new Promise(setImmediate);
+  assert.equal(app.states[7].status, 403);
+  assert.equal(app.states[0].length, 0);
+});
+
+test("later reads announce new orders and transitions; the first read marks nothing", async () => {
+  const app = setup();
+  app.requests[0].resolve([{ id: "a", student: "Ana", status: "pending" }]);
+  await new Promise(setImmediate);
+  assert.equal(app.states[9], "");
+  app.tick();
+  app.requests[1].resolve([
+    { id: "a", student: "Ana", status: "preparing" },
+    { id: "b", student: "Luis", status: "pending" },
+  ]);
+  await new Promise(setImmediate);
+  assert.equal(
+    app.states[9],
+    "Pedido de Ana: en preparación. Nuevo pedido de Luis.",
+  );
+  const marked = app.states[10]({});
+  assert.deepEqual(Object.keys(marked), ["b"]);
 });

@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 
+import { SearchEmpty } from "@/features/orders/components/BoardFeedback";
 import { clientIdentity } from "@/features/orders/utils/clientIdentity";
 import {
   NotCollectedButton,
@@ -30,6 +31,9 @@ interface CallsBoardProps {
   search: string;
 
   onSearchChange: (value: string) => void;
+
+  /** Clears the header search (W5). */
+  onClearSearch?: () => void;
 
   onSelectOrder: (order: Order | null) => void;
 
@@ -73,6 +77,7 @@ export default function CallsBoard({
   now,
   selectedOrder,
   search,
+  onClearSearch,
   onSelectOrder,
   onDeliver,
   onRemind,
@@ -124,11 +129,20 @@ export default function CallsBoard({
 
           <div className={styles.list}>
             {filteredOrders.length === 0 ? (
-              /*
-               * Si no existen llamadas,
-               * dejamos el área completamente vacía.
-               */
-              <div className={styles.empty} aria-hidden="true" />
+              query ? (
+                <SearchEmpty
+                  query={search}
+                  scope="por entregar"
+                  onClear={() => onClearSearch?.()}
+                />
+              ) : (
+                // L2: say it, instead of an empty area.
+                <div className={styles.empty} role="status">
+                  <p className={styles.emptyText}>
+                    No hay pedidos esperando entrega.
+                  </p>
+                </div>
+              )
             ) : (
               filteredOrders.map((order) => {
                 const selected = selectedOrder?.id === order.id;

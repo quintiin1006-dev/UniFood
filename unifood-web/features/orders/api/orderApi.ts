@@ -53,11 +53,15 @@ export async function getOperationalOrders(): Promise<{
   });
 
   if (!response.ok) {
-    throw new Error(
-      await readErrorMessage(
-        response,
-        `Error al obtener pedidos: ${response.status}`,
+    // The status lets the board choose a fixed message and its next step (listingStatus.ts).
+    throw Object.assign(
+      new Error(
+        await readErrorMessage(
+          response,
+          `Error al obtener pedidos: ${response.status}`,
+        ),
       ),
+      { status: response.status },
     );
   }
 

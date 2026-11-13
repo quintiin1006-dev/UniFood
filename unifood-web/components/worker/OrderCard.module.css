@@ -388,3 +388,17 @@
     transition: none;
   }
 }
+
+/* W11: static «Nuevo» badge for one minute. No animation, no sound. */
+.newBadge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #0b63ce;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
