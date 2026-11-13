@@ -5,7 +5,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 4px 4px 28px;
-  color: #223b59;
+  color: var(--color-ink);
   scrollbar-gutter: stable;
 }
 .titleRow {
@@ -32,7 +32,7 @@
 }
 .date {
   margin: 0;
-  color: #586c82;
+  color: var(--color-slate);
   font-size: 14px;
 }
 .refresh,
@@ -43,10 +43,10 @@
   gap: 8px;
   min-height: 44px;
   padding: 10px 14px;
-  border: 1px solid #d9e3ef;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 10px;
   background: white;
-  color: #10396f;
+  color: var(--color-ink);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -56,8 +56,8 @@
 }
 .refresh:hover:not(:disabled),
 .error button:hover {
-  background: #edf4ff;
-  border-color: #a9c6e9;
+  background: var(--color-brand-tint);
+  border-color: var(--color-brand);
 }
 .refresh:disabled {
   opacity: 0.65;
@@ -73,10 +73,10 @@
   gap: 24px;
   margin-bottom: 20px;
   padding: 20px;
-  border: 1px solid #dce5f0;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 16px;
   background: white;
-  color: #16335c;
+  color: var(--color-ink);
 }
 .cafeteriaDetails,
 .cafeteriaControl {
@@ -89,18 +89,18 @@
   gap: 8px;
   margin: 12px 0 0;
   font-size: 12px;
-  color: #586c82;
+  color: var(--color-slate);
 }
 .badge {
   padding: 4px 9px;
   border-radius: 6px;
-  background: #e7f5ed;
-  color: #216847;
+  background: var(--color-success-bg);
+  color: var(--color-success-ink);
   font-weight: 600;
 }
 .inactiveBadge {
-  background: #fff2d9;
-  color: #78500d;
+  background: var(--color-brand-tint);
+  color: var(--color-ink);
 }
 .operationLabel {
   margin: 0 0 8px;
@@ -109,7 +109,7 @@
 }
 .operationHelp {
   margin: 8px 0 0;
-  color: #586c82;
+  color: var(--color-slate);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -123,15 +123,15 @@
   line-height: 1.6;
 }
 .notice {
-  background: #e8f3ff;
-  color: #174370;
+  background: var(--color-brand-tint);
+  color: var(--color-ink);
 }
 .warning {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  background: #fff4d9;
-  color: #6a460b;
+  background: var(--color-brand-tint);
+  color: var(--color-ink);
   margin: 12px 0 0;
   padding: 10px 12px;
   font-size: 13px;
@@ -141,8 +141,8 @@
   margin-top: 2px;
 }
 .error {
-  background: #fff0ee;
-  color: #8d2925;
+  background: var(--color-danger-bg);
+  color: var(--color-danger-ink);
 }
 .error p {
   margin: 0 0 12px;
@@ -151,7 +151,7 @@
   margin-bottom: 18px;
   min-width: 0;
   padding: 16px;
-  border: 1px solid #e0e7f0;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 16px;
   background: white;
 }
@@ -174,7 +174,7 @@
   gap: 10px;
 }
 .categoryCount {
-  color: #66768a;
+  color: var(--color-text-soft);
   font-size: 12px;
 }
 .carouselActions {
@@ -186,18 +186,18 @@
   place-items: center;
   width: 44px;
   height: 44px;
-  border: 1px solid #e0e7f0;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 10px;
-  background: #f7f9fc;
-  color: #113c76;
+  background: var(--color-brand-tint);
+  color: var(--color-ink);
   cursor: pointer;
   transition:
     background-color 160ms ease,
     border-color 160ms ease;
 }
 .carouselActions button:hover:not(:disabled) {
-  background: #eaf2ff;
-  border-color: #b7cdeb;
+  background: var(--color-brand-tint);
+  border-color: var(--color-brand-tint-2);
 }
 .carouselActions button:disabled {
   opacity: 0.4;
@@ -219,10 +219,10 @@
   min-width: 0;
   overflow: hidden;
   scroll-snap-align: start;
-  border: 1px solid #e0e6ef;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 12px;
   background: white;
-  color: #17375e;
+  color: var(--color-ink);
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease;
@@ -231,14 +231,14 @@
   justify-content: center;
 }
 .card:hover {
-  border-color: #c1d3e8;
+  border-color: var(--color-brand-tint-2);
   box-shadow: 0 2px 8px rgb(23 55 94 / 5%);
 }
 .photo {
   position: relative;
   aspect-ratio: 3 / 2;
   width: 100%;
-  background: #f1f4f8;
+  background: var(--color-brand-tint);
 }
 .image {
   object-fit: cover;
@@ -251,7 +251,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #687c91;
+  color: var(--color-text-soft);
   font-size: 12px;
 }
 .cardBody {
@@ -267,7 +267,7 @@
 }
 .price {
   margin: 0 0 12px;
-  color: #104e90;
+  color: var(--color-ink);
   font-size: 17px;
   font-weight: 700;
 }
@@ -279,10 +279,10 @@
   width: 100%;
   min-height: 46px;
   padding: 8px 9px;
-  border: 1px solid #dce5f0;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 8px;
-  background: #f8fafd;
-  color: #24496f;
+  background: var(--color-brand-tint);
+  color: var(--color-ink);
   font: inherit;
   font-size: 13px;
   font-weight: 600;
@@ -293,8 +293,8 @@
     border-color 160ms ease;
 }
 .switch:hover:not(:disabled) {
-  background: #edf4ff;
-  border-color: #b4cbe7;
+  background: var(--color-brand-tint);
+  border-color: var(--color-brand-tint-2);
 }
 .switch:disabled {
   opacity: 0.6;
@@ -313,7 +313,7 @@
   height: 26px;
   padding: 3px;
   border-radius: 20px;
-  background: #778b9e;
+  background: var(--color-text-soft);
   transition: background-color 160ms ease;
 }
 .thumb {
@@ -324,7 +324,7 @@
   transition: transform 160ms ease;
 }
 .switch[aria-checked="true"] .track {
-  background: #14784e;
+  background: var(--color-success-ink);
 }
 .switch[aria-checked="true"] .thumb {
   transform: translateX(20px);
@@ -332,21 +332,21 @@
 .feedback {
   min-height: 1.5em;
   margin: 8px 0 0 !important;
-  color: #60748b;
+  color: var(--color-text-soft);
   font-size: 12px !important;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
 .feedback[role="alert"] {
-  color: #a5322b;
+  color: var(--color-danger);
 }
 .empty {
   margin: 0;
   padding: 20px 14px;
-  border: 1px dashed #dce5f0;
+  border: 1px dashed var(--color-brand-tint-2);
   border-radius: 10px;
-  background: #f8fafd;
-  color: #586c82;
+  background: var(--color-brand-tint);
+  color: var(--color-slate);
   font-size: 14px;
 }
 .loading {
@@ -359,13 +359,13 @@
   height: 180px;
   margin: 16px 0;
   border-radius: 16px;
-  background: #e4ebf4;
+  background: var(--color-brand-tint);
   opacity: 0.7;
 }
 .panel button:focus-visible,
 .rail:focus-visible {
-  outline: 3px solid #0868d9;
-  outline-offset: 3px;
+  outline: var(--focus-ring-width) solid var(--color-brand);
+  outline-offset: var(--focus-ring-offset);
 }
 @media (max-width: 760px) {
   .panel {
@@ -387,7 +387,7 @@
     padding: 16px;
   }
   .cafeteriaControl {
-    border-top: 1px solid #edf1f6;
+    border-top: 1px solid var(--color-brand-tint);
     padding-top: 14px;
   }
   .category {

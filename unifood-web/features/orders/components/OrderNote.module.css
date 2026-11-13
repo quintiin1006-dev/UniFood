@@ -1,20 +1,21 @@
 .note {
+  /* Ola 2: highlighted note, page background with a brand bar on the left. */
   display: flex;
   align-items: flex-start;
-  gap: 6px;
-  margin: 0 5px 1px;
-  padding: 8px 10px;
-  color: #334155;
-  background: #f8fafc;
-  border-radius: 10px;
-  font-size: 12px;
-  line-height: 1.35;
+  gap: 8px;
+  padding: calc(10px / var(--worker-zoom, 1)) calc(12px / var(--worker-zoom, 1));
+  border-left: calc(4px / var(--worker-zoom, 1)) solid var(--color-brand);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-size: calc(15px / var(--worker-zoom, 1));
+  line-height: 1.4;
 }
 
 .note svg {
   flex-shrink: 0;
   margin-top: 1px;
-  color: #1c4fa1;
+  color: var(--color-brand);
 }
 
 .note > div {
@@ -23,8 +24,8 @@
 
 .note strong {
   display: block;
-  color: #1c4fa1;
-  font-weight: 600;
+  color: var(--color-brand-hover);
+  font-weight: 800;
 }
 
 .note p {

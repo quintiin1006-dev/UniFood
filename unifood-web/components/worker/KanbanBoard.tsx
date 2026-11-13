@@ -77,10 +77,14 @@ export default function KanbanBoard({
     byId: Record<string, string>;
   } | null>(null);
   const [arrived, setArrived] = useState<ReadonlySet<string>>(new Set());
+  // Ola 2: a new order gets a brand-tint highlight once, under the same guard.
+  const [appeared, setAppeared] = useState<ReadonlySet<string>>(new Set());
   if (seen?.key !== statuses) {
-    const byId = Object.fromEntries(
-      orders.map((order) => [order.id, order.status]),
-    );
+    // Cumulative, so an order hidden by the search and shown again is not «new».
+    const byId = {
+      ...(seen?.byId ?? {}),
+      ...Object.fromEntries(orders.map((order) => [order.id, order.status])),
+    };
     const moved = new Set(
       seen
         ? orders
@@ -92,8 +96,16 @@ export default function KanbanBoard({
             .map((order) => order.id)
         : [],
     );
+    const fresh = new Set(
+      seen
+        ? orders
+            .filter((order) => seen.byId[order.id] === undefined)
+            .map((order) => order.id)
+        : [],
+    );
     setSeen({ key: statuses, byId });
     setArrived(moved);
+    setAppeared(fresh);
   }
 
   return (
@@ -116,7 +128,11 @@ export default function KanbanBoard({
         const ColumnIcon = column.icon;
 
         return (
-          <article key={column.id} className={styles.column}>
+          <article
+            key={column.id}
+            className={styles.column}
+            data-tone={column.id}
+          >
             <header className={styles.columnHeader}>
               <div className={styles.columnHeading}>
                 <ColumnIcon
@@ -145,6 +161,7 @@ export default function KanbanBoard({
                     order={order}
                     busy={busyOrderIds.includes(order.id)}
                     arrived={arrived.has(order.id)}
+                    appeared={appeared.has(order.id)}
                     isNew={
                       newOrderIds[order.id] !== undefined &&
                       now - newOrderIds[order.id] < NEW_ORDER_BADGE_MS

@@ -38,13 +38,13 @@ test("nothing in the worker panel loops, enters on mount or starts at scale(0)",
   );
 });
 
-test("hover never lifts and presses sink to 0.98 at most", () => {
+test("hover never lifts and presses sink about 3 % (ola 2)", () => {
   for (const file of files) {
     const source = css(file);
     for (const match of source.matchAll(/:hover[^{]*\{([^}]*)\}/g))
       assert.doesNotMatch(match[1], /transform/, `${file}: ${match[0]}`);
     for (const match of source.matchAll(/transform: scale\((0\.\d+)\)/g))
-      assert.ok(Number(match[1]) >= 0.98, `${file}: ${match[0]}`);
+      assert.ok(Number(match[1]) >= 0.97, `${file}: ${match[0]}`);
   }
 });
 

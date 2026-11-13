@@ -28,8 +28,9 @@
 .modal {
   position: relative;
 
-  width: min(440px, 100%);
-  max-height: min(700px, 90vh);
+  /* Real size on the scaled board (ola 2). */
+  width: min(calc(520px / var(--worker-zoom, 1)), 100%);
+  max-height: calc(90vh / var(--worker-zoom, 1));
 
   overflow-y: auto;
 
@@ -53,7 +54,7 @@
   scrollbar-width: thin;
 
   scrollbar-color:
-    #cbd9ec
+    var(--color-brand-tint-2)
     transparent;
 }
 
@@ -71,13 +72,13 @@
 }
 
 .modal::-webkit-scrollbar-thumb {
-  background: #cbd9ec;
+  background: var(--color-brand-tint-2);
 
   border-radius: 999px;
 }
 
 .modal::-webkit-scrollbar-thumb:hover {
-  background: #b4c7e0;
+  background: var(--color-brand);
 }
 
 
@@ -97,9 +98,9 @@
   display: grid;
   place-items: center;
 
-  color: #4f6482;
+  color: var(--color-slate);
 
-  background: #f2f5f9;
+  background: var(--color-brand-tint);
 
   border: 0;
   border-radius: 50%;
@@ -114,17 +115,15 @@
 }
 
 .close:hover {
-  color: #183d78;
+  color: var(--color-brand-hover);
 
-  background: #e9eef6;
+  background: var(--color-brand-tint);
 }
 
 .close:focus-visible {
-  outline:
-    3px solid
-    rgba(8, 104, 233, 0.22);
+  outline: var(--focus-ring-width) solid var(--color-brand);
 
-  outline-offset: 3px;
+  outline-offset: var(--focus-ring-offset);
 }
 
 
@@ -150,13 +149,13 @@
   display: grid;
   place-items: center;
 
-  color: #0757b7;
+  color: var(--color-brand);
 
-  background: #e4f0ff;
+  background: var(--color-brand-tint);
 
   border-radius: 50%;
 
-  font-size: 18px;
+  font-size: calc(18px / var(--worker-zoom, 1));
   font-weight: 600;
 }
 
@@ -171,9 +170,9 @@
    * Es información principal,
    * por lo que usamos un neutral oscuro.
    */
-  color: #172033;
+  color: var(--color-ink);
 
-  font-size: 16px;
+  font-size: calc(16px / var(--worker-zoom, 1));
   font-weight: 600;
 
   line-height: 1.25;
@@ -187,9 +186,9 @@
 .header p {
   margin: 4px 0 0;
 
-  color: #6f7b8c;
+  color: var(--color-text-soft);
 
-  font-size: 13px;
+  font-size: calc(13px / var(--worker-zoom, 1));
   font-weight: 400;
 
   line-height: 1.3;
@@ -205,7 +204,7 @@
 
   margin: 20px 0;
 
-  background: #e3e8ef;
+  background: var(--color-brand-tint-2);
 }
 
 
@@ -220,9 +219,9 @@
    * Los títulos principales
    * también pasan a neutral oscuro.
    */
-  color: #172033;
+  color: var(--color-ink);
 
-  font-size: 18px;
+  font-size: calc(18px / var(--worker-zoom, 1));
   font-weight: 700;
 
   line-height: 1.25;
@@ -243,13 +242,13 @@
    * El texto h3 tiene su propio
    * color neutral.
    */
-  color: #1761bd;
+  color: var(--color-brand);
 }
 
 .sectionTitle h3 {
   margin: 0;
 
-  color: #172033;
+  color: var(--color-ink);
 }
 
 
@@ -277,15 +276,15 @@
    * Eliminamos parte del exceso
    * de azul del fondo.
    */
-  background: #f7f9fc;
+  background: var(--color-brand-tint);
 
   border:
     1px solid
-    #e7ebf1;
+    var(--color-brand-tint);
 
-  color: #4f5d70;
+  color: var(--color-slate);
 
-  font-size: 14px;
+  font-size: calc(14px / var(--worker-zoom, 1));
   font-weight: 400;
 
   line-height: 1.45;
@@ -296,9 +295,9 @@
 }
 
 .item:hover {
-  background: #f3f6fa;
+  background: var(--color-brand-tint);
 
-  border-color: #dfe5ed;
+  border-color: var(--color-brand-tint-2);
 }
 
 
@@ -323,9 +322,9 @@
    * Producto:
    * neutral oscuro en lugar de azul.
    */
-  color: #1f2937;
+  color: var(--color-ink);
 
-  font-size: 14px;
+  font-size: calc(14px / var(--worker-zoom, 1));
   font-weight: 600;
 
   line-height: 1.4;
@@ -338,9 +337,9 @@
    * El precio tampoco necesita
    * ser azul.
    */
-  color: #172033;
+  color: var(--color-ink);
 
-  font-size: 14px;
+  font-size: calc(14px / var(--worker-zoom, 1));
   font-weight: 600;
 
   line-height: 1.4;
@@ -359,9 +358,9 @@
 
   margin-top: 4px;
 
-  color: #7a8596;
+  color: var(--color-text-soft);
 
-  font-size: 12.5px;
+  font-size: calc(12.5px / var(--worker-zoom, 1));
   font-weight: 400;
 
   line-height: 1.35;
@@ -377,9 +376,9 @@
 
   margin-top: 7px;
 
-  color: #5f6b7a;
+  color: var(--color-slate);
 
-  font-size: 13px;
+  font-size: calc(13px / var(--worker-zoom, 1));
   font-weight: 400;
 
   line-height: 1.45;
@@ -405,21 +404,21 @@
    * Antes era un bloque azul.
    * Ahora es una superficie neutral.
    */
-  background: #f7f9fc;
+  background: var(--color-brand-tint);
 
   border:
     1px solid
-    #e3e8ef;
+    var(--color-brand-tint-2);
 
   border-radius: 16px;
 
-  color: #172033;
+  color: var(--color-ink);
 }
 
 .total span {
-  color: #3f4a5a;
+  color: var(--color-slate);
 
-  font-size: 14px;
+  font-size: calc(14px / var(--worker-zoom, 1));
   font-weight: 600;
 }
 
@@ -428,9 +427,9 @@
    * El total es importante por
    * tamaño y peso, no porque sea azul.
    */
-  color: #172033;
+  color: var(--color-ink);
 
-  font-size: 18px;
+  font-size: calc(18px / var(--worker-zoom, 1));
   font-weight: 700;
 
   line-height: 1;
@@ -453,9 +452,9 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 
-  color: #5f6b7a;
+  color: var(--color-slate);
 
-  font-size: 14px;
+  font-size: calc(14px / var(--worker-zoom, 1));
   font-weight: 400;
 
   line-height: 1.5;
@@ -476,7 +475,7 @@
    * El icono puede conservar
    * el azul como acento.
    */
-  color: #1761bd;
+  color: var(--color-brand);
 }
 
 .timeInfo div {
@@ -487,18 +486,18 @@
 }
 
 .timeInfo span {
-  color: #7a8596;
+  color: var(--color-text-soft);
 
-  font-size: 12px;
+  font-size: calc(12px / var(--worker-zoom, 1));
   font-weight: 400;
 
   line-height: 1.3;
 }
 
 .timeInfo strong {
-  color: #283341;
+  color: var(--color-ink);
 
-  font-size: 14px;
+  font-size: calc(14px / var(--worker-zoom, 1));
   font-weight: 600;
 
   line-height: 1.3;
@@ -511,78 +510,48 @@
 
 .action {
   width: 100%;
-  min-height: 47px;
-
+  min-height: calc(56px / var(--worker-zoom, 1));
   display: flex;
   align-items: center;
   justify-content: center;
-
   gap: 9px;
-
   margin-top: 23px;
-
-  color: #ffffff;
-
-  /*
-   * El azul se mantiene aquí
-   * porque es la acción principal.
-   */
-  background:
-    linear-gradient(
-      135deg,
-      #176fe9,
-      #0754bd
-    );
-
   border: 0;
-
-  /*
-   * Botones:
-   * 10–12px.
-   */
-  border-radius: 12px;
-
-  font-size: 14px;
-  font-weight: 600;
-
+  border-radius: calc(20px / var(--worker-zoom, 1));
+  background: var(--color-brand);
+  color: var(--color-on-color);
+  font-size: calc(17px / var(--worker-zoom, 1));
+  font-weight: 700;
   line-height: 1.2;
-
-  box-shadow:
-    0 7px 17px
-    rgba(11, 91, 206, 0.2);
-
   cursor: pointer;
-
   transition:
     transform var(--motion-fast, 120ms) var(--ease-out, ease-out),
-    box-shadow var(--motion-fast, 120ms) var(--ease-out, ease-out);
-
+    background var(--motion-fast, 120ms) var(--ease-out, ease-out);
   -webkit-tap-highlight-color: transparent;
 }
 
+.action[data-status="preparing"] {
+  background: var(--color-success);
+}
+
 .action:hover:not(:disabled) {
-  box-shadow:
-    0 10px 22px
-    rgba(11, 91, 206, 0.26);
+  background: var(--color-brand-hover);
 }
 
 .action:active:not(:disabled) {
-  transform:
-    scale(0.98);
+  transform: scale(0.97);
 }
 
 .action:focus-visible {
-  outline:
-    3px solid
-    rgba(8, 104, 233, 0.25);
+  outline: var(--focus-ring-width) solid var(--color-brand);
 
-  outline-offset: 3px;
+  outline-offset: var(--focus-ring-offset);
 }
 
 .action:disabled {
-  color: #718093;
+  color: var(--color-text-soft);
 
-  background: #e5e9ef;
+  background: var(--color-brand-tint-2);
 
   box-shadow: none;
 
@@ -644,15 +613,15 @@
   }
 
   .header h2 {
-    font-size: 16px;
+    font-size: calc(16px / var(--worker-zoom, 1));
   }
 
   .header p {
-    font-size: 12px;
+    font-size: calc(12px / var(--worker-zoom, 1));
   }
 
   .section h3 {
-    font-size: 17px;
+    font-size: calc(17px / var(--worker-zoom, 1));
   }
 
   .itemMain {
@@ -660,11 +629,11 @@
   }
 
   .itemSubtotal {
-    font-size: 13px;
+    font-size: calc(13px / var(--worker-zoom, 1));
   }
 
   .action {
-    font-size: 13px;
+    font-size: calc(13px / var(--worker-zoom, 1));
   }
 }
 

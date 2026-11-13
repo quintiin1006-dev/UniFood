@@ -1,19 +1,24 @@
 /* Same look as the worker panel's former cancel dialog and button, without new tokens. */
 .rejectButton {
+  /* Danger as an outline, never taller than the primary action above it. */
   width: 100%;
-  margin-top: 8px;
-  border: 1px solid #fecaca;
-  border-radius: 12px;
-  padding: 9px 12px;
+  min-height: calc(48px / var(--worker-zoom, 1));
+  border: 1px solid var(--color-danger);
+  border-radius: calc(20px / var(--worker-zoom, 1));
+  padding: 0 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  background: #fff7f7;
-  color: #dc2626;
-  font-size: 13px;
-  font-weight: 600;
+  background: var(--color-surface);
+  color: var(--color-danger);
+  font-size: calc(15px / var(--worker-zoom, 1));
+  font-weight: 700;
   cursor: pointer;
+}
+
+.rejectButton:hover:not(:disabled) {
+  background: var(--color-danger-bg);
 }
 
 .rejectButton:disabled {
@@ -28,60 +33,59 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(5px);
+  background: color-mix(in srgb, var(--color-ink) 32%, transparent);
   padding: 24px;
 }
 
 .dialog {
   width: min(440px, 100%);
-  background: #ffffff;
-  border-radius: 24px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
   padding: 28px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
 }
 
 .title {
   margin: 0 0 10px;
-  font-size: 20px;
+  font-size: calc(20px / var(--worker-zoom, 1));
   font-weight: 700;
-  color: #172033;
+  color: var(--color-ink);
 }
 
 .text {
   margin: 0 0 16px;
-  font-size: 15px;
+  font-size: calc(15px / var(--worker-zoom, 1));
   line-height: 1.5;
-  color: #5d6678;
+  color: var(--color-slate);
 }
 
 .label {
   display: block;
   margin-bottom: 6px;
-  font-size: 14px;
+  font-size: calc(14px / var(--worker-zoom, 1));
   font-weight: 600;
-  color: #172033;
+  color: var(--color-ink);
 }
 
 .field {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #d9dee8;
-  border-radius: 12px;
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
   font: inherit;
-  font-size: 15px;
-  color: #172033;
+  font-size: calc(15px / var(--worker-zoom, 1));
+  color: var(--color-ink);
   resize: vertical;
 }
 
 .field:focus-visible {
-  outline: 2px solid #0b63ce;
-  outline-offset: 1px;
+  outline: var(--focus-ring-width) solid var(--color-brand);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .field[aria-invalid="true"] {
-  border-color: #dc2626;
+  border-color: var(--color-danger);
 }
 
 .meta {
@@ -93,26 +97,26 @@
 
 .hint {
   margin: 0;
-  font-size: 13px;
-  color: #7a8394;
+  font-size: calc(13px / var(--worker-zoom, 1));
+  color: var(--color-text-soft);
 }
 
 .counter,
 .counterOver {
-  font-size: 13px;
+  font-size: calc(13px / var(--worker-zoom, 1));
   font-variant-numeric: tabular-nums;
-  color: #7a8394;
+  color: var(--color-text-soft);
 }
 
 .counterOver {
-  color: #dc2626;
+  color: var(--color-danger);
   font-weight: 600;
 }
 
 .error {
   margin: 10px 0 0;
-  font-size: 14px;
-  color: #dc2626;
+  font-size: calc(14px / var(--worker-zoom, 1));
+  color: var(--color-danger-ink);
 }
 
 .actions {
@@ -126,21 +130,22 @@
 .primary {
   border-radius: var(--radius-control);
   padding: 13px 18px;
-  font-size: 14px;
+  font-size: calc(14px / var(--worker-zoom, 1));
   font-weight: 600;
   cursor: pointer;
 }
 
 .secondary {
-  border: 1px solid #d9dee8;
-  background: #ffffff;
-  color: #172033;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink);
 }
 
+/* Danger as an outline (ola 2): rejecting is never the loudest button. */
 .primary {
-  border: none;
-  background: #dc2626;
-  color: #ffffff;
+  border: 1px solid var(--color-danger);
+  background: var(--color-surface);
+  color: var(--color-danger);
 }
 
 .secondary:disabled,
@@ -165,17 +170,17 @@
   border: 0;
   border-radius: 12px;
   background: transparent;
-  color: #475266;
+  color: var(--color-slate);
   cursor: pointer;
 }
 
 .close:hover:not(:disabled) {
-  background: #f1f4f8;
+  background: var(--color-brand-tint);
 }
 
 .close:focus-visible {
-  outline: 2px solid #0b63ce;
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-brand);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .dialog .title {

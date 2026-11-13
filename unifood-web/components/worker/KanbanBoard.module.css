@@ -1,452 +1,159 @@
-/* =====================================================
-   TABLERO
-   ===================================================== */
-
+/*
+ * Worker board (ola 2, T3). Three working columns with the «arco de la U» headers and a
+ * narrower, neutral «Entregados». Sizes are real pixels on the ~10" landscape tablet: the
+ * board is drawn at scale(0.7), so calc(N / var(--worker-zoom)) gives N px on screen.
+ */
 .board {
+  --rpx: calc(1px / var(--worker-zoom, 1));
+
   width: 100%;
   height: 100%;
-
   min-width: 0;
   min-height: 0;
-
   display: grid;
-
-  grid-template-columns:
-    repeat(4, minmax(0, 1fr));
-
-  gap: 16px;
-
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 0.8fr);
+  gap: calc(12 * var(--rpx));
   overflow: hidden;
-
   padding: 4px 0;
 }
-
-
-/* =====================================================
-   COLUMNA
-   ===================================================== */
 
 .column {
   min-width: 0;
   min-height: 0;
-
   height: 100%;
-
   display: flex;
   flex-direction: column;
-
   overflow: hidden;
-
-  /*
-   * Contenedor principal:
-   * mantenemos el radio dentro
-   * del rango acordado 20–24px.
-   */
-  border-radius: 20px;
-
-  /*
-   * Se conserva exactamente
-   * el efecto transparente original.
-   */
-  background:
-    rgba(255, 255, 255, 0.08);
-
-  border:
-    1px solid
-    rgba(255, 255, 255, 0.12);
-
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-
-  box-shadow:
-    0 8px 30px
-    rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
 }
 
-
-/* =====================================================
-   HEADER DE COLUMNA
-   ===================================================== */
-
+/* «Arco de la U»: large bottom corners, a tone per state. */
 .columnHeader {
-  height: 76px;
-
   flex-shrink: 0;
-
   display: flex;
   align-items: center;
   justify-content: space-between;
-
-  gap: 10px;
-
-  padding: 0 16px;
-
-  border-bottom:
-    1px solid
-    rgba(255, 255, 255, 0.1);
-
-  background:
-    rgba(255, 255, 255, 0.04);
+  gap: calc(10 * var(--rpx));
+  min-height: calc(64 * var(--rpx));
+  padding: calc(10 * var(--rpx)) calc(16 * var(--rpx));
+  border-radius: 12px 12px calc(28 * var(--rpx)) calc(28 * var(--rpx));
+  background: var(--color-brand-tint);
+  color: var(--color-brand-hover);
 }
 
+.column[data-tone="preparing"] .columnHeader {
+  background: var(--color-brand);
+  color: var(--color-on-color);
+}
 
-/* =====================================================
-   ICONO + TÍTULO
-   ===================================================== */
+.column[data-tone="ready"] .columnHeader {
+  background: var(--color-success-bg);
+  color: var(--color-success-ink);
+}
+
+.column[data-tone="delivered"] .columnHeader {
+  background: var(--color-neutral-chip-bg);
+  color: var(--color-neutral-chip-ink);
+}
 
 .columnHeading {
   min-width: 0;
-
   display: flex;
   align-items: center;
-
-  gap: 10px;
+  gap: calc(10 * var(--rpx));
 }
 
-
-/* =====================================================
-   ICONOS DE LAS COLUMNAS
-   ===================================================== */
-
-.columnIcon {
-  width: 38px;
-  height: 38px;
-
-  flex-shrink: 0;
-
-  color: #ffffff;
-}
-
-
-/* =====================================================
-   ICONO DE ENTREGADOS
-   ===================================================== */
-
+.columnIcon,
 .deliveredIcon {
-  width: 38px;
-  height: 38px;
-
+  width: calc(26 * var(--rpx));
+  height: calc(26 * var(--rpx));
   flex-shrink: 0;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  color: #1768d8;
-
-  background: #ffffff;
-
-  border-radius: 50%;
+  color: currentColor;
 }
-
-
-/* =====================================================
-   TÍTULO DE COLUMNA
-   ===================================================== */
 
 .columnTitle {
   min-width: 0;
-
   overflow: hidden;
-
-  color:
-    rgba(255, 255, 255, 0.95);
-
-  /*
-   * Título de sección:
-   * 18px / 700.
-   */
-  font-size: 18px;
-  font-weight: 700;
-
+  color: currentColor;
+  font-size: calc(19 * var(--rpx));
+  font-weight: 800;
   line-height: 1.2;
-
-  letter-spacing: -0.01em;
-
   white-space: nowrap;
-
   text-overflow: ellipsis;
 }
 
-
-/* =====================================================
-   CONTADOR
-   ===================================================== */
-
 .columnCount {
-  min-width: 40px;
-  height: 40px;
-
+  min-width: calc(36 * var(--rpx));
+  height: calc(36 * var(--rpx));
   flex-shrink: 0;
-
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
-  padding: 0 10px;
-
-  color: #ffffff;
-
-  background:
-    rgba(177, 215, 255, 0.55);
-
-  /*
-   * Los contadores son badges.
-   */
-  border-radius: 999px;
-
-  font-size: 14px;
-  font-weight: 600;
-
+  padding: 0 calc(10 * var(--rpx));
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: calc(16 * var(--rpx));
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
-
-/* =====================================================
-   CONTENIDO DE LA COLUMNA
-   ===================================================== */
-
 .columnContent {
-  /*
-   * Ocupa únicamente el espacio
-   * disponible debajo del header.
-   */
   flex: 1;
-
   min-width: 0;
   min-height: 0;
-
-  /*
-   * Cada columna tiene su propio
-   * scroll vertical.
-   */
   overflow-y: auto;
   overflow-x: hidden;
-
-  /*
-   * Evita que el scroll de una
-   * columna arrastre inmediatamente
-   * toda la página.
-   */
   overscroll-behavior: contain;
-
-  /*
-   * Reserva el espacio necesario
-   * para el scrollbar cuando aparece
-   * y evita pequeños saltos de ancho.
-   */
   scrollbar-gutter: stable;
-
   display: flex;
   flex-direction: column;
-
-  gap: 10px;
-
-  padding:
-    12px
-    10px
-    18px
-    12px;
-
+  gap: calc(10 * var(--rpx));
+  padding: calc(12 * var(--rpx)) calc(10 * var(--rpx)) calc(18 * var(--rpx));
   scrollbar-width: thin;
-
-  scrollbar-color:
-    rgba(255, 255, 255, 0.28)
-    transparent;
+  scrollbar-color: var(--color-line) transparent;
 }
 
-
-/* =====================================================
-   CARDS DENTRO DEL SCROLL
-   ===================================================== */
-
 .columnContent > * {
-  /*
-   * Las tarjetas conservan su altura
-   * y no se comprimen cuando hay
-   * muchos pedidos.
-   */
   flex-shrink: 0;
 }
 
-
-/* =====================================================
-   SCROLLBAR
-   ===================================================== */
-
-.columnContent::-webkit-scrollbar {
-  width: 6px;
-}
-
-.columnContent::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.columnContent::-webkit-scrollbar-thumb {
-  background:
-    rgba(255, 255, 255, 0.24);
-
-  border-radius: 999px;
-
-  transition:
-    background 0.2s ease;
-}
-
-.columnContent::-webkit-scrollbar-thumb:hover {
-  background:
-    rgba(255, 255, 255, 0.42);
-}
-
-
-/* =====================================================
-   COLUMNA VACÍA
-   ===================================================== */
-
 .emptyColumn {
-  min-height: 100px;
-
+  min-height: calc(90 * var(--rpx));
   display: flex;
   align-items: center;
   justify-content: center;
-
-  padding: 20px;
-
-  color:
-    rgba(255, 255, 255, 0.52);
-
-  font-size: 13px;
-  font-weight: 400;
-
-  line-height: 1.4;
-
+  padding: calc(16 * var(--rpx));
+  color: var(--color-text-soft);
+  font-size: calc(16 * var(--rpx));
+  font-weight: 600;
   text-align: center;
 }
 
-
-/* =====================================================
-   RESPONSIVE — PANTALLAS MEDIANAS
-   ===================================================== */
-
-@media (max-width: 1100px) {
-  .board {
-    gap: 12px;
-  }
-
-  .columnContent {
-    padding:
-      10px
-      8px
-      16px
-      10px;
-  }
-
-  .columnTitle {
-    font-size: 17px;
-  }
-}
-
-
-/* =====================================================
-   RESPONSIVE — TABLET
-   ===================================================== */
-
 @media (max-width: 850px) {
   .board {
-    grid-template-columns:
-      repeat(
-        2,
-        minmax(0, 1fr)
-      );
-
-    grid-template-rows:
-      repeat(
-        2,
-        minmax(0, 1fr)
-      );
-
-    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
   }
 }
-
-
-/* =====================================================
-   RESPONSIVE — MÓVIL
-   ===================================================== */
 
 @media (max-width: 600px) {
   .board {
     height: auto;
-
-    grid-template-columns:
-      1fr;
-
-    grid-template-rows:
-      none;
-
-    gap: 12px;
-
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
     overflow-y: visible;
     overflow-x: hidden;
-
     padding-right: 2px;
   }
 
-  /*
-   * Cada columna conserva una altura
-   * limitada para que 10, 20 o más
-   * pedidos no hagan crecer toda
-   * la página.
-   */
+  /* Each column keeps a bounded height, so many orders never grow the whole page. */
   .column {
     height: 320px;
     min-height: 320px;
-
     flex-shrink: 0;
-  }
-
-  .columnHeader {
-    height: 70px;
-
-    padding: 0 14px;
-  }
-
-  .columnIcon,
-  .deliveredIcon {
-    width: 34px;
-    height: 34px;
-  }
-
-  .columnTitle {
-    font-size: 16px;
-    font-weight: 700;
-  }
-
-  .columnCount {
-    min-width: 34px;
-    height: 34px;
-
-    padding: 0 8px;
-
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  .columnContent {
-    padding:
-      10px
-      8px
-      14px
-      10px;
-  }
-}
-
-
-/* =====================================================
-   REDUCCIÓN DE MOVIMIENTO
-   ===================================================== */
-
-@media (prefers-reduced-motion: reduce) {
-  .columnContent::-webkit-scrollbar-thumb {
-    transition: none;
   }
 }

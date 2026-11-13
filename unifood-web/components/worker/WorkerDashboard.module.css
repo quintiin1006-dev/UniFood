@@ -1,6 +1,7 @@
 .profilePage:global(.worker-page) {
   width: 100%; height: 100dvh; min-height: 100svh; transform: none;
-  overflow: hidden; background: #f3f6fb;
+  overflow: hidden; background: var(--color-bg);
+  --worker-zoom: 1;
 }
 .profilePage::before,
 .profilePage :global(.worker-main)::before { display: none; }
@@ -22,7 +23,8 @@
   min-height: 100svh;
   transform: none;
   overflow: hidden;
-  background: #f3f6fb;
+  background: var(--color-bg);
+  --worker-zoom: 1;
 }
 
 /* History keeps its own unscaled surface without changing the other modules. */
@@ -32,7 +34,8 @@
   min-height: 100svh;
   transform: none;
   overflow: hidden;
-  background: #f3f6fb;
+  background: var(--color-bg);
+  --worker-zoom: 1;
 }
 .historyPage::before,
 .historyPage :global(.worker-main)::before { display: none; }
