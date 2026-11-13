@@ -491,6 +491,42 @@ class WorkerOrdersApiPostgresTest {
     assertEquals(before.get("cancellation_deadline"), after.get("cancellation_deadline"));
   }
 
+  // ---------------------------------------------------------------- FIFO of the day (§6)
+
+  @Test
+  void theFifoQueueOnlyConsidersTodaysOrdersSoAStalePendingNeverBlocksIt() throws Exception {
+    // A cafeteria of its own, so the exact listings of the other tests stay untouched.
+    UUID cafe = UUID.randomUUID();
+    UUID worker = UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO public.cafeterias(id,site_id,name,is_active,lunch_order_start,lunch_order_end) "
+            + "SELECT ?,site_id,'Cafetería Sur',false,'06:00','18:00' FROM public.cafeterias WHERE id=?",
+        cafe,
+        CAFE);
+    staff(worker, "WORKER", cafe);
+    UUID stale = order(cafe, null, "PENDING", YESTERDAY, null, null, null, "DOC-PRIVATE-S");
+    UUID first = order(cafe, null, "PENDING", TODAY, null, null, null, "DOC-PRIVATE-S1");
+    UUID second =
+        order(cafe, null, "PENDING", TODAY.plusSeconds(60), null, null, null, "DOC-PRIVATE-S2");
+
+    // Today's FIFO still holds: the second order waits for the first.
+    mvc.perform(patch("/api/orders/" + second + "/prepare").with(as(worker)))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("ORDER_PROCESSING_SEQUENCE_VIOLATION"));
+    // Yesterday's PENDING no longer blocks today's first order.
+    mvc.perform(patch("/api/orders/" + first + "/prepare").with(as(worker)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("PREPARING"));
+    mvc.perform(patch("/api/orders/" + second + "/prepare").with(as(worker)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("PREPARING"));
+    // The stale order is outside today's queue; the daily close cancels it.
+    mvc.perform(patch("/api/orders/" + stale + "/prepare").with(as(worker)))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("ORDER_PROCESSING_SEQUENCE_VIOLATION"));
+    assertEquals("PENDING", row(stale).get("status"));
+  }
+
   // ---------------------------------------------------------------- pickup time (023)
 
   static UUID orderPickingUpAt(Instant created, Instant pickup) {

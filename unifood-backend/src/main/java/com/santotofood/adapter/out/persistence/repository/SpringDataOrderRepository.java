@@ -37,6 +37,8 @@ public interface SpringDataOrderRepository extends JpaRepository<OrderEntity, UU
       @Param("start") Instant start,
       @Param("end") Instant end);
 
-  Optional<OrderEntity> findFirstByCafeteriaIdAndStatusOrderByCreatedAtAscIdAsc(
-      UUID cafeteriaId, OrderStatus status);
+  /** FIFO head: the oldest order in the status created within [start, end) (§6). */
+  Optional<OrderEntity>
+      findFirstByCafeteriaIdAndStatusAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtAscIdAsc(
+          UUID cafeteriaId, OrderStatus status, Instant start, Instant end);
 }

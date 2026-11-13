@@ -379,6 +379,11 @@ se versiona.
   entrega sigue siendo un reintento, nunca un pedido nuevo.
 - Cierre diario (America/Bogota): PENDING pasa a CANCELLED por el sistema; PREPARING, READY
   o CALLED pasan a NOT_COLLECTED. La cola FIFO solo considera pedidos del día.
+  - **Implementado el 2026-11-12:** al preparar, la cabeza de la cola es el PENDING más antiguo
+    creado en el día de negocio actual de America/Bogota (`TimeProvider`). Un PENDING de otro
+    día ya no bloquea la cola de hoy y no se puede preparar (409
+    `ORDER_PROCESSING_SEQUENCE_VIOLATION`); el worker puede rechazarlo y el cierre diario lo
+    cancela.
   - **Automático desde B19 (2026-11-10):** Spring lo ejecuta al arrancar y luego cada hora,
     porque en la demo el backend se apaga de noche y al encenderlo cierra lo del día anterior.
     El script manual queda como herramienta de emergencia (§11).

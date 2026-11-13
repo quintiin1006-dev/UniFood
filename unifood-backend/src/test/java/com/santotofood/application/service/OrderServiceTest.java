@@ -66,7 +66,8 @@ class OrderServiceTest {
 
     when(requestedOrder.getCafeteriaId()).thenReturn(cafeteriaId);
 
-    when(orderRepository.findFirstPendingByCafeteriaId(cafeteriaId))
+    when(timeProvider.now()).thenReturn(java.time.Instant.parse("2026-11-20T17:00:00Z"));
+    when(orderRepository.findFirstPendingByCafeteriaId(eq(cafeteriaId), any(), any()))
         .thenReturn(Optional.of(firstPendingOrder));
 
     when(firstPendingOrder.getId()).thenReturn(firstPendingOrderId);
@@ -83,6 +84,49 @@ class OrderServiceTest {
         exception.getMessage());
 
     verify(timeProvider).now();
+    verify(orderRepository, never()).save(any());
+  }
+
+  @Test
+  void theFifoHeadIsLookedUpOnlyAmongTodaysOrdersInBogota() {
+    UUID orderId = UUID.randomUUID();
+    UUID cafeteriaId = UUID.randomUUID();
+    Order order = mock(Order.class);
+    when(orderRepository.findCafeteriaId(orderId)).thenReturn(Optional.of(cafeteriaId));
+    when(orderRepository.findByIdForUpdate(orderId)).thenReturn(Optional.of(order));
+    when(order.getId()).thenReturn(orderId);
+    when(order.getCafeteriaId()).thenReturn(cafeteriaId);
+    // 04:00Z is still the previous day in America/Bogota.
+    when(timeProvider.now()).thenReturn(java.time.Instant.parse("2026-11-20T04:00:00Z"));
+    when(orderRepository.findFirstPendingByCafeteriaId(eq(cafeteriaId), any(), any()))
+        .thenReturn(Optional.of(order));
+    when(orderRepository.save(order)).thenReturn(order);
+
+    orderService.prepareOrder(orderId);
+
+    verify(orderRepository)
+        .findFirstPendingByCafeteriaId(
+            cafeteriaId,
+            java.time.Instant.parse("2026-11-19T05:00:00Z"),
+            java.time.Instant.parse("2026-11-20T05:00:00Z"));
+    verify(orderRepository).save(order);
+  }
+
+  @Test
+  void aPendingOrderFromAnotherDayIsOutsideTodaysQueue() {
+    UUID staleId = UUID.randomUUID();
+    UUID cafeteriaId = UUID.randomUUID();
+    Order stale = mock(Order.class);
+    when(orderRepository.findCafeteriaId(staleId)).thenReturn(Optional.of(cafeteriaId));
+    when(orderRepository.findByIdForUpdate(staleId)).thenReturn(Optional.of(stale));
+    when(stale.getId()).thenReturn(staleId);
+    when(stale.getCafeteriaId()).thenReturn(cafeteriaId);
+    when(timeProvider.now()).thenReturn(java.time.Instant.parse("2026-11-20T17:00:00Z"));
+    // Today's queue is empty: the stale order is not its head, so it is not prepared.
+    when(orderRepository.findFirstPendingByCafeteriaId(eq(cafeteriaId), any(), any()))
+        .thenReturn(Optional.empty());
+
+    assertThrows(OrderProcessingSequenceException.class, () -> orderService.prepareOrder(staleId));
     verify(orderRepository, never()).save(any());
   }
 

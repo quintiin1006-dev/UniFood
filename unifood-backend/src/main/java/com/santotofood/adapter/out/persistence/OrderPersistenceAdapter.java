@@ -75,10 +75,12 @@ public class OrderPersistenceAdapter implements OrderRepository {
   }
 
   @Override
-  public Optional<Order> findFirstPendingByCafeteriaId(UUID cafeteriaId) {
+  public Optional<Order> findFirstPendingByCafeteriaId(
+      UUID cafeteriaId, Instant dayStart, Instant nextDayStart) {
 
     return repository
-        .findFirstByCafeteriaIdAndStatusOrderByCreatedAtAscIdAsc(cafeteriaId, OrderStatus.PENDING)
+        .findFirstByCafeteriaIdAndStatusAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtAscIdAsc(
+            cafeteriaId, OrderStatus.PENDING, dayStart, nextDayStart)
         .map(mapper::toDomain);
   }
 }
