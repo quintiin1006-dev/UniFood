@@ -10,6 +10,7 @@ import BottomNav, { type WorkerModule } from "@/components/worker/BottomNav";
 
 import { useOrders } from "@/features/orders/hooks/useOrders";
 import { RejectOrderDialog } from "@/features/orders/components/RejectOrderDialog";
+import { OrderActionAlert } from "@/features/orders/components/OrderActionAlert";
 import {
   BoardAnnouncer,
   BoardError,
@@ -345,94 +346,15 @@ export default function WorkerDashboard() {
 
       {actionError &&
         (activeModule === "orders" || activeModule === "calls") && (
-          <div
-            role="alert"
-            onClick={clearActionError}
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 9999,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "rgba(0, 0, 0, 0.18)",
-              backdropFilter: "blur(4px)",
-              padding: "24px",
-              cursor: "pointer",
-            }}
-          >
-            <div
-              onClick={(event) => event.stopPropagation()}
-              style={{
-                width: "min(440px, 100%)",
-                background: "rgba(255, 255, 255, 0.98)",
-                borderRadius: "24px",
-                padding: "28px",
-                boxShadow: "0 24px 70px rgba(0,0,0,.25)",
-                textAlign: "center",
-                cursor: "default",
-              }}
-            >
-              <div
-                style={{
-                  width: "56px",
-                  height: "56px",
-                  margin: "0 auto 16px",
-                  borderRadius: "50%",
-                  display: "grid",
-                  placeItems: "center",
-                  background: "#fee2e2",
-                  color: "#dc2626",
-                  fontSize: "28px",
-                  fontWeight: 700,
-                }}
-              >
-                !
-              </div>
-
-              <h2
-                style={{
-                  margin: "0 0 10px",
-                  fontSize: "20px",
-                  fontWeight: 700,
-                  color: "#172033",
-                }}
-              >
-                {isPriorityError
-                  ? "Acción no disponible"
-                  : "No se pudo completar la acción"}
-              </h2>
-
-              <p
-                style={{
-                  margin: "0 0 24px",
-                  fontSize: "15px",
-                  lineHeight: 1.5,
-                  color: "#5d6678",
-                }}
-              >
-                {actionError}
-              </p>
-
-              <button
-                type="button"
-                onClick={clearActionError}
-                style={{
-                  width: "100%",
-                  border: "none",
-                  borderRadius: "var(--radius-control)",
-                  padding: "13px 18px",
-                  background: "#0b63ce",
-                  color: "#ffffff",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Entendido
-              </button>
-            </div>
-          </div>
+          <OrderActionAlert
+            title={
+              isPriorityError
+                ? "Acción no disponible"
+                : "No se pudo completar la acción"
+            }
+            message={actionError}
+            onClose={clearActionError}
+          />
         )}
     </main>
   );
