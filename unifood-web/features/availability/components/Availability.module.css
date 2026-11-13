@@ -140,6 +140,25 @@
   flex-shrink: 0;
   margin-top: 2px;
 }
+/* §2: open without any available product. Persistent and static, never animated. */
+.openWarning {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid #f1d08a;
+  border-radius: 12px;
+  background: #fff4d9;
+  color: #6a460b;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.openWarning svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
 .error {
   background: #fff0ee;
   color: #8d2925;
