@@ -108,7 +108,7 @@ En Authentication:
 2. Configurar OTP de **6 dígitos**, con expiración y límites de frecuencia de Supabase habilitados.
 3. En **Confirm signup** y **Reset password**, conservar `{{ .Token }}` para registro y recuperación OTP de CLIENT. En **Reset password**, incluir también un enlace con `{{ .ConfirmationURL }}` para el flujo PKCE del panel. Ver la [configuración y plantilla compatible](panel-password-recovery.md).
 4. Configurar SMTP para entregar correos a estudiantes reales. El remitente de pruebas de Supabase tiene restricciones de destinatarios.
-5. Configurar también en Supabase una longitud mínima de 8 caracteres, mayúscula, minúscula y número. La aplicación valida estas reglas, pero el proveedor debe aplicarlas también para impedir que se omitan llamando directamente a su API.
+5. Configurar también en Supabase una longitud mínima de 8 caracteres, mayúscula, minúscula y número. La aplicación valida estas reglas (de 8 a 128 caracteres, `features/auth/validation.ts`), pero el proveedor debe aplicarlas también para impedir que se omitan llamando directamente a su API. **Pendiente (2026-11-12):** según `docs/decisiones.md` §9, el proyecto tiene hoy «letras y dígitos», más laxo que la aplicación.
 6. Configurar Site URL con la URL real del frontend. La aplicación no necesita una clave administrativa para enviar los correos.
 
 El reenvío tiene una espera visual de 60 segundos; el límite efectivo y el control de intentos son responsabilidad de Supabase, también entre pestañas o instancias. La recuperación muestra un mensaje neutro para no revelar la existencia de una cuenta. Después de cambiar la contraseña se invalidan las sesiones de actualización con cierre global y se vuelve al login. Como ocurre con JWT, los access tokens ya emitidos pueden permanecer válidos hasta su vencimiento; configurar una vida corta en Supabase.
@@ -154,6 +154,9 @@ Brand, logout y la navegación de AuthScreen reciben contexto explícito. La var
 ## Perfil CLIENT y autoridad de negocio
 
 `GET /api/me/profile` devuelve únicamente `document`, `phone` e `institution` (nombre).
+Desde la 018 el registro ya no llena `clients.document`, así que en las cuentas nuevas
+`document` llega en `null`; se dejará de leer y se eliminará tras el piloto
+(`docs/decisiones.md` §10).
 Spring toma el UUID del subject JWT verificado y aplica la misma política CLIENT que
 la cancelación propia: usuario activo y rol exclusivo CLIENT, leídos de PostgreSQL.
 Los IDs de usuario, cliente o institución enviados por navegador no seleccionan datos.
