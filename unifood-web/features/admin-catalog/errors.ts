@@ -1,3 +1,4 @@
+import { SESSION_CHECK_UNAVAILABLE } from "@/lib/messages";
 import { IMAGE_MESSAGES } from "./images";
 export const CATALOG_MESSAGES = {
   ...IMAGE_MESSAGES,
@@ -19,8 +20,7 @@ export const CATALOG_MESSAGES = {
     "No pudimos cargar tu catálogo. Inténtalo nuevamente.",
   ADMIN_CATALOG_BAD_GATEWAY:
     "No pudimos cargar un catálogo válido. Inténtalo nuevamente.",
-  AUTH_TEMPORARILY_UNAVAILABLE:
-    "No pudimos verificar tu sesión en este momento. Inténtalo nuevamente.",
+  AUTH_TEMPORARILY_UNAVAILABLE: SESSION_CHECK_UNAVAILABLE,
 } as const;
 export function catalogErrorCode(
   status: number,

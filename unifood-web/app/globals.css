@@ -10,14 +10,21 @@ body {
   width: 100%;
   height: 100%;
 
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    "SF Pro Display",
-    "SF Pro Text",
-    "Segoe UI",
-    sans-serif;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+/* Prices, order codes and times keep their columns aligned. */
+time,
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Focus visible on every control: brand ring of 2 px with offset. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-brand);
+  outline-offset: var(--focus-ring-offset);
 }
 
 body {

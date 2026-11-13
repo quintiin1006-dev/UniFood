@@ -1,0 +1,62 @@
+/*
+ * UniFood design tokens (docs/ui-paneles.md, «Tokens»). The only place where colors are
+ * written as hex: components use var(--…). Sober and minimal: blues and whites, muted red and
+ * green, no yellow. Contrast of every text pair is checked in the document.
+ */
+:root {
+  /* Text */
+  --color-ink: #0f172a;
+  --color-text-soft: #64708a;
+  --color-slate: #475266;
+
+  /* Brand */
+  --color-brand: #1e4fd8;
+  --color-brand-hover: #1a40ae;
+  --color-brand-tint: #eef3ff;
+  --color-brand-tint-2: #dce6fb;
+
+  /* Surfaces */
+  --color-bg: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-line: #e5e8ee;
+  /* Boundary of inputs and controls: ≥3:1 against the surface (WCAG 1.4.11). */
+  --color-control-border: var(--color-text-soft);
+
+  /* States */
+  --color-success: #2e7d5b;
+  --color-success-bg: #e6f2ec;
+  --color-success-ink: #1f5e43;
+  --color-danger: #c8323a;
+  --color-danger-bg: #fdecee;
+  --color-danger-ink: #9e2530;
+  --color-neutral-chip-bg: #eef0f4;
+  --color-neutral-chip-ink: #475266;
+  --color-on-color: #ffffff;
+
+  /* Shape */
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-pill: 999px;
+  /* «Arco de la U»: section and column headers, and product images. */
+  --radius-arch: 12px 12px 28px 28px;
+  --radius-media-arch: 28px 28px 40px 40px;
+  /* Former name, still used by a few components. */
+  --radius-control: var(--radius-md);
+  --shadow-raised: 0 12px 24px -16px rgba(15, 23, 42, 0.25);
+
+  /* Focus: brand ring of 2 px with offset, on every control. */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  /* Type */
+  --font-sans:
+    var(--font-figtree), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+
+  /* Motion (design-motion-principles; the worker keeps its own faster set). */
+  --motion-enter: 220ms;
+  --motion-press: 120ms;
+  --ease-soft: cubic-bezier(0.2, 0, 0, 1);
+  --press-scale: 0.97;
+}

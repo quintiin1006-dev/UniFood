@@ -455,3 +455,78 @@ admin pueden ir **en paralelo** entre sí. Ningún PR toca `app/cuenta/**` ni `f
 3. Un script de Playwright (Edge) inicia sesión como `worker@`, `backendunavailable@`,
    `admin@` y `superadmin@example.invalid` y siembra el tablero con `/__test/worker-orders`.
 4. Los servidores se detuvieron al terminar y el repositorio quedó sin cambios.
+
+---
+
+## Tokens
+
+Identidad aprobada por el dueño (ola 2): sobria, minimalista y elegante. Azules y blancos, rojo y
+verde apagados; sin amarillo ni colores extra. Los valores viven **solo** en
+`unifood-web/app/tokens.css`; los componentes usan `var(--…)`.
+
+### Color
+
+| Token                                             | Valor                             | Uso                                                       |
+| ------------------------------------------------- | --------------------------------- | --------------------------------------------------------- |
+| `--color-ink`                                     | `#0F172A`                         | Texto principal (sustituye al negro)                      |
+| `--color-text-soft`                               | `#64708A`                         | Texto de apoyo; borde de inputs y controles               |
+| `--color-slate`                                   | `#475266`                         | Secundario; texto de apoyo sobre `brand-tint`             |
+| `--color-brand` / `--color-brand-hover`           | `#1E4FD8` / `#1A40AE`             | Acción principal, enlaces, foco                           |
+| `--color-brand-tint` / `--color-brand-tint-2`     | `#EEF3FF` / `#DCE6FB`             | Avisos e información, nav activa, resalte de pedido nuevo |
+| `--color-bg` / `--color-surface` / `--color-line` | `#F6F7F9` / `#FFFFFF` / `#E5E8EE` | Fondo de página, tarjetas, bordes decorativos             |
+| `--color-success` / `-bg` / `-ink`                | `#2E7D5B` / `#E6F2EC` / `#1F5E43` | «Marcar como listo», éxito, chip Listo                    |
+| `--color-danger` / `-bg` / `-ink`                 | `#C8323A` / `#FDECEE` / `#9E2530` | Rechazar, errores, chips Rechazado y No recogido          |
+| `--color-neutral-chip-bg` / `-ink`                | `#EEF0F4` / `#475266`             | Chip Entregado                                            |
+
+### Contraste (WCAG 2.x, calculado)
+
+| Pareja                             | Uso                                  | Contraste | Nivel          |
+| ---------------------------------- | ------------------------------------ | --------- | -------------- |
+| ink / surface                      | Texto principal sobre tarjeta        | 17.85:1   | AAA            |
+| ink / bg                           | Texto principal sobre fondo          | 16.65:1   | AAA            |
+| text-soft / surface                | Texto de apoyo sobre tarjeta         | 4.97:1    | AA             |
+| text-soft / bg                     | Texto de apoyo sobre fondo           | 4.64:1    | AA             |
+| slate / surface                    | Secundario sobre tarjeta             | 7.87:1    | AAA            |
+| brand / surface                    | Enlace o texto brand sobre tarjeta   | 6.63:1    | AA             |
+| brand / bg                         | Enlace sobre fondo                   | 6.19:1    | AA             |
+| white / brand                      | Botón primario / chip En preparación | 6.63:1    | AA             |
+| white / brand-hover                | Botón primario en hover              | 8.79:1    | AAA            |
+| brand-hover / brand-tint           | Chip Pendiente / aviso               | 7.91:1    | AAA            |
+| ink / brand-tint                   | Texto sobre aviso brand-tint         | 16.07:1   | AAA            |
+| ink / brand-tint-2                 | Texto sobre brand-tint-2             | 14.24:1   | AAA            |
+| text-soft / brand-tint             | Apoyo sobre brand-tint               | 4.47:1    | AA grande / UI |
+| white / success                    | Botón de éxito                       | 5.00:1    | AA             |
+| success-ink / success-bg           | Chip Listo / mensaje de éxito        | 6.67:1    | AA             |
+| white / ink                        | Chip Llamado / barra de carrito      | 17.85:1   | AAA            |
+| neutral-chip-ink / neutral-chip-bg | Chip Entregado                       | 6.90:1    | AA             |
+| danger-ink / danger-bg             | Chip Rechazado / mensaje de error    | 6.67:1    | AA             |
+| danger / surface                   | Botón de peligro (texto)             | 5.29:1    | AA             |
+| danger-ink / surface               | Chip No recogido                     | 7.61:1    | AAA            |
+| brand / brand-tint                 | Brand sobre brand-tint (nav activa)  | 5.97:1    | AA             |
+| brand / surface                    | Anillo de foco (no texto, ≥3:1)      | 6.63:1    | AA             |
+| line / surface                     | Borde (decorativo)                   | 1.23:1    | NO             |
+
+- Todas las parejas de texto cumplen AA salvo `text-soft` sobre `brand-tint` (4,47:1). Regla: **sobre `brand-tint` el texto de apoyo va en `slate`** (7,87:1 sobre blanco; más de 6:1 sobre el tinte).
+- `line` (1,23:1) es solo decorativo. El límite de inputs y controles usa `--color-control-border` (`text-soft`, 4,97:1), para cumplir el contraste no textual (WCAG 1.4.11).
+- El anillo de foco (`brand`, 2 px con 2 px de separación) tiene 6,63:1 sobre blanco.
+
+### Tipografía, forma y movimiento
+
+- **Figtree** con `next/font/google`, pesos 500, 600, 700 y 800, autoalojada en el build (sin peticiones a Google en ejecución). `font-variant-numeric: tabular-nums` en precios, códigos y horas (`time` y la clase `.tabular`).
+- Radios: 12 (controles pequeños), 20 (botones e inputs), 28 (tarjetas y contenedores) y píldora (chips y navegación). **Arco de la U**: cabeceras de columna o sección `12 12 28 28` e imágenes de producto `28 28 40 40`.
+- Una sola sombra, para tarjetas elevadas: `0 12px 24px -16px rgba(15, 23, 42, .25)`.
+- Movimiento según la skill: entradas de 8 px en 200 a 240 ms con `cubic-bezier(0.2, 0, 0, 1)`, botones que se hunden un 3 % al pulsar, un pedido nuevo del worker con un resalte `brand-tint` una sola vez, y nada que se anime al refrescar por sondeo. Con `prefers-reduced-motion`, solo opacidad (hoy la regla global de `globals.css` las reduce a 0,01 ms).
+
+### Componentes compartidos (`unifood-web/components/ui/`)
+
+| Componente                      | Qué resuelve                                                                                                                                    |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Button`, `buttonClass`         | Primario (brand), éxito, peligro en contorno nunca mayor que el primario, secundario; 48 px, o 56 px con `touch`                                |
+| `StatusChip` y `orderStatus.ts` | **Único mapa** de estados: Pendiente, En preparación, Listo, Llamado, Entregado, Rechazado, No recogido y Cancelado                             |
+| `Card`, `ArchHeader`            | Contenedor de radio 28 con sombra opcional; cabecera en arco con tono tinte, brand, éxito o neutro                                              |
+| `Field`                         | Etiqueta, input de radio 20, ayuda y error anunciado                                                                                            |
+| `PillNav`                       | Navegación inferior o pestañas en píldora, con `aria-current`                                                                                   |
+| `EmptyState`                    | Icono, una frase y como mucho una acción                                                                                                        |
+| `Notice`                        | Mensaje de respuesta: éxito en verde, error en rojo (`alert`), aviso o información en `brand-tint` (`status`); `floating` lo convierte en toast |
+
+`lib/messages.ts` reúne los textos que varios paneles repetían palabra por palabra (sesión no verificable, sesión vencida, pedido que cambió de estado), sin cambiar su redacción.

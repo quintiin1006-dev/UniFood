@@ -1,3 +1,4 @@
+import { SESSION_CHECK_UNAVAILABLE } from "@/lib/messages";
 export const AVAILABILITY_MESSAGES = {
   AVAILABILITY_UNAUTHORIZED: "Inicia sesión para gestionar la disponibilidad.",
   AVAILABILITY_FORBIDDEN:
@@ -17,8 +18,7 @@ export const AVAILABILITY_MESSAGES = {
     "La disponibilidad cambió. Actualiza la pantalla y vuelve a intentarlo.",
   AVAILABILITY_TEMPORARILY_UNAVAILABLE:
     "La disponibilidad no está disponible en este momento. Inténtalo nuevamente.",
-  AUTH_TEMPORARILY_UNAVAILABLE:
-    "No pudimos verificar tu sesión en este momento. Inténtalo nuevamente.",
+  AUTH_TEMPORARILY_UNAVAILABLE: SESSION_CHECK_UNAVAILABLE,
   AVAILABILITY_CATALOG_INVALID:
     "El catálogo requiere una revisión administrativa.",
   AVAILABILITY_INTERNAL_ERROR: "No pudimos gestionar la disponibilidad.",
