@@ -75,9 +75,10 @@ function Shell({ children }: { children: ReactNode }) {
                   <div className={styles.inactive} role="status">
                     <CircleAlert size={21} aria-hidden="true" />
                     <p>
-                      <strong>La cafetería está inactiva.</strong> Puedes
-                      consultar la información, pero los cambios están
-                      deshabilitados.
+                      <strong>La cafetería está inactiva.</strong> Todavía no
+                      está visible para los clientes, por eso el catálogo es de
+                      solo consulta por ahora. Se podrá editar cuando el equipo
+                      de UniFood active la cafetería.
                     </p>
                   </div>
                 )}

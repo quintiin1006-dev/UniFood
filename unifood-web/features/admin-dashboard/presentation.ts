@@ -1,3 +1,4 @@
+import { formatCop, formatPercentage } from "@/lib/numberFormat";
 import { dashboardDate, dateOrdinal, bogotaDate } from "./filters";
 import type {
   DashboardCoverage,
@@ -9,13 +10,11 @@ export const formatCount = (value: string | null): string =>
   value === null
     ? "No calculable"
     : value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-export function formatMoney(value: string | null): string {
-  if (value === null) return "No calculable";
-  const [whole, cents] = value.split(".");
-  return `$ ${formatCount(whole)},${cents}`;
-}
-export const formatPercent = (value: string | null) =>
-  value === null ? "Sin base de cálculo" : value.replace(".", ",") + " %";
+// Pesos without decimals and percentages with one decimal, shared with the worker history (I6).
+export const formatMoney = (value: string | null): string =>
+  (value === null ? null : formatCop(value)) ?? "No calculable";
+export const formatPercent = (value: string | null): string =>
+  (value === null ? null : formatPercentage(value)) ?? "Sin base de cálculo";
 export function formatDay(value: string, short = false): string {
   return new Intl.DateTimeFormat("es-CO", {
     day: "2-digit",

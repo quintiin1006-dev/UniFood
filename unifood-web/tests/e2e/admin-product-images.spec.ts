@@ -126,7 +126,7 @@ test("partial creation failure preserves preview and safely retries only the sam
     .click();
   await expect(
     dialog(page).getByRole("button", {
-      name: "Comprobar resultado de imagen",
+      name: "Revisar si la imagen quedó",
       exact: true,
     }),
   ).toBeVisible();
@@ -135,11 +135,11 @@ test("partial creation failure preserves preview and safely retries only the sam
   ).toBeVisible();
   await config(page, { imageMode: null });
   await dialog(page)
-    .getByRole("button", { name: "Comprobar resultado de imagen", exact: true })
+    .getByRole("button", { name: "Revisar si la imagen quedó", exact: true })
     .click();
   await dialog(page)
     .getByRole("button", {
-      name: "Reenviar mismo intento de imagen",
+      name: "Volver a intentar la imagen",
       exact: true,
     })
     .click();
@@ -162,7 +162,7 @@ test("lost confirmation is recovered without another upload", async ({
     .getByRole("button", { name: "Guardar producto", exact: true })
     .click();
   await dialog(page)
-    .getByRole("button", { name: "Comprobar resultado de imagen", exact: true })
+    .getByRole("button", { name: "Revisar si la imagen quedó", exact: true })
     .click();
   await expect(dialog(page)).toHaveCount(0);
   expect((await audit(page)).imageMutations).toHaveLength(1);

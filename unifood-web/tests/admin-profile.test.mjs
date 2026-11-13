@@ -200,7 +200,11 @@ test("inactive cafeteria banner is shared across all ADMIN surfaces with one pan
   );
   assert.match(html, /role="status"/);
   assert.match(html, /La cafetería está inactiva/);
-  assert.match(html, /los cambios están deshabilitados/);
+  assert.match(html, /el catálogo es\s+de solo consulta por ahora/);
+  assert.match(
+    html,
+    /Se podrá editar cuando el\s+equipo de UniFood active la cafetería/,
+  );
   assert.match(html, /Protected content/);
   assert.equal((html.match(/Cerrar sesión<\/button>/g) ?? []).length, 1);
 });

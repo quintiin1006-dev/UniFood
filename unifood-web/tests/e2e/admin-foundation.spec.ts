@@ -148,7 +148,7 @@ test("inactive cafeteria remains readable and the warning persists across all su
       page
         .getByRole("status")
         .filter({ hasText: "La cafetería está inactiva." }),
-    ).toContainText("los cambios están deshabilitados");
+    ).toContainText("el catálogo es de solo consulta por ahora");
     await expect(
       page.getByRole("heading", { name, exact: true }),
     ).toBeVisible();

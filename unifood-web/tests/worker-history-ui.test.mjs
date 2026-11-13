@@ -78,8 +78,10 @@ test("history UI renders terminal labels, historical items/quantity, totals and 
   fractional.orders[0].total = 19000.5;
   fractional.orders[0].items[0].subtotal = 15000.5;
   const fractions = render({ data: fractional });
-  assert.match(fractions, /19\.000,50/);
-  assert.match(fractions, /15\.000,50/);
+  // Whole pesos, the shared format (I6): a snapshot with cents rounds half up.
+  assert.match(fractions, /\$19\.001/);
+  assert.match(fractions, /\$15\.001/);
+  assert.doesNotMatch(fractions, /,50/);
 });
 
 test("search has an accessible label and distinct no-match state with clear actions", () => {
