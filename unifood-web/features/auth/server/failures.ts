@@ -7,6 +7,8 @@ const invalidSessionCodes = new Set([
   "session_not_found",
   "session_expired",
   "bad_jwt",
+  // getClaims: a bad signature or an expired token it cannot refresh (definitive, like bad_jwt).
+  "invalid_jwt",
   "jwt_expired",
   "user_not_found",
   "user_banned",

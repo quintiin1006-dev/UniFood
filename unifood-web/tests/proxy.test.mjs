@@ -101,7 +101,7 @@ test("rejected refresh deletes all project chunks/PKCE cookies on the contextual
       "@supabase/ssr": {
         createServerClient: (_url, _key, options) => ({
           auth: {
-            getUser: async () => {
+            getClaims: async () => {
               // Reproduce two SDK callbacks and a partially deleted request, before redirect.
               options.cookies.setAll([
                 { name: `${key}.0`, value: "", options: { maxAge: 0 } },
@@ -110,7 +110,7 @@ test("rejected refresh deletes all project chunks/PKCE cookies on the contextual
                 { name: `${key}-user`, value: "", options: { maxAge: 0 } },
               ]);
               return {
-                data: { user: null },
+                data: null,
                 error: { code: "refresh_token_not_found" },
               };
             },
@@ -167,8 +167,8 @@ test("expired or revoked refresh tokens clear all relevant cookies and redirect 
       "@supabase/ssr": {
         createServerClient: () => ({
           auth: {
-            getUser: async () => ({
-              data: { user: null },
+            getClaims: async () => ({
+              data: null,
               error: { status: 400, code },
             }),
           },
@@ -211,14 +211,14 @@ test("multiple refresh callbacks retain all response writes", async () => {
     "@supabase/ssr": {
       createServerClient: (_url, _key, options) => ({
         auth: {
-          getUser: async () => {
+          getClaims: async () => {
             options.cookies.setAll([
               { name: "first", value: "value", options: {} },
             ]);
             options.cookies.setAll([
               { name: "second", value: "value", options: {} },
             ]);
-            return { data: { user: { id: "verified" } }, error: null };
+            return { data: { claims: { sub: "verified" } }, error: null };
           },
         },
       }),
@@ -279,15 +279,15 @@ for (const [label, failure, thrown] of [
         "@supabase/ssr": {
           createServerClient: (_url, _key, options) => ({
             auth: {
-              getUser: async () => {
+              getClaims: async () => {
                 if (!unavailable)
-                  return { data: { user: { id: "verified" } }, error: null };
+                  return { data: { claims: { sub: "verified" } }, error: null };
                 // Even an SDK deletion callback must not invalidate the browser on a transient failure.
                 options.cookies.setAll([
                   { name: `${key}.0`, value: "", options: { maxAge: 0 } },
                 ]);
                 if (thrown) throw failure;
-                return { data: { user: null }, error: failure };
+                return { data: null, error: failure };
               },
             },
           }),
@@ -360,7 +360,7 @@ test("proxy refreshes request and response cookies with existing session options
       "@supabase/ssr": {
         createServerClient: (_url, _key, options) => ({
           auth: {
-            getUser: async () => {
+            getClaims: async () => {
               userReads++;
               options.cookies.setAll([
                 {
@@ -369,7 +369,11 @@ test("proxy refreshes request and response cookies with existing session options
                   options: { maxAge: 3600 },
                 },
               ]);
-              return { data: { user: { user_metadata: { role: "ADMIN" } } } };
+              return {
+                data: {
+                  claims: { sub: "verified", user_metadata: { role: "ADMIN" } },
+                },
+              };
             },
           },
         }),
