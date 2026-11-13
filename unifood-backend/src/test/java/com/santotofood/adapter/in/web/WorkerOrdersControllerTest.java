@@ -60,6 +60,26 @@ class WorkerOrdersControllerTest {
   }
 
   @Test
+  void theListingCarriesTheClientNoteOrNull() {
+    UUID cafeteria = UUID.randomUUID();
+    var withNote =
+        com.santotofood.adapter.in.web.mapper.OrderResponseMapperTest.order(
+            "Sin cebolla\n<b>por favor</b>");
+    var withoutNote = com.santotofood.adapter.in.web.mapper.OrderResponseMapperTest.order(null);
+    when(authorization.workerCafeteria(authentication)).thenReturn(Optional.of(cafeteria));
+    when(list.getOperationalOrders(cafeteria))
+        .thenReturn(
+            new OperationalOrders(
+                new BusinessDate(LocalDate.of(2026, 11, 20)), List.of(withNote, withoutNote)));
+    var real = new WorkerOrdersController(authorization, list, new OrderResponseMapper());
+
+    var body = real.orders(authentication).getBody();
+
+    assertEquals("Sin cebolla\n<b>por favor</b>", body.get(0).note());
+    assertNull(body.get(1).note());
+  }
+
+  @Test
   void anUnresolvedCafeteriaIsDeniedBeforeListing() {
     when(authorization.workerCafeteria(authentication)).thenReturn(Optional.empty());
     assertThrows(AccessDeniedException.class, () -> controller.orders(authentication));

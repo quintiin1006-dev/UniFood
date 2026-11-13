@@ -32,6 +32,7 @@ public class OrderMapper {
     // A merge copies every attribute into the managed entity: without it the response would lose
     // the pickup time, although the read-only column itself is never written.
     entity.setRequestedPickupAt(order.getRequestedPickupAt());
+    entity.setNote(order.getNote());
     return entity;
   }
 
@@ -59,6 +60,7 @@ public class OrderMapper {
     order.restoreCancellation(
         entity.getCancellationSource(), entity.getRejectionReason(), entity.getRejectedBy());
     order.restoreRequestedPickupAt(entity.getRequestedPickupAt());
+    order.restoreNote(entity.getNote());
     return order;
   }
 }

@@ -568,6 +568,34 @@ class WorkerOrdersApiPostgresTest {
     assertEquals(wish, pickupOf(order));
   }
 
+  // ---------------------------------------------------------------- note (021)
+
+  @Test
+  void theClientNoteReachesTheWorkerVerbatimAndNoTransitionRewritesIt() throws Exception {
+    String note = "Sin cebolla & <b>ají</b> \"aparte\"\nSegunda línea";
+    UUID withNote = orderPickingUpAt("PREPARING", TODAY.plusSeconds(300), null);
+    jdbc.update("UPDATE public.orders SET note=? WHERE id=?", note, withNote);
+    UUID withoutNote = orderPickingUpAt("PREPARING", TODAY.plusSeconds(360), null);
+
+    var result =
+        mvc.perform(get("/api/worker/orders").with(as(OTHER_WORKER)))
+            .andExpect(status().isOk())
+            .andReturn();
+    var orders = listing(result);
+    assertEquals(note, orders.get(withNote.toString()).get("note").asString());
+    assertTrue(orders.get(withoutNote.toString()).get("note").isNull());
+
+    mvc.perform(patch("/api/orders/" + withNote + "/ready").with(as(OTHER_WORKER)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.note").value(note));
+    mvc.perform(patch("/api/orders/" + withoutNote + "/ready").with(as(OTHER_WORKER)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.note").doesNotExist());
+    assertEquals(
+        note,
+        jdbc.queryForObject("SELECT note FROM public.orders WHERE id=?", String.class, withNote));
+  }
+
   @Test
   void theWorkerCancellationRouteIsGone() throws Exception {
     UUID stale = ORDERS.get("stale");

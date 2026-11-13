@@ -10,6 +10,7 @@ import {
 
 import { formatClockTime, formatRelativeTime } from "@/lib/orderTime";
 
+import { OrderNote } from "@/features/orders/components/OrderNote";
 import { RejectOrderButton } from "@/features/orders/components/RejectOrderDialog";
 import { clientIdentity } from "@/features/orders/utils/clientIdentity";
 import { pickupLabel } from "@/features/orders/utils/pickupTime";
@@ -76,6 +77,8 @@ export default function OrderCard({
           <span>{pickup}</span>
         </div>
       )}
+
+      <OrderNote note={order.note} />
 
       {/* Estado del estudiante */}
       {order.status === "called" && (
