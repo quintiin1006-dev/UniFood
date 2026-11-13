@@ -165,3 +165,18 @@ export function coverageScope(
       );
   }
 }
+
+const BOGOTA_CLOCK = new Intl.DateTimeFormat("es-CO", {
+  timeZone: "America/Bogota",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/** «Actualizado a las HH:mm» in Bogotá, from the server instant the data was computed at. */
+export function updatedAtLabel(asOf: string | null | undefined): string | null {
+  if (typeof asOf !== "string") return null;
+  const instant = Date.parse(asOf);
+  if (!Number.isFinite(instant)) return null;
+  return `Actualizado a las ${BOGOTA_CLOCK.format(instant)}`;
+}

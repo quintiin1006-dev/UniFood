@@ -764,6 +764,21 @@ false`. La `version` sube como en las demás transiciones (JPA y el trigger de l
   el navegador no envía `Origin` en un GET del mismo origen.
 - Sin escrituras: el interruptor de suscripción y las credenciales quedan para otro PR.
 
+**Dashboard del admin sin sondeo (implementado el 2026-11-12, solo frontend):**
+
+- Carga una vez al abrir y al cambiar el período; no recarga sola, ni con el foco ni al volver a
+  la pestaña. «Actualizar» fuerza una consulta nueva y se deshabilita mientras carga.
+- Muestra «Actualizado a las HH:mm» en hora de Bogotá, a partir de `period.asOf` del servidor.
+- Si «Actualizar» falla, conserva los datos anteriores con el mensaje fijo «No pudimos actualizar
+  el dashboard. Se muestran los datos anteriores.». Un 401 o 403 sí los retira.
+- Caché en memoria del navegador **solo de períodos personalizados ya cerrados**: `to` anterior
+  a hoy en Bogotá y `period.partial = false` en la respuesta. Hoy, «Últimos 7/30 días» o
+  cualquier rango que incluya hoy siempre van al servidor. Un día pasado no cambia porque cada
+  evento se fecha con el reloj del servidor al ocurrir y los estados terminales son finales.
+- La clave incluye admin (correo), institución, sede y cafetería del perfil, y el período.
+  Otro perfil vacía la caché, igual que cerrar sesión (`unifood:logout`). Sin perfil cargado,
+  no se cachea.
+
 **Cierre diario automático (B19, implementado el 2026-11-10):**
 
 - **Cuándo:** al arrancar el backend y luego **cada hora** (`orders.daily-close.interval`,

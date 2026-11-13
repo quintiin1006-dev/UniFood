@@ -28,6 +28,33 @@
   font-weight: 600 !important;
   box-shadow: 0 1px 3px #163f6d05;
 }
+.refreshGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.updatedAt {
+  color: #5d6f87;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.refreshError {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  color: #7a3e00;
+  background: #fff6e8;
+  border: 1px solid #f3d4a4;
+  border-radius: 9px;
+  font-size: 14px;
+}
+.refreshError svg {
+  flex-shrink: 0;
+}
 .refresh:hover:not(:disabled) {
   background: #eaf2ff;
   border-color: #a9c3e6;
