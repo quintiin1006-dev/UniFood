@@ -38,15 +38,15 @@
   height: 80px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: #e3ecfc;
-  color: #8198c5;
+  background: var(--color-brand-tint);
+  color: var(--color-text-soft);
 }
 .details {
   margin: 0;
   padding: 4px 20px;
-  border: 1px solid #edf2fb;
+  border: 1px solid var(--color-brand-tint);
   border-radius: 24px;
-  background: #ffffffd9;
+  background: color-mix(in srgb, var(--color-surface) 85%, transparent);
 }
 .details > div {
   display: grid;
@@ -56,12 +56,12 @@
   padding-block: 18px;
 }
 .details > div + div {
-  border-top: 1px solid #edf1f8;
+  border-top: 1px solid var(--color-brand-tint);
 }
 .details svg {
   grid-row: span 2;
   align-self: center;
-  color: #7a8bb3;
+  color: var(--color-text-soft);
 }
 .details dt {
   font-size: 14px;
@@ -74,9 +74,9 @@
 }
 .actions {
   padding-inline: 18px;
-  border: 1px solid #edf2fb;
+  border: 1px solid var(--color-brand-tint);
   border-radius: 24px;
-  background: #ffffffd9;
+  background: color-mix(in srgb, var(--color-surface) 85%, transparent);
 }
 .action {
   display: flex;
@@ -90,14 +90,14 @@
 }
 .action > svg {
   flex-shrink: 0;
-  color: #7a8bb3;
+  color: var(--color-text-soft);
 }
 .action > svg:last-child {
   color: var(--client-ink);
   margin-left: auto;
 }
 .actions > div {
-  border-top: 1px solid #edf1f8;
+  border-top: 1px solid var(--color-brand-tint);
 }
 .logout {
   width: 100%;
@@ -105,7 +105,7 @@
   padding: 14px 2px;
   border: 0;
   border-radius: 10px;
-  color: #c73847;
+  color: var(--color-danger);
   background: transparent;
   font: inherit;
   font-size: 15px;
@@ -123,7 +123,7 @@
 .notice {
   margin: 0;
   padding: 14px;
-  border: 1px solid #dde7f7;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 14px;
   color: var(--client-muted);
   font-size: 14px;
@@ -149,9 +149,9 @@
   justify-items: start;
   gap: 18px;
   padding: 24px;
-  border: 1px solid #edf2fb;
+  border: 1px solid var(--color-brand-tint);
   border-radius: 24px;
-  background: #ffffffdb;
+  background: color-mix(in srgb, var(--color-surface) 86%, transparent);
 }
 .lockIcon {
   display: grid;
@@ -159,8 +159,8 @@
   width: 60px;
   height: 60px;
   border-radius: 19px;
-  color: #1460d5;
-  background: #edf4ff;
+  color: var(--color-brand);
+  background: var(--color-brand-tint);
 }
 .passwordPanel h2 {
   margin: 0;
@@ -181,7 +181,7 @@
   min-height: 52px;
   padding: 12px;
   border-radius: 26px;
-  background: #0064ff;
+  background: var(--color-brand);
   color: white;
   text-align: center;
   text-decoration: none;

@@ -23,7 +23,7 @@
 }
 .pageHeading .eyebrow {
   margin: 0 0 18px;
-  color: #52668e;
+  color: var(--color-slate);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 1.7px;
@@ -44,10 +44,11 @@
   align-items: center;
   gap: 16px;
   padding: 12px;
-  border: 1px solid #e8eef9;
+  border: 1px solid var(--color-brand-tint);
   border-radius: 23px;
   background: rgb(255 255 255 / 88%);
-  box-shadow: 0 5px 14px #234b9110;
+  box-shadow: 0 5px 14px
+    color-mix(in srgb, var(--color-brand-hover) 6%, transparent);
   color: inherit;
   text-decoration: none;
 }
@@ -60,7 +61,7 @@
 }
 .siteCard > svg:last-child {
   flex-shrink: 0;
-  color: #7484aa;
+  color: var(--color-text-soft);
   margin-left: auto;
 }
 .siteCard > svg:first-child {
@@ -69,8 +70,8 @@
   padding: 14px;
   flex-shrink: 0;
   border-radius: 16px;
-  background: #e6efff;
-  color: #2f5fb3;
+  background: var(--color-brand-tint);
+  color: var(--color-brand);
 }
 .siteText {
   display: grid;
@@ -96,12 +97,13 @@
   gap: 12px;
   min-width: 0;
   padding: 10px 14px 10px 10px;
-  border: 1px solid #e9eff9;
+  border: 1px solid var(--color-brand-tint);
   border-radius: 21px;
-  background: #ffffffdf;
+  background: color-mix(in srgb, var(--color-surface) 87%, transparent);
   color: inherit;
   text-decoration: none;
-  box-shadow: 0 4px 12px #204a8910;
+  box-shadow: 0 4px 12px
+    color-mix(in srgb, var(--color-brand-hover) 6%, transparent);
 }
 .cafeteriaSelector > img {
   width: 56px;
@@ -134,8 +136,8 @@
   padding: 10px;
   flex-shrink: 0;
   border-radius: 12px;
-  background: #e6efff;
-  color: #2f5fb3;
+  background: var(--color-brand-tint);
+  color: var(--color-brand);
 }
 .hero {
   position: relative;
@@ -160,7 +162,12 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(15deg, #000b 5%, #0006 35%, transparent 75%);
+  background: linear-gradient(
+    15deg,
+    color-mix(in srgb, var(--color-ink) 73%, transparent) 5%,
+    color-mix(in srgb, var(--color-ink) 40%, transparent) 35%,
+    transparent 75%
+  );
 }
 .heroCopy {
   display: grid;
@@ -183,7 +190,7 @@
   flex-shrink: 0;
   margin: 0 18px 20px auto;
   border-radius: 50%;
-  background: #fff;
+  background: var(--color-surface);
   color: var(--client-ink);
 }
 .categories {
@@ -200,7 +207,7 @@
   min-height: 124px;
   padding: 16px 6px;
   border-radius: 21px;
-  background: #edf3fc;
+  background: var(--color-brand-tint);
   color: var(--client-ink);
   text-align: center;
   text-decoration: none;
@@ -209,8 +216,8 @@
   line-height: 1.3;
 }
 .categories .primaryCategory {
-  background: #0954cf;
-  color: #fff;
+  background: var(--color-brand);
+  color: var(--color-surface);
 }
 .demoNotice {
   display: flex;
@@ -246,9 +253,9 @@
   gap: 10px;
   min-height: 50px;
   padding-left: 14px;
-  border: 1px solid #dce5f4;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 18px;
-  background: #fff;
+  background: var(--color-surface);
   color: var(--client-muted);
 }
 .search > svg {
@@ -296,14 +303,14 @@
   gap: 16px;
   align-items: center;
   overflow: hidden;
-  border: 1px solid #ecf0f8;
+  border: 1px solid var(--color-brand-tint);
   border-radius: 22px;
-  background: #ffffffdb;
+  background: color-mix(in srgb, var(--color-surface) 86%, transparent);
 }
 .availability {
   display: block;
   margin-top: 8px;
-  color: #856233;
+  color: var(--color-brand-hover);
   font-size: 12px;
   line-height: 1.4;
 }
@@ -326,7 +333,7 @@
   padding: 18px 14px;
   border: 1px solid transparent;
   border-radius: 21px;
-  color: #18295a;
+  color: var(--color-brand-hover);
   text-align: left;
   text-decoration: none;
   font: inherit;
@@ -345,23 +352,23 @@
   font-size: 11px;
 }
 .mealTypes .breakfastType {
-  background: #fff1db;
-  border-color: #f3e4c9;
+  background: var(--color-brand-tint);
+  border-color: var(--color-brand-tint);
 }
 .mealTypes .breakfastType > svg {
-  color: #966126;
+  color: var(--color-brand-hover);
 }
 .mealTypes .lunchType {
-  background: #eaf2ff;
-  border-color: #dae7fb;
+  background: var(--color-brand-tint);
+  border-color: var(--color-brand-tint-2);
 }
 .mealTypes .lunchType > svg {
-  color: #0954cf;
+  color: var(--color-brand);
 }
 .mealTypes button:disabled {
   cursor: not-allowed;
   filter: saturate(0.5);
-  color: #566178;
+  color: var(--color-slate);
 }
 .scheduleNote {
   margin: 14px 0 0;
@@ -413,9 +420,9 @@
 .secondaryButton {
   min-height: 46px;
   padding: 10px 20px;
-  border: 1px solid #dce5f4;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
   color: var(--client-ink);
   font: inherit;
   cursor: pointer;
@@ -479,7 +486,7 @@
 @media (hover: hover) {
   .siteCard:hover,
   .cafeteriaSelector:hover {
-    border-color: #c9d9f1;
+    border-color: var(--color-brand-tint-2);
   }
   .categories a:hover {
     filter: brightness(0.97);

@@ -15,7 +15,7 @@ export default function PrivacyPage() {
         margin: "0 auto",
         padding: "32px 16px 48px",
         lineHeight: 1.6,
-        color: "#172b23",
+        color: "var(--color-ink)",
       }}
     >
       <p
@@ -23,8 +23,8 @@ export default function PrivacyPage() {
         style={{
           padding: "11px 14px",
           borderRadius: 11,
-          background: "#fff4e5",
-          color: "#7a4b00",
+          background: "var(--color-brand-tint)",
+          color: "var(--color-brand-hover)",
           fontWeight: 600,
         }}
       >

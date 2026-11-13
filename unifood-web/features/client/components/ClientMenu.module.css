@@ -5,8 +5,8 @@
   flex-shrink: 0;
   overflow: hidden;
   border-radius: 18px;
-  background: #e6efff;
-  color: #2f5fb3;
+  background: var(--color-brand-tint);
+  color: var(--color-brand);
   font-weight: 800;
   line-height: 1;
   user-select: none;
@@ -20,6 +20,8 @@
 .placeholder[data-size="rail"] {
   width: 100%;
   aspect-ratio: 1.35;
+  /* «Arco de la U». */
+  border-radius: 20px 20px 40px 40px;
   font-size: 44px;
 }
 .placeholder[data-size="line"] {
@@ -31,7 +33,7 @@
 .placeholder[data-size="hero"] {
   width: 100%;
   aspect-ratio: 1.6;
-  border-radius: 24px;
+  border-radius: var(--radius-media-arch);
   font-size: 72px;
 }
 
@@ -51,9 +53,9 @@
 .filters a {
   min-height: 44px;
   padding: 10px 16px;
-  border: 1px solid #dce5f4;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 999px;
-  background: #fff;
+  background: var(--color-surface);
   color: var(--client-ink);
   font: inherit;
   font-size: 14px;
@@ -66,7 +68,7 @@
 .filters [aria-current="page"] {
   border-color: var(--client-blue);
   background: var(--client-blue);
-  color: #fff;
+  color: var(--color-surface);
 }
 
 .category {
@@ -116,10 +118,10 @@
   display: grid;
   gap: 8px;
   height: 100%;
-  padding: 8px 8px 12px;
-  border: 1px solid #ecf0f8;
-  border-radius: 20px;
-  background: #ffffffdb;
+  padding: 8px 8px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
   color: inherit;
   text-decoration: none;
 }
@@ -133,14 +135,14 @@
   font-weight: 700;
 }
 .railCard small {
-  color: #856233;
+  color: var(--color-brand-hover);
   font-size: 12px;
 }
 /* Category without available products (§6): one compact line, no carousel. */
 .compact {
   margin: 0;
   padding: 12px 14px;
-  border: 1px dashed #d6e0f0;
+  border: 1px dashed var(--color-brand-tint-2);
   border-radius: 16px;
   color: var(--client-muted);
   font-size: 14px;
@@ -156,8 +158,8 @@
   margin: 0;
   padding: 14px 16px;
   border-radius: 16px;
-  background: #fff6e8;
-  color: #6d4a1c;
+  background: var(--color-brand-tint);
+  color: var(--color-brand-hover);
   font-size: 14px;
   line-height: 1.45;
 }
@@ -186,7 +188,7 @@
   color: var(--client-muted);
 }
 .cafeteriaStatus[data-open="true"] {
-  color: #1f7a4a;
+  color: var(--color-success);
 }
 
 @media (min-width: 600px) {
@@ -196,6 +198,6 @@
 }
 @media (hover: hover) {
   .railCard:hover {
-    border-color: #c9d9f1;
+    border-color: var(--color-brand-tint-2);
   }
 }

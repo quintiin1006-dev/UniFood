@@ -727,7 +727,13 @@ export default function AuthScreen({
             )}
             {isRegisterEmail && (
               <p className={styles.note} aria-live="polite">
-                <Info size={20} fill="#0064ff" color="white" />
+                <Info
+                  size={20}
+                  style={{
+                    fill: "var(--color-brand)",
+                    stroke: "var(--color-on-color)",
+                  }}
+                />
                 {domain.state === "checking"
                   ? t.checking
                   : domain.state === "allowed"

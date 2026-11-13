@@ -1,8 +1,8 @@
 .shell {
-  --client-ink: #090f52;
-  --client-muted: #626f93;
-  --client-blue: #0064ff;
-  --client-border: #e0e7f0;
+  --client-ink: var(--color-ink);
+  --client-muted: var(--color-text-soft);
+  --client-blue: var(--color-brand);
+  --client-border: var(--color-brand-tint-2);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   height: 100vh;
@@ -10,7 +10,12 @@
   overflow: hidden;
   color: var(--client-ink);
   background:
-    radial-gradient(ellipse at 15% 105%, #dfedff 0, transparent 50%), #f7faff;
+    radial-gradient(
+      ellipse at 15% 105%,
+      var(--color-brand-tint) 0,
+      transparent 50%
+    ),
+    var(--color-brand-tint);
   font-size: 16px;
   line-height: 1.5;
 }
@@ -77,7 +82,7 @@
   border: 1px solid var(--client-border);
   border-radius: 50%;
   color: var(--client-ink);
-  background: #edf4ff;
+  background: var(--color-brand-tint);
 }
 
 .main {
@@ -100,17 +105,21 @@
   padding: 8px max(12px, env(safe-area-inset-right, 0px))
     max(8px, env(safe-area-inset-bottom, 0px))
     max(12px, env(safe-area-inset-left, 0px));
-  border-top: 1px solid var(--client-border);
-  background: rgb(255 255 255 / 96%);
-  backdrop-filter: blur(16px);
+  background: transparent;
 }
 
+/* Ola 2: floating pill tab bar. */
 .navInner {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: 4px;
   width: min(100%, 520px);
   margin-inline: auto;
+  padding: 6px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
 }
 
 .navItem {
@@ -120,10 +129,10 @@
   justify-content: center;
   gap: 4px;
   min-width: 0;
-  min-height: 58px;
+  min-height: 56px;
   padding: 6px 2px;
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--radius-pill);
   color: var(--client-muted);
   background: transparent;
   font-size: 13px;
@@ -133,8 +142,19 @@
 }
 
 .navItem[aria-current="page"] {
-  color: #0054d6;
-  background: #edf4ff;
+  color: var(--color-brand);
+  background: var(--color-brand-tint);
+}
+
+/* The cart with units is an ink pill: the floating cart of the identity, without a new flow. */
+.navItem:has(.cartBadge) {
+  background: var(--color-ink);
+  color: var(--color-on-color);
+}
+
+.navItem:has(.cartBadge) .cartBadge {
+  background: var(--color-surface);
+  color: var(--color-ink);
 }
 
 .navItem:disabled {
@@ -155,17 +175,17 @@
   height: 18px;
   padding-inline: 4px;
   border-radius: 12px;
-  background: #0064ff;
-  color: white;
+  background: var(--color-brand);
+  color: var(--color-on-color);
   font-size: 11px;
-  animation: cart-pop 240ms ease-out;
+  font-variant-numeric: tabular-nums;
+  /* design-motion-principles: a short pop from 0.9, never from far below. */
+  animation: cart-pop var(--motion-enter) var(--ease-soft);
 }
 @keyframes cart-pop {
   from {
-    transform: scale(0.65);
-  }
-  to {
-    transform: scale(1);
+    opacity: 0;
+    transform: scale(0.9);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -183,7 +203,7 @@
   transform: translateY(-180%);
   border-radius: 8px;
   color: var(--client-ink);
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .skipLink:focus {
@@ -193,7 +213,7 @@
 @media (hover: hover) {
   .profileLink:hover,
   .navItem[href]:hover {
-    background: #edf4ff;
+    background: var(--color-brand-tint);
   }
 }
 

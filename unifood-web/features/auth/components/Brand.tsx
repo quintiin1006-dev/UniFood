@@ -42,13 +42,13 @@ export function Waves() {
     >
       <path
         d="M0 44C190 0 352 188 600 148V180H0Z"
-        fill="#d6edff"
+        style={{ fill: "var(--color-brand-tint-2)" }}
         fillOpacity=".8"
       />
       <path
         d="M0 210C220 125 360-20 600 0V180H0Z"
-        fill="#91cfff"
-        fillOpacity=".35"
+        style={{ fill: "var(--color-brand)" }}
+        fillOpacity=".18"
       />
     </svg>
   );
