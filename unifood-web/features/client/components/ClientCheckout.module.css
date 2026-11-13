@@ -101,7 +101,7 @@
   min-width: 0;
   min-height: 52px;
   padding: 12px 8px;
-  border: 1px solid var(--color-brand-tint-2);
+  border: 1px solid var(--color-control-border);
   border-radius: 16px;
   background: white;
   color: var(--client-ink);
@@ -222,7 +222,7 @@
   width: 100%;
   min-width: 0;
   padding: 12px;
-  border: 1px solid var(--color-brand-tint-2);
+  border: 1px solid var(--color-control-border);
   border-radius: 16px;
   background: white;
   color: var(--client-ink);
