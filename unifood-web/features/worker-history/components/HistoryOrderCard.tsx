@@ -1,7 +1,7 @@
 import { Check, Clock3, X } from "lucide-react";
 import type { HistoryOrder } from "../types";
 import {
-  HISTORY_LABELS,
+  historyStatusText,
   formatHistoryPrice,
   formatHistoryTime,
   formatHistoryDate,
@@ -25,7 +25,7 @@ export function HistoryOrderCard({ order }: { order: HistoryOrder }) {
       </div>
       <span className={`${styles.badge} ${styles[order.status]}`}>
         <Icon size={14} aria-hidden="true" />
-        {HISTORY_LABELS[order.status]}
+        <span>{historyStatusText(order)}</span>
       </span>
       <p className={styles.clientName}>
         <span>Cliente</span>

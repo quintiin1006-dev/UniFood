@@ -25,7 +25,9 @@ public record WorkerHistoryResponse(
       OrderStatus status,
       Instant completedAt,
       BigDecimal total,
-      List<Item> items) {}
+      List<Item> items,
+      String cancellationSource,
+      String rejectionReason) {}
 
   public record Item(String name, int quantity, BigDecimal unitPrice, BigDecimal subtotal) {}
 
@@ -54,7 +56,9 @@ public record WorkerHistoryResponse(
                                         item.quantity(),
                                         item.unitPrice(),
                                         item.subtotal()))
-                            .toList()))
+                            .toList(),
+                        order.cancellationSource(),
+                        order.rejectionReason()))
             .toList(),
         history.nextCursor(),
         history.hasHistory());

@@ -222,7 +222,7 @@ test("WORKER history shows only ordered terminal snapshots and survives reload/r
   for (const label of [
     "Entregado",
     "No recogido",
-    "Cancelado",
+    "Rechazado por la cafetería: Se acabó el ingrediente principal",
     "Almuerzo del día",
     "Especial histórico",
   ])

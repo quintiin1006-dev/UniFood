@@ -715,6 +715,17 @@ según `cafeteria_daily_states` de hoy en America/Bogota. Nunca incluye el docum
 - El panel la muestra tal cual, como texto plano con la etiqueta fija «Observaciones», con sus
   saltos de línea y sin cortar, en la tarjeta, el detalle y la vista de llamados.
 
+**Cómo terminó un pedido en el historial del worker (implementado el 2026-11-12):**
+
+- `GET /api/worker/orders/history` añade a cada pedido `cancellationSource` (`CLIENT`, `WORKER`,
+  `SYSTEM` o `null`) y `rejectionReason`. Solo un CANCELLED lleva origen, y solo un rechazo del
+  worker lleva motivo. Nunca expone `rejected_by`.
+- Textos fijos: «Rechazado por la cafetería: <motivo>», «Cancelado por el cliente», «Cerrado por
+  el sistema» y «No recogido», que sigue aparte. Una cancelación anterior a la 021 sigue como
+  «Cancelado», y una del worker sin motivo, de antes de B18, como «Cancelado por la cafetería».
+- El dashboard del admin no lista pedidos uno a uno: solo agrega conteos y menciona
+  «cancelados» en textos de cobertura, así que no cambia.
+
 **Rechazo del worker implementado (B18, decidido el 2026-11-10):**
 
 - **Quién:** solo un WORKER activo asignado a la cafetería del pedido. El worker que rechaza

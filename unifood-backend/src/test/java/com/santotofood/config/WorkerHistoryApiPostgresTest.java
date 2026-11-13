@@ -371,6 +371,16 @@ class WorkerHistoryApiPostgresTest {
         Files.readString(
             Path.of("supabase/migrations/014_order_cancellation_timestamp.sql"),
             StandardCharsets.UTF_8));
+    // Then every later migration, so the query runs on the real schema (021 adds who ended a
+    // cancelled order and the rejection reason).
+    try (var files = Files.list(Path.of("supabase/migrations"))) {
+      for (Path migration :
+          files
+              .filter(file -> file.getFileName().toString().compareTo("015") >= 0)
+              .filter(file -> file.getFileName().toString().endsWith(".sql"))
+              .sorted()
+              .toList()) jdbc.execute(Files.readString(migration, StandardCharsets.UTF_8));
+    }
     context = new AnnotationConfigWebApplicationContext();
     context.setServletContext(new MockServletContext());
     context.register(
@@ -501,6 +511,65 @@ class WorkerHistoryApiPostgresTest {
         offset(START.minusSeconds(86400)),
         offset(START.minusSeconds(86000)));
     return id;
+  }
+
+  /** A cancelled order with its 021 source; a worker rejection also carries reason and worker. */
+  static UUID cancelled(String source, String reason, Instant completed) {
+    UUID id = UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO public.orders(id,cafeteria_id,client_name,client_document,total,status,cancelled_at,"
+            + "cancellation_source,cancelled_by_client,rejection_reason,rejected_by,created_at,updated_at) "
+            + "VALUES (?,?,'Cliente de prueba','PRIVATE_DOCUMENT_DETAIL',10000,'CANCELLED',?,?,?,?,?,?,?)",
+        id,
+        CAFE,
+        offset(completed),
+        source,
+        source.equals("CLIENT"),
+        reason,
+        reason == null ? null : WORKER,
+        offset(START.minusSeconds(86400)),
+        offset(START.minusSeconds(86000)));
+    return id;
+  }
+
+  @Test
+  void cancelledOrdersSayWhoEndedThemAndOnlyARejectionCarriesItsReason() throws Exception {
+    UUID rejected =
+        cancelled("WORKER", "Se acabó el pollo & <b>la salsa</b>", START.plusSeconds(10));
+    UUID byClient = cancelled("CLIENT", null, START.plusSeconds(20));
+    UUID bySystem = cancelled("SYSTEM", null, START.plusSeconds(30));
+    UUID legacyWorker = cancelled("WORKER", null, START.plusSeconds(40));
+    UUID delivered = order("DELIVERED", START.plusSeconds(50));
+    UUID notCollected = order("NOT_COLLECTED", START.plusSeconds(60));
+    var body =
+        mvc.perform(get(ENDPOINT).with(as(WORKER)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.orders", hasSize(6)))
+            .andReturn()
+            .getResponse()
+            .getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+    var orders = new java.util.HashMap<String, tools.jackson.databind.JsonNode>();
+    for (var entry :
+        tools.jackson.databind.json.JsonMapper.builder().build().readTree(body).get("orders"))
+      orders.put(entry.get("id").asString(), entry);
+    var r = orders.get(rejected.toString());
+    assertEquals("WORKER", r.get("cancellationSource").asString());
+    assertEquals("Se acabó el pollo & <b>la salsa</b>", r.get("rejectionReason").asString());
+    assertEquals("CLIENT", orders.get(byClient.toString()).get("cancellationSource").asString());
+    assertTrue(orders.get(byClient.toString()).get("rejectionReason").isNull());
+    assertEquals("SYSTEM", orders.get(bySystem.toString()).get("cancellationSource").asString());
+    assertTrue(orders.get(bySystem.toString()).get("rejectionReason").isNull());
+    assertEquals(
+        "WORKER", orders.get(legacyWorker.toString()).get("cancellationSource").asString());
+    assertTrue(orders.get(legacyWorker.toString()).get("rejectionReason").isNull());
+    for (UUID finished : new UUID[] {delivered, notCollected}) {
+      assertTrue(orders.get(finished.toString()).get("cancellationSource").isNull());
+      assertTrue(orders.get(finished.toString()).get("rejectionReason").isNull());
+    }
+    // Who rejected it is never exposed, nor the document.
+    assertFalse(body.contains(WORKER.toString()), body);
+    assertFalse(body.contains("rejectedBy"), body);
+    assertFalse(body.contains("PRIVATE_DOCUMENT_DETAIL"), body);
   }
 
   static void item(UUID id, UUID order, String name, int quantity, int price) {
@@ -641,7 +710,7 @@ class WorkerHistoryApiPostgresTest {
             .andExpect(jsonPath("$.orders[1].id").value(low.toString()))
             .andExpect(jsonPath("$.orders[2].id").value(older.toString()))
             .andExpect(jsonPath("$.orders[0].reference").value("Pedido · FFFFFFFF"))
-            .andExpect(jsonPath("$.orders[0].length()").value(7))
+            .andExpect(jsonPath("$.orders[0].length()").value(9))
             .andExpect(jsonPath("$.orders[0].clientName").value("Cliente de prueba"))
             .andExpect(jsonPath("$.orders[0].total").value(10000))
             .andExpect(jsonPath("$.orders[0].items", hasSize(2)))

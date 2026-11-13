@@ -60,7 +60,7 @@ test("history UI renders terminal labels, historical items/quantity, totals and 
     "Juan Pérez",
     "Entregado",
     "No recogido",
-    "Cancelado",
+    "Rechazado por la cafetería: Se acabó el ingrediente principal",
     "Almuerzo del día",
     "2×",
     "30.000",

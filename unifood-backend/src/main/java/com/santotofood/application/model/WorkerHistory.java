@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 /** Minimal read projection; customer and item names come from stored order snapshots. */
@@ -31,7 +32,20 @@ public record WorkerHistory(
       OrderStatus status,
       Instant completedAt,
       BigDecimal total,
-      List<Item> items) {
+      List<Item> items,
+      String cancellationSource,
+      String rejectionReason) {
+    /** Orders that are not cancelled have neither a source nor a reason. */
+    public Entry(
+        UUID id,
+        String clientName,
+        OrderStatus status,
+        Instant completedAt,
+        BigDecimal total,
+        List<Item> items) {
+      this(id, clientName, status, completedAt, total, items, null, null);
+    }
+
     public Entry {
       Objects.requireNonNull(id);
       // Preserve older orders without a usable name; never invent a customer identity.
@@ -44,6 +58,14 @@ public record WorkerHistory(
           && status != OrderStatus.CANCELLED)
         throw new IllegalArgumentException("Invalid worker history state");
       items = List.copyOf(items);
+      // Only a cancelled order says who ended it, and only a worker rejection has a reason.
+      if (status != OrderStatus.CANCELLED
+          || cancellationSource == null
+          || !Set.of("CLIENT", "WORKER", "SYSTEM").contains(cancellationSource))
+        cancellationSource = null;
+      if (!"WORKER".equals(cancellationSource)
+          || rejectionReason == null
+          || rejectionReason.isBlank()) rejectionReason = null;
     }
   }
 
