@@ -177,7 +177,7 @@ test("complete API flow, backend priority rejection and terminal states", async 
   }
 });
 
-test("Next proxy resolves GET context and preserves PATCH authorization and backend conflict", async (t) => {
+test("Next proxy lists with one call and preserves PATCH authorization and backend conflict", async (t) => {
   const originalApiUrl = process.env.API_URL;
   process.env.API_URL = "http://127.0.0.1:8080";
   t.after(() => {
@@ -188,8 +188,7 @@ test("Next proxy resolves GET context and preserves PATCH authorization and back
   const received = [];
   global.fetch = async (url, options) => {
     received.push([String(url), options]);
-    if (String(url).endsWith("/api/worker/context"))
-      return Response.json({ cafeteriaId: id });
+    if (String(url).endsWith("/api/worker/orders")) return Response.json([]);
     return new Response("El pedido anterior debe ser procesado primero.", {
       status: 409,
     });
@@ -220,13 +219,13 @@ test("Next proxy resolves GET context and preserves PATCH authorization and back
       new Request("http://localhost:3001/api/orders?cafeteriaId=test"),
       { params: Promise.resolve({}) },
     );
-    assert.ok(received[1][0].endsWith("/api/worker/context"));
-    assert.equal(new URL(received[2][0]).searchParams.get("cafeteriaId"), id);
+    assert.equal(received[1][0], "http://127.0.0.1:8080/api/worker/orders");
+    assert.equal(new URL(received[1][0]).searchParams.get("cafeteriaId"), null);
     const invalid = await route.PATCH(request, {
       params: Promise.resolve({ path: [id, "unknown"] }),
     });
     assert.equal(invalid.status, 404);
-    assert.equal(received.length, 3);
+    assert.equal(received.length, 2);
     global.fetch = async () => {
       throw new Error("ECONNREFUSED");
     };

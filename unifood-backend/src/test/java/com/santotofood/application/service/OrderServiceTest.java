@@ -85,4 +85,45 @@ class OrderServiceTest {
     verify(timeProvider).now();
     verify(orderRepository, never()).save(any());
   }
+
+  @Test
+  void operationalOrdersUseTheBogotaBusinessDayAndLoadEveryItemInOneQuery() {
+    UUID cafeteriaId = UUID.randomUUID();
+    // 2026-11-20 at 04:00Z is still 2026-11-19 in America/Bogota.
+    when(timeProvider.now()).thenReturn(java.time.Instant.parse("2026-11-20T04:00:00Z"));
+    Order first = mock(Order.class);
+    Order second = mock(Order.class);
+    UUID firstId = UUID.randomUUID();
+    UUID secondId = UUID.randomUUID();
+    when(first.getId()).thenReturn(firstId);
+    when(second.getId()).thenReturn(secondId);
+    var item = mock(com.santotofood.domain.model.OrderItem.class);
+    when(item.getOrderId()).thenReturn(firstId);
+    when(orderRepository.findOperational(
+            cafeteriaId,
+            java.time.Instant.parse("2026-11-19T05:00:00Z"),
+            java.time.Instant.parse("2026-11-20T05:00:00Z")))
+        .thenReturn(java.util.List.of(first, second));
+    when(orderItemRepository.findByOrderIds(java.util.List.of(firstId, secondId)))
+        .thenReturn(java.util.List.of(item));
+
+    var listing = orderService.getOperationalOrders(cafeteriaId);
+
+    assertEquals(java.time.LocalDate.of(2026, 11, 19), listing.businessDate().value());
+    assertEquals(java.util.List.of(first, second), listing.orders());
+    verify(first).setItems(java.util.List.of(item));
+    verify(second).setItems(java.util.List.of());
+    verify(orderItemRepository).findByOrderIds(any());
+    verifyNoMoreInteractions(orderItemRepository);
+  }
+
+  @Test
+  void operationalOrdersRunInAReadOnlyTransactionWithThe15SecondTimeout() throws Exception {
+    var annotation =
+        OrderService.class
+            .getMethod("getOperationalOrders", UUID.class)
+            .getAnnotation(org.springframework.transaction.annotation.Transactional.class);
+    assertEquals(true, annotation.readOnly());
+    assertEquals(15, annotation.timeout());
+  }
 }

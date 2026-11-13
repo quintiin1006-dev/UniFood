@@ -184,7 +184,7 @@ public class OrderService
   }
 
   @Override
-  @Transactional(readOnly = true)
+  @Transactional(readOnly = true, timeout = 15)
   public OperationalOrders getOperationalOrders(UUID cafeteriaId) {
     var date = BusinessDate.from(timeProvider.now());
 

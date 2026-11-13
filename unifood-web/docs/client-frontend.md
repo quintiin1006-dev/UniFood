@@ -99,8 +99,9 @@ No se transmite el access token a los componentes del navegador.
 | RPC `current_auth_profile`                                   | id, email, fullName, active, roles; no incluye institución/sede                          |
 | RPC `is_institutional_email`                                 | Admisión del correo; no es un catálogo                                                   |
 | Spring `/api/institutions/*`                                 | Eliminado el 2026-11-10: nadie lo consumía; responde 404                                 |
-| `GET /api/orders` en Next                                    | Solo WORKER; resuelve cafetería mediante contexto del backend                            |
-| Spring `GET /api/worker/context`                             | Cafetería asignada al WORKER activo                                                      |
+| `GET /api/orders` en Next                                    | Solo WORKER; una llamada a Spring `GET /api/worker/orders`                               |
+| Spring `GET /api/worker/orders`                              | Listado de la cafetería asignada al WORKER activo, resuelta en la misma petición         |
+| Spring `GET /api/worker/context`                             | Cafetería asignada al WORKER activo; sin consumidores en la web desde el 2026-11-12      |
 | Spring `GET /api/orders?cafeteriaId=…`                       | Listado autorizado de la cafetería, no listado CLIENT                                    |
 | `PATCH /api/orders/{id}/{prepare,ready,call,deliver,reject}` | Operaciones WORKER mediante BFF; `reject` lleva `{reason}` y solo en PENDING o PREPARING |
 | `PATCH /api/me/orders/{orderId}/cancel`                      | CLIENT activo, pedido propio y PENDING; BFF devuelve solo `{id,status:"CANCELLED"}`      |

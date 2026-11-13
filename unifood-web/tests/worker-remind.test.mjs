@@ -320,6 +320,13 @@ function hook({ action }) {
   global.setInterval = () => 0;
   if (!hadWindow)
     global.window = { addEventListener() {}, removeEventListener() {} };
+  const hadDocument = "document" in global;
+  if (!hadDocument)
+    global.document = {
+      visibilityState: "visible",
+      addEventListener() {},
+      removeEventListener() {},
+    };
   const exports = load("features/orders/hooks/useOrders.ts");
   const api = exports.useOrders(true);
   try {
@@ -328,6 +335,7 @@ function hook({ action }) {
     global.setTimeout = originalSetTimeout;
     global.setInterval = originalSetInterval;
     if (!hadWindow) delete global.window;
+    if (!hadDocument) delete global.document;
   }
   return { api, listings, actions, start };
 }

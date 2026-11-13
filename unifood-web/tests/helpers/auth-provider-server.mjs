@@ -1233,6 +1233,7 @@ createServer(async (request, response) => {
     }
     if (
       url.pathname === "/api/worker/context" ||
+      url.pathname === "/api/worker/orders" ||
       url.pathname.startsWith("/api/orders")
     ) {
       if (
@@ -1243,7 +1244,11 @@ createServer(async (request, response) => {
         profile.roles.some((role) => ["ADMIN", "SUPER_ADMIN"].includes(role))
       )
         return json(response, 403, { message: "Forbidden" });
-      if (url.pathname === "/api/worker/context") {
+      // Like Spring, the single-call listing resolves the cafeteria itself and fails the same way.
+      if (
+        url.pathname === "/api/worker/context" ||
+        url.pathname === "/api/worker/orders"
+      ) {
         const failure = {
           backendunauthorized: 401,
           backendforbidden: 403,
@@ -1253,10 +1258,12 @@ createServer(async (request, response) => {
           return json(response, failure, { message: "PRIVATE_FIXTURE_DETAIL" });
         if (profile.email.startsWith("backenddisconnect@"))
           return request.socket.destroy();
-        return json(response, 200, { cafeteriaId });
+        if (url.pathname === "/api/worker/context")
+          return json(response, 200, { cafeteriaId });
       }
       if (
         request.method === "GET" &&
+        url.pathname !== "/api/worker/orders" &&
         url.searchParams.get("cafeteriaId") !== cafeteriaId
       )
         return json(response, 403, { message: "Other cafeteria" });

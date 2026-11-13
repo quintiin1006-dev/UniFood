@@ -102,13 +102,17 @@ test("browser orders requests have no cafeteria parameter or environment fallbac
   }
 });
 
-test("BFF obtains context using the session token and ignores all client cafeteria overrides", async () => {
+test("BFF lists with one Spring call using the session token and ignores client cafeteria overrides", async () => {
   const calls = [];
   const handler = route(async (url, options) => {
     calls.push([String(url), options]);
-    if (String(url).endsWith("/api/worker/context"))
-      return Response.json({ cafeteriaId: firstCafeteria });
-    return Response.json([{ cafeteriaId: firstCafeteria }]);
+    return Response.json([{ cafeteriaId: firstCafeteria }], {
+      headers: {
+        "X-Business-Date": "2026-11-20",
+        "X-Next-Business-Date-At": "2026-11-21T05:00:00Z",
+        "Set-Cookie": "upstream=secret",
+      },
+    });
   });
   const response = await list(
     handler,
@@ -116,58 +120,74 @@ test("BFF obtains context using the session token and ignores all client cafeter
   );
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), [{ cafeteriaId: firstCafeteria }]);
-  assert.equal(calls.length, 2);
-  assert.equal(calls[0][0], "http://backend.test:8080/api/worker/context");
+  assert.equal(calls.length, 1);
+  // No query string at all: the cafeteria is resolved by Spring from the database.
+  assert.equal(calls[0][0], "http://backend.test:8080/api/worker/orders");
+  const [, options] = calls[0];
+  assert.equal(options.method, "GET");
+  assert.equal(options.cache, "no-store");
+  assert.equal(options.redirect, "error");
+  assert.ok(options.signal instanceof AbortSignal);
   assert.equal(
-    calls[1][0],
-    `http://backend.test:8080/api/orders?cafeteriaId=${firstCafeteria}`,
+    options.headers.get("authorization"),
+    "Bearer verified-session-token",
   );
-  for (const [, options] of calls) {
-    assert.equal(options.method, "GET");
-    assert.equal(options.cache, "no-store");
-    assert.equal(
-      options.headers.get("authorization"),
-      "Bearer verified-session-token",
-    );
-  }
   assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(response.headers.get("x-business-date"), "2026-11-20");
+  assert.equal(
+    response.headers.get("x-next-business-date-at"),
+    "2026-11-21T05:00:00Z",
+  );
+  assert.equal(response.headers.get("set-cookie"), null);
 });
 
-test("context is read again on each listing and a revoked context prevents forwarding", async () => {
-  let selected = firstCafeteria;
-  let contextCalls = 0;
-  const orders = [];
+test("each listing is authorized again and a revoked worker is denied with the fixed message", async () => {
+  let allowed = true;
+  let calls = 0;
   const handler = route(async (url) => {
-    if (String(url).endsWith("/api/worker/context")) {
-      contextCalls++;
-      return selected
-        ? Response.json({ cafeteriaId: selected })
-        : Response.json({ secret: "database-secret" }, { status: 403 });
-    }
-    orders.push(new URL(url).searchParams.get("cafeteriaId"));
-    return Response.json([]);
+    calls++;
+    assert.equal(String(url), "http://backend.test:8080/api/worker/orders");
+    return allowed
+      ? Response.json([])
+      : Response.json(
+          { code: "FORBIDDEN", message: "database-secret" },
+          { status: 403 },
+        );
   });
   assert.equal((await list(handler)).status, 200);
-  selected = secondCafeteria;
   assert.equal((await list(handler)).status, 200);
-  selected = null;
+  allowed = false;
   const revoked = await list(handler);
   assert.equal(revoked.status, 403);
-  assert.ok(!(await revoked.text()).includes("database-secret"));
-  assert.equal(contextCalls, 3);
-  assert.deepEqual(orders, [firstCafeteria, secondCafeteria]);
+  const body = await revoked.json();
+  assert.equal(body.message, "No se pudo resolver la cafetería de tu cuenta.");
+  assert.ok(!JSON.stringify(body).includes("database-secret"));
+  assert.equal(calls, 3);
 });
 
-test("unavailable, denied or malformed context never falls back or leaks upstream values", async () => {
+test("denied, failed or malformed listings never leak upstream values", async () => {
   for (const [makeResponse, expectedStatus] of [
-    ...[401, 403, 400, 500].map((status) => [
+    ...[401, 403, 400, 404, 409, 500, 503].map((status) => [
       () => Response.json({ message: "provider-secret" }, { status }),
       [401, 403].includes(status) ? status : 502,
     ]),
-    [() => Response.json({ cafeteriaId: "provider-secret" }), 502],
-    [() => Response.json({}), 502],
-    [() => Response.json(null), 502],
     [() => new Response("provider-secret", { status: 200 }), 502],
+    [
+      () =>
+        new Response("provider-secret", {
+          status: 200,
+          headers: { "content-type": "text/html" },
+        }),
+      502,
+    ],
+    [
+      () =>
+        new Response(null, {
+          status: 302,
+          headers: { location: "http://evil.test/provider-secret" },
+        }),
+      502,
+    ],
     [
       () => {
         throw new Error("provider-secret");
@@ -178,13 +198,29 @@ test("unavailable, denied or malformed context never falls back or leaks upstrea
     let calls = 0;
     const handler = route(async (url) => {
       calls++;
-      assert.ok(String(url).endsWith("/api/worker/context"));
+      assert.ok(String(url).endsWith("/api/worker/orders"));
       return makeResponse();
     });
     const response = await list(handler);
     assert.equal(response.status, expectedStatus);
     assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal(response.headers.get("location"), null);
     assert.ok(!(await response.text()).includes("provider-secret"));
     assert.equal(calls, 1);
   }
+});
+
+test("a non-worker session is denied before any Spring call", async () => {
+  for (const roles of [["CLIENT"], ["ADMIN"], ["SUPER_ADMIN"]]) {
+    const handler = route(
+      async () => assert.fail("No Spring call for a non-worker"),
+      {
+        profile: { active: true, roles },
+        accessToken: "verified-session-token",
+      },
+    );
+    assert.equal((await list(handler)).status, 403);
+  }
+  const anonymous = route(async () => assert.fail("No Spring call"), null);
+  assert.equal((await list(anonymous)).status, 401);
 });

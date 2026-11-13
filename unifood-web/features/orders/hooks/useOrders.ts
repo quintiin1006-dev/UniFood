@@ -110,13 +110,14 @@ export function useOrders(enabled = true) {
     const initial = setTimeout(() => {
       void refresh();
     }, 0);
-    const interval = setInterval(() => {
-      void refresh();
-    }, 10000);
-    const onFocus = () => {
-      void refresh();
+    // A hidden tab does not poll; becoming visible again reloads at once (as the history and
+    // the admin dashboard do).
+    const whenVisible = () => {
+      if (document.visibilityState === "visible") void refresh();
     };
-    window.addEventListener("focus", onFocus);
+    const interval = setInterval(whenVisible, 10000);
+    window.addEventListener("focus", whenVisible);
+    document.addEventListener("visibilitychange", whenVisible);
     return () => {
       subscribed.current = false;
       invalidate();
@@ -124,7 +125,8 @@ export function useOrders(enabled = true) {
       clearInterval(interval);
       if (rolloverTimer.current !== undefined)
         clearTimeout(rolloverTimer.current);
-      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("focus", whenVisible);
+      document.removeEventListener("visibilitychange", whenVisible);
     };
   }, [refresh, invalidate, enabled]);
 

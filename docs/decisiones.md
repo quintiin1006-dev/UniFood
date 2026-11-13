@@ -488,6 +488,7 @@ El BFF y Spring usan las mismas rutas. Errores con `ApiErrorResponse`:
 | `GET /api/me/orders?cursor=&limit=20`                 | Historial                               | 400 `INVALID_ORDER_REQUEST`                                                                                          |
 | `GET /api/me/orders/{id}`                             | Detalle de un pedido propio             | 404 `ORDER_NOT_FOUND`                                                                                                |
 | `PATCH /api/me/orders/{id}/cancel`                    | Cancela en PENDING                      | 404 `ORDER_NOT_FOUND`, 409 `ORDER_ALREADY_PREPARING`, `INVALID_ORDER_STATE`                                          |
+| `GET /api/worker/orders`                              | Listado operativo del worker            | 401, 403 `FORBIDDEN`                                                                                                 |
 | `PATCH /api/orders/{id}/reject`                       | Rechazo del worker `{reason}`           | 400 `REJECTION_REASON_REQUIRED`, `REJECTION_REASON_TOO_LONG`, 403 `FORBIDDEN`, 409 `INVALID_ORDER_STATE`             |
 | `PATCH /api/orders/{id}/remind`                       | Recordatorio del worker, en CALLED      | 403 `FORBIDDEN`, 409 `REMINDER_TOO_EARLY`, `REMINDER_LIMIT_REACHED`, `INVALID_ORDER_STATE`                           |
 | `PATCH /api/orders/{id}/not-collected`                | No recogido tras los 3 recordatorios    | 403 `FORBIDDEN`, 409 `NOT_COLLECTED_REQUIREMENTS_NOT_MET`, `INVALID_ORDER_STATE`                                     |
@@ -691,6 +692,19 @@ según `cafeteria_daily_states` de hoy en America/Bogota. Nunca incluye el docum
     con el pedido, sin escribir otra vez.
   - Spring responde con el pedido del cliente, sin el documento. El BFF sigue devolviendo
     solo `{id, status}`.
+
+**Listado del worker en una llamada (implementado el 2026-11-12):**
+
+- `GET /api/worker/orders` sin parámetros. La cafetería sale de actividad, rol y asignación
+  leídos de la base en esa misma petición, con la política de `/api/worker/context`; nunca de
+  un parámetro ni del JWT. Sin caché de permisos.
+- Mismo cuerpo y cabeceras que `GET /api/orders?cafeteriaId=` (§6, «Listado del worker»).
+- Cuenta inactiva, sin rol WORKER exclusivo, sin asignación o con varias: el mismo 403
+  `FORBIDDEN` con mensaje fijo. Sin sesión: 401.
+- El BFF hace una sola llamada en vez de contexto y listado, y traduce cualquier fallo al
+  mensaje fijo «No se pudo resolver la cafetería de tu cuenta.». `GET /api/worker/context` y
+  `GET /api/orders?cafeteriaId=` se conservan en Spring sin consumidores en la web.
+- El sondeo de 10 s se pausa con la pestaña oculta y recarga al volver a ser visible.
 
 **Rechazo del worker implementado (B18, decidido el 2026-11-10):**
 
