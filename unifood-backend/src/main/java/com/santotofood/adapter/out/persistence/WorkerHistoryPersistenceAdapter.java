@@ -86,12 +86,16 @@ public class WorkerHistoryPersistenceAdapter implements WorkerHistoryQueryPort {
       var completedAt = rows.getObject("completed_at", OffsetDateTime.class).toInstant();
       var total = Objects.requireNonNull(rows.getBigDecimal("total"));
       String clientName = rows.getString("client_name");
+      String source = rows.getString("cancellation_source");
+      String reason = rows.getString("rejection_reason");
       var entry = orders.get(id);
       if (entry == null) {
-        entry = new EntryBuilder(id, clientName, status, completedAt, total);
+        entry = new EntryBuilder(id, clientName, status, completedAt, total, source, reason);
         orders.put(id, entry);
       } else if (entry.status != status
           || !Objects.equals(entry.clientName, clientName)
+          || !Objects.equals(entry.source, source)
+          || !Objects.equals(entry.reason, reason)
           || !entry.completedAt.equals(completedAt)
           || entry.total.compareTo(total) != 0) {
         throw new IllegalStateException("Inconsistent worker history projection");
@@ -118,19 +122,30 @@ public class WorkerHistoryPersistenceAdapter implements WorkerHistoryQueryPort {
     final OrderStatus status;
     final Instant completedAt;
     final BigDecimal total;
+    final String source;
+    final String reason;
     final List<WorkerHistory.Item> items = new ArrayList<>();
 
     EntryBuilder(
-        UUID id, String clientName, OrderStatus status, Instant completedAt, BigDecimal total) {
+        UUID id,
+        String clientName,
+        OrderStatus status,
+        Instant completedAt,
+        BigDecimal total,
+        String source,
+        String reason) {
       this.id = id;
       this.clientName = clientName;
       this.status = status;
       this.completedAt = completedAt;
       this.total = total;
+      this.source = source;
+      this.reason = reason;
     }
 
     WorkerHistory.Entry build() {
-      return new WorkerHistory.Entry(id, clientName, status, completedAt, total, items);
+      return new WorkerHistory.Entry(
+          id, clientName, status, completedAt, total, items, source, reason);
     }
   }
 

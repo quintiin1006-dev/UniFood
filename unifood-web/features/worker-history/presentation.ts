@@ -1,6 +1,6 @@
 import { formatAvailabilityPrice } from "@/features/availability/presentation";
 export { formatBusinessDate } from "@/features/availability/presentation";
-import type { HistoryStatus } from "./types";
+import type { HistoryOrder, HistoryStatus } from "./types";
 
 const fractionalPesos = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -36,3 +36,29 @@ export const HISTORY_LABELS: Record<HistoryStatus, string> = {
   NOT_COLLECTED: "No recogido",
   CANCELLED: "Cancelado",
 };
+
+/**
+ * Fixed Spanish text of how an order ended. A cancelled order says who ended it; a worker
+ * rejection adds its reason as plain text. Older cancellations without a source stay
+ * «Cancelado», and an older worker cancellation without a reason is «Cancelado por la cafetería».
+ */
+export function historyStatusText(
+  order: Pick<
+    HistoryOrder,
+    "status" | "cancellationSource" | "rejectionReason"
+  >,
+): string {
+  if (order.status !== "CANCELLED") return HISTORY_LABELS[order.status];
+  switch (order.cancellationSource) {
+    case "WORKER":
+      return order.rejectionReason
+        ? `Rechazado por la cafetería: ${order.rejectionReason}`
+        : "Cancelado por la cafetería";
+    case "CLIENT":
+      return "Cancelado por el cliente";
+    case "SYSTEM":
+      return "Cerrado por el sistema";
+    default:
+      return HISTORY_LABELS.CANCELLED;
+  }
+}

@@ -77,7 +77,18 @@ export function parseWorkerHistory(value: unknown): WorkerHistoryPage | null {
         Date.parse(value.rangeStart + "T05:00:00Z") ||
       Date.parse(entry.completedAt) >= Date.parse(value.nextBusinessDateAt) ||
       !amount(entry.total) ||
-      !Array.isArray(entry.items)
+      !Array.isArray(entry.items) ||
+      !(
+        entry.cancellationSource == null ||
+        ["CLIENT", "WORKER", "SYSTEM"].includes(
+          entry.cancellationSource as string,
+        )
+      ) ||
+      !(
+        entry.rejectionReason == null ||
+        (typeof entry.rejectionReason === "string" &&
+          entry.rejectionReason.length <= 300)
+      )
     )
       return null;
     ids.add(entry.id.toLowerCase());
@@ -113,6 +124,7 @@ export function parseWorkerHistory(value: unknown): WorkerHistoryPage | null {
       completedAt: entry.completedAt,
       total: entry.total,
       items,
+      ...cancellation(entry),
     });
   }
   if (
@@ -141,4 +153,25 @@ export function parseWorkerHistory(value: unknown): WorkerHistoryPage | null {
     hasHistory: value.hasHistory,
     orders,
   };
+}
+
+/**
+ * Additive compatibility: older snapshots have neither field. Only a cancelled order keeps who
+ * ended it, and only a worker rejection keeps its reason.
+ */
+function cancellation(entry: Record<string, unknown>): {
+  cancellationSource: HistoryOrder["cancellationSource"];
+  rejectionReason: string | null;
+} {
+  const source =
+    entry.status === "CANCELLED" && typeof entry.cancellationSource === "string"
+      ? (entry.cancellationSource as HistoryOrder["cancellationSource"])
+      : null;
+  const reason =
+    source === "WORKER" &&
+    typeof entry.rejectionReason === "string" &&
+    entry.rejectionReason.trim()
+      ? entry.rejectionReason.trim()
+      : null;
+  return { cancellationSource: source, rejectionReason: reason };
 }
