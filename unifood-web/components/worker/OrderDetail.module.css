@@ -462,6 +462,10 @@
 .note {
   margin: 0;
 
+  /* D2: the client's line breaks, as on the card. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
   color: #5f6b7a;
 
   font-size: 14px;

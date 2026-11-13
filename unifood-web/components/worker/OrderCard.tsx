@@ -91,7 +91,7 @@ export default function OrderCard({
         <div className={styles.calledStatus}>
           <span className={styles.calledDot} />
 
-          <span>Estudiante avisado</span>
+          <span>Cliente avisado</span>
         </div>
       )}
 

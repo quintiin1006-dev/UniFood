@@ -148,3 +148,36 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* D5: visible close button, besides «Volver» and Escape. */
+.dialog {
+  position: relative;
+}
+
+.close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #475266;
+  cursor: pointer;
+}
+
+.close:hover:not(:disabled) {
+  background: #f1f4f8;
+}
+
+.close:focus-visible {
+  outline: 2px solid #0b63ce;
+  outline-offset: 2px;
+}
+
+.dialog .title {
+  padding-right: 48px;
+}

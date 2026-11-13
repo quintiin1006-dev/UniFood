@@ -23,6 +23,14 @@ function remindTitle(order: Order, now: number): string {
   return `Avisar nuevamente (${reminderCount(order)} de ${MAX_REMINDERS})`;
 }
 
+/** L3: why the bell is blocked, visible on touch screens and read by screen readers. */
+export function remindHint(order: Order, now: number): string | null {
+  const availability = reminderAvailability(order, now);
+  if (availability.kind === "limit") return "Avisos completos";
+  if (availability.kind === "wait") return `En ${availability.minutes} min`;
+  return null;
+}
+
 /**
  * Bell of a CALLED row. Disabled while any action of the order is in flight, after the third
  * reminder and, as a hint, before the 5 minutes; Spring decides in any case.
@@ -45,6 +53,7 @@ export function RemindButton({
   if (order.status !== "called") return null;
   const availability = reminderAvailability(order, now);
   const blocked = busy || availability.kind !== "available";
+  const hint = remindHint(order, now);
   return (
     <button
       type="button"
@@ -55,7 +64,7 @@ export function RemindButton({
       aria-label={
         sending
           ? `Enviando aviso a ${order.student}`
-          : `Avisar nuevamente a ${order.student}, ${reminderCount(order)} de ${MAX_REMINDERS} avisos enviados`
+          : `Avisar nuevamente a ${order.student}, ${reminderCount(order)} de ${MAX_REMINDERS} avisos enviados${hint ? `. ${remindTitle(order, now)}` : ""}`
       }
       onClick={() => {
         if (!blocked) onRemind(order);
@@ -65,6 +74,11 @@ export function RemindButton({
       <span className={styles.count} aria-hidden="true">
         {sending ? "…" : `${reminderCount(order)}/${MAX_REMINDERS}`}
       </span>
+      {hint && !sending && (
+        <span className={styles.hint} aria-hidden="true">
+          {hint}
+        </span>
+      )}
     </button>
   );
 }

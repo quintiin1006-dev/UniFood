@@ -11,6 +11,7 @@ import {
 
 import { SearchEmpty } from "@/features/orders/components/BoardFeedback";
 import { clientIdentity } from "@/features/orders/utils/clientIdentity";
+import { pickupLabel } from "@/features/orders/utils/pickupTime";
 import {
   NotCollectedButton,
   RemindButton,
@@ -264,6 +265,11 @@ export default function CallsBoard({
                       <span>{clientIdentity(selectedOrder)}</span>
                     )}
                   </div>
+                  {pickupLabel(selectedOrder.requestedPickupAt) && (
+                    <span className={styles.pickupBadge}>
+                      {pickupLabel(selectedOrder.requestedPickupAt)}
+                    </span>
+                  )}
                   {selectedOrder.status === "called" && (
                     <span className={styles.calledBadge}>
                       <Check size={13} aria-hidden="true" /> Avisado
@@ -340,7 +346,7 @@ export default function CallsBoard({
                     <div className={styles.orderNote}>
                       <MessageSquareText size={18} aria-hidden="true" />
                       <div>
-                        <strong>Nota del pedido</strong>
+                        <strong>Observaciones</strong>
                         <p>{selectedOrder.note}</p>
                       </div>
                     </div>
