@@ -239,6 +239,9 @@
   aspect-ratio: 3 / 2;
   width: 100%;
   background: var(--color-brand-tint);
+  overflow: hidden;
+  /* «Arco de la U» on product images. */
+  border-radius: 0 0 40px 40px;
 }
 .image {
   object-fit: cover;

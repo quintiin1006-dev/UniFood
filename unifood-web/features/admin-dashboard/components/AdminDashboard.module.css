@@ -12,7 +12,7 @@
   margin-bottom: 16px;
 }
 .intro {
-  color: #5d6f87;
+  color: var(--color-slate);
   margin: 0;
 }
 .refresh {
@@ -22,11 +22,11 @@
   background: white;
   color: var(--admin-blue);
   padding: 10px 15px;
-  border: 1px solid #cbdcf0;
-  border-radius: 9px;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: var(--radius-sm);
   min-height: 44px;
   font-weight: 600 !important;
-  box-shadow: 0 1px 3px #163f6d05;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-ink) 2%, transparent);
 }
 .refreshGroup {
   display: flex;
@@ -36,7 +36,7 @@
   gap: 10px;
 }
 .updatedAt {
-  color: #5d6f87;
+  color: var(--color-slate);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
@@ -46,25 +46,25 @@
   gap: 8px;
   margin: 0 0 16px;
   padding: 10px 14px;
-  color: #7a3e00;
-  background: #fff6e8;
-  border: 1px solid #f3d4a4;
-  border-radius: 9px;
+  color: var(--color-brand-hover);
+  background: var(--color-brand-tint);
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: var(--radius-sm);
   font-size: 14px;
 }
 .refreshError svg {
   flex-shrink: 0;
 }
 .refresh:hover:not(:disabled) {
-  background: #eaf2ff;
-  border-color: #a9c3e6;
+  background: var(--color-brand-tint);
+  border-color: var(--color-brand);
 }
 .refresh:active:not(:disabled) {
-  background: #dceaff;
+  background: var(--color-brand-tint);
 }
 .dashboard :is(button, input, summary, [tabindex]):focus-visible {
-  outline: 3px solid var(--admin-accent);
-  outline-offset: 3px;
+  outline: var(--focus-ring-width) solid var(--color-brand);
+  outline-offset: var(--focus-ring-offset);
 }
 .filters {
   border: 0;
@@ -88,9 +88,9 @@
   justify-content: space-between;
   gap: 8px 16px;
   padding: 8px;
-  border: 1px solid #dce5f1;
-  border-radius: 12px;
-  background: #eaf2ff;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-brand-tint);
 }
 .periodMeta {
   display: inline-flex;
@@ -98,19 +98,19 @@
   gap: 8px;
   padding: 0 10px;
   border: 0;
-  border-radius: 9px;
+  border-radius: var(--radius-sm);
   background: transparent;
   align-self: flex-start;
   min-height: 44px;
   font-size: 13px;
-  color: #274568;
+  color: var(--color-ink);
   font-weight: 600;
 }
 .partialDot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #1455ad;
+  background: var(--color-brand);
 }
 .periodMeta {
   position: relative;
@@ -135,7 +135,7 @@
   min-height: 36px;
   cursor: pointer;
   list-style: none;
-  color: #53667d;
+  color: var(--color-slate);
   border-radius: 6px;
 }
 .infoDisclosure summary::-webkit-details-marker {
@@ -148,11 +148,11 @@
   z-index: 6;
   width: min(280px, calc(100vw - 48px));
   padding: 14px 16px;
-  border: 1px solid #cddbeb;
-  border-radius: 10px;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: var(--radius-sm);
   background: white;
-  box-shadow: 0 6px 24px #163f6d18;
-  color: #304761;
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--color-ink) 9%, transparent);
+  color: var(--color-ink);
   font-size: 12px;
   line-height: 1.6;
 }
@@ -179,7 +179,7 @@
   align-items: center;
 }
 .compactNotice {
-  color: #475a75;
+  color: var(--color-slate);
   font-size: 12px;
 }
 .compactNotice summary {
@@ -203,17 +203,17 @@
   min-height: 44px;
   padding: 10px 18px;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: #455c76;
+  color: var(--color-slate);
   font-size: 13px;
 }
 .periodButtons button[aria-pressed="true"] {
   background: white;
-  border-color: #b9d4fa;
+  border-color: var(--color-brand-tint-2);
   color: var(--admin-blue);
   font-weight: 650;
-  box-shadow: 0 2px 5px #163f6d0d;
+  box-shadow: 0 2px 5px color-mix(in srgb, var(--color-ink) 5%, transparent);
 }
 .periodButtons button[aria-pressed="true"]::after {
   content: "";
@@ -226,8 +226,8 @@
   background: currentColor;
 }
 .periodButtons button:hover:not(:disabled) {
-  border-color: #b5c9e2;
-  background: #fff;
+  border-color: var(--color-brand);
+  background: var(--color-surface);
 }
 .customDates {
   display: flex;
@@ -236,7 +236,7 @@
   align-items: end;
   margin-top: 16px;
   padding: 16px 4px 2px;
-  border-top: 1px solid #e7edf5;
+  border-top: 1px solid var(--color-brand-tint);
 }
 .customDates label {
   display: grid;
@@ -246,11 +246,11 @@
 }
 .customDates input {
   min-height: 44px;
-  border: 1px solid #b7c7da;
-  border-radius: 7px;
+  border: 1px solid var(--color-brand);
+  border-radius: var(--radius-sm);
   padding: 8px 12px;
   background: white;
-  color: #24364d;
+  color: var(--color-ink);
   min-width: 0;
   width: 100%;
 }
@@ -260,19 +260,19 @@
   margin: 0;
 }
 .dateError {
-  color: #9b2f2f;
+  color: var(--color-danger);
   font-size: 14px;
 }
 .primary {
   min-height: 44px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--admin-blue);
   color: white;
   padding: 10px 18px;
 }
 .primary:hover:not(:disabled) {
-  background: #124783;
+  background: var(--color-ink);
 }
 .results {
   display: grid;
@@ -286,7 +286,7 @@
   flex-wrap: wrap;
   gap: 12px 18px;
   font-size: 13px;
-  color: #405671;
+  color: var(--color-slate);
   padding-bottom: 16px;
   border-bottom: 1px solid var(--admin-line);
 }
@@ -297,7 +297,7 @@
 }
 .effectivePeriod p span {
   font-size: 12px;
-  color: #5d6f87;
+  color: var(--color-slate);
 }
 .effectivePeriod a {
   display: inline-flex;
@@ -306,9 +306,9 @@
   min-height: 44px;
 }
 .badge {
-  background: #eaf2ff;
-  color: #325b8c;
-  border: 1px solid #dbe7f6;
+  background: var(--color-brand-tint);
+  color: var(--color-brand);
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 6px;
   padding: 5px 9px;
   font-size: 12px;
@@ -335,17 +335,17 @@
 .metric {
   background: white;
   border: 1px solid var(--admin-line);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   padding: 20px;
   min-width: 0;
   box-shadow: var(--admin-shadow);
 }
 .countGrid .metric {
   border-top: 1px solid var(--admin-line);
-  border-left: 3px solid #dcebff;
+  border-left: 3px solid var(--color-brand-tint);
 }
 .metric dt {
-  color: #53677f;
+  color: var(--color-slate);
   font-size: 12px;
   font-weight: 600;
   display: flex;
@@ -361,7 +361,7 @@
 .metric dd {
   margin: 12px 0 0;
   font-size: clamp(26px, 2.6vw, 34px);
-  color: #102d68;
+  color: var(--color-ink);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1.25;
@@ -371,7 +371,7 @@
 .metric small {
   display: block;
   font-size: 12px;
-  color: #5d6f87;
+  color: var(--color-slate);
   margin-top: 10px;
 }
 .metric .metricUnknown {
@@ -387,7 +387,7 @@
   margin: 14px 0 0;
   padding: 12px 18px;
   border: 1px solid var(--admin-line);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: white;
 }
 .monetarySummary .infoDisclosure {
@@ -406,11 +406,11 @@
 }
 .monetarySummary dt {
   font-size: 13px;
-  color: #53677f;
+  color: var(--color-slate);
 }
 .monetarySummary dd {
   margin: 0 0 0 auto;
-  color: #102d68;
+  color: var(--color-ink);
   font-size: 20px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
@@ -427,18 +427,18 @@
 }
 .tableScroll .priorityCell {
   font-weight: 650;
-  color: #172b46;
+  color: var(--color-ink);
 }
 .hint {
   font-size: 12px;
   line-height: 1.6;
-  color: #5d6f87;
+  color: var(--color-slate);
   margin: 14px 0 0;
 }
 .panel {
   background: white;
   border: 1px solid var(--admin-line);
-  border-radius: 18px;
+  border-radius: var(--radius-md);
   padding: 24px;
   min-width: 0;
   box-shadow: var(--admin-shadow);
@@ -458,11 +458,11 @@
 }
 .panelHeading p {
   margin: 6px 0 0;
-  color: #5d6f87;
+  color: var(--color-slate);
   font-size: 13px;
 }
 .panelHeading .eyebrow {
-  color: #8a5b22;
+  color: var(--color-brand-hover);
   font-size: 10px;
   letter-spacing: 1.2px;
   font-weight: 650;
@@ -476,7 +476,7 @@
   padding: 0;
   margin: 0 0 20px;
   font-size: 12px;
-  color: #456078;
+  color: var(--color-slate);
 }
 .legend li {
   display: flex;
@@ -491,12 +491,17 @@
   width: 12px;
   height: 12px;
   border-radius: 3px;
-  border: 1px solid #0868e9;
-  background: #0868e9;
+  border: 1px solid var(--color-brand);
+  background: var(--color-brand);
 }
+/* Same as the bars: «No recogido» is danger, there is no amber in the system. */
 .notCollectedSwatch {
-  border-color: #9b570b;
-  background: repeating-linear-gradient(135deg, #fff4df 0 3px, #9b570b 3px 4px);
+  border-color: var(--color-danger);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--color-danger-bg) 0 3px,
+    var(--color-danger) 3px 4px
+  );
 }
 .chart {
   margin: 0;
@@ -508,8 +513,8 @@
   width: 12px;
   height: 12px;
   border-radius: 3px;
-  background: #475a75;
-  border: 1px solid #475a75;
+  background: var(--color-slate);
+  border: 1px solid var(--color-slate);
 }
 .chartTooltip {
   position: absolute;
@@ -521,11 +526,11 @@
   flex-wrap: wrap;
   gap: 4px 12px;
   padding: 10px 14px;
-  border: 1px solid #cddbeb;
-  border-radius: 9px;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: var(--radius-sm);
   background: white;
-  box-shadow: 0 4px 16px #163f6d14;
-  color: #304761;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-ink) 8%, transparent);
+  color: var(--color-ink);
   font-size: 12px;
   pointer-events: none;
 }
@@ -533,8 +538,8 @@
   flex-basis: 100%;
 }
 .chart [data-chart-day]:focus-visible {
-  outline: 2px solid #0868e9;
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-brand);
+  outline-offset: var(--focus-ring-offset);
 }
 .shareCell {
   display: inline-flex;
@@ -544,20 +549,20 @@
 .shareTrack {
   width: 44px;
   height: 4px;
-  background: #f1e6d5;
+  background: var(--color-brand-tint);
   border-radius: 3px;
   overflow: hidden;
 }
 .shareTrack > span {
   display: block;
   height: 100%;
-  background: #9b570b;
+  background: var(--color-brand-hover);
   border-radius: inherit;
 }
 .chartViewport {
   max-width: 100%;
   overflow-x: auto;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
 }
 .chartViewport > svg {
   display: block;
@@ -566,14 +571,14 @@
 .chartEmpty {
   margin: 12px 0 0;
   padding: 12px 16px;
-  border-radius: 10px;
-  color: #53667d;
-  background: #f3f6fb;
+  border-radius: var(--radius-sm);
+  color: var(--color-slate);
+  background: var(--color-brand-tint);
   font-size: 13px;
 }
 .metricHelp {
   font-size: 12px;
-  color: #53667d;
+  color: var(--color-slate);
   margin-top: 12px;
 }
 .metricHelp summary {
@@ -592,27 +597,27 @@
 .chart text {
   font-family: inherit;
   font-size: 12px;
-  fill: #526982;
+  fill: var(--color-slate);
 }
 .dailyDetails {
   margin-top: 18px;
   padding-top: 14px;
-  border-top: 1px solid #edf1f6;
+  border-top: 1px solid var(--color-brand-tint);
 }
 .dailyDetails summary,
 .coverage summary {
   min-height: 44px;
   cursor: pointer;
   font-size: 13px;
-  color: #255a96;
+  color: var(--color-brand);
   padding: 10px 0;
 }
 .tableScroll {
   position: relative;
   overflow: auto;
   max-width: 100%;
-  border-radius: 8px;
-  border: 1px solid #e5ecf5;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-brand-tint);
 }
 .tableScroll table {
   width: 100%;
@@ -624,21 +629,21 @@
 .tableScroll caption {
   text-align: left;
   font-size: 12px;
-  color: #5d7189;
+  color: var(--color-text-soft);
   padding: 12px;
-  background: #fff;
+  background: var(--color-surface);
 }
 .tableScroll th,
 .tableScroll td {
   padding: 14px 12px;
-  border-bottom: 1px solid #eaf0f6;
+  border-bottom: 1px solid var(--color-brand-tint);
   vertical-align: top;
 }
 .tableScroll thead th {
   font-size: 12px;
   font-weight: 600;
-  color: #546b84;
-  background: #f1f5fb;
+  color: var(--color-slate);
+  background: var(--color-brand-tint);
 }
 .tableScroll :is(th, td):not(:first-child) {
   text-align: right;
@@ -647,7 +652,7 @@
   border-bottom: 0;
 }
 .tableScroll tbody tr:hover {
-  background: #f7faff;
+  background: var(--color-brand-tint);
 }
 .tableScroll tbody th {
   font-weight: 550;
@@ -655,7 +660,7 @@
   overflow-wrap: anywhere;
 }
 .tableScroll td {
-  color: #334e6c;
+  color: var(--color-slate);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
   max-width: 210px;
@@ -665,31 +670,31 @@
   place-items: center;
   min-width: 24px;
   height: 24px;
-  background: #eaf2ff;
+  background: var(--color-brand-tint);
   border-radius: 6px;
   margin-right: 10px;
-  color: #285d9d;
+  color: var(--color-brand);
   font-size: 11px;
 }
 .rankingTotals,
 .omitted {
   font-size: 12px;
-  color: #536c86;
+  color: var(--color-slate);
   margin: 14px 0;
   overflow-wrap: anywhere;
 }
 .omitted {
-  background: #f5f8fc;
+  background: var(--color-brand-tint);
   padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 .notCollected {
-  border-top: 3px solid #b98137;
+  border-top: 3px solid var(--color-brand-hover);
 }
 .notCollected .badge {
-  background: #fbf4e7;
-  color: #80571f;
-  border-color: #ecdfc7;
+  background: var(--color-brand-tint);
+  color: var(--color-brand-hover);
+  border-color: var(--color-brand-tint);
 }
 .impactGrid {
   display: grid;
@@ -697,11 +702,11 @@
   gap: 16px;
   padding: 18px;
   margin: 0;
-  border-radius: 10px;
-  background: #fcf9f3;
+  border-radius: var(--radius-sm);
+  background: var(--color-brand-tint);
 }
 .impactGrid dt {
-  color: #776044;
+  color: var(--color-brand-hover);
   font-size: 12px;
 }
 .impactGrid dd {
@@ -709,14 +714,14 @@
   font-size: 24px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: #654b2d;
+  color: var(--color-brand-hover);
   overflow-wrap: anywhere;
 }
 .coverage {
   background: white;
-  border: 1px solid #dce5f0;
-  border-left: 3px solid #91aac6;
-  border-radius: 10px;
+  border: 1px solid var(--color-brand-tint-2);
+  border-left: 3px solid var(--color-text-soft);
+  border-radius: var(--radius-sm);
   padding: 16px 18px 6px;
   min-width: 0;
 }
@@ -727,7 +732,7 @@
 .coverage > p,
 .coverage li {
   margin: 0;
-  color: #53677f;
+  color: var(--color-slate);
   font-size: 12px;
 }
 .coverage ul {
@@ -742,17 +747,17 @@
 .unavailable {
   margin: 0;
   padding: 20px;
-  border: 1px solid #e0e7f0;
-  border-radius: 10px;
-  background: #f6f9fc;
-  color: #4e657e;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-brand-tint);
+  color: var(--color-slate);
   font-size: 14px;
   line-height: 1.65;
 }
 .unavailable {
-  background: #fff9ed;
-  border-color: #eadbbd;
-  color: #775723;
+  background: var(--color-brand-tint);
+  border-color: var(--color-brand-tint);
+  color: var(--color-brand-hover);
 }
 .unavailable p {
   margin: 7px 0 0;
@@ -762,13 +767,13 @@
   padding: 28px;
   margin-top: 24px;
   background: white;
-  border: 1px solid #dce5ef;
-  border-radius: 12px;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: var(--radius-sm);
 }
 .loading {
   margin: 0 0 14px;
   font-size: 13px;
-  color: #5d6f87;
+  color: var(--color-slate);
 }
 .loadingLayout {
   margin-top: 18px;
@@ -780,7 +785,7 @@
   margin-top: 14px;
   padding: 20px 18px;
   border: 1px solid var(--admin-line);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: white;
 }
 .skeletonMetric,
@@ -788,7 +793,7 @@
   padding: 20px;
   min-width: 0;
   border: 1px solid var(--admin-line);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: var(--admin-surface);
 }
 .skeletonMetric {
@@ -799,7 +804,7 @@
 .skeletonRows > span {
   display: block;
   border-radius: 5px;
-  background: #eaf4ff;
+  background: var(--color-brand-tint);
 }
 .skeletonLabel {
   width: 60%;
@@ -814,13 +819,13 @@
 .skeletonPanel {
   margin-top: 20px;
   padding: 24px;
-  border-radius: 18px;
+  border-radius: var(--radius-md);
 }
 .skeletonChart {
   height: 224px;
   margin-top: 24px;
-  border-radius: 8px;
-  background: #eaf4ff;
+  border-radius: var(--radius-sm);
+  background: var(--color-brand-tint);
 }
 .skeletonRows {
   display: grid;
@@ -842,14 +847,14 @@
   display: flex;
   gap: 14px;
   align-items: start;
-  color: #67483f;
+  color: var(--color-danger-ink);
 }
 .error svg {
   flex-shrink: 0;
 }
 .error p {
   margin: 8px 0 16px;
-  color: #64718a;
+  color: var(--color-text-soft);
 }
 .error a {
   display: inline-block;
@@ -886,7 +891,7 @@
   }
   .mobileHint {
     display: block;
-    color: #61758c;
+    color: var(--color-text-soft);
     font-size: 11px;
   }
   .impactGrid {
