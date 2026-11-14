@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Banknote, Clock3, ShoppingBag } from "lucide-react";
+import { Notice } from "@/components/ui/Notice";
 import type { CafeteriaMenu, ClientCart } from "../types";
 import { placeOrder } from "../api/placeOrder";
 import { currency } from "../domain/catalog";
@@ -10,8 +11,10 @@ import { validateCart } from "../domain/cart";
 import {
   checkoutLines,
   earliestPickup,
-  noteLength,
+  limitNote,
   NOTE_LIMIT,
+  pickupInstant,
+  PICKUP_TIME_MESSAGE,
   orderSignature,
   reviewOrder,
   type PlacedOrder,
@@ -100,6 +103,7 @@ function CheckoutForm({
   const [choosePickup, setChoosePickup] = useState(false);
   const [pickupTime, setPickupTime] = useState("");
   const [accepted, setAccepted] = useState(false);
+  const [noteLimitReached, setNoteLimitReached] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [pending, setPending] = useState(false);
   const sending = useRef(false);
@@ -113,9 +117,11 @@ function CheckoutForm({
   );
   const cartIssue = validateCart(cart, menu);
   const earliest = earliestPickup(now);
-  const pickupHelp = earliest
-    ? `Solo horas de hoy posteriores a la actual (hora de Colombia). Es informativa: no cambia el orden de atención.`
-    : "Ya no quedan horas disponibles hoy. Envía el pedido lo antes posible.";
+  // Checked against the live clock, so a time that expires while the summary is open is caught.
+  const typedPickup =
+    choosePickup && pickupTime ? pickupInstant(pickupTime, now) : null;
+  const pickupError =
+    typedPickup && !typedPickup.ok ? PICKUP_TIME_MESSAGE : null;
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -246,7 +252,8 @@ function CheckoutForm({
                 min={earliest}
                 max="23:59"
                 required
-                aria-describedby="pickup-help"
+                aria-invalid={pickupError ? true : undefined}
+                aria-describedby={pickupError ? "pickup-error" : undefined}
                 onChange={(event) => {
                   setPickupTime(event.target.value);
                   setProblem(null);
@@ -254,7 +261,17 @@ function CheckoutForm({
               />
             </>
           )}
-          <p id="pickup-help">{pickupHelp}</p>
+          {pickupError && (
+            <Notice id="pickup-error" tone="error">
+              {pickupError}
+            </Notice>
+          )}
+          {!earliest && (
+            <p id="pickup-help">
+              Ya no quedan horas disponibles hoy. Envía el pedido lo antes
+              posible.
+            </p>
+          )}
         </fieldset>
         <div className={styles.noteField}>
           <label htmlFor="order-note">
@@ -264,20 +281,22 @@ function CheckoutForm({
             id="order-note"
             ref={noteInput}
             rows={3}
-            maxLength={NOTE_LIMIT + 50}
             value={note}
             disabled={pending}
             placeholder="Cuéntanos algo que debamos tener en cuenta"
-            aria-describedby="note-count"
             onChange={(event) => {
-              setNote(event.target.value);
+              // Typing or pasting past the limit keeps the first NOTE_LIMIT characters.
+              const limited = limitNote(event.target.value);
+              setNote(limited.note);
+              setNoteLimitReached(limited.truncated);
               setProblem(null);
             }}
           />
-          <small id="note-count">
-            {noteLength(note)}/{NOTE_LIMIT} caracteres. Una sola nota para todo
-            el pedido.
-          </small>
+          {noteLimitReached && (
+            <Notice tone="info">
+              El límite es de {NOTE_LIMIT} caracteres.
+            </Notice>
+          )}
         </div>
         <div className={styles.payment}>
           <Banknote size={24} aria-hidden="true" />
@@ -326,7 +345,7 @@ function CheckoutForm({
         <button
           type="submit"
           className={shared.primaryButton}
-          disabled={!accepted || pending || !!cartIssue}
+          disabled={!accepted || pending || !!cartIssue || !!pickupError}
         >
           {pending
             ? "Enviando pedido…"
