@@ -12,9 +12,12 @@ import {
 import { NEW_ORDER_BADGE_MS } from "@/features/orders/listingStatus";
 import type { Order } from "@/types/order";
 import OrderCard from "./OrderCard";
-import styles from "./KanbanBoard.module.css";
+import modernStyles from "./KanbanBoard.module.css";
+import classicStyles from "./KanbanBoard.classic.module.css";
 
 interface KanbanBoardProps {
+  /** Pedidos and Llamadas use the classic look (ola 2 · D2); the rest keep the modern one. */
+  variant?: "classic" | "modern";
   orders: Order[];
   busyOrderIds: string[];
   /** When each order first appeared after the first read (W11). */
@@ -60,6 +63,7 @@ const columns: Column[] = [
 ];
 
 export default function KanbanBoard({
+  variant = "modern",
   orders,
   busyOrderIds,
   newOrderIds = {},
@@ -68,6 +72,7 @@ export default function KanbanBoard({
   onAction,
   onReject,
 }: KanbanBoardProps) {
+  const styles = variant === "classic" ? classicStyles : modernStyles;
   // W9: an order animates only when it changed column while the board was on screen. On mount
   // (opening the module) there is no previous state, so nothing moves; a polling refresh that
   // changes nothing keeps the same set. Derived state, updated during render.
@@ -157,6 +162,7 @@ export default function KanbanBoard({
               ) : (
                 visibleOrders.map((order) => (
                   <OrderCard
+                    variant={variant}
                     key={order.id}
                     order={order}
                     busy={busyOrderIds.includes(order.id)}

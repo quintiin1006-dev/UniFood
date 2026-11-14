@@ -14,16 +14,19 @@ export function RejectOrderButton({
   order,
   busy = false,
   onReject,
+  compact = false,
 }: {
   order: Order;
   busy?: boolean;
   onReject: (order: Order) => void;
+  /** Classic worker board (ola 2 · D2): smaller, so it never outweighs the primary action. */
+  compact?: boolean;
 }) {
   if (order.status !== "pending" && order.status !== "preparing") return null;
   return (
     <button
       type="button"
-      className={styles.rejectButton}
+      className={`${styles.rejectButton} ${compact ? styles.compact : ""}`}
       disabled={busy}
       onClick={() => onReject(order)}
       aria-label={`Rechazar pedido de ${order.student}`}

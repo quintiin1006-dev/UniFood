@@ -6,11 +6,14 @@ import Image from "next/image";
 
 import { Search, X } from "lucide-react";
 
-import styles from "./Header.module.css";
+import modernStyles from "./Header.module.css";
+import classicStyles from "./Header.classic.module.css";
 import LogoutButton from "@/features/auth/components/LogoutButton";
 import type { WorkerModule } from "./BottomNav";
 
 interface HeaderProps {
+  /** Pedidos and Llamadas use the classic look (ola 2 · D2); the rest keep the modern one. */
+  variant?: "classic" | "modern";
   activeModule?: WorkerModule;
   search: string;
   onSearchChange: (value: string) => void;
@@ -21,11 +24,13 @@ interface HeaderProps {
 const searchInputId = "worker-search-input";
 
 export default function Header({
+  variant = "modern",
   activeModule = "orders",
   search,
   onSearchChange,
   syncStatus,
 }: HeaderProps) {
+  const styles = variant === "classic" ? classicStyles : modernStyles;
   const titles: Record<WorkerModule, string> = {
     orders: "Gestión de pedidos",
     calls: "Llamadas",

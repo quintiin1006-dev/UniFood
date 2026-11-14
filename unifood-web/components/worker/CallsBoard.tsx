@@ -20,9 +20,12 @@ import {
 import type { CalledOrderAction } from "@/features/orders/calledOrderActions";
 import type { Order } from "@/types/order";
 
-import styles from "./CallsBoard.module.css";
+import modernStyles from "./CallsBoard.module.css";
+import classicStyles from "./CallsBoard.classic.module.css";
 
 interface CallsBoardProps {
+  /** Pedidos and Llamadas use the classic look (ola 2 · D2); the rest keep the modern one. */
+  variant?: "classic" | "modern";
   orders: Order[];
   busyOrderIds: string[];
   busyActions: Record<string, CalledOrderAction>;
@@ -72,6 +75,7 @@ function formatCurrency(value: number): string {
    ========================================================= */
 
 export default function CallsBoard({
+  variant = "modern",
   orders,
   busyOrderIds,
   busyActions,
@@ -84,6 +88,7 @@ export default function CallsBoard({
   onRemind,
   onNotCollected,
 }: CallsBoardProps) {
+  const styles = variant === "classic" ? classicStyles : modernStyles;
   const totalUnits =
     selectedOrder?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
 
