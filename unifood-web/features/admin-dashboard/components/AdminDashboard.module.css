@@ -1051,3 +1051,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+.amountLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

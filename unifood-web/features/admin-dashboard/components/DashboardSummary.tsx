@@ -1,5 +1,6 @@
 import { formatCount, formatMoney } from "../presentation";
 import type { DashboardSummary as Summary } from "../types";
+import { DashboardInfo } from "./DashboardInfo";
 import styles from "./AdminDashboard.module.css";
 
 /**
@@ -30,7 +31,15 @@ export function DashboardSummary({ summary: s }: { summary: Summary }) {
         ))}
       </dl>
       <p className={styles.amountLine}>
-        <span>Valor de pedidos registrados</span>
+        <span className={styles.amountLabel}>
+          <span>Valor de pedidos registrados</span>
+          <DashboardInfo label="Sobre el valor de pedidos registrados">
+            <p>
+              Importe registrado, incluidos pedidos cancelados. No acredita
+              dinero cobrado.
+            </p>
+          </DashboardInfo>
+        </span>
         <strong>{formatMoney(s.receivedOrderValue)}</strong>
       </p>
     </section>
