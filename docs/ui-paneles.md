@@ -570,7 +570,7 @@ Se conservan las mejoras de jerarquía y de lectura (observaciones destacadas, h
 chip, «Cliente avisado», cantidades). Implementación: `*.classic.module.css` (copias de los CSS
 anteriores al merge de #117) y la prop `variant` en `KanbanBoard`, `OrderCard`, `CallsBoard`,
 `OrderDetail`, `Header` y `BottomNav`. Historial, Disponibilidad y Perfil siguen con el estilo nuevo.
-Los cuatro hex sueltos de Pedidos y Llamadas son esa excepción; no se mezclan con los tokens.
+Los hex de esos CSS clásicos (unos 150, en `*.classic.module.css`) son esa excepción y no pasan por los tokens; por eso el conteo de hex del repo sube de 5 a 173 con este cambio.
 
 Compartidos y **sin** variante clásica (decisión propia): los diálogos y franjas de estado
 (`RejectOrderDialog`, `CalledOrderActions`, `OrderActionAlert`, `BoardFeedback`). Si el dueño quiere
