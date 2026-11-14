@@ -2,17 +2,13 @@
   position: relative;
   z-index: 30;
 
-  width: min(
-    790px,
-    calc(100% - 40px)
-  );
+  width: min(790px, calc(100% - 40px));
 
   min-height: 76px;
 
   display: grid;
 
-  grid-template-columns:
-    repeat(5, 1fr);
+  grid-template-columns: repeat(5, 1fr);
 
   gap: 5px;
 
@@ -22,33 +18,14 @@
 
   border-radius: 30px;
 
-  background:
-    rgba(
-      255,
-      255,
-      255,
-      0.97
-    );
+  background: rgba(255, 255, 255, 0.97);
 
   box-shadow:
-    0 13px 35px
-      rgba(
-        3,
-        39,
-        87,
-        0.2
-      ),
-    0 2px 5px
-      rgba(
-        3,
-        39,
-        87,
-        0.08
-      );
+    0 13px 35px rgba(3, 39, 87, 0.2),
+    0 2px 5px rgba(3, 39, 87, 0.08);
 
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-
 }
 
 /* =========================================================
@@ -98,14 +75,7 @@
 }
 
 .item:focus-visible {
-  outline:
-    3px solid
-    rgba(
-      8,
-      104,
-      233,
-      0.28
-    );
+  outline: 3px solid rgba(8, 104, 233, 0.28);
 
   outline-offset: 2px;
 }
@@ -133,28 +103,18 @@
 
   background: #dcebff;
 
-  box-shadow:
-    inset 0 1px 0
-      rgba(
-        255,
-        255,
-        255,
-        0.7
-      );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 /* =========================================================
    ANIMACIÓN
    ========================================================= */
 
-
 /* =========================================================
    REDUCIR MOVIMIENTO
    ========================================================= */
 
-@media (
-  prefers-reduced-motion: reduce
-) {
+@media (prefers-reduced-motion: reduce) {
   .nav,
   .item {
     animation: none;
@@ -173,8 +133,7 @@
 
 @media (max-width: 760px) {
   .nav {
-    width:
-      calc(100% - 24px);
+    width: calc(100% - 24px);
 
     min-height: 68px;
 
