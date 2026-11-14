@@ -1,10 +1,10 @@
 .shell {
   --admin-blue: var(--color-brand);
   --admin-accent: var(--color-brand);
-  --admin-sidebar: var(--color-ink);
-  /* Ola 2: sober solid sidebar, no gradient. */
-  --admin-sidebar-background: var(--color-ink);
-  --admin-sidebar-active: rgba(255, 255, 255, 0.06);
+  /* D4: white sidebar; the active item is brand-tint with brand-blue text and icon. */
+  --admin-sidebar: var(--color-surface);
+  --admin-sidebar-background: var(--color-surface);
+  --admin-sidebar-active: var(--color-brand-tint);
   --admin-canvas: var(--color-bg);
   --admin-surface: var(--color-surface);
   --admin-line: var(--color-line);
@@ -54,8 +54,7 @@
 .sidebar {
   width: 272px;
   flex: 0 0 272px;
-  border-right: 1px solid
-    color-mix(in srgb, var(--color-surface) 6%, transparent);
+  border-right: 1px solid var(--color-line);
   background: var(--admin-sidebar-background);
   background-color: var(--admin-sidebar);
   overflow-y: auto;
@@ -88,13 +87,13 @@
   font-weight: 750;
   letter-spacing: -0.8px;
   line-height: 1.2;
-  color: var(--color-surface);
+  color: var(--color-brand-navy);
 }
 .brand small {
   display: block;
   margin-top: 4px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.94);
+  color: var(--color-slate);
 }
 .sidebarContent nav {
   display: grid;
@@ -109,18 +108,18 @@
   padding: 12px 16px;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  color: var(--color-surface);
+  color: var(--color-ink);
   text-decoration: none;
   font-weight: 550;
 }
 .sidebarContent nav a:hover {
-  color: var(--color-surface);
-  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-brand-hover);
+  background: var(--color-bg);
 }
 .sidebarContent nav a[aria-current="page"] {
-  color: var(--color-surface);
+  color: var(--color-brand);
   background: var(--admin-sidebar-active);
-  border-color: rgba(255, 255, 255, 0.24);
+  border-color: var(--color-brand-tint-2);
   font-weight: 650;
 }
 .sidebarContent nav a[aria-current="page"]::before {
@@ -130,7 +129,7 @@
   width: 3px;
   height: 20px;
   border-radius: 0 3px 3px 0;
-  background: var(--color-surface);
+  background: var(--color-brand);
 }
 .sidebarContent nav a:focus-visible,
 .closeMenu:focus-visible {
@@ -140,8 +139,7 @@
 .secondaryNav {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid
-    color-mix(in srgb, var(--color-surface) 19%, transparent);
+  border-top: 1px solid var(--color-line);
 }
 .workspace {
   flex: 1;
@@ -427,7 +425,7 @@
   padding: 0;
   background: var(--admin-sidebar-background);
   background-color: var(--admin-sidebar);
-  color: var(--color-surface);
+  color: var(--color-ink);
 }
 .drawer::backdrop {
   background: color-mix(in srgb, var(--color-ink) 33%, transparent);
@@ -437,13 +435,13 @@
   position: absolute;
   right: 14px;
   top: 16px;
-  color: var(--color-surface);
-  background: color-mix(in srgb, var(--color-surface) 3%, transparent);
-  border-color: color-mix(in srgb, var(--color-surface) 19%, transparent);
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border-color: var(--color-line);
 }
 .closeMenu:hover {
-  background: var(--admin-sidebar-active);
-  color: var(--color-surface);
+  background: var(--color-bg);
+  color: var(--color-brand-hover);
 }
 .drawer .brand {
   padding-right: 0;

@@ -960,3 +960,94 @@
 .message {
   margin: 16px 0;
 }
+
+/* ---- Ola 2 · D4: simple and useful. Three large counts, one chart, cards, collapsed detail. ---- */
+.headline {
+  display: grid;
+  gap: 14px;
+}
+
+.bigGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+
+.bigMetric {
+  display: grid;
+  gap: 6px;
+  padding: 22px 22px 20px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.bigMetric dt {
+  color: var(--color-slate);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.bigMetric dd {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: clamp(36px, 4vw, 52px);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.amountLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0;
+  padding: 16px 22px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-slate);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.amountLine strong {
+  color: var(--color-ink);
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.cardsRow {
+  display: grid;
+  gap: 14px;
+}
+
+.moreDetail {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  padding: 4px 22px;
+}
+
+.moreDetail > summary {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  color: var(--color-brand);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.moreDetail[open] > summary {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 760px) {
+  .bigGrid {
+    grid-template-columns: 1fr;
+  }
+}

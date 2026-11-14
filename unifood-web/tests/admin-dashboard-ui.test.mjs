@@ -55,26 +55,34 @@ test("custom validation uses the backend reference date across Bogota midnight",
   assert.match(p.customPeriodError("2024-01-01", "2025-01-01", null), /366/);
   assert.equal(p.customPeriodError("2024-01-01", "2024-12-31", null), null);
 });
-test("summary renders accurate labels, backend rate and nominal money without financial claims", () => {
-  const html = render("DashboardSummary", {
+test("summary shows three large counts and the registered amount; detail holds the rate (ola 2 · D4)", () => {
+  const summary = render("DashboardSummary", {
     summary: adminDashboardFixture().summary,
   });
   for (const text of [
     "Pedidos recibidos",
     "Pedidos entregados",
     "Pedidos no recogidos",
-    "Unidades no recogidas",
     "Valor de pedidos registrados",
-    "Tasa de no recogida",
-    "50 %",
     "$30",
   ])
-    assert.ok(html.includes(text), text);
-  assert.equal((html.match(/class="metric"/g) ?? []).length, 5);
-  assert.match(html, /class="monetarySummary"/);
-  assert.doesNotMatch(html, /Valor asociado a no recogidos/);
-  assert.doesNotMatch(html, />Ingresos|>Ventas|>Pérdidas/);
+    assert.ok(summary.includes(text), text);
+  assert.equal((summary.match(/class="bigMetric"/g) ?? []).length, 3);
+  assert.doesNotMatch(summary, /Tasa de no recogida|Unidades no recogidas/);
+  const detail = renderDetail(adminDashboardFixture());
+  for (const text of [
+    "Ver más detalle",
+    "Unidades no recogidas",
+    "Tasa de no recogida",
+    "50 %",
+  ])
+    assert.ok(detail.includes(text), text);
+  assert.doesNotMatch(
+    summary + detail,
+    />Ingresos|>Ventas|>Pérdidas|Valor asociado a no recogidos/,
+  );
 });
+
 test("trend has a zero-based proportional scale and exact accessible data for huge counts", () => {
   const data = adminDashboardFixture();
   data.trend[0].receivedOrders = "9".repeat(90);
@@ -208,12 +216,12 @@ test("pending history never claims missing orders or invalid dates; detected ano
   assert.match(invalid, /<details open/);
   assert.match(invalid, /fecha de cierre no válida/);
 });
-test("five KPIs and one secondary amount preserve null rate and place uncollected money only in its section", () => {
+test("headline keeps null-safe counts; the null rate lives in the collapsed detail", () => {
   const data = adminDashboardFixture({ empty: true });
   const summary = render("DashboardSummary", { summary: data.summary });
-  assert.match(summary, /Sin base de cálculo/);
-  assert.doesNotMatch(summary, /0 %/);
-  assert.equal((summary.match(/<dd\b/g) ?? []).length, 6);
+  assert.equal((summary.match(/<dd/g) ?? []).length, 3);
+  assert.doesNotMatch(summary, /0 %/);
+  assert.match(renderDetail(data), /Sin base de cálculo/);
   const section = render("NotCollectedProducts", {
     ranking: data.notCollectedProducts,
     summary: data.summary,
@@ -226,6 +234,24 @@ test("five KPIs and one secondary amount preserve null rate and place uncollecte
   );
   assert.match(section, /Total del período/);
 });
+function renderDetail(data) {
+  const load = availabilityLoader({
+    mocks: {
+      "next/image": ({ src, alt, className }) =>
+        React.createElement("img", { src, alt, className }),
+    },
+  });
+  const { DashboardDetail } = load(
+    "features/admin-dashboard/components/DashboardDetail.tsx",
+  );
+  return renderToStaticMarkup(
+    React.createElement(DashboardDetail, {
+      summary: data.summary,
+      ranking: data.notCollectedProducts,
+    }),
+  );
+}
+
 function dashboard(state) {
   const loadedDashboard = availabilityLoader({
     mocks: {
