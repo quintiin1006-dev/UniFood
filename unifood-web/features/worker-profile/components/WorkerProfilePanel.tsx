@@ -1,8 +1,10 @@
 "use client";
-import { CircleAlert, Mail, UserRound } from "lucide-react";
+import { Mail, UserRound } from "lucide-react";
 import { useWorkerProfile } from "../useWorkerProfile";
 import { inactiveCafeteriaMessage, workerRoleLabel } from "../presentation";
 import styles from "./WorkerProfile.module.css";
+import { Notice } from "@/components/ui/Notice";
+import { Button, buttonClass } from "@/components/ui/Button";
 
 export function WorkerProfilePanel() {
   const { data, loading, error, retry } = useWorkerProfile();
@@ -19,19 +21,25 @@ export function WorkerProfilePanel() {
         </div>
       )}
       {error && (
-        <div className={styles.error} role="alert">
-          <CircleAlert size={21} aria-hidden="true" />
-          <p>{error.message}</p>
-          {error.status === 401 ? (
-            <a href="/panel/login">Iniciar sesión</a>
-          ) : (
-            error.status !== 403 && (
-              <button type="button" onClick={() => void retry()}>
-                Reintentar
-              </button>
+        <Notice
+          tone="error"
+          className={styles.message}
+          action={
+            error.status === 401 ? (
+              <a className={buttonClass("secondary")} href="/panel/login">
+                Iniciar sesión
+              </a>
+            ) : (
+              error.status !== 403 && (
+                <Button variant="secondary" onClick={() => void retry()}>
+                  Reintentar
+                </Button>
+              )
             )
-          )}
-        </div>
+          }
+        >
+          {error.message}
+        </Notice>
       )}
       {data && (
         <article className={styles.card} aria-label="Datos de tu perfil">
@@ -70,10 +78,9 @@ export function WorkerProfilePanel() {
               </div>
             </dl>
             {!data.cafeteria.active && (
-              <p className={styles.notice} role="status">
-                <CircleAlert size={18} aria-hidden="true" />
+              <Notice tone="info" className={styles.message}>
                 {inactiveCafeteriaMessage}
-              </p>
+              </Notice>
             )}
           </div>
         </article>

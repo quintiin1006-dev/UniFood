@@ -72,39 +72,14 @@
 }
 
 .banner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  /* Colors come from the shared Notice; only placement and size on the scaled board. */
   margin: 0 16px 12px;
-  padding: 12px 16px;
-  border-radius: 16px;
-  background: var(--color-brand-tint);
-  color: var(--color-brand-hover);
-  font-size: 20px;
+  font-size: calc(18px / var(--worker-zoom, 1));
   font-weight: 600;
-}
-
-.banner p {
-  flex: 1;
-  margin: 0;
-  line-height: 1.4;
-}
-
-.banner button {
-  min-height: 60px;
-  padding: 0 22px;
-  border: 1px solid var(--color-brand-hover);
-  border-radius: 12px;
-  background: var(--color-surface);
-  color: var(--color-brand-hover);
-  font-size: 19px;
-  font-weight: 600;
-  cursor: pointer;
 }
 
 .primary:focus-visible,
-.secondary:focus-visible,
-.banner button:focus-visible {
+.secondary:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-brand);
   outline-offset: var(--focus-ring-offset);
 }

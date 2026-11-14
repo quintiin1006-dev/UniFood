@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
-import { PackageSearch, CircleAlert } from "lucide-react";
+import { PackageSearch } from "lucide-react";
 import { useAdminCatalog } from "../useAdminCatalog";
 import { filterCatalog } from "../presentation";
 import type { CatalogFilters, CatalogMutation } from "../types";
@@ -13,6 +13,8 @@ import { AdminCatalogToolbar } from "./AdminCatalogToolbar";
 import { AdminProductCard } from "./AdminProductCard";
 import shell from "@/features/admin/components/Admin.module.css";
 import styles from "./AdminCatalog.module.css";
+import { Notice } from "@/components/ui/Notice";
+import { Button, buttonClass } from "@/components/ui/Button";
 
 export function AdminCatalog() {
   const {
@@ -122,9 +124,9 @@ export function AdminCatalog() {
         Administra los productos que ofrece tu cafetería.
       </p>
       {success && (
-        <p role="status" className={styles.success}>
+        <Notice tone="success" className={styles.message}>
           {success}
-        </p>
+        </Notice>
       )}
       {loading && !data && (
         <div className={styles.feedback} role="status">
@@ -132,19 +134,25 @@ export function AdminCatalog() {
         </div>
       )}
       {error && (
-        <div className={styles.feedback} role="alert">
-          <CircleAlert size={24} aria-hidden="true" />
-          <p>{error.message}</p>
-          {error.status === 401 ? (
-            <a href="/panel/login">Iniciar sesión</a>
-          ) : (
-            error.status !== 403 && (
-              <button type="button" onClick={() => void retry()}>
-                Reintentar
-              </button>
+        <Notice
+          tone="error"
+          className={styles.message}
+          action={
+            error.status === 401 ? (
+              <a className={buttonClass("secondary")} href="/panel/login">
+                Iniciar sesión
+              </a>
+            ) : (
+              error.status !== 403 && (
+                <Button variant="secondary" onClick={() => void retry()}>
+                  Reintentar
+                </Button>
+              )
             )
-          )}
-        </div>
+          }
+        >
+          {error.message}
+        </Notice>
       )}
       {data && (
         <>

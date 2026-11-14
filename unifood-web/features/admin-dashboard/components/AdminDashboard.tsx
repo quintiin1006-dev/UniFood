@@ -1,5 +1,5 @@
 "use client";
-import { RefreshCw, CircleAlert } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useAdminDashboard } from "../useAdminDashboard";
 import { updatedAtLabel } from "../presentation";
 import { DashboardPeriodLabel } from "./DashboardPeriodLabel";
@@ -12,6 +12,8 @@ import { DashboardCoverage } from "./DashboardCoverage";
 import { DashboardLoading } from "./DashboardLoading";
 import shell from "@/features/admin/components/Admin.module.css";
 import styles from "./AdminDashboard.module.css";
+import { Notice } from "@/components/ui/Notice";
+import { Button, buttonClass } from "@/components/ui/Button";
 
 export function AdminDashboard() {
   const {
@@ -56,10 +58,9 @@ export function AdminDashboard() {
         </div>
       </div>
       {refreshError && (
-        <p className={styles.refreshError} role="status">
-          <CircleAlert size={16} aria-hidden="true" />
+        <Notice tone="info" className={styles.message}>
           {refreshError}
-        </p>
+        </Notice>
       )}
       <div className={styles.filterBar}>
         <DashboardPeriodFilter
@@ -73,26 +74,26 @@ export function AdminDashboard() {
       </div>
       {loading && !data && <DashboardLoading />}
       {error && (
-        <div className={styles.error} role="alert">
-          <CircleAlert size={23} aria-hidden="true" />
-          <div>
-            <strong>No pudimos mostrar el dashboard</strong>
-            <p>{error.message}</p>
-            {error.status === 401 ? (
-              <a href="/panel/login">Iniciar sesión</a>
+        <Notice
+          tone="error"
+          title="No pudimos mostrar el dashboard"
+          className={styles.message}
+          action={
+            error.status === 401 ? (
+              <a className={buttonClass("secondary")} href="/panel/login">
+                Iniciar sesión
+              </a>
             ) : (
               error.status !== 403 && (
-                <button
-                  type="button"
-                  className={styles.primary}
-                  onClick={() => void load()}
-                >
+                <Button variant="secondary" onClick={() => void load()}>
                   Reintentar
-                </button>
+                </Button>
               )
-            )}
-          </div>
-        </div>
+            )
+          }
+        >
+          {error.message}
+        </Notice>
       )}
       {data && (
         <div className={styles.results}>

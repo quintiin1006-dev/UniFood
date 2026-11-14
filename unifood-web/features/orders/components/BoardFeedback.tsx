@@ -5,6 +5,9 @@ import { CircleAlert, RefreshCw, SearchX } from "lucide-react";
 import type { ListingErrorView } from "../listingStatus";
 import { STALE_LISTING_MESSAGE } from "../listingStatus";
 
+import { Button } from "@/components/ui/Button";
+import { Notice } from "@/components/ui/Notice";
+
 import styles from "./BoardFeedback.module.css";
 
 /**
@@ -59,7 +62,7 @@ export function BoardError({
   );
 }
 
-/** Over a board that keeps showing the last orders it could read. */
+/** Over a board that keeps showing the last orders it could read (shared Notice, ola 2). */
 export function StaleListingBanner({
   retrying,
   onRetry,
@@ -68,18 +71,22 @@ export function StaleListingBanner({
   onRetry: () => void;
 }) {
   return (
-    <div className={styles.banner} role="status">
-      <CircleAlert size={20} aria-hidden="true" />
-      <p>{STALE_LISTING_MESSAGE}</p>
-      <button
-        type="button"
-        onClick={onRetry}
-        disabled={retrying}
-        aria-busy={retrying || undefined}
-      >
-        {retrying ? "Reintentando…" : "Reintentar"}
-      </button>
-    </div>
+    <Notice
+      tone="info"
+      className={styles.banner}
+      action={
+        <Button
+          variant="secondary"
+          onClick={onRetry}
+          disabled={retrying}
+          aria-busy={retrying || undefined}
+        >
+          {retrying ? "Reintentando…" : "Reintentar"}
+        </Button>
+      }
+    >
+      {STALE_LISTING_MESSAGE}
+    </Notice>
   );
 }
 
