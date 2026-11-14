@@ -171,7 +171,8 @@
   border: 1px solid var(--color-brand-tint-2);
   border-radius: 18px;
   padding: 21px;
-  box-shadow: 0 3px 12px color-mix(in srgb, var(--color-brand-hover) 2%, transparent);
+  box-shadow: 0 3px 12px
+    color-mix(in srgb, var(--color-brand-hover) 2%, transparent);
 }
 .cardHeading {
   display: flex;

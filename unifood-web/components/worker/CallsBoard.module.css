@@ -16,7 +16,6 @@
   color: var(--color-surface);
 }
 
-
 /* =========================================================
    LAYOUT
    ========================================================= */
@@ -35,7 +34,6 @@
   gap: 22px;
 }
 
-
 /* =========================================================
    PANEL DE LLAMADAS
    ========================================================= */
@@ -49,7 +47,6 @@
   border-radius: var(--radius-lg);
   background: var(--color-surface);
 }
-
 
 /* =========================================================
    HEADER DE LLAMADAS
@@ -103,7 +100,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-
 /* =========================================================
    LISTA
    ========================================================= */
@@ -139,10 +135,8 @@
 .productsScroll::-webkit-scrollbar-thumb {
   border-radius: 999px;
 
-  background:
-    rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.25);
 }
-
 
 /* =========================================================
    ESTADO VACÍO
@@ -153,7 +147,6 @@
 
   min-height: 100px;
 }
-
 
 /* =========================================================
    TARJETAS
@@ -178,9 +171,7 @@
 }
 
 .orderRow:hover {
-  box-shadow:
-    0 7px 18px
-      rgba(0, 35, 85, 0.12);
+  box-shadow: 0 7px 18px rgba(0, 35, 85, 0.12);
 }
 
 .orderRow.selected {
@@ -188,10 +179,8 @@
 
   box-shadow:
     inset 3px 0 0 var(--color-brand),
-    0 7px 20px
-      rgba(0, 65, 140, 0.13);
+    0 7px 20px rgba(0, 65, 140, 0.13);
 }
-
 
 /* =========================================================
    ESTUDIANTE
@@ -237,12 +226,11 @@
   font-size: calc(13px / var(--worker-zoom, 1));
   font-weight: 600;
 
-  background:
-    linear-gradient(
-      145deg,
-      var(--color-brand-tint),
-      var(--color-brand-tint)
-    );
+  background: linear-gradient(
+    145deg,
+    var(--color-brand-tint),
+    var(--color-brand-tint)
+  );
 }
 
 .studentInfo {
@@ -278,7 +266,6 @@
   line-height: 1.3;
 }
 
-
 /* =========================================================
    AVISAR
    ========================================================= */
@@ -292,9 +279,7 @@
 
   border-radius: 11px;
 
-  border:
-    1px solid
-    var(--color-brand-tint-2);
+  border: 1px solid var(--color-brand-tint-2);
 
   background: var(--color-surface);
 
@@ -306,7 +291,6 @@
 .remindButton:hover {
   background: var(--color-brand-tint);
 }
-
 
 /* =========================================================
    VER PEDIDO
@@ -327,12 +311,7 @@
 
   border-radius: 11px;
 
-  background:
-    linear-gradient(
-      135deg,
-      var(--color-brand),
-      var(--color-brand)
-    );
+  background: linear-gradient(135deg, var(--color-brand), var(--color-brand));
 
   color: var(--color-surface);
 
@@ -341,9 +320,7 @@
 
   cursor: pointer;
 
-  box-shadow:
-    0 6px 14px
-      rgba(0, 103, 225, 0.18);
+  box-shadow: 0 6px 14px rgba(0, 103, 225, 0.18);
 }
 
 .viewButton:active,
@@ -366,7 +343,6 @@
   font-size: calc(15px / var(--worker-zoom, 1));
 }
 
-
 /* =========================================================
    PANEL DE DETALLE
    ========================================================= */
@@ -380,9 +356,7 @@
 
   overflow: hidden;
 
-  border:
-    1px solid
-    var(--color-brand-tint-2);
+  border: 1px solid var(--color-brand-tint-2);
 
   border-radius: 23px;
 
@@ -395,9 +369,7 @@
    */
   color: var(--color-ink);
 
-  box-shadow:
-    0 12px 32px
-    rgba(0, 35, 85, 0.14);
+  box-shadow: 0 12px 32px rgba(0, 35, 85, 0.14);
 }
 
 .detail {
@@ -408,7 +380,6 @@
   display: flex;
   flex-direction: column;
 }
-
 
 /* =========================================================
    HEADER DEL DETALLE
@@ -425,9 +396,7 @@
 
   padding: 20px;
 
-  border-bottom:
-    1px solid
-    var(--color-brand-tint-2);
+  border-bottom: 1px solid var(--color-brand-tint-2);
 }
 
 .detailHeading {
@@ -496,9 +465,7 @@
   display: grid;
   place-items: center;
 
-  border:
-    1px solid
-    var(--color-brand-tint-2);
+  border: 1px solid var(--color-brand-tint-2);
 
   border-radius: 11px;
 
@@ -515,7 +482,6 @@
   color: var(--color-ink);
 }
 
-
 /* =========================================================
    CUERPO DEL DETALLE
    ========================================================= */
@@ -530,13 +496,10 @@
 
   scrollbar-width: thin;
 
-  scrollbar-color:
-    var(--color-brand-tint-2)
-    transparent;
+  scrollbar-color: var(--color-brand-tint-2) transparent;
 
   overscroll-behavior: contain;
 }
-
 
 /* =========================================================
    INFORMACIÓN DEL ESTUDIANTE
@@ -549,10 +512,7 @@
 
   gap: 12px;
 
-  margin:
-    18px
-    20px
-    0;
+  margin: 18px 20px 0;
 
   padding: 15px;
 
@@ -560,9 +520,7 @@
    * Antes azul claro.
    * Ahora superficie neutral.
    */
-  border:
-    1px solid
-    var(--color-brand-tint-2);
+  border: 1px solid var(--color-brand-tint-2);
 
   border-radius: 16px;
 
@@ -632,7 +590,6 @@
   font-weight: 400;
 }
 
-
 /* =========================================================
    BADGE AVISADO
    ========================================================= */
@@ -645,9 +602,7 @@
 
   padding: 6px 9px;
 
-  border:
-    1px solid
-    var(--color-success);
+  border: 1px solid var(--color-success);
 
   border-radius: 999px;
 
@@ -659,15 +614,12 @@
   font-weight: 600;
 }
 
-
 /* =========================================================
    PRODUCTOS
    ========================================================= */
 
 .productsSection {
-  padding:
-    22px
-    20px;
+  padding: 22px 20px;
 }
 
 .productsHeader {
@@ -712,7 +664,6 @@
   gap: 12px;
 }
 
-
 /* =========================================================
    PRODUCTO
    ========================================================= */
@@ -730,19 +681,14 @@
 
   padding: 16px;
 
-  border:
-    1px solid
-    var(--color-brand-tint-2);
+  border: 1px solid var(--color-brand-tint-2);
 
   border-radius: 16px;
 
   background: var(--color-surface);
 
-  box-shadow:
-    0 2px 5px
-    rgba(20, 41, 87, 0.02);
+  box-shadow: 0 2px 5px rgba(20, 41, 87, 0.02);
 }
-
 
 /* =========================================================
    CANTIDAD
@@ -783,7 +729,6 @@
   font-weight: 400;
 }
 
-
 /* =========================================================
    INFORMACIÓN DEL PRODUCTO
    ========================================================= */
@@ -814,7 +759,6 @@
   font-weight: 400;
 }
 
-
 /* =========================================================
    BEBIDA / NOTAS
    ========================================================= */
@@ -839,7 +783,6 @@
   line-height: 1.5;
 }
 
-
 /* Bebida: neutral */
 
 .beverage {
@@ -847,9 +790,7 @@
 
   color: var(--color-slate);
 
-  border:
-    1px solid
-    var(--color-brand-tint-2);
+  border: 1px solid var(--color-brand-tint-2);
 }
 
 .beverage svg,
@@ -878,7 +819,6 @@
   font-weight: 500;
 }
 
-
 /* Indicaciones: amarillo semántico */
 
 .productNote,
@@ -887,9 +827,7 @@
 
   color: var(--color-brand-hover);
 
-  border:
-    1px solid
-    var(--color-brand-tint);
+  border: 1px solid var(--color-brand-tint);
 }
 
 .productNote p,
@@ -915,7 +853,6 @@
   font-weight: 600;
 }
 
-
 /* =========================================================
    PRECIO DEL PRODUCTO
    ========================================================= */
@@ -926,20 +863,15 @@
   align-items: baseline;
   justify-content: space-between;
 
-  gap:
-    5px
-    12px;
+  gap: 5px 12px;
 
   margin-top: 13px;
 
   padding-top: 10px;
 
-  border-top:
-    1px solid
-    var(--color-line);
+  border-top: 1px solid var(--color-line);
 
-  font-variant-numeric:
-    tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 
 .productPrice span {
@@ -965,7 +897,6 @@
   line-height: 1.6;
 }
 
-
 /* =========================================================
    FOOTER
    ========================================================= */
@@ -973,13 +904,9 @@
 .detailFooter {
   flex-shrink: 0;
 
-  padding:
-    18px
-    20px;
+  padding: 18px 20px;
 
-  border-top:
-    1px solid
-    var(--color-brand-tint-2);
+  border-top: 1px solid var(--color-brand-tint-2);
 
   /*
    * Neutralizamos también
@@ -987,7 +914,6 @@
    */
   background: var(--color-brand-tint);
 }
-
 
 /* =========================================================
    TOTAL
@@ -999,9 +925,7 @@
   justify-content: space-between;
   align-items: center;
 
-  gap:
-    8px
-    12px;
+  gap: 8px 12px;
 
   margin-bottom: 16px;
 }
@@ -1032,12 +956,10 @@
 
   letter-spacing: -0.03em;
 
-  font-variant-numeric:
-    tabular-nums;
+  font-variant-numeric: tabular-nums;
 
   overflow-wrap: anywhere;
 }
-
 
 /* =========================================================
    ENTREGAR
@@ -1073,9 +995,7 @@
 
   cursor: pointer;
 
-  box-shadow:
-    0 4px 12px
-    rgba(8, 107, 227, 0.15);
+  box-shadow: 0 4px 12px rgba(8, 107, 227, 0.15);
 }
 
 .deliverButton:hover:not(:disabled) {
@@ -1089,7 +1009,6 @@
 
   box-shadow: none;
 }
-
 
 /* =========================================================
    SIN SELECCIÓN
@@ -1110,12 +1029,11 @@
   /*
    * Fondo mucho más neutral.
    */
-  background:
-    linear-gradient(
-      160deg,
-      var(--color-surface),
-      var(--color-brand-tint)
-    );
+  background: linear-gradient(
+    160deg,
+    var(--color-surface),
+    var(--color-brand-tint)
+  );
 }
 
 .detailIcon {
@@ -1124,18 +1042,13 @@
 
   margin-bottom: 20px;
 
-  border:
-    1px solid
-    var(--color-brand-tint-2);
+  border: 1px solid var(--color-brand-tint-2);
 
   border-radius: 22px;
 }
 
 .noSelection h2 {
-  margin:
-    0
-    0
-    10px;
+  margin: 0 0 10px;
 
   color: var(--color-ink);
 
@@ -1156,7 +1069,6 @@
   line-height: 1.7;
 }
 
-
 /* =========================================================
    ACCESIBILIDAD
    ========================================================= */
@@ -1166,7 +1078,6 @@
 
   outline-offset: var(--focus-ring-offset);
 }
-
 
 /* =========================================================
    RESPONSIVE — 1100px
@@ -1182,7 +1093,6 @@
   }
 }
 
-
 /* =========================================================
    RESPONSIVE — 900px
    ========================================================= */
@@ -1191,8 +1101,7 @@
   .content {
     height: auto;
 
-    grid-template-columns:
-      minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .listPanel {
@@ -1211,7 +1120,6 @@
     max-height: 560px;
   }
 }
-
 
 /* =========================================================
    RESPONSIVE — 600px
@@ -1271,16 +1179,11 @@
   }
 
   .studentDetail {
-    margin:
-      16px
-      14px
-      0;
+    margin: 16px 14px 0;
   }
 
   .productsSection {
-    padding:
-      20px
-      14px;
+    padding: 20px 14px;
   }
 
   .product {
