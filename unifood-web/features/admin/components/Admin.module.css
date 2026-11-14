@@ -54,7 +54,8 @@
 .sidebar {
   width: 272px;
   flex: 0 0 272px;
-  border-right: 1px solid color-mix(in srgb, var(--color-surface) 6%, transparent);
+  border-right: 1px solid
+    color-mix(in srgb, var(--color-surface) 6%, transparent);
   background: var(--admin-sidebar-background);
   background-color: var(--admin-sidebar);
   overflow-y: auto;
@@ -139,7 +140,8 @@
 .secondaryNav {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid color-mix(in srgb, var(--color-surface) 19%, transparent);
+  border-top: 1px solid
+    color-mix(in srgb, var(--color-surface) 19%, transparent);
 }
 .workspace {
   flex: 1;
