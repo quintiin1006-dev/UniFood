@@ -1,10 +1,10 @@
 // Fixed Spanish messages for the board's transitions and the rejection (docs/ui-paneles.md, W4).
 // Chosen by the code of Spring's ApiErrorResponse; Spring's text never reaches the worker,
 // as the reminders already do in calledOrderActions.ts.
+import { ORDER_STATE_CHANGED, SESSION_EXPIRED } from "@/lib/messages";
 import { MAX_REJECTION_REASON } from "./rejectionReason";
 
-export const ORDER_STATE_CHANGED =
-  "El pedido ya cambió de estado. Revisa el tablero actualizado.";
+export { ORDER_STATE_CHANGED };
 
 /** FIFO of the day (docs/decisiones.md §6): only the oldest PENDING of today can be prepared. */
 export const ORDER_SEQUENCE_MESSAGE =
@@ -14,7 +14,7 @@ export const isSequenceViolation = (code: unknown) =>
   code === "ORDER_PROCESSING_SEQUENCE_VIOLATION";
 
 function common(status: number): string | null {
-  if (status === 401) return "Tu sesión expiró. Inicia sesión de nuevo.";
+  if (status === 401) return SESSION_EXPIRED;
   if (status === 403) return "No tienes permisos para gestionar este pedido.";
   if (status === 0 || status >= 500)
     return "No pudimos guardar el cambio. Revisa la conexión e inténtalo de nuevo.";

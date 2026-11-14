@@ -1,3 +1,4 @@
+import { SESSION_CHECK_UNAVAILABLE } from "@/lib/messages";
 export const DASHBOARD_MESSAGES = {
   ADMIN_DASHBOARD_INVALID_REQUEST: "Revisa los filtros del período.",
   UNAUTHORIZED:
@@ -9,8 +10,7 @@ export const DASHBOARD_MESSAGES = {
     "No pudimos obtener una respuesta válida del dashboard. Inténtalo nuevamente.",
   ADMIN_DASHBOARD_TEMPORARILY_UNAVAILABLE:
     "No pudimos cargar el dashboard. Inténtalo nuevamente.",
-  AUTH_TEMPORARILY_UNAVAILABLE:
-    "No pudimos verificar tu sesión en este momento. Inténtalo nuevamente.",
+  AUTH_TEMPORARILY_UNAVAILABLE: SESSION_CHECK_UNAVAILABLE,
 } as const;
 export function dashboardErrorCode(
   status: number,

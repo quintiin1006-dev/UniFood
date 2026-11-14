@@ -1,3 +1,4 @@
+import { SESSION_CHECK_UNAVAILABLE } from "@/lib/messages";
 export const PROFILE_MESSAGES = {
   ADMIN_PROFILE_UNAUTHORIZED:
     "Tu sesión no está disponible. Inicia sesión para consultar tu perfil.",
@@ -8,8 +9,7 @@ export const PROFILE_MESSAGES = {
     "No pudimos cargar tu perfil. Inténtalo nuevamente.",
   ADMIN_PROFILE_BAD_GATEWAY:
     "No pudimos cargar un perfil válido. Inténtalo nuevamente.",
-  AUTH_TEMPORARILY_UNAVAILABLE:
-    "No pudimos verificar tu sesión en este momento. Inténtalo nuevamente.",
+  AUTH_TEMPORARILY_UNAVAILABLE: SESSION_CHECK_UNAVAILABLE,
 } as const;
 export function profileErrorCode(
   status: number,

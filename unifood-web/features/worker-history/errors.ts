@@ -1,3 +1,4 @@
+import { SESSION_CHECK_UNAVAILABLE } from "@/lib/messages";
 export const HISTORY_MESSAGES = {
   WORKER_HISTORY_INVALID_REQUEST:
     "Los filtros o la página ya no son válidos. Actualiza el historial.",
@@ -10,8 +11,7 @@ export const HISTORY_MESSAGES = {
     "No pudimos cargar un historial válido. Inténtalo nuevamente.",
   WORKER_HISTORY_INTERNAL_ERROR:
     "No pudimos cargar el historial en este momento.",
-  AUTH_TEMPORARILY_UNAVAILABLE:
-    "No pudimos verificar tu sesión en este momento. Inténtalo nuevamente.",
+  AUTH_TEMPORARILY_UNAVAILABLE: SESSION_CHECK_UNAVAILABLE,
 } as const;
 export type HistoryErrorCode = keyof typeof HISTORY_MESSAGES;
 export function historyErrorCode(

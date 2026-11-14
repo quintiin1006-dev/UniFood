@@ -1,3 +1,4 @@
+import { ORDER_STATE_CHANGED, SESSION_EXPIRED } from "@/lib/messages";
 import type { Order } from "@/types/order";
 
 /** Same rules as `Order.remindStudent` and `Order.markNotCollected` in Spring, which decides. */
@@ -46,8 +47,7 @@ export function canMarkNotCollected(order: Order): boolean {
   return order.status === "called" && reminderCount(order) >= MAX_REMINDERS;
 }
 
-const STATE_CHANGED =
-  "El pedido ya cambió de estado. Revisa el tablero actualizado.";
+const STATE_CHANGED = ORDER_STATE_CHANGED;
 
 /** Fixed Spanish messages by code; Spring's text never reaches the worker. */
 export function calledOrderActionMessage(
@@ -67,7 +67,7 @@ export function calledOrderActionMessage(
       return STATE_CHANGED;
   }
   if (status === 409) return STATE_CHANGED;
-  if (status === 401) return "Tu sesión expiró. Inicia sesión de nuevo.";
+  if (status === 401) return SESSION_EXPIRED;
   if (status === 403) return "No tienes permisos para gestionar este pedido.";
   return action === "remind"
     ? "No se pudo enviar el aviso. Inténtalo de nuevo."
