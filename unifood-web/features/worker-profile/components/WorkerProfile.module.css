@@ -156,7 +156,11 @@
   height: 270px;
   border-radius: 22px;
   border: 1px solid var(--color-brand-tint-2);
-  background: linear-gradient(135deg, var(--color-surface), var(--color-brand-tint));
+  background: linear-gradient(
+    135deg,
+    var(--color-surface),
+    var(--color-brand-tint)
+  );
 }
 @media (max-width: 600px) {
   .panel {

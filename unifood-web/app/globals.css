@@ -41,7 +41,6 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
-
 /* =========================================================
    CONTENEDOR PRINCIPAL
    ========================================================= */
@@ -79,7 +78,6 @@ button {
   content: none;
 }
 
-
 /* =========================================================
    CONTENIDO PRINCIPAL
    ========================================================= */
@@ -101,8 +99,7 @@ button {
 
   overflow: hidden;
 
-  padding:
-    14px 24px 7px;
+  padding: 14px 24px 7px;
 
   /*
    * Permite controlar correctamente
@@ -110,7 +107,6 @@ button {
    */
   isolation: isolate;
 }
-
 
 /* =========================================================
    LOGO UNIFOOD CENTRAL
@@ -121,7 +117,6 @@ button {
 .worker-main::before {
   content: none;
 }
-
 
 /* =========================================================
    CONTENIDO DEL KANBAN
@@ -137,7 +132,6 @@ button {
   min-width: 0;
 }
 
-
 /* =========================================================
    HEADER
    ========================================================= */
@@ -147,7 +141,6 @@ button {
 
   z-index: 5;
 }
-
 
 /* =========================================================
    NAVEGACIÓN INFERIOR
@@ -159,103 +152,74 @@ button {
   z-index: 5;
 }
 
-
 /* =========================================================
    TABLET / PANTALLAS MEDIANAS
    ========================================================= */
 
 @media (max-width: 1150px) {
-
   .worker-main {
-    padding:
-      12px 16px 7px;
+    padding: 12px 16px 7px;
   }
 
   .worker-main::before {
-    width:
-      360px;
+    width: 360px;
 
-    height:
-      360px;
+    height: 360px;
 
-    opacity:
-      0.09;
+    opacity: 0.09;
   }
 }
-
 
 /* =========================================================
    MÓVIL
    ========================================================= */
 
 @media (max-width: 760px) {
-
   body {
-    overflow-y:
-      auto;
+    overflow-y: auto;
   }
-
 
   .worker-page {
-    height:
-      auto;
+    height: auto;
 
-    min-height:
-      100vh;
+    min-height: 100vh;
 
-    overflow-y:
-      auto;
+    overflow-y: auto;
 
-    overflow-x:
-      hidden;
+    overflow-x: hidden;
   }
-
 
   .worker-main {
-    flex:
-      none;
+    flex: none;
 
-    min-height:
-      calc(100vh - 140px);
+    min-height: calc(100vh - 140px);
 
-    overflow:
-      visible;
+    overflow: visible;
 
-    padding:
-      10px 10px 6px;
+    padding: 10px 10px 6px;
   }
-
 
   .worker-main::before {
-    width:
-      280px;
+    width: 280px;
 
-    height:
-      280px;
+    height: 280px;
 
-    top:
-      50%;
+    top: 50%;
 
-    opacity:
-      0.08;
+    opacity: 0.08;
   }
 }
-
 
 /* =========================================================
    REDUCIR ANIMACIONES
    ========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
-
   * {
-    scroll-behavior:
-      auto !important;
+    scroll-behavior: auto !important;
 
-    animation-duration:
-      0.01ms !important;
+    animation-duration: 0.01ms !important;
 
-    animation-iteration-count:
-      1 !important;
+    animation-iteration-count: 1 !important;
   }
 }
