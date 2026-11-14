@@ -8,6 +8,7 @@ import {
   runCalledOrderAction,
 } from "@/features/orders/api/orderApi";
 import type { CalledOrderAction } from "@/features/orders/calledOrderActions";
+import { isSequenceViolation } from "@/features/orders/orderActionMessages";
 import {
   listingErrorView,
   listingFailure,
@@ -213,15 +214,14 @@ export function useOrders(enabled = true) {
         );
         return updated;
       } catch (cause) {
-        const apiError = cause as Error & { status?: number };
+        const apiError = cause as Error & { code?: unknown };
         const message =
           cause instanceof Error
             ? cause.message
             : "No se pudo actualizar el pedido.";
+        // W4: by code, never by matching Spring's text.
         setIsPriorityError(
-          current.status === "pending" &&
-            apiError.status === 409 &&
-            /pedido anterior/i.test(message),
+          current.status === "pending" && isSequenceViolation(apiError.code),
         );
         setActionError(message);
         return null;
