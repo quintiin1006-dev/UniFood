@@ -220,9 +220,7 @@
 
   box-shadow: 0 4px 12px rgba(0, 35, 85, 0.08);
 
-  transition:
-    transform 150ms ease,
-    box-shadow 150ms ease;
+  transition: box-shadow var(--motion-fast, 120ms) var(--ease-out, ease-out);
 }
 
 .orderRow:last-child {
@@ -230,8 +228,6 @@
 }
 
 .orderRow:hover {
-  transform: translateY(-1px);
-
   box-shadow: 0 7px 18px rgba(0, 35, 85, 0.12);
 }
 
@@ -379,8 +375,20 @@
   box-shadow: 0 6px 14px rgba(0, 103, 225, 0.18);
 }
 
-.viewButton:hover {
-  transform: translateY(-1px);
+.viewButton:active,
+.deliverButton:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orderRow {
+    transition: none;
+  }
+
+  .viewButton:active,
+  .deliverButton:active:not(:disabled) {
+    transform: none;
+  }
 }
 
 .viewButton span:last-child {

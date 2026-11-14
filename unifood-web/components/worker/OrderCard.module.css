@@ -18,16 +18,13 @@
     0 5px 16px rgba(5, 52, 115, 0.12),
     0 1px 2px rgba(5, 52, 115, 0.06);
 
-  animation: cardIn 450ms cubic-bezier(0.22, 1, 0.36, 1) both;
-
-  transition:
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 220ms ease;
+  /* W9: no entrance on mount. Opening the module or a polling refresh never moves a card;
+     only an order that just changed column plays .arrived. */
+  transition: box-shadow var(--motion-fast, 120ms) var(--ease-out, ease-out);
 }
 
+/* Hover only deepens the shadow: no lift on a touch-first board. */
 .card:hover {
-  transform: translateY(-2px);
-
   box-shadow:
     0 10px 25px rgba(5, 52, 115, 0.15),
     0 2px 4px rgba(5, 52, 115, 0.07);
@@ -156,12 +153,6 @@
   flex-shrink: 0;
 
   color: #0759ba;
-
-  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.mainInfo:hover .arrow {
-  transform: translateX(3px);
 }
 
 /* =========================================================
@@ -217,7 +208,7 @@
 
   line-height: 1.2;
 
-  animation: calledAppear 250ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: calledAppear var(--motion-base, 180ms) var(--ease-out, ease-out);
 }
 
 .calledDot {
@@ -264,16 +255,13 @@
   cursor: pointer;
 
   transition:
-    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    background 180ms ease,
-    box-shadow 180ms ease;
+    transform var(--motion-fast, 120ms) var(--ease-out, ease-out),
+    background var(--motion-fast, 120ms) var(--ease-out, ease-out);
 
   -webkit-tap-highlight-color: transparent;
 }
 
 .actionButton:hover:not(:disabled) {
-  transform: scale(1.015);
-
   background: linear-gradient(135deg, #cee4ff, #bcd9ff);
 
   box-shadow: 0 5px 13px rgba(17, 103, 225, 0.13);
@@ -317,31 +305,27 @@
    ANIMACIONES
    ========================================================= */
 
+/* W9 (Emil: 180 ms, ease-out, no scale): the order just arrived in this column. */
 @keyframes cardIn {
   from {
     opacity: 0;
-
-    transform: translateY(10px) scale(0.98);
+    transform: translateY(8px);
   }
+}
 
-  to {
-    opacity: 1;
-
-    transform: translateY(0) scale(1);
+@keyframes cardFade {
+  from {
+    opacity: 0;
   }
+}
+
+.arrived {
+  animation: cardIn var(--motion-base, 180ms) var(--ease-out, ease-out) both;
 }
 
 @keyframes calledAppear {
   from {
     opacity: 0;
-
-    transform: translateY(-3px) scale(0.98);
-  }
-
-  to {
-    opacity: 1;
-
-    transform: translateY(0) scale(1);
   }
 }
 
@@ -379,13 +363,22 @@
    REDUCCIÓN DE MOVIMIENTO
    ========================================================= */
 
+/* Reduced motion: no movement. The arrival keeps a short fade so the change is still
+   noticed, and the aria-live announcement says it in words (W8). */
 @media (prefers-reduced-motion: reduce) {
   .card,
   .actionButton,
-  .arrow,
   .calledStatus {
     animation: none;
     transition: none;
+  }
+
+  .actionButton:active:not(:disabled) {
+    transform: none;
+  }
+
+  .arrived {
+    animation: cardFade var(--motion-fast, 120ms) linear both;
   }
 }
 

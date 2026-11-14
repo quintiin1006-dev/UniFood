@@ -15,10 +15,9 @@
 
   background: rgba(5, 29, 65, 0.42);
 
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-
-  animation: overlayIn 220ms ease both;
+  /* D4: no backdrop blur; a plain dim is cheaper on kitchen tablets. */
+  animation: overlayIn var(--motion-dialog, 220ms) var(--ease-out, ease-out)
+    both;
 }
 
 /* =====================================================
@@ -47,7 +46,8 @@
     0 30px 80px rgba(3, 31, 70, 0.3),
     0 5px 20px rgba(3, 31, 70, 0.12);
 
-  animation: modalIn 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  /* D4: 200 ms, opacity and scale(0.98 → 1). Closing is instant: the dialog unmounts. */
+  animation: modalIn 200ms var(--ease-out, ease-out) both;
 
   scrollbar-width: thin;
 
@@ -102,9 +102,8 @@
   cursor: pointer;
 
   transition:
-    transform 180ms ease,
-    background-color 180ms ease,
-    color 180ms ease;
+    background-color var(--motion-fast, 120ms) var(--ease-out, ease-out),
+    color var(--motion-fast, 120ms) var(--ease-out, ease-out);
 
   -webkit-tap-highlight-color: transparent;
 }
@@ -113,8 +112,6 @@
   color: #183d78;
 
   background: #e9eef6;
-
-  transform: rotate(4deg) scale(1.05);
 }
 
 .close:focus-visible {
@@ -279,17 +276,14 @@
   line-height: 1.45;
 
   transition:
-    background-color 160ms ease,
-    border-color 160ms ease,
-    transform 160ms ease;
+    background-color var(--motion-fast, 120ms) var(--ease-out, ease-out),
+    border-color var(--motion-fast, 120ms) var(--ease-out, ease-out);
 }
 
 .item:hover {
   background: #f3f6fa;
 
   border-color: #dfe5ed;
-
-  transform: translateY(-1px);
 }
 
 /* =====================================================
@@ -527,15 +521,13 @@
   cursor: pointer;
 
   transition:
-    transform 180ms ease,
-    box-shadow 180ms ease;
+    transform var(--motion-fast, 120ms) var(--ease-out, ease-out),
+    box-shadow var(--motion-fast, 120ms) var(--ease-out, ease-out);
 
   -webkit-tap-highlight-color: transparent;
 }
 
 .action:hover:not(:disabled) {
-  transform: translateY(-1px);
-
   box-shadow: 0 10px 22px rgba(11, 91, 206, 0.26);
 }
 
@@ -580,14 +572,13 @@
 @keyframes modalIn {
   from {
     opacity: 0;
-
-    transform: translateY(15px) scale(0.96);
+    transform: scale(0.98);
   }
+}
 
-  to {
-    opacity: 1;
-
-    transform: translateY(0) scale(1);
+@keyframes modalFade {
+  from {
+    opacity: 0;
   }
 }
 
@@ -640,13 +631,20 @@
    ACCESIBILIDAD
    ===================================================== */
 
+/* Reduced motion: opacity only, no scale and no press movement. */
 @media (prefers-reduced-motion: reduce) {
-  .overlay,
-  .modal,
   .item,
   .close,
   .action {
-    animation: none;
     transition: none;
+  }
+
+  .overlay,
+  .modal {
+    animation: modalFade var(--motion-fast, 120ms) linear both;
+  }
+
+  .action:active:not(:disabled) {
+    transform: none;
   }
 }

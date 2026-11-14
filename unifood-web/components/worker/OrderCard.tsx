@@ -26,6 +26,8 @@ interface OrderCardProps {
   busy?: boolean;
   /** Appeared in the last minute (W11): a static badge, no sound and no motion. */
   isNew?: boolean;
+  /** Just changed column while the board was on screen (W9): plays a 180 ms arrival. */
+  arrived?: boolean;
 }
 
 export default function OrderCard({
@@ -35,6 +37,7 @@ export default function OrderCard({
   onReject,
   busy = false,
   isNew = false,
+  arrived = false,
 }: OrderCardProps) {
   const ActionIcon = ACTION_ICONS[order.status];
 
@@ -48,7 +51,9 @@ export default function OrderCard({
 
   return (
     <article
-      className={`${styles.card} ${isDelivered ? styles.delivered : ""}`}
+      className={`${styles.card} ${isDelivered ? styles.delivered : ""} ${
+        arrived ? styles.arrived : ""
+      }`}
     >
       {/* Información principal del estudiante */}
       <button

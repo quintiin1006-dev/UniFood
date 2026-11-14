@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Clock3,
   ChefHat,
@@ -67,6 +68,34 @@ export default function KanbanBoard({
   onAction,
   onReject,
 }: KanbanBoardProps) {
+  // W9: an order animates only when it changed column while the board was on screen. On mount
+  // (opening the module) there is no previous state, so nothing moves; a polling refresh that
+  // changes nothing keeps the same set. Derived state, updated during render.
+  const statuses = orders.map((order) => `${order.id}:${order.status}`).join();
+  const [seen, setSeen] = useState<{
+    key: string;
+    byId: Record<string, string>;
+  } | null>(null);
+  const [arrived, setArrived] = useState<ReadonlySet<string>>(new Set());
+  if (seen?.key !== statuses) {
+    const byId = Object.fromEntries(
+      orders.map((order) => [order.id, order.status]),
+    );
+    const moved = new Set(
+      seen
+        ? orders
+            .filter(
+              (order) =>
+                seen.byId[order.id] !== undefined &&
+                seen.byId[order.id] !== order.status,
+            )
+            .map((order) => order.id)
+        : [],
+    );
+    setSeen({ key: statuses, byId });
+    setArrived(moved);
+  }
+
   return (
     <section className={styles.board}>
       {columns.map((column) => {
@@ -115,6 +144,7 @@ export default function KanbanBoard({
                     key={order.id}
                     order={order}
                     busy={busyOrderIds.includes(order.id)}
+                    arrived={arrived.has(order.id)}
                     isNew={
                       newOrderIds[order.id] !== undefined &&
                       now - newOrderIds[order.id] < NEW_ORDER_BADGE_MS
