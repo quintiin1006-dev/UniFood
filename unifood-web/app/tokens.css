@@ -10,10 +10,14 @@
   --color-slate: #475266;
 
   /* Brand */
-  --color-brand: #1e4fd8;
-  --color-brand-hover: #1a40ae;
-  --color-brand-tint: #eef3ff;
-  --color-brand-tint-2: #dce6fb;
+  --color-brand: #0b5fff;
+  --color-brand-hover: #0a4fd6;
+  /* Official brand navy: titles and brand marks only, never body text. */
+  --color-brand-navy: #0b2d6b;
+  /* Celeste: accent on navy or as a fill. Not text on white (2.57:1). */
+  --color-brand-celeste: #3ba7ff;
+  --color-brand-tint: #eaf4ff;
+  --color-brand-tint-2: #d6e8ff;
 
   /* Surfaces */
   --color-bg: #f6f7f9;
