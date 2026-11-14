@@ -25,14 +25,15 @@
   position: relative;
   aspect-ratio: 1.4;
   overflow: hidden;
-  border-radius: 24px;
+  /* «Arco de la U». */
+  border-radius: var(--radius-media-arch);
 }
 .productImage img {
   object-fit: cover;
 }
 .eyebrow {
   margin: 0 0 8px;
-  color: #687598;
+  color: var(--color-text-soft);
   font-size: 13px;
   font-weight: 600;
 }
@@ -69,7 +70,7 @@
   flex-wrap: wrap;
   gap: 14px;
   padding-block: 18px;
-  border-block: 1px solid #e3eaf6;
+  border-block: 1px solid var(--color-brand-tint);
 }
 .quantityRow label {
   font-weight: 700;
@@ -82,9 +83,9 @@
 .quantity {
   display: flex;
   align-items: center;
-  border: 1px solid #dae4f6;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
 }
 .quantity button {
   display: grid;
@@ -94,7 +95,7 @@
   border: 0;
   border-radius: 15px;
   background: transparent;
-  color: #0954cf;
+  color: var(--color-brand);
   cursor: pointer;
 }
 .quantity button:disabled {
@@ -125,9 +126,9 @@
   resize: vertical;
   min-height: 106px;
   padding: 14px;
-  border: 1px solid #dce5f4;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 17px;
-  background: #fff;
+  background: var(--color-surface);
   color: var(--client-ink);
   font: inherit;
   font-size: 16px;
@@ -140,10 +141,10 @@
 .notice {
   margin: 0;
   padding: 14px;
-  border: 1px solid #ecdcb9;
+  border: 1px solid var(--color-brand-tint);
   border-radius: 16px;
-  background: #fff9ee;
-  color: #775526;
+  background: var(--color-brand-tint);
+  color: var(--color-brand-hover);
   font-size: 14px;
 }
 .purchase {
@@ -153,9 +154,9 @@
   display: grid;
   gap: 12px;
   padding: 14px;
-  border: 1px solid #e2eaf7;
+  border: 1px solid var(--color-brand-tint);
   border-radius: 22px;
-  background: #fffffff5;
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
   backdrop-filter: blur(12px);
 }
 .purchase > div {
@@ -189,22 +190,22 @@
   cursor: pointer;
 }
 .primaryButton {
-  color: #fff;
-  background: #0064ff;
+  color: var(--color-surface);
+  background: var(--color-brand);
 }
 .secondaryButton {
-  color: #203f78;
-  background: #fff;
-  border-color: #dae4f6;
+  color: var(--color-brand-hover);
+  background: var(--color-surface);
+  border-color: var(--color-brand-tint-2);
 }
 .primaryButton:disabled {
-  color: #626f87;
-  background: #e5ebf5;
+  color: var(--color-text-soft);
+  background: var(--color-brand-tint);
   cursor: not-allowed;
 }
 .primaryButton[data-added="true"] {
-  color: #fff;
-  background: #087d57;
+  color: var(--color-surface);
+  background: var(--color-success-ink);
   animation: added 220ms ease-out;
 }
 .primaryButton > svg,
@@ -219,7 +220,7 @@
   text-align: center;
 }
 .empty > svg {
-  color: #859bc1;
+  color: var(--color-text-soft);
 }
 .empty p {
   margin: 0;
@@ -238,8 +239,8 @@
   align-items: start;
   gap: 10px;
   padding: 14px 8px 14px 12px;
-  background: #fff;
-  border: 1px solid #e7edf7;
+  background: var(--color-surface);
+  border: 1px solid var(--color-brand-tint);
   border-radius: 20px;
 }
 .cartLine > img {
@@ -269,7 +270,7 @@
   display: block;
   margin-top: 8px;
   font-size: 12px;
-  color: #856233;
+  color: var(--color-brand-hover);
 }
 .lineNotes {
   overflow-wrap: anywhere;
@@ -282,8 +283,8 @@
   padding: 0;
   border: 0;
   border-radius: 50%;
-  color: #a8444b;
-  background: #fff3f3;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
   cursor: pointer;
 }
 .cartTotal {
@@ -292,7 +293,7 @@
   justify-content: space-between;
   gap: 16px;
   padding-block: 20px;
-  border-block: 1px solid #e0e7f2;
+  border-block: 1px solid var(--color-brand-tint-2);
 }
 .cartTotal strong {
   font-size: 24px;
@@ -312,17 +313,18 @@
   flex-wrap: wrap;
   gap: 10px;
   padding: 12px 14px;
-  border: 1px solid #dce6f5;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 18px;
-  background: #fff;
-  box-shadow: 0 8px 28px #233a6226;
-  color: #183156;
+  background: var(--color-surface);
+  box-shadow: 0 8px 28px
+    color-mix(in srgb, var(--color-brand-hover) 15%, transparent);
+  color: var(--color-ink);
   font-size: 14px;
   pointer-events: auto;
   animation: toast-in 200ms ease-out;
 }
 .toast > svg {
-  color: #087d57;
+  color: var(--color-success-ink);
   flex-shrink: 0;
 }
 .toast > span {
@@ -333,7 +335,7 @@
   display: flex;
   align-items: center;
   min-height: 44px;
-  color: #0054d6;
+  color: var(--color-brand);
   font-weight: 600;
 }
 .toast button {
@@ -343,22 +345,22 @@
   height: 44px;
   border: 0;
   border-radius: 14px;
-  background: #f1f5fc;
-  color: #5f6d89;
+  background: var(--color-brand-tint);
+  color: var(--color-text-soft);
   cursor: pointer;
 }
 .dialog {
   width: min(calc(100% - 32px), 440px);
   max-height: calc(100dvh - 48px);
   padding: 24px;
-  border: 1px solid #e1e8f5;
+  border: 1px solid var(--color-brand-tint);
   border-radius: 24px;
-  background: #fff;
-  color: #090f52;
+  background: var(--color-surface);
+  color: var(--color-ink);
   overflow-y: auto;
 }
 .dialog::backdrop {
-  background: #07163866;
+  background: color-mix(in srgb, var(--color-ink) 40%, transparent);
   backdrop-filter: blur(3px);
 }
 .dialog h2 {
@@ -368,7 +370,7 @@
   letter-spacing: -0.5px;
 }
 .dialog p {
-  color: #626f93;
+  color: var(--color-text-soft);
   line-height: 1.55;
   font-size: 15px;
 }
@@ -378,7 +380,7 @@
   margin-top: 22px;
 }
 .dialog :is(button, a):focus-visible {
-  outline: 3px solid #0064ff;
+  outline: 3px solid var(--color-brand);
   outline-offset: 3px;
 }
 @keyframes added {

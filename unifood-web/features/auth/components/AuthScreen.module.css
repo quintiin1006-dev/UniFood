@@ -1,7 +1,7 @@
 .screen {
-  --ink: #090f52;
-  --muted: #7884b4;
-  --blue: #0064ff;
+  --ink: var(--color-ink);
+  --muted: var(--color-text-soft);
+  --blue: var(--color-brand);
   position: relative;
   isolation: isolate;
   height: 100dvh;
@@ -10,9 +10,9 @@
   color: var(--ink);
   background: radial-gradient(
     ellipse at 50% 25%,
-    #fff 0%,
-    #f9fcff 68%,
-    #eff8ff 100%
+    var(--color-surface) 0%,
+    var(--color-surface) 68%,
+    var(--color-brand-tint) 100%
   );
 }
 .canvas {
@@ -42,12 +42,12 @@
   margin-left: -10px;
   border: 0;
   border-radius: 50%;
-  color: #56679e;
+  color: var(--color-text-soft);
   background: transparent;
   cursor: pointer;
 }
 .back:hover {
-  background: #edf4ff;
+  background: var(--color-brand-tint);
 }
 .language {
   position: relative;
@@ -130,7 +130,7 @@
   letter-spacing: -1.8px;
 }
 .hero em {
-  background: linear-gradient(100deg, #00adff, #0052ff);
+  background: linear-gradient(100deg, var(--color-brand), var(--color-brand));
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -163,17 +163,18 @@
   gap: 13px;
   min-height: 58px;
   padding: 0 16px;
-  border: 1.5px solid #e0e7f5;
-  border-radius: 14px;
-  color: #7482b2;
-  background: #ffffff94;
+  /* Inputs: boundary ≥3:1 (WCAG 1.4.11) and radius 20 (ola 2). */
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-soft);
+  background: color-mix(in srgb, var(--color-surface) 58%, transparent);
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
 }
 .field:focus-within {
-  border-color: #5391ff;
-  box-shadow: 0 0 0 3px #0064ff12;
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 7%, transparent);
 }
 .field > svg {
   flex-shrink: 0;
@@ -189,7 +190,7 @@
   font-size: 15px;
 }
 .field input::placeholder {
-  color: #7d88b5;
+  color: var(--color-text-soft);
   opacity: 1;
 }
 .field button {
@@ -199,7 +200,7 @@
   margin-right: -6px;
   border: 0;
   border-radius: 8px;
-  color: #7381af;
+  color: var(--color-text-soft);
   background: transparent;
   cursor: pointer;
 }
@@ -215,14 +216,14 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  color: #717fae;
+  color: var(--color-text-soft);
   cursor: pointer;
 }
 .remember input {
   width: 20px;
   height: 20px;
   margin: 0;
-  accent-color: #0064ff;
+  accent-color: var(--color-brand);
   cursor: pointer;
 }
 .link {
@@ -248,8 +249,13 @@
   border: 0;
   border-radius: 30px;
   color: white;
-  background: linear-gradient(115deg, #30c9f6 0%, #0099ff 43%, #0051f4 100%);
-  box-shadow: 0 4px 8px #0078ef26;
+  background: linear-gradient(
+    115deg,
+    var(--color-brand) 0%,
+    var(--color-brand) 43%,
+    var(--color-brand) 100%
+  );
+  box-shadow: 0 4px 8px color-mix(in srgb, var(--color-brand) 15%, transparent);
   font-size: 17px;
   font-weight: 550;
   cursor: pointer;
@@ -286,7 +292,7 @@
   content: "";
   flex: 1;
   height: 1px;
-  background: #dbe4f3;
+  background: var(--color-brand-tint-2);
 }
 .register {
   color: var(--muted);
@@ -315,13 +321,13 @@
 .requirements {
   padding: 15px 17px;
   border-radius: 14px;
-  background: #ecf5fdba;
-  color: #5f6da0;
+  background: color-mix(in srgb, var(--color-brand-tint) 73%, transparent);
+  color: var(--color-text-soft);
   font-size: 13px;
 }
 .requirements p {
   margin: 0 0 8px;
-  color: #35477f;
+  color: var(--color-slate);
 }
 .requirements ul {
   display: grid;
@@ -336,7 +342,7 @@
   gap: 8px;
 }
 .requirements .passed {
-  color: #08846a;
+  color: var(--color-success-ink);
 }
 .progress {
   display: flex;
@@ -357,13 +363,13 @@
   display: block;
   width: 31px;
   height: 1px;
-  background: #c6dbfb;
+  background: var(--color-brand-tint-2);
 }
 .dot {
   display: block;
   width: 7px;
   height: 7px;
-  border: 1px solid #97addd;
+  border: 1px solid var(--color-brand);
   border-radius: 50%;
 }
 [aria-current="step"] .dot {
@@ -371,11 +377,11 @@
   height: 11px;
   border-color: var(--blue);
   background: var(--blue);
-  box-shadow: 0 0 0 4px #f6faff;
+  box-shadow: 0 0 0 4px var(--color-brand-tint);
 }
 .complete .dot {
-  border-color: #8abaff;
-  background: #8abaff;
+  border-color: var(--color-brand);
+  background: var(--color-brand);
 }
 .email {
   display: block;
@@ -392,7 +398,7 @@
   width: 100%;
   min-width: 0;
   height: 60px;
-  border: 1.5px solid #dde5f5;
+  border: 1.5px solid var(--color-brand-tint-2);
   border-radius: 11px;
   outline: 0;
   text-align: center;
@@ -401,11 +407,11 @@
   letter-spacing: 0.5em;
   text-indent: 0.5em;
   color: var(--ink);
-  background: #ffffffa6;
+  background: color-mix(in srgb, var(--color-surface) 65%, transparent);
 }
 .otp input:focus {
   border-color: var(--blue);
-  box-shadow: 0 0 0 3px #0064ff0d;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 5%, transparent);
 }
 .resend {
   text-align: center;
@@ -417,8 +423,8 @@
 .error {
   padding: 11px 14px;
   border-radius: 11px;
-  color: #aa2944;
-  background: #fff0f3;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
   font-size: 13px;
   line-height: 1.5;
   margin: 0;
@@ -426,8 +432,8 @@
 .success {
   padding: 11px 14px;
   border-radius: 11px;
-  color: #16705c;
-  background: #eaf9f2;
+  color: var(--color-success-ink);
+  background: var(--color-success-bg);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -437,7 +443,7 @@
   display: grid;
   gap: 8px;
   list-style: none;
-  color: #697994;
+  color: var(--color-text-soft);
   font-size: 13px;
 }
 .recoveryRules li::before {
@@ -469,7 +475,7 @@
   border: 0;
 }
 .screen :is(button, a, select, input[type="checkbox"]):focus-visible {
-  outline: 3px solid #66a2ff;
+  outline: 3px solid var(--color-brand);
   outline-offset: 4px;
 }
 .screen button:disabled {
@@ -480,7 +486,7 @@
   padding-top: 30px;
 }
 .account > svg {
-  color: #087bea;
+  color: var(--color-brand);
   margin-bottom: 20px;
 }
 .account .primary {
@@ -490,7 +496,7 @@
   margin-top: 24px;
 }
 .panelScreen {
-  background: #eef3f9;
+  background: var(--color-brand-tint);
 }
 .panelScreen .panelCanvas {
   display: grid;
@@ -509,10 +515,11 @@
   width: min(100%, 520px);
   max-width: none;
   padding: 36px 28px;
-  border: 1px solid #e2e9f2;
-  border-radius: 28px;
-  background: #fff;
-  box-shadow: 0 18px 60px #203d6710;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: 0 18px 60px
+    color-mix(in srgb, var(--color-brand-hover) 6%, transparent);
 }
 .panelContent .topbar {
   height: 32px;
@@ -536,13 +543,13 @@
   letter-spacing: -1px;
 }
 .panelContent .description {
-  color: #7783a3;
+  color: var(--color-text-soft);
 }
 .panelContent .field {
   min-height: 64px;
-  border: 1px solid #dce4f1;
-  border-radius: 14px;
-  background: #fff;
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
 }
 .panelContent .field input {
   height: 61px;
@@ -553,8 +560,8 @@
 .panelContent .primary {
   min-height: 60px;
   border-radius: 14px;
-  background: #0863f7;
-  box-shadow: 0 6px 18px #0863f726;
+  background: var(--color-brand);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-brand) 15%, transparent);
   font-weight: 600;
 }
 .panelContent .loginForm {
@@ -567,9 +574,10 @@
   overflow: hidden;
   min-height: 620px;
   border-radius: 30px;
-  color: #fff;
-  background: #07359c;
-  box-shadow: 0 18px 60px #123b7b18;
+  color: var(--color-surface);
+  background: var(--color-brand-hover);
+  box-shadow: 0 18px 60px
+    color-mix(in srgb, var(--color-brand-hover) 9%, transparent);
 }
 .panelIllustration {
   position: relative;
@@ -591,7 +599,7 @@
 .panelCopy p {
   max-width: 430px;
   margin: 0;
-  color: #fff;
+  color: var(--color-surface);
   font-size: 16px;
   line-height: 1.6;
 }
@@ -664,17 +672,27 @@
 }
 .panelLogin {
   background:
-    radial-gradient(ellipse at 12% 8%, #fff9, transparent 55%),
-    radial-gradient(ellipse at 90% 95%, #dbe7f580, transparent 55%), #eef3f9;
+    radial-gradient(
+      ellipse at 12% 8%,
+      color-mix(in srgb, var(--color-surface) 60%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse at 90% 95%,
+      color-mix(in srgb, var(--color-brand-tint-2) 50%, transparent),
+      transparent 55%
+    ),
+    var(--color-brand-tint);
 }
 .panelLogin .panelCanvas {
   gap: 28px;
 }
 .panelLogin .panelIntro {
-  border: 1px solid #ffffff14;
+  border: 1px solid color-mix(in srgb, var(--color-surface) 8%, transparent);
   border-radius: 28px;
-  background: #07359c;
-  box-shadow: 0 16px 48px #123b7b14;
+  background: var(--color-brand-hover);
+  box-shadow: 0 16px 48px
+    color-mix(in srgb, var(--color-brand-hover) 8%, transparent);
 }
 .panelLogin .panelIntro::before {
   content: "";
@@ -684,13 +702,17 @@
   background:
     linear-gradient(
       180deg,
-      #052968a6,
-      #07358324 20%,
-      #07359c0d 42%,
-      #073583b3 72%,
-      #052968eb
+      color-mix(in srgb, var(--color-ink) 65%, transparent),
+      color-mix(in srgb, var(--color-brand-hover) 14%, transparent) 20%,
+      color-mix(in srgb, var(--color-brand-hover) 5%, transparent) 42%,
+      color-mix(in srgb, var(--color-brand-hover) 70%, transparent) 72%,
+      color-mix(in srgb, var(--color-ink) 92%, transparent)
     ),
-    linear-gradient(90deg, #05296826, transparent 80%);
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-ink) 15%, transparent),
+      transparent 80%
+    );
   pointer-events: none;
 }
 .panelLogin .panelCopy {
@@ -705,13 +727,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #dfebff;
+  color: var(--color-brand-tint);
 }
 .panelLogin .panelLabel::before {
   content: "";
   width: 22px;
   height: 1px;
-  background: #dfebff80;
+  background: color-mix(in srgb, var(--color-brand-tint) 50%, transparent);
 }
 .panelLogin .panelCopy h2 {
   max-width: 430px;
@@ -721,7 +743,7 @@
   letter-spacing: -1.4px;
 }
 .panelLogin .panelCopy > p:last-child {
-  color: #e1ebff;
+  color: var(--color-brand-tint);
 }
 .panelLogin .panelIllustration {
   position: absolute;
@@ -739,10 +761,10 @@
 }
 .panelLogin .panelContent {
   padding: 40px 32px;
-  border-color: #dce5f0;
+  border-color: var(--color-brand-tint-2);
   box-shadow:
-    0 16px 48px #1b38610b,
-    inset 0 1px 0 #fff;
+    0 16px 48px color-mix(in srgb, var(--color-brand-hover) 4%, transparent),
+    inset 0 1px 0 var(--color-surface);
 }
 .panelLogin .brand {
   margin-bottom: 32px;
@@ -753,7 +775,7 @@
   font-size: 30px;
 }
 .panelLogin .description {
-  color: #6d7b98;
+  color: var(--color-text-soft);
   line-height: 1.6;
 }
 .panelLogin .loginForm {
@@ -761,18 +783,19 @@
 }
 .panelLogin .field {
   min-height: 60px;
-  border-color: #d9e2f0;
-  background: #fbfcff;
-  box-shadow: inset 0 1px 2px #17376603;
+  border-color: var(--color-control-border);
+  background: var(--color-surface);
+  box-shadow: inset 0 1px 2px
+    color-mix(in srgb, var(--color-brand-hover) 1%, transparent);
   transition:
     border-color 0.15s,
     box-shadow 0.15s,
     background-color 0.15s;
 }
 .panelLogin .field:focus-within {
-  border-color: #6a98ed;
-  background: #fff;
-  box-shadow: 0 0 0 3px #0863f71a;
+  border-color: var(--color-brand);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 10%, transparent);
 }
 .panelLogin .field input {
   height: 57px;
@@ -783,6 +806,6 @@
 .panelLogin .primary {
   min-height: 58px;
   box-shadow:
-    0 5px 14px #0863f724,
-    inset 0 1px 0 #ffffff14;
+    0 5px 14px color-mix(in srgb, var(--color-brand) 14%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-surface) 8%, transparent);
 }
