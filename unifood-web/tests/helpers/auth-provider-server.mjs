@@ -87,6 +87,63 @@ const passwords = new Map();
 const refreshTokens = new Map();
 const failures = new Map();
 const profileAudit = { directBusinessReads: 0, backendProfileReads: 0 };
+// SUPER_ADMIN fixture: one visible cafeteria with its ADMIN, one hidden without one.
+const superAdminState = {};
+function resetSuperAdmin() {
+  Object.assign(superAdminState, {
+    mode: null,
+    mutations: [],
+    auditGets: [],
+    audit: [],
+    cafeterias: [
+      {
+        id: "00000000-0000-0000-0000-000000000002",
+        name: "Cafetería Central",
+        visible: true,
+        hasActiveAdmin: true,
+        billing: {
+          model: "NONE",
+          perOrderFeeCop: null,
+          subscriptionFeeCop: null,
+          version: 0,
+        },
+      },
+      {
+        id: "00000000-0000-0000-0000-0000000000c2",
+        name: "Cafetería Norte",
+        visible: false,
+        hasActiveAdmin: false,
+        billing: {
+          model: "NONE",
+          perOrderFeeCop: null,
+          subscriptionFeeCop: null,
+          version: 0,
+        },
+      },
+    ],
+  });
+}
+resetSuperAdmin();
+function superAdminListing() {
+  return {
+    institutions: [
+      {
+        id: "00000000-0000-0000-0000-0000000000a1",
+        name: "Universidad Santo Tomás",
+        active: true,
+        sites: [
+          {
+            id: "00000000-0000-0000-0000-0000000000b1",
+            name: "Sede Principal",
+            city: "Villavicencio",
+            active: true,
+            cafeterias: superAdminState.cafeterias,
+          },
+        ],
+      },
+    ],
+  };
+}
 const availabilityStates = new Map();
 const availabilityAudit = { directBusinessReads: 0 };
 const historyStates = new Map();
@@ -287,6 +344,33 @@ createServer(async (request, response) => {
       if (Object.hasOwn(config, "inactive")) state.inactive = config.inactive;
       if (config.data) state.data = config.data;
       return json(response, 200, { gets: state.gets });
+    }
+    if (url.pathname === "/__test/super-admin" && request.method === "POST") {
+      let raw = "";
+      for await (const chunk of request) raw += chunk;
+      const config = JSON.parse(raw);
+      if (config.reset) resetSuperAdmin();
+      if (Object.hasOwn(config, "mode")) superAdminState.mode = config.mode;
+      if (config.manualSql) {
+        const cafeteria = superAdminState.cafeterias[0];
+        superAdminState.audit.push({
+          cafeteriaId: cafeteria.id,
+          setting: "BILLING",
+          oldValue: {},
+          newValue: {
+            model: "NONE",
+            perOrderFeeCop: null,
+            subscriptionFeeCop: null,
+          },
+          changedAt: "2026-11-12T13:00:00Z",
+          changedBy: null,
+          source: "SQL",
+        });
+      }
+      return json(response, 200, {
+        mutations: superAdminState.mutations,
+        auditGets: superAdminState.auditGets,
+      });
     }
     if (url.pathname === "/__test/admin-catalog") {
       let config;
@@ -923,10 +1007,10 @@ createServer(async (request, response) => {
         dashboardUiFixture(url.searchParams, scenario),
       );
     }
-    if (
-      url.pathname === "/api/super-admin/cafeterias" &&
-      request.method === "GET"
-    ) {
+    const superAdminRoute = url.pathname.match(
+      /^\/api\/super-admin\/cafeterias(?:\/([0-9a-f-]{36})\/(visibility|billing|audit))?$/,
+    );
+    if (superAdminRoute) {
       if (
         !profile.active ||
         profile.roles.length !== 1 ||
@@ -936,31 +1020,87 @@ createServer(async (request, response) => {
           code: "SUPER_ADMIN_FORBIDDEN",
           message: "PRIVATE",
         });
-      return json(response, 200, {
-        institutions: [
-          {
-            id: "00000000-0000-0000-0000-0000000000a1",
-            name: "Universidad Santo Tomás",
-            active: true,
-            sites: [
-              {
-                id: "00000000-0000-0000-0000-0000000000b1",
-                name: "Sede Principal",
-                city: "Villavicencio",
-                active: true,
-                cafeterias: [
-                  {
-                    id: "00000000-0000-0000-0000-000000000002",
-                    name: "Cafetería Central",
-                    subscribed: true,
-                    hasActiveAdmin: true,
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      });
+      const [, id, action] = superAdminRoute;
+      if (!id && request.method === "GET")
+        return json(response, 200, superAdminListing());
+      const cafeteria = superAdminState.cafeterias.find(
+        (entry) => entry.id === id,
+      );
+      if (!cafeteria)
+        return json(response, 404, {
+          code: "CAFETERIA_NOT_FOUND",
+          message: "PRIVATE",
+        });
+      if (action === "audit" && request.method === "GET") {
+        superAdminState.auditGets.push(url.search);
+        return json(response, 200, {
+          entries: superAdminState.audit
+            .filter((entry) => entry.cafeteriaId === id)
+            .map(({ cafeteriaId: _ignored, ...entry }) => entry)
+            .reverse(),
+        });
+      }
+      let raw = "";
+      for await (const chunk of request) raw += chunk;
+      const body = JSON.parse(raw);
+      superAdminState.mutations.push({ action, body });
+      const mode = superAdminState.mode;
+      superAdminState.mode = null;
+      if (mode === "503")
+        return json(response, 503, {
+          code: "SUPER_ADMIN_TEMPORARILY_UNAVAILABLE",
+          message: "PRIVATE",
+        });
+      const actor = { name: "Dueño del repositorio" };
+      const now = new Date().toISOString();
+      if (action === "visibility" && request.method === "PATCH") {
+        if (cafeteria.visible === body.visible)
+          return json(response, 200, cafeteria);
+        if (mode === "conflict" || cafeteria.visible !== body.expectedVisible)
+          return json(response, 409, {
+            code: "VISIBILITY_STATE_CHANGED",
+            message: "PRIVATE",
+          });
+        if (body.visible && !cafeteria.hasActiveAdmin)
+          return json(response, 409, {
+            code: "CAFETERIA_REQUIRES_ADMIN",
+            message: "PRIVATE",
+          });
+        superAdminState.audit.push({
+          cafeteriaId: id,
+          setting: "VISIBILITY",
+          oldValue: { visible: cafeteria.visible },
+          newValue: { visible: body.visible },
+          changedAt: now,
+          changedBy: actor,
+          source: "API",
+        });
+        cafeteria.visible = body.visible;
+        return json(response, 200, cafeteria);
+      }
+      if (action === "billing" && request.method === "PUT") {
+        const { expectedVersion, ...next } = body;
+        const { version, ...previous } = cafeteria.billing;
+        if (JSON.stringify(previous) === JSON.stringify(next))
+          return json(response, 200, cafeteria);
+        if (mode === "conflict" || version !== expectedVersion)
+          return json(response, 409, {
+            code: "BILLING_STATE_CHANGED",
+            message: "PRIVATE",
+          });
+        superAdminState.audit.push({
+          cafeteriaId: id,
+          setting: "BILLING",
+          oldValue: previous,
+          newValue: next,
+          changedAt: now,
+          changedBy: actor,
+          source: "API",
+        });
+        cafeteria.billing = { ...next, version: version + 1 };
+        return json(response, 200, cafeteria);
+      }
+      return json(response, 405, {});
     }
     if (url.pathname === "/api/admin/profile" && request.method === "GET") {
       const state = adminProfileState(profile);

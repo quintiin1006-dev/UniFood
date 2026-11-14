@@ -22,11 +22,21 @@ public record SuperAdminInstitution(UUID id, String name, boolean active, List<S
     }
   }
 
-  /** {@code subscribed} is {@code cafeterias.is_active} until subscriptions get their table. */
-  public record Cafeteria(UUID id, String name, boolean subscribed, boolean hasActiveAdmin) {
+  /**
+   * {@code visible} is {@code cafeterias.is_active}: visible to clients and accepting new orders
+   * (decisiones §5). The billing agreement is independent of it (022).
+   */
+  public record Cafeteria(
+      UUID id,
+      String name,
+      boolean visible,
+      boolean hasActiveAdmin,
+      CafeteriaBilling billing,
+      int billingVersion) {
     public Cafeteria {
       Objects.requireNonNull(id);
       requireName(name);
+      Objects.requireNonNull(billing);
     }
   }
 

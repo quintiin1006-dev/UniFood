@@ -262,6 +262,16 @@ ADMIN](../docs/admin-product-images.md) documenta configuración backend, bucket
 privado, permisos, límites de despliegue, recuperación y limpieza. Las pruebas
 locales no acreditan políticas ni credenciales de un proyecto Storage real.
 
+## Visibilidad y cobro (022)
+
+`022_cafeteria_visibility_billing.sql` crea `cafeteria_billing_settings` y la auditoría
+inmutable `cafeteria_settings_audit` (docs/decisiones.md §5). No cambia `is_active` de ninguna
+cafetería y siembra «Sin cobro» para todas. Se escribió después de la 023: aplicar con
+`apply-migrations.ps1 -AllowOutOfOrder 022`, primero `-PlanOnly`, en bases temporales locales y
+`unifood-staging` antes que en el proyecto real. Antes, ejecutar `audit_business_integrity.sql`;
+después, `staging-check.sql` debe dar `true` en el bloque de la 022. Con la 022, una cafetería ya
+no se puede borrar (claves `RESTRICT`), y la auditoría rechaza UPDATE, DELETE y TRUNCATE.
+
 ## Registro de migraciones aplicadas
 
 `public.schema_migrations` registra qué migración se aplicó en cada base: versión,

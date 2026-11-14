@@ -10,8 +10,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.santotofood.adapter.in.web.SuperAdminCafeteriaController;
 import com.santotofood.adapter.in.web.error.GlobalExceptionHandler;
 import com.santotofood.adapter.in.web.error.SuperAdminExceptionHandler;
+import com.santotofood.application.model.CafeteriaBilling;
 import com.santotofood.application.model.SuperAdminInstitution;
 import com.santotofood.application.model.UserAuthorization;
+import com.santotofood.application.port.in.ChangeCafeteriaBillingUseCase;
+import com.santotofood.application.port.in.ChangeCafeteriaVisibilityUseCase;
+import com.santotofood.application.port.in.ListCafeteriaSettingsAuditUseCase;
 import com.santotofood.application.port.in.ListSuperAdminCafeteriasUseCase;
 import com.santotofood.application.port.out.AuthorizationQueryPort;
 import java.util.List;
@@ -69,6 +73,21 @@ class SuperAdminCafeteriaAuthorizationTest {
     @Bean
     ListSuperAdminCafeteriasUseCase cafeterias() {
       return mock(ListSuperAdminCafeteriasUseCase.class);
+    }
+
+    @Bean
+    ChangeCafeteriaVisibilityUseCase visibility() {
+      return mock(ChangeCafeteriaVisibilityUseCase.class);
+    }
+
+    @Bean
+    ChangeCafeteriaBillingUseCase billing() {
+      return mock(ChangeCafeteriaBillingUseCase.class);
+    }
+
+    @Bean
+    ListCafeteriaSettingsAuditUseCase audit() {
+      return mock(ListCafeteriaSettingsAuditUseCase.class);
     }
   }
 
@@ -161,7 +180,13 @@ class SuperAdminCafeteriaAuthorizationTest {
                             true,
                             List.of(
                                 new SuperAdminInstitution.Cafeteria(
-                                    cafeteriaId, "Cafetería Central", false, true)))))));
+                                    cafeteriaId,
+                                    "Cafetería Central",
+                                    false,
+                                    true,
+                                    new CafeteriaBilling(
+                                        CafeteriaBilling.Model.SUBSCRIPTION, null, 250000),
+                                    3)))))));
     mvc.perform(get(ENDPOINT).with(as(userId.toString())).param("userId", "ignored"))
         .andExpect(status().isOk())
         .andExpect(header().string("Cache-Control", "no-store"))
@@ -170,7 +195,15 @@ class SuperAdminCafeteriaAuthorizationTest {
         .andExpect(jsonPath("$.institutions[0].sites[0].city").value("Villavicencio"))
         .andExpect(
             jsonPath("$.institutions[0].sites[0].cafeterias[0].id").value(cafeteriaId.toString()))
-        .andExpect(jsonPath("$.institutions[0].sites[0].cafeterias[0].subscribed").value(false))
+        .andExpect(jsonPath("$.institutions[0].sites[0].cafeterias[0].visible").value(false))
+        .andExpect(jsonPath("$.institutions[0].sites[0].cafeterias[0].subscribed").doesNotExist())
+        .andExpect(
+            jsonPath("$.institutions[0].sites[0].cafeterias[0].billing.model")
+                .value("SUBSCRIPTION"))
+        .andExpect(
+            jsonPath("$.institutions[0].sites[0].cafeterias[0].billing.subscriptionFeeCop")
+                .value(250000))
+        .andExpect(jsonPath("$.institutions[0].sites[0].cafeterias[0].billing.version").value(3))
         .andExpect(jsonPath("$.institutions[0].sites[0].cafeterias[0].hasActiveAdmin").value(true))
         .andExpect(jsonPath("$.institutions[0].sites[0].cafeterias[0].active").doesNotExist());
     verify(cafeterias).listCafeterias(userId);

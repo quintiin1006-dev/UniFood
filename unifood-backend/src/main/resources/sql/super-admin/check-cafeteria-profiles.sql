@@ -1,0 +1,1 @@
+SET CONSTRAINTS public.trg_cafeteria_profiles_check IMMEDIATE

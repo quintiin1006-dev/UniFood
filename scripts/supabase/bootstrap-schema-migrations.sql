@@ -3,8 +3,10 @@
 -- Creates public.schema_migrations and, only while it is empty, records as 'baseline' the
 -- migrations whose objects are already installed. Nothing is assumed per environment:
 -- each migration is detected with catalog lookups, so on unifood-staging it records
--- 001-023 (022 is reserved and has no file) and on an empty database it records nothing.
--- A gap (a later migration present while an earlier one is missing) aborts everything.
+-- 001-023 without 022 until 022 is applied (with -AllowOutOfOrder 022), and on an empty
+-- database it records nothing.
+-- A gap (a later migration present while an earlier one is missing) aborts everything,
+-- except 022, which was written after 023 and may be missing below it.
 --
 -- apply-migrations.ps1 runs this file itself when the table does not exist. It can also
 -- be run by hand once; a second run changes nothing. It lives outside migrations/ on
@@ -79,6 +81,7 @@ SELECT version, name, present FROM (VALUES
   ('021', '021_order_rejection_and_snapshots.sql', EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'orders' AND column_name = 'client_code')),
+  ('022', '022_cafeteria_visibility_billing.sql', to_regclass('public.cafeteria_settings_audit') IS NOT NULL),
   ('023', '023_order_requested_pickup_time.sql', EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'orders' AND column_name = 'requested_pickup_at'))
@@ -94,6 +97,7 @@ BEGIN
   SELECT string_agg(d.version, ', ' ORDER BY d.version) INTO missing
   FROM unifood_detected_migrations d
   WHERE NOT d.present
+    AND d.version <> '022'
     AND EXISTS (SELECT 1 FROM unifood_detected_migrations l WHERE l.present AND l.version > d.version);
   IF missing IS NOT NULL THEN
     RAISE EXCEPTION 'MIGRATIONS_BASELINE_GAP: later migrations are installed but not %. Nothing was recorded.', missing;

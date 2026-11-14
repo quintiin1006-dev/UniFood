@@ -16,5 +16,9 @@ public record SuperAdminCafeteriaRow(
     Boolean siteActive,
     UUID cafeteriaId,
     String cafeteriaName,
-    Boolean cafeteriaSubscribed,
-    boolean cafeteriaHasActiveAdmin) {}
+    Boolean cafeteriaVisible,
+    boolean cafeteriaHasActiveAdmin,
+    String billingModel,
+    Integer perOrderFeeCop,
+    Integer subscriptionFeeCop,
+    Integer billingVersion) {}

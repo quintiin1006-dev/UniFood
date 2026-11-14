@@ -49,7 +49,9 @@ WITH account_fks AS (
       'notifications.user_id', 'notification_preferences.user_id', 'pending_registrations.user_id',
       'client_code_corrections.actor_id', 'client_code_corrections.client_id', 'orders.client_id',
       -- 021: whoever rejects is a WORKER, and the cleanup skips accounts with a role.
-      'orders.rejected_by')
+      'orders.rejected_by',
+      -- 022: only a SUPER_ADMIN changes billing and visibility; the cleanup skips them too.
+      'cafeteria_billing_settings.updated_by', 'cafeteria_settings_audit.changed_by')
 ), checks(object, ok) AS (VALUES
   ('every account foreign key is covered by the cleanup', NOT EXISTS (SELECT 1 FROM uncovered_fks)),
   ('browser roles cannot write account columns', CASE WHEN to_regclass('public.pending_registrations') IS NULL THEN false
@@ -122,8 +124,39 @@ WHERE c.contype = 'f'
     'notifications.user_id', 'notification_preferences.user_id', 'pending_registrations.user_id',
     'client_code_corrections.actor_id', 'client_code_corrections.client_id', 'orders.client_id',
     -- 021: whoever rejects is a WORKER, and the cleanup skips accounts with a role.
-    'orders.rejected_by')
+    'orders.rejected_by',
+    -- 022: only a SUPER_ADMIN changes billing and visibility; the cleanup skips them too.
+    'cafeteria_billing_settings.updated_by', 'cafeteria_settings_audit.changed_by')
 ORDER BY 1;
+
+-- Read-only: objects of migration 022 (visibility and billing). Every row must say true.
+-- Catalog lookups and dynamic counts only, so it also runs before 022 and reports false.
+WITH checks(object, ok) AS (VALUES
+  ('022 table cafeteria_billing_settings', to_regclass('public.cafeteria_billing_settings') IS NOT NULL),
+  ('022 table cafeteria_settings_audit', to_regclass('public.cafeteria_settings_audit') IS NOT NULL),
+  ('022 audit and billing triggers enabled', (
+    SELECT count(*) = 7 FROM pg_catalog.pg_trigger
+    WHERE NOT tgisinternal AND tgenabled <> 'D' AND tgname IN (
+      'trg_cafeterias_visibility_audit', 'trg_cafeterias_billing_row', 'trg_cafeteria_billing_audit',
+      'trg_cafeteria_billing_required', 'trg_cafeteria_billing_no_truncate',
+      'trg_cafeteria_settings_audit_immutable', 'trg_cafeteria_settings_audit_no_truncate'))),
+  ('022 every cafeteria has its billing row', CASE
+    WHEN to_regclass('public.cafeteria_billing_settings') IS NULL THEN false
+    ELSE (xpath('/row/n/text()', query_to_xml(
+      $q$SELECT NOT EXISTS (SELECT 1 FROM public.cafeterias c
+         WHERE NOT EXISTS (SELECT 1 FROM public.cafeteria_billing_settings b
+                           WHERE b.cafeteria_id = c.id)) AS n$q$,
+      false, true, '')))[1]::text::boolean END),
+  ('022 billing and audit closed to browser roles', CASE
+    WHEN to_regclass('public.cafeteria_settings_audit') IS NULL THEN false
+    ELSE NOT EXISTS (
+      SELECT 1 FROM unnest(ARRAY['anon', 'authenticated']) r,
+        unnest(ARRAY['public.cafeteria_billing_settings', 'public.cafeteria_settings_audit']) t
+      WHERE has_table_privilege(r, t, 'SELECT') OR has_table_privilege(r, t, 'INSERT')
+         OR has_table_privilege(r, t, 'UPDATE') OR has_table_privilege(r, t, 'DELETE')
+         OR has_any_column_privilege(r, t, 'SELECT')) END)
+)
+SELECT object, ok FROM checks ORDER BY object;
 
 -- Read-only: objects of migrations 019-021 (order backend base). Every row must say true.
 -- Uses catalog lookups only, so it also runs before 019 and simply reports false.

@@ -13,13 +13,17 @@ import com.santotofood.adapter.in.web.SuperAdminCafeteriaController;
 import com.santotofood.adapter.in.web.error.GlobalExceptionHandler;
 import com.santotofood.adapter.in.web.error.SuperAdminExceptionHandler;
 import com.santotofood.adapter.out.persistence.AuthorizationPersistenceAdapter;
+import com.santotofood.adapter.out.persistence.CafeteriaSettingsPersistenceAdapter;
 import com.santotofood.adapter.out.persistence.SuperAdminCafeteriaPersistenceAdapter;
+import com.santotofood.application.service.CafeteriaSettingsService;
 import com.santotofood.application.service.SuperAdminCafeteriaService;
+import com.santotofood.domain.port.out.TimeProvider;
 import jakarta.persistence.EntityManagerFactory;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -48,7 +52,7 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 /**
  * SUPER_ADMIN cafeteria tree on the real 001-021 schema: the guard reads roles from PostgreSQL, and
- * the listing reports subscription and active ADMIN exactly as the database holds them.
+ * the listing reports visibility, billing and active ADMIN exactly as the database holds them.
  */
 @Timeout(120)
 class SuperAdminCafeteriasApiPostgresTest {
@@ -97,6 +101,11 @@ class SuperAdminCafeteriasApiPostgresTest {
     }
 
     @Bean
+    TimeProvider clock() {
+      return Instant::now;
+    }
+
+    @Bean
     JwtDecoder jwtDecoder() {
       JwtDecoder decoder = mock(JwtDecoder.class);
       when(decoder.decode(anyString())).thenThrow(new BadJwtException("Rejected test token"));
@@ -128,6 +137,8 @@ class SuperAdminCafeteriasApiPostgresTest {
         AuthorizationPersistenceAdapter.class,
         SuperAdminCafeteriaPersistenceAdapter.class,
         SuperAdminCafeteriaService.class,
+        CafeteriaSettingsPersistenceAdapter.class,
+        CafeteriaSettingsService.class,
         SuperAdminCafeteriaController.class,
         SuperAdminExceptionHandler.class,
         GlobalExceptionHandler.class);
@@ -259,7 +270,11 @@ class SuperAdminCafeteriasApiPostgresTest {
   }
 
   @Test
-  void superAdminSeesInstitutionsSitesAndCafeteriasWithSubscriptionAndAdmin() throws Exception {
+  void superAdminSeesInstitutionsSitesAndCafeteriasWithVisibilityBillingAndAdmin()
+      throws Exception {
+    jdbc.update(
+        "UPDATE public.cafeteria_billing_settings SET billing_model='PER_ORDER_FEE', per_order_fee_cop=1000 WHERE cafeteria_id=?",
+        NORTE);
     String main = institutionPath(institution);
     String site = "$.institutions[*].sites[?(@.id=='" + SITE + "')]";
     mvc.perform(get(ENDPOINT).with(as(SUPER)))
@@ -279,7 +294,16 @@ class SuperAdminCafeteriasApiPostgresTest {
         .andExpect(
             jsonPath(site + ".cafeterias[*].id")
                 .value(contains(CENTRAL.toString(), NORTE.toString(), SUR.toString())))
-        .andExpect(jsonPath(site + ".cafeterias[*].subscribed").value(contains(true, false, false)))
+        .andExpect(jsonPath(site + ".cafeterias[*].visible").value(contains(true, false, false)))
+        .andExpect(jsonPath("$..subscribed").isEmpty())
+        // 022 seeds NONE for every cafeteria; billing is independent of visibility.
+        .andExpect(
+            jsonPath(site + ".cafeterias[*].billing.model")
+                .value(contains("NONE", "PER_ORDER_FEE", "NONE")))
+        .andExpect(
+            jsonPath(site + ".cafeterias[*].billing.perOrderFeeCop")
+                .value(contains(nullValue(), is(1000), nullValue())))
+        .andExpect(jsonPath(site + ".cafeterias[*].billing.version").value(contains(0, 0, 0)))
         // Norte has an assigned but inactive ADMIN; Sur only a WORKER.
         .andExpect(
             jsonPath(site + ".cafeterias[*].hasActiveAdmin").value(contains(true, false, false)))
@@ -319,7 +343,9 @@ class SuperAdminCafeteriasApiPostgresTest {
           'assignments',(SELECT jsonb_agg(to_jsonb(cu) ORDER BY id) FROM public.cafeteria_users cu),
           'cafeterias',(SELECT jsonb_agg(to_jsonb(c) ORDER BY id) FROM public.cafeterias c),
           'sites',(SELECT jsonb_agg(to_jsonb(s) ORDER BY id) FROM public.sites s),
-          'institutions',(SELECT jsonb_agg(to_jsonb(i) ORDER BY id) FROM public.institutions i))::text
+          'institutions',(SELECT jsonb_agg(to_jsonb(i) ORDER BY id) FROM public.institutions i),
+          'billing',(SELECT jsonb_agg(to_jsonb(b) ORDER BY cafeteria_id) FROM public.cafeteria_billing_settings b),
+          'audit',(SELECT count(*) FROM public.cafeteria_settings_audit))::text
         """,
         String.class);
   }

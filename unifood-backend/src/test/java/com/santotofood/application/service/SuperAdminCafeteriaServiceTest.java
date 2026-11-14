@@ -36,7 +36,11 @@ class SuperAdminCafeteriaServiceTest {
         cafeteriaId,
         name,
         cafeteriaId == null ? null : admin,
-        admin);
+        admin,
+        cafeteriaId == null ? null : admin ? "PER_ORDER_FEE" : "NONE",
+        cafeteriaId != null && admin ? 1000 : null,
+        null,
+        cafeteriaId == null ? null : 2);
   }
 
   @Test
@@ -50,7 +54,8 @@ class SuperAdminCafeteriaServiceTest {
                 row(site, second, "Cafetería Norte", false),
                 row(bare, null, null, false),
                 new SuperAdminCafeteriaRow(
-                    empty, "Otra", false, null, null, null, null, null, null, null, false)));
+                    empty, "Otra", false, null, null, null, null, null, null, null, false, null,
+                    null, null, null)));
     var tree = service.listCafeterias(user);
     assertEquals(2, tree.size());
     var main = tree.getFirst();
@@ -58,9 +63,16 @@ class SuperAdminCafeteriaServiceTest {
     assertEquals(List.of(site, bare), main.sites().stream().map(s -> s.id()).toList());
     var cafeterias = main.sites().getFirst().cafeterias();
     assertEquals(List.of(first, second), cafeterias.stream().map(c -> c.id()).toList());
-    assertTrue(cafeterias.getFirst().subscribed());
+    assertTrue(cafeterias.getFirst().visible());
     assertTrue(cafeterias.getFirst().hasActiveAdmin());
-    assertFalse(cafeterias.getLast().subscribed());
+    assertEquals(
+        new com.santotofood.application.model.CafeteriaBilling(
+            com.santotofood.application.model.CafeteriaBilling.Model.PER_ORDER_FEE, 1000, null),
+        cafeterias.getFirst().billing());
+    assertEquals(2, cafeterias.getFirst().billingVersion());
+    assertEquals(
+        com.santotofood.application.model.CafeteriaBilling.none(), cafeterias.getLast().billing());
+    assertFalse(cafeterias.getLast().visible());
     assertFalse(cafeterias.getLast().hasActiveAdmin());
     assertFalse(main.sites().getLast().active());
     assertTrue(main.sites().getLast().cafeterias().isEmpty());

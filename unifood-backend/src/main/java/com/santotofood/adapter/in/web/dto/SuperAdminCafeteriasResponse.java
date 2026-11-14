@@ -10,7 +10,27 @@ public record SuperAdminCafeteriasResponse(List<Institution> institutions) {
   public record Site(
       UUID id, String name, String city, boolean active, List<Cafeteria> cafeterias) {}
 
-  public record Cafeteria(UUID id, String name, boolean subscribed, boolean hasActiveAdmin) {}
+  /** {@code visible} replaces the former {@code subscribed} (022): same value, is_active. */
+  public record Cafeteria(
+      UUID id, String name, boolean visible, boolean hasActiveAdmin, Billing billing) {}
+
+  /** Recorded agreement only; nothing is charged. Amounts in whole pesos, or null. */
+  public record Billing(
+      String model, Integer perOrderFeeCop, Integer subscriptionFeeCop, int version) {}
+
+  public static Cafeteria cafeteria(SuperAdminInstitution.Cafeteria cafeteria) {
+    var billing = cafeteria.billing();
+    return new Cafeteria(
+        cafeteria.id(),
+        cafeteria.name(),
+        cafeteria.visible(),
+        cafeteria.hasActiveAdmin(),
+        new Billing(
+            billing.model().name(),
+            billing.perOrderFeeCop(),
+            billing.subscriptionFeeCop(),
+            cafeteria.billingVersion()));
+  }
 
   public static SuperAdminCafeteriasResponse from(List<SuperAdminInstitution> institutions) {
     return new SuperAdminCafeteriasResponse(
@@ -30,13 +50,7 @@ public record SuperAdminCafeteriasResponse(List<Institution> institutions) {
                                         site.city(),
                                         site.active(),
                                         site.cafeterias().stream()
-                                            .map(
-                                                cafeteria ->
-                                                    new Cafeteria(
-                                                        cafeteria.id(),
-                                                        cafeteria.name(),
-                                                        cafeteria.subscribed(),
-                                                        cafeteria.hasActiveAdmin()))
+                                            .map(SuperAdminCafeteriasResponse::cafeteria)
                                             .toList()))
                             .toList()))
             .toList());

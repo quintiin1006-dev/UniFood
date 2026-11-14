@@ -35,9 +35,12 @@ public class SuperAdminCafeteriaPersistenceAdapter implements SuperAdminCafeteri
                 row.getObject("site_active", Boolean.class),
                 row.getObject("cafeteria_id", UUID.class),
                 row.getString("cafeteria_name"),
-                row.getObject("cafeteria_subscribed", Boolean.class),
-                Objects.requireNonNull(
-                    row.getObject("cafeteria_has_active_admin", Boolean.class))));
+                row.getObject("cafeteria_visible", Boolean.class),
+                Objects.requireNonNull(row.getObject("cafeteria_has_active_admin", Boolean.class)),
+                row.getString("billing_model"),
+                row.getObject("per_order_fee_cop", Integer.class),
+                row.getObject("subscription_fee_cop", Integer.class),
+                row.getObject("billing_version", Integer.class)));
   }
 
   private static String sql() {
