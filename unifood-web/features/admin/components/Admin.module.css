@@ -1,15 +1,16 @@
 .shell {
-  --admin-blue: #1455ad;
-  --admin-accent: #0868e9;
-  --admin-sidebar: #0b2d6b;
-  --admin-sidebar-background: linear-gradient(180deg, #0b5fff 0%, #0b2d6b 100%);
+  --admin-blue: var(--color-brand);
+  --admin-accent: var(--color-brand);
+  --admin-sidebar: var(--color-ink);
+  /* Ola 2: sober solid sidebar, no gradient. */
+  --admin-sidebar-background: var(--color-ink);
   --admin-sidebar-active: rgba(255, 255, 255, 0.06);
-  --admin-canvas: #f3f6fb;
-  --admin-surface: #fff;
-  --admin-line: #dce5f1;
-  --admin-muted: #5d6f87;
-  --admin-shadow: 0 4px 20px #163f6d08, 0 1px 3px #163f6d05;
-  --admin-text: #172b46;
+  --admin-canvas: var(--color-bg);
+  --admin-surface: var(--color-surface);
+  --admin-line: var(--color-line);
+  --admin-muted: var(--color-text-soft);
+  --admin-shadow: var(--shadow-raised);
+  --admin-text: var(--color-ink);
   display: flex;
   height: 100dvh;
   width: 100%;
@@ -26,8 +27,8 @@
   color: var(--admin-blue);
 }
 .shell :is(a, button):focus-visible {
-  outline: 3px solid var(--admin-accent);
-  outline-offset: 4px;
+  outline: var(--focus-ring-width) solid var(--color-brand);
+  outline-offset: var(--focus-ring-offset);
 }
 .shell button {
   font: inherit;
@@ -45,7 +46,7 @@
   z-index: 20;
   padding: 12px 18px;
   background: white;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 .skipLink:focus {
   transform: translateY(0);
@@ -53,7 +54,8 @@
 .sidebar {
   width: 272px;
   flex: 0 0 272px;
-  border-right: 1px solid #ffffff0f;
+  border-right: 1px solid
+    color-mix(in srgb, var(--color-surface) 6%, transparent);
   background: var(--admin-sidebar-background);
   background-color: var(--admin-sidebar);
   overflow-y: auto;
@@ -75,7 +77,7 @@
   width: 52px;
   height: 52px;
   object-fit: contain;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
 }
 .brand > div {
   min-width: 0;
@@ -86,7 +88,7 @@
   font-weight: 750;
   letter-spacing: -0.8px;
   line-height: 1.2;
-  color: #fff;
+  color: var(--color-surface);
 }
 .brand small {
   display: block;
@@ -106,17 +108,17 @@
   min-height: 48px;
   padding: 12px 16px;
   border: 1px solid transparent;
-  border-radius: 9px;
-  color: #fff;
+  border-radius: var(--radius-sm);
+  color: var(--color-surface);
   text-decoration: none;
   font-weight: 550;
 }
 .sidebarContent nav a:hover {
-  color: #fff;
+  color: var(--color-surface);
   background: rgba(255, 255, 255, 0.03);
 }
 .sidebarContent nav a[aria-current="page"] {
-  color: #fff;
+  color: var(--color-surface);
   background: var(--admin-sidebar-active);
   border-color: rgba(255, 255, 255, 0.24);
   font-weight: 650;
@@ -128,17 +130,18 @@
   width: 3px;
   height: 20px;
   border-radius: 0 3px 3px 0;
-  background: #fff;
+  background: var(--color-surface);
 }
 .sidebarContent nav a:focus-visible,
 .closeMenu:focus-visible {
-  outline: 3px solid #fff;
-  outline-offset: 3px;
+  outline: var(--focus-ring-width) solid var(--color-brand);
+  outline-offset: var(--focus-ring-offset);
 }
 .secondaryNav {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid #ffffff30;
+  border-top: 1px solid
+    color-mix(in srgb, var(--color-surface) 19%, transparent);
 }
 .workspace {
   flex: 1;
@@ -177,9 +180,9 @@
   width: 42px;
   height: 42px;
   flex-shrink: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   color: var(--admin-blue);
-  background: #eaf2ff;
+  background: var(--color-brand-tint);
 }
 .context strong {
   display: block;
@@ -187,7 +190,7 @@
   font-size: 18px;
   line-height: 1.35;
   margin-top: 2px;
-  color: #102d68;
+  color: var(--color-ink);
   letter-spacing: -0.25px;
 }
 .contextLocation {
@@ -199,24 +202,24 @@
 .logout {
   min-height: 44px;
   padding: 10px 14px;
-  border: 1px solid #dce4ef;
-  border-radius: 9px;
-  background: #eaf2ff;
-  color: #235487;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-brand-tint);
+  color: var(--color-brand-hover);
   white-space: nowrap;
   font-size: 13px !important;
 }
 .logout:hover {
-  border-color: #99b9e2;
-  background: #f7faff;
+  border-color: var(--color-brand);
+  background: var(--color-brand-tint);
 }
 .logout:active,
 .menuToggle:active {
-  background: #eaf2ff;
+  background: var(--color-brand-tint);
 }
 .menuToggle:hover {
-  background: #f0f5fc;
-  border-color: #99b9e2;
+  background: var(--color-brand-tint);
+  border-color: var(--color-brand);
 }
 .menuToggle,
 .closeMenu {
@@ -225,9 +228,9 @@
   width: 44px;
   height: 44px;
   flex-shrink: 0;
-  border: 1px solid #dce4ef;
-  border-radius: 9px;
-  color: #245890;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: var(--radius-sm);
+  color: var(--color-brand-hover);
   background: white;
 }
 .menuToggle {
@@ -257,7 +260,7 @@
   font-size: 11px;
   letter-spacing: 1.2px;
   font-weight: 650;
-  color: #42648b;
+  color: var(--color-slate);
 }
 .intro {
   margin: 0 0 28px;
@@ -265,17 +268,17 @@
 }
 .comingSoon {
   background: white;
-  border: 1px solid #e1e8f1;
-  border-radius: 16px;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: var(--radius-md);
   padding: clamp(26px, 4vw, 52px);
   max-width: 820px;
 }
 .comingSoonLabel {
   display: inline-block;
   padding: 5px 11px;
-  background: #edf3fc;
+  background: var(--color-brand-tint);
   border-radius: 6px;
-  color: #346096;
+  color: var(--color-brand);
   font-size: 12px;
   font-weight: 600;
 }
@@ -288,13 +291,13 @@
 .comingSoon p {
   max-width: 450px;
   margin: 0;
-  color: #66758a;
+  color: var(--color-text-soft);
 }
 .profileCard {
   max-width: 880px;
   background: white;
   border: 1px solid var(--admin-line);
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
   box-shadow: var(--admin-shadow);
   overflow: hidden;
 }
@@ -310,9 +313,9 @@
   flex: 0 0 64px;
   width: 64px;
   height: 64px;
-  background: #edf4ff;
+  background: var(--color-brand-tint);
   color: var(--admin-blue);
-  border-radius: 18px;
+  border-radius: var(--radius-md);
 }
 .identity dl {
   flex: 1;
@@ -338,7 +341,7 @@
   min-width: 0;
 }
 .business {
-  border-top: 1px solid #edf0f5;
+  border-top: 1px solid var(--color-brand-tint);
   padding: 28px 32px 32px;
 }
 .business h2 {
@@ -360,20 +363,20 @@
   display: inline-block;
 }
 .active {
-  color: #21674d;
-  background: #edf8f2;
+  color: var(--color-success-ink);
+  background: var(--color-success-bg);
 }
 .inactiveBadge {
-  color: #815218;
-  background: #fff4de;
+  color: var(--color-brand-hover);
+  background: var(--color-brand-tint);
 }
 .readOnly {
   font-size: 12px;
   color: var(--admin-muted);
   padding: 16px 32px;
   margin: 0;
-  background: #fafbfd;
-  border-top: 1px solid #edf0f5;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-brand-tint);
 }
 .inactive {
   display: flex;
@@ -381,10 +384,10 @@
   gap: 12px;
   margin-bottom: 32px;
   padding: 16px 20px;
-  background: #fff8e9;
-  border: 1px solid #eddfbd;
-  border-radius: 12px;
-  color: #77521d;
+  background: var(--color-brand-tint);
+  border: 1px solid var(--color-brand-tint);
+  border-radius: var(--radius-sm);
+  color: var(--color-brand-hover);
   font-size: 14px;
 }
 .inactive svg {
@@ -395,11 +398,11 @@
   margin: 0;
 }
 .feedback {
-  border: 1px solid #e1e8f1;
-  border-radius: 14px;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: var(--radius-sm);
   padding: 28px;
   background: white;
-  color: #52637a;
+  color: var(--color-slate);
 }
 .feedback button,
 .feedback a {
@@ -410,7 +413,7 @@
   background: var(--admin-blue);
   color: white;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   text-decoration: none;
 }
 .drawer {
@@ -424,23 +427,23 @@
   padding: 0;
   background: var(--admin-sidebar-background);
   background-color: var(--admin-sidebar);
-  color: #fff;
+  color: var(--color-surface);
 }
 .drawer::backdrop {
-  background: #172d4c55;
+  background: color-mix(in srgb, var(--color-ink) 33%, transparent);
 }
 .closeMenu {
   display: flex;
   position: absolute;
   right: 14px;
   top: 16px;
-  color: #fff;
-  background: #ffffff08;
-  border-color: #ffffff30;
+  color: var(--color-surface);
+  background: color-mix(in srgb, var(--color-surface) 3%, transparent);
+  border-color: color-mix(in srgb, var(--color-surface) 19%, transparent);
 }
 .closeMenu:hover {
   background: var(--admin-sidebar-active);
-  color: #fff;
+  color: var(--color-surface);
 }
 .drawer .brand {
   padding-right: 0;
@@ -512,7 +515,7 @@
     flex-basis: 44px;
     width: 44px;
     height: 44px;
-    border-radius: 12px;
+    border-radius: var(--radius-sm);
   }
   .business {
     padding: 24px 20px;

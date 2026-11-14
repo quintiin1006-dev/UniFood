@@ -877,7 +877,8 @@ for (const width of [390, 768, 1440])
         };
       });
       expect(focus.style).toBe("solid");
-      expect(focus.width).toBeGreaterThanOrEqual(3);
+      // Ola 2: the shared focus ring is 2 px of brand with an offset (app/tokens.css).
+      expect(focus.width).toBeGreaterThanOrEqual(2);
       expect(focus.indicator).toBeGreaterThanOrEqual(2);
       expect(
         focus.duration.split(",").every((value) => parseFloat(value) === 0),
@@ -1114,6 +1115,7 @@ for (const width of [390, 768, 1440])
         textBlock = text.parentElement!.getBoundingClientRect();
       return {
         background: getComputedStyle(surface).backgroundImage,
+        backgroundColor: getComputedStyle(surface).backgroundColor,
         width: surface.getBoundingClientRect().width,
         textColor: getComputedStyle(text).color,
         aligned:
@@ -1122,8 +1124,9 @@ for (const width of [390, 768, 1440])
         overflow: surface.scrollWidth > surface.clientWidth,
       };
     });
-    expect(surface.background).toContain("rgb(11, 95, 255)");
-    expect(surface.background).toContain("rgb(11, 45, 107)");
+    // Ola 2: sober solid ink sidebar instead of the former blue gradient.
+    expect(surface.background).toBe("none");
+    expect(surface.backgroundColor).toBe("rgb(15, 23, 42)");
     expect(surface.textColor).toBe("rgb(255, 255, 255)");
     expect(surface.aligned).toBe(true);
     expect(surface.overflow).toBe(false);

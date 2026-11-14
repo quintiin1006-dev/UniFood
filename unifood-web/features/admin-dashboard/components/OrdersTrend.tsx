@@ -10,16 +10,17 @@ import type { DashboardTrend } from "../types";
 import styles from "./AdminDashboard.module.css";
 
 const series = [
-  { key: "receivedOrders", label: "Recibidos", color: "#475a75" },
+  // Tokens through `style`: SVG presentation attributes do not resolve var().
+  { key: "receivedOrders", label: "Recibidos", color: "var(--color-slate)" },
   {
     key: "deliveredOrders",
     label: "Entregados",
-    color: "#0868e9",
+    color: "var(--color-brand)",
   },
   {
     key: "notCollectedOrders",
     label: "No recogidos",
-    color: "#9b570b",
+    color: "var(--color-danger)",
   },
 ] as const;
 export function OrdersTrend({ trend }: { trend: DashboardTrend[] }) {
@@ -136,10 +137,14 @@ export function OrdersTrend({ trend }: { trend: DashboardTrend[] }) {
                 height="6"
                 patternUnits="userSpaceOnUse"
               >
-                <rect width="6" height="6" fill="#fff4df" />
+                <rect
+                  width="6"
+                  height="6"
+                  style={{ fill: "var(--color-danger-bg)" }}
+                />
                 <path
                   d="M-1 1L1 -1M0 6L6 0M5 7L7 5"
-                  stroke="#9b570b"
+                  style={{ stroke: "var(--color-danger)" }}
                   strokeWidth="1.2"
                 />
               </pattern>
@@ -151,7 +156,7 @@ export function OrdersTrend({ trend }: { trend: DashboardTrend[] }) {
                   x2={chartWidth - 40}
                   y1={geometry.y(tick)}
                   y2={geometry.y(tick)}
-                  stroke="#e3eaf2"
+                  style={{ stroke: "var(--color-line)" }}
                 />
                 <text x="88" y={geometry.y(tick) + 4} textAnchor="end">
                   <title>{`${formatCount(tick)} pedidos`}</title>
@@ -182,7 +187,9 @@ export function OrdersTrend({ trend }: { trend: DashboardTrend[] }) {
                   y="38"
                   width={groupWidth}
                   height="205"
-                  fill={tooltipDay === i ? "#f3f6fb" : "transparent"}
+                  style={{
+                    fill: tooltipDay === i ? "var(--color-bg)" : "transparent",
+                  }}
                   aria-hidden="true"
                 />
                 {i % labelStep === 0 && (
@@ -212,12 +219,13 @@ export function OrdersTrend({ trend }: { trend: DashboardTrend[] }) {
                         width={barWidth}
                         height={240 - y}
                         rx="2"
-                        fill={
-                          s.key === "notCollectedOrders"
-                            ? `url(#${patternId})`
-                            : s.color
-                        }
-                        stroke={s.color}
+                        style={{
+                          fill:
+                            s.key === "notCollectedOrders"
+                              ? `url(#${patternId})`
+                              : s.color,
+                          stroke: s.color,
+                        }}
                       >
                         <title>{`${formatDay(day.date)} · ${s.label}: ${formatCount(day[s.key])}`}</title>
                       </rect>
