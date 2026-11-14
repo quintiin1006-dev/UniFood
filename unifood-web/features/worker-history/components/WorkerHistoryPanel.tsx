@@ -1,11 +1,13 @@
 "use client";
 import { useRef } from "react";
-import { CircleAlert, History, RefreshCw, Search, X } from "lucide-react";
+import { History, RefreshCw, Search, X } from "lucide-react";
 import { useWorkerHistory } from "../useWorkerHistory";
 import { formatBusinessDate } from "../presentation";
 import { HistoryOrderCard } from "./HistoryOrderCard";
 import type { HistoryRange, HistoryStatus } from "../types";
 import styles from "./WorkerHistory.module.css";
+import { Notice } from "@/components/ui/Notice";
+import { Button, buttonClass } from "@/components/ui/Button";
 
 export function WorkerHistoryPanel() {
   const state = useWorkerHistory();
@@ -122,35 +124,39 @@ export function WorkerHistoryPanel() {
         </div>
       )}
       {state.error && (
-        <div className={styles.error} role="alert">
-          <CircleAlert size={20} aria-hidden="true" />
-          <div>
-            <p>{state.error.message}</p>
-            {state.data && (
-              <p className={styles.stale}>
-                Datos de la última consulta. Actualiza para confirmar el
-                historial.
-              </p>
-            )}
-          </div>
-          {state.error.status === 401 ? (
-            <a href="/panel/login">Iniciar sesión</a>
-          ) : (
-            !denied && (
-              <button
-                type="button"
-                disabled={
-                  state.loading || state.refreshing || state.loadingMore
-                }
-                onClick={() => void state.refresh()}
-              >
-                {state.loading || state.refreshing
-                  ? "Reintentando…"
-                  : "Reintentar"}
-              </button>
+        <Notice
+          tone="error"
+          className={styles.message}
+          action={
+            state.error.status === 401 ? (
+              <a className={buttonClass("secondary")} href="/panel/login">
+                Iniciar sesión
+              </a>
+            ) : (
+              !denied && (
+                <Button
+                  variant="secondary"
+                  disabled={
+                    state.loading || state.refreshing || state.loadingMore
+                  }
+                  onClick={() => void state.refresh()}
+                >
+                  {state.loading || state.refreshing
+                    ? "Reintentando…"
+                    : "Reintentar"}
+                </Button>
+              )
             )
+          }
+        >
+          <p>{state.error.message}</p>
+          {state.data && (
+            <p className={styles.stale}>
+              Datos de la última consulta. Actualiza para confirmar el
+              historial.
+            </p>
           )}
-        </div>
+        </Notice>
       )}
       {state.data && !state.loading && (
         <>

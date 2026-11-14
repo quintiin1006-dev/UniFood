@@ -542,3 +542,8 @@
       color 140ms ease;
   }
 }
+
+/* Response messages use the shared Notice (components/ui); only spacing lives here. */
+.message {
+  margin: 16px 0;
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { CircleAlert, X } from "lucide-react";
+import { X } from "lucide-react";
 import {
   AdminProfileProvider,
   useAdminProfile,
@@ -9,6 +9,8 @@ import {
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminHeader } from "./AdminHeader";
 import styles from "./Admin.module.css";
+import { Notice } from "@/components/ui/Notice";
+import { Button, buttonClass } from "@/components/ui/Button";
 
 export function AdminShell({ children }: { children: ReactNode }) {
   return (
@@ -55,31 +57,36 @@ function Shell({ children }: { children: ReactNode }) {
               </div>
             )}
             {error && (
-              <div className={styles.feedback} role="alert">
-                <CircleAlert size={23} aria-hidden="true" />
-                <p>{error.message}</p>
-                {error.status === 401 ? (
-                  <a href="/panel/login">Iniciar sesión</a>
-                ) : (
-                  error.status !== 403 && (
-                    <button type="button" onClick={() => void retry()}>
-                      Reintentar
-                    </button>
+              <Notice
+                tone="error"
+                className={styles.message}
+                action={
+                  error.status === 401 ? (
+                    <a className={buttonClass("secondary")} href="/panel/login">
+                      Iniciar sesión
+                    </a>
+                  ) : (
+                    error.status !== 403 && (
+                      <Button variant="secondary" onClick={() => void retry()}>
+                        Reintentar
+                      </Button>
+                    )
                   )
-                )}
-              </div>
+                }
+              >
+                {error.message}
+              </Notice>
             )}
             {data && (
               <>
                 {!data.cafeteria.active && (
-                  <div className={styles.inactive} role="status">
-                    <CircleAlert size={21} aria-hidden="true" />
+                  <Notice tone="info" className={styles.message}>
                     <p>
                       <strong>La cafetería está inactiva.</strong> Puedes
                       consultar la información, pero los cambios están
                       deshabilitados.
                     </p>
-                  </div>
+                  </Notice>
                 )}
                 {children}
               </>

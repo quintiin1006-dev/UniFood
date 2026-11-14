@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { CircleAlert, X } from "lucide-react";
+import { X } from "lucide-react";
+
+import { Notice } from "@/components/ui/Notice";
 
 import styles from "./OrderActionAlert.module.css";
 
@@ -27,20 +29,22 @@ export function OrderActionAlert({
   }, [onClose]);
 
   return (
-    <div className={styles.alert} role="alert">
-      <CircleAlert size={26} aria-hidden="true" className={styles.icon} />
-      <div className={styles.body}>
-        <p className={styles.title}>{title}</p>
-        <p className={styles.message}>{message}</p>
-      </div>
-      <button
-        type="button"
-        className={styles.close}
-        onClick={onClose}
-        aria-label="Cerrar aviso"
-      >
-        <X size={24} aria-hidden="true" />
-      </button>
-    </div>
+    <Notice
+      tone="error"
+      title={title}
+      className={styles.alert}
+      action={
+        <button
+          type="button"
+          className={styles.close}
+          onClick={onClose}
+          aria-label="Cerrar aviso"
+        >
+          <X size={24} aria-hidden="true" />
+        </button>
+      }
+    >
+      {message}
+    </Notice>
   );
 }

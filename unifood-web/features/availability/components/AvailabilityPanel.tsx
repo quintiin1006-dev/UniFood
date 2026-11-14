@@ -5,6 +5,8 @@ import { formatBusinessDate } from "../presentation";
 import { AvailabilitySwitch } from "./AvailabilitySwitch";
 import { CategoryCarousel } from "./CategoryCarousel";
 import styles from "./Availability.module.css";
+import { Notice } from "@/components/ui/Notice";
+import { Button } from "@/components/ui/Button";
 
 export function AvailabilityPanel() {
   const state = useAvailability();
@@ -46,22 +48,27 @@ export function AvailabilityPanel() {
         </div>
       )}
       {state.notice && (
-        <p className={styles.notice} role="status">
+        <Notice tone="info" className={styles.message}>
           {state.notice}
-        </p>
+        </Notice>
       )}
       {state.error && (
-        <div className={styles.error} role="alert">
-          <p>{state.error}</p>
-          <button
-            type="button"
-            onClick={() => {
-              void state.refresh();
-            }}
-          >
-            Reintentar
-          </button>
-        </div>
+        <Notice
+          tone="error"
+          className={styles.message}
+          action={
+            <Button
+              variant="secondary"
+              onClick={() => {
+                void state.refresh();
+              }}
+            >
+              Reintentar
+            </Button>
+          }
+        >
+          {state.error}
+        </Notice>
       )}
       {state.data && (
         <>

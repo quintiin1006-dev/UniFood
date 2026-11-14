@@ -390,3 +390,8 @@
     padding: 48px 20px;
   }
 }
+
+/* Response messages use the shared Notice (components/ui); only spacing lives here. */
+.message {
+  margin: 16px 0;
+}
