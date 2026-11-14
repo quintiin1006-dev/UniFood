@@ -14,20 +14,25 @@ const render = (name, props) =>
       props,
     ),
   );
-test("presentation keeps exact cents, large integers, nulls and percentages distinct", () => {
+test("presentation rounds to whole pesos and one-decimal percentages without losing large integers", () => {
   assert.equal(
     p.formatCount("900719925474099312345"),
     "900.719.925.474.099.312.345",
   );
   assert.equal(
     p.formatMoney("12345678901234567890123.45"),
-    "$ 12.345.678.901.234.567.890.123,45",
+    "$12.345.678.901.234.567.890.123",
   );
-  assert.equal(p.formatMoney("0.00"), "$ 0,00");
+  assert.equal(p.formatMoney("0.00"), "$0");
+  assert.equal(p.formatMoney("22500.50"), "$22.501");
+  assert.equal(p.formatMoney("22500.49"), "$22.500");
   assert.equal(p.formatMoney(null), "No calculable");
   assert.equal(p.formatCount(null), "No calculable");
   assert.equal(p.formatCount("0"), "0");
-  assert.equal(p.formatPercent("33.33"), "33,33 %");
+  assert.equal(p.formatPercent("33.33"), "33,3 %");
+  assert.equal(p.formatPercent("100.00"), "100 %");
+  assert.equal(p.formatPercent("12.35"), "12,4 %");
+  assert.equal(p.formatPercent("0.04"), "0 %");
   assert.equal(p.formatPercent(null), "Sin base de cálculo");
 });
 test("custom validation uses the backend reference date across Bogota midnight", () => {
@@ -61,8 +66,8 @@ test("summary renders accurate labels, backend rate and nominal money without fi
     "Unidades no recogidas",
     "Valor de pedidos registrados",
     "Tasa de no recogida",
-    "50,00 %",
-    "$ 30,00",
+    "50 %",
+    "$30",
   ])
     assert.ok(html.includes(text), text);
   assert.equal((html.match(/class="metric"/g) ?? []).length, 5);
@@ -160,9 +165,9 @@ test("no recogidos shows all-universe share and monetary sources without summing
   });
   for (const text of [
     "Participación",
-    "100,00 %",
+    "100 %",
     "Fuera del Top 10",
-    "$ 123,45",
+    "$123",
     "no se suman",
     "subtotales históricos",
   ])
@@ -176,8 +181,8 @@ test("coverage explains pending checks and real issues without an audit table or
     "Información sobre los datos",
     "¿Por qué?",
     "No se ha comprobado todo el histórico",
-    "operaciones reales",
-    "Faltan detalles fiables",
+    "pedidos de prueba",
+    "falta el detalle de productos",
   ])
     assert.ok(html.includes(text), text);
   assert.doesNotMatch(
@@ -190,7 +195,7 @@ test("pending history never claims missing orders or invalid dates; detected ano
   const normal = render("DashboardCoverage", { coverage });
   assert.doesNotMatch(
     normal,
-    /podrían no incluir|fechas de finalización no válidas|<details open/,
+    /podrían no incluir|fecha de cierre no válida|<details open/,
   );
   assert.equal(
     (normal.match(/No se ha comprobado todo el histórico/g) ?? []).length,
@@ -201,13 +206,13 @@ test("pending history never claims missing orders or invalid dates; detected ano
   const invalid = render("DashboardCoverage", { coverage });
   assert.match(invalid, /podrían no incluir todos los pedidos/);
   assert.match(invalid, /<details open/);
-  assert.match(invalid, /fechas de finalización no válidas/);
+  assert.match(invalid, /fecha de cierre no válida/);
 });
 test("five KPIs and one secondary amount preserve null rate and place uncollected money only in its section", () => {
   const data = adminDashboardFixture({ empty: true });
   const summary = render("DashboardSummary", { summary: data.summary });
   assert.match(summary, /Sin base de cálculo/);
-  assert.doesNotMatch(summary, /0,00 %/);
+  assert.doesNotMatch(summary, /0 %/);
   assert.equal((summary.match(/<dd\b/g) ?? []).length, 6);
   const section = render("NotCollectedProducts", {
     ranking: data.notCollectedProducts,
@@ -275,7 +280,7 @@ test("full dashboard renders effective server period, all sections and empty cov
     "Importes en COP",
     "Productos no recogidos",
     "Productos más entregados",
-    "no confirma ausencia total",
+    "No hay pedidos finalizados con fecha en este período.",
   ])
     assert.ok(html.includes(text), text);
   assert.doesNotMatch(html, /Próximamente|PRIVATE/);

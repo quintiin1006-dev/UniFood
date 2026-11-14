@@ -1,19 +1,10 @@
-import { formatAvailabilityPrice } from "@/features/availability/presentation";
+import { formatCop } from "@/lib/numberFormat";
 export { formatBusinessDate } from "@/features/availability/presentation";
 import type { HistoryOrder, HistoryStatus } from "./types";
 
-const fractionalPesos = new Intl.NumberFormat("es-CO", {
-  style: "currency",
-  currency: "COP",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-// NUMERIC(12,2) snapshots may contain cents. Reuse the existing whole-peso format
-// while preserving historical fractional amounts instead of rounding them away.
-export const formatHistoryPrice = (amount: number) =>
-  Number.isInteger(amount)
-    ? formatAvailabilityPrice(amount)
-    : fractionalPesos.format(amount);
+// Pesos without decimals, the same format as the admin dashboard (I6). A historical snapshot
+// with cents is rounded half up for display; the contract keeps the exact value.
+export const formatHistoryPrice = (amount: number) => formatCop(amount) ?? "—";
 
 const clock = new Intl.DateTimeFormat("es-CO", {
   timeZone: "America/Bogota",
