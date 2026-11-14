@@ -428,7 +428,8 @@
   gap: 2px;
 }
 
-.rowIdentity strong {
+.rowName {
+  margin: 0;
   overflow: hidden;
   color: var(--color-ink);
   font-size: 16px;

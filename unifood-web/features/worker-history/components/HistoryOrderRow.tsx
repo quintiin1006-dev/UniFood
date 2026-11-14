@@ -32,7 +32,7 @@ export function HistoryOrderRow({
     <article className={styles.row} data-open={open || undefined}>
       <div className={styles.rowHead}>
         <div className={styles.rowIdentity}>
-          <strong>{name}</strong>
+          <h3 className={styles.rowName}>{name}</h3>
           <span>{order.reference}</span>
         </div>
         <div className={styles.rowAside}>
@@ -75,9 +75,9 @@ export function HistoryOrderRow({
             >
               {order.items.map((item, index) => (
                 <li key={index}>
-                  <span>
+                  <span className={styles.itemName}>
                     <span className={styles.quantity}>{item.quantity}×</span>{" "}
-                    {item.name}
+                    <span>{item.name}</span>
                   </span>
                   <span className={styles.amount}>
                     {formatHistoryPrice(item.subtotal)}
