@@ -28,7 +28,6 @@ const noon = new Date("2026-11-20T12:00:00-05:00");
 const input = (extra = {}) => ({
   note: "",
   pickupTime: "",
-  accepted: true,
   ...extra,
 });
 
@@ -114,7 +113,7 @@ test("the order body carries ids, quantities, one trimmed note and the optional 
   ]);
 });
 
-test("review applies the cart rules, the 200-character note, the pickup time and the terms", () => {
+test("review applies the cart rules, the 200-character note and the pickup time, with no terms step", () => {
   const ok = checkout.reviewOrder(state, central, input(), noon);
   assert.equal(ok.ok, true);
   assert.equal("requestedPickupAt" in ok.request, false);
@@ -147,11 +146,8 @@ test("review applies the cart rules, the 200-character note, the pickup time and
   assert.equal(long.field, "note");
   // Emoji count as one character, like length() in PostgreSQL.
   assert.equal(checkout.noteLength("😀".repeat(200)), 200);
-  assert.equal(
-    checkout.reviewOrder(state, central, input({ accepted: false }), noon)
-      .field,
-    "terms",
-  );
+  // Ordering no longer asks for any acceptance: the terms are accepted at registration.
+  assert.equal("accepted" in input(), false);
   const closed = menuDomain.toCafeteriaMenu(
     fixtures.clientMenus[fixtures.CAFETERIA_BLOQUE_B],
   );

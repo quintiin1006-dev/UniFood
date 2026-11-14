@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
+import { TERMS_PATH } from "@/features/auth/legal";
 import { ArrowLeft, Banknote, Clock3, ShoppingBag } from "lucide-react";
 import { Notice } from "@/components/ui/Notice";
 import type { CafeteriaMenu, ClientCart } from "../types";
@@ -102,7 +103,6 @@ function CheckoutForm({
   const [note, setNote] = useState("");
   const [choosePickup, setChoosePickup] = useState(false);
   const [pickupTime, setPickupTime] = useState("");
-  const [accepted, setAccepted] = useState(false);
   const [noteLimitReached, setNoteLimitReached] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [pending, setPending] = useState(false);
@@ -134,7 +134,7 @@ function CheckoutForm({
     const review = reviewOrder(
       latest,
       menu,
-      { note, pickupTime: choosePickup ? pickupTime : "", accepted },
+      { note, pickupTime: choosePickup ? pickupTime : "" },
       new Date(),
     );
     if (!review.ok) {
@@ -309,30 +309,6 @@ function CheckoutForm({
           <span>Total estimado</span>
           <strong>{currency.format(total)}</strong>
         </div>
-        <div className={styles.terms}>
-          <h2>Condiciones de recogida</h2>
-          <p id="pickup-terms">
-            Revisa los productos, las cantidades y la cafetería. Recoge tu
-            pedido y paga en efectivo en caja. El total final lo calcula la
-            cafetería al recibirlo.
-          </p>
-          <label>
-            <input
-              type="checkbox"
-              checked={accepted}
-              required
-              disabled={pending}
-              onChange={(event) => {
-                setAccepted(event.target.checked);
-                setProblem(null);
-              }}
-              aria-describedby="pickup-terms"
-            />
-            <span>
-              He revisado mi pedido y acepto las condiciones de recogida.
-            </span>
-          </label>
-        </div>
         {problem && (
           <div role="alert" className={shared.notice}>
             <p>{problem.message}</p>
@@ -345,7 +321,7 @@ function CheckoutForm({
         <button
           type="submit"
           className={shared.primaryButton}
-          disabled={!accepted || pending || !!cartIssue || !!pickupError}
+          disabled={pending || !!cartIssue || !!pickupError}
         >
           {pending
             ? "Enviando pedido…"
@@ -353,6 +329,10 @@ function CheckoutForm({
               ? "Reintentar envío"
               : "Confirmar pedido"}
         </button>
+        <p className={styles.reminder}>
+          Recuerda recoger tu pedido a tiempo. Al pedir aceptas los{" "}
+          <Link href={TERMS_PATH}>términos y condiciones</Link>.
+        </p>
       </form>
     </section>
   );

@@ -74,6 +74,10 @@ const registrationFailures: Record<string, Omit<Failure, "code">> = {
     message:
       "Debes aceptar el tratamiento de tus datos personales para continuar.",
   },
+  REGISTRATION_TERMS_REQUIRED: {
+    status: 400,
+    message: "Debes aceptar los términos y condiciones para continuar.",
+  },
   REGISTRATION_INVALID_NAME: {
     status: 400,
     message:

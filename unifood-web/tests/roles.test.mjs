@@ -75,6 +75,12 @@ const uiMocks = {
   "@/features/client/components/ClientCartProvider": {
     default: ({ children }) => createElement("div", {}, children),
   },
+  "@/features/client/components/TermsGate": {
+    default: () => null,
+  },
+  "@/features/auth/server/terms": {
+    currentTermsAccepted: async () => true,
+  },
   "@/features/client/components/ClientCart": {
     default: () => createElement("div", {}, "Student cart"),
   },

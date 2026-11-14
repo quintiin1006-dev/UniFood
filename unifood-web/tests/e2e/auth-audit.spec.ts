@@ -137,7 +137,8 @@ test("a pending registration is held at step 2 until it completes, then enters /
   await page
     .getByLabel("Confirmar contraseña", { exact: true })
     .fill("NuevaClave9");
-  await page.getByRole("checkbox").check();
+  await page.getByRole("checkbox", { name: /Acepto el tratamiento/ }).check();
+  await page.getByRole("checkbox", { name: /Acepto los/ }).check();
   await page.getByRole("button", { name: "Crear mi cuenta" }).click();
   await expect(page.getByRole("main").getByRole("alert")).toHaveText(
     "Ese código institucional ya está registrado. Si es tuyo, contacta a soporte.",
@@ -159,6 +160,19 @@ test("the privacy page is a draft marked for legal review", async ({
   await expect(page.getByRole("note")).toContainText(
     "Borrador, pendiente de revisión legal",
   );
+});
+
+test("the terms page is a draft marked for legal review, and step 2 links to it", async ({
+  page,
+}) => {
+  await page.goto("/terminos");
+  await expect(page.getByRole("note")).toContainText(
+    "Borrador, pendiente de revisión legal",
+  );
+  await expect(
+    page.getByText("[PENDIENTE: razón social y NIT del operador]"),
+  ).toBeVisible();
+  await expect(page.getByText("Condiciones de recogida")).toBeVisible();
 });
 
 test("all four anonymous protected routes redirect to their exact entrypoint", async ({

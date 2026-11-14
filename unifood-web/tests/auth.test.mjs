@@ -430,6 +430,7 @@ const completeBody = {
   fullName: "María Pérez",
   code: "1234567",
   privacy: true,
+  terms: true,
   password: "NuevaClave9",
 };
 
@@ -457,6 +458,8 @@ test("step 2 updates the password, closes other sessions, then completes", async
       full_name: "María Pérez",
       institutional_code: "1234567",
       privacy_accepted: true,
+      terms_accepted: true,
+      terms_version: "2026-11-v1",
     },
   );
   // The session stays: no global or local sign-out, no cookie deletion.
@@ -569,6 +572,8 @@ test("step 2 validates its input on the server before calling Supabase", async (
     [pendingStudent, { fullName: "AB" }, "REGISTRATION_INVALID_NAME"],
     [pendingStudent, { privacy: false }, "REGISTRATION_PRIVACY_REQUIRED"],
     [pendingStudent, { privacy: "true" }, "REGISTRATION_PRIVACY_REQUIRED"],
+    [pendingStudent, { terms: false }, "REGISTRATION_TERMS_REQUIRED"],
+    [pendingStudent, { terms: "true" }, "REGISTRATION_TERMS_REQUIRED"],
     [pendingStudent, { code: "" }, "REGISTRATION_INVALID_CODE"],
     [pendingStudent, { code: "123456" }, "REGISTRATION_INVALID_CODE"],
     [pendingStudent, { code: "12345a7" }, "REGISTRATION_INVALID_CODE"],
