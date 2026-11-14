@@ -49,28 +49,6 @@
 .back:hover {
   background: var(--color-brand-tint);
 }
-.language {
-  position: relative;
-  display: flex;
-  align-items: center;
-  margin-left: auto;
-  color: var(--muted);
-}
-.language select {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-size: 14px;
-  padding: 10px 28px 10px 12px;
-  cursor: pointer;
-}
-.language svg {
-  position: absolute;
-  right: 4px;
-  pointer-events: none;
-}
 .brand {
   display: flex;
   justify-content: center;

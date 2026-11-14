@@ -142,7 +142,6 @@ export default function CompleteRegistration({
           >
             <div className={styles.fields}>
               <Field
-                language="es"
                 icon={<UserRound size={21} />}
                 label={t.name}
                 name="name"
@@ -155,7 +154,6 @@ export default function CompleteRegistration({
                 disabled={!hydrated || busy}
               />
               <Field
-                language="es"
                 icon={<IdCard size={21} />}
                 label={student ? t.studentCode : t.staffCode}
                 name="institutional-code"
@@ -171,7 +169,6 @@ export default function CompleteRegistration({
                 aria-describedby="code-hint"
               />
               <Field
-                language="es"
                 icon={<LockKeyhole size={21} />}
                 label={t.password}
                 password
@@ -186,7 +183,6 @@ export default function CompleteRegistration({
                 aria-describedby="password-rules"
               />
               <Field
-                language="es"
                 icon={<LockKeyhole size={21} />}
                 label={t.confirm}
                 password

@@ -7,13 +7,11 @@ export function Field({
   icon,
   label,
   password = false,
-  language,
   ...props
 }: InputHTMLAttributes<HTMLInputElement> & {
   icon: ReactNode;
   label: string;
   password?: boolean;
-  language: "es" | "en";
 }) {
   const [visible, setVisible] = useState(false);
   return (
@@ -31,15 +29,7 @@ export function Field({
           type="button"
           disabled={props.disabled}
           onClick={() => setVisible((current) => !current)}
-          aria-label={
-            visible
-              ? language === "es"
-                ? "Ocultar contraseña"
-                : "Hide password"
-              : language === "es"
-                ? "Mostrar contraseña"
-                : "Show password"
-          }
+          aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
           aria-pressed={visible}
         >
           {visible ? <Eye size={21} /> : <EyeOff size={21} />}
