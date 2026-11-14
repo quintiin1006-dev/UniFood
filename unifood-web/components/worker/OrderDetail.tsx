@@ -268,6 +268,7 @@ export default function OrderDetail({
         <button
           type="button"
           className={styles.action}
+          data-status={order.status}
           onClick={() => onAction(order)}
           disabled={busy || !canAdvanceOrder(order)}
           aria-label={

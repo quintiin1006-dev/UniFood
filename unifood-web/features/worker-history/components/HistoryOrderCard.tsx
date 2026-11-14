@@ -1,4 +1,5 @@
 import { Check, Clock3, X } from "lucide-react";
+import { StatusChip } from "@/components/ui/StatusChip";
 import type { HistoryOrder } from "../types";
 import {
   historyStatusText,
@@ -23,10 +24,15 @@ export function HistoryOrderCard({ order }: { order: HistoryOrder }) {
           {formatHistoryTime(order.completedAt)}
         </time>
       </div>
-      <span className={`${styles.badge} ${styles[order.status]}`}>
+      {/* The shared state chip (ola 2); the text is the same fixed one as before. */}
+      <StatusChip
+        status={order.status}
+        cancellationSource={order.cancellationSource}
+        className={styles.badge}
+      >
         <Icon size={14} aria-hidden="true" />
         <span>{historyStatusText(order)}</span>
-      </span>
+      </StatusChip>
       <p className={styles.clientName}>
         <span>Cliente</span>
         <strong>{order.clientName || "Cliente no disponible"}</strong>

@@ -61,13 +61,11 @@ button {
   transform: scale(0.7);
   transform-origin: top left;
 
-  background:
-    radial-gradient(
-      circle at 50% 45%,
-      rgba(35, 129, 239, 0.26),
-      transparent 40%
-    ),
-    linear-gradient(145deg, #063d82 0%, #0756a9 48%, #043d7f 100%);
+  /* Ola 2: light page, no gradient. The board is drawn at 0.7: --worker-zoom lets components
+     size things in real pixels with calc(N / var(--worker-zoom)). */
+  --worker-zoom: 0.7;
+  background: var(--color-bg);
+  color: var(--color-ink);
 
   isolation: isolate;
 }
@@ -77,23 +75,7 @@ button {
    ========================================================= */
 
 .worker-page::before {
-  content: "";
-
-  position: absolute;
-
-  inset: 0;
-
-  pointer-events: none;
-
-  background: radial-gradient(
-    circle at 50% 70%,
-    rgba(255, 255, 255, 0.035),
-    transparent 35%
-  );
-
-  opacity: 0.8;
-
-  z-index: 0;
+  content: none;
 }
 
 /* =========================================================
@@ -131,41 +113,9 @@ button {
    MARCA DE AGUA
    ========================================================= */
 
+/* Ola 2: «cero ruido visual», no watermark behind the board. */
 .worker-main::before {
-  content: "";
-
-  position: absolute;
-
-  left: 50%;
-  top: 52%;
-
-  transform: translate(-50%, -50%);
-
-  width: 420px;
-  height: 420px;
-
-  background-image: url("/unifood-pantalla.png");
-
-  background-repeat: no-repeat;
-
-  background-position: center;
-
-  background-size: contain;
-
-  /*
-   * Transparencia de la marca de agua.
-   */
-  opacity: 0.1;
-
-  pointer-events: none;
-
-  user-select: none;
-
-  /*
-   * El logo queda sobre el fondo,
-   * pero debajo del Kanban.
-   */
-  z-index: 0;
+  content: none;
 }
 
 /* =========================================================

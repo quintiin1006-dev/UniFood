@@ -5,7 +5,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 4px 6px 24px;
-  color: #192a45;
+  color: var(--color-ink);
 }
 .heading {
   display: flex;
@@ -23,7 +23,7 @@
 .date {
   margin: 6px 0 0;
   font-size: 14px;
-  color: #52627a;
+  color: var(--color-slate);
 }
 .refresh,
 .error button,
@@ -33,10 +33,10 @@
   justify-content: center;
   gap: 7px;
   min-height: 44px;
-  border: 1px solid #c8d8f1;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 12px;
-  background: #fff;
-  color: #1455ad;
+  background: var(--color-surface);
+  color: var(--color-brand);
   padding: 10px 14px;
   font-size: 13px;
   font-weight: 650;
@@ -45,7 +45,7 @@
 }
 .panel button:hover:not(:disabled),
 .error a:hover {
-  background: #edf4ff;
+  background: var(--color-brand-tint);
 }
 .panel button:disabled {
   cursor: wait;
@@ -53,8 +53,8 @@
 }
 .panel button:focus-visible,
 .panel a:focus-visible {
-  outline: 3px solid #0868e9;
-  outline-offset: 3px;
+  outline: var(--focus-ring-width) solid var(--color-brand);
+  outline-offset: var(--focus-ring-offset);
 }
 .filters {
   display: flex;
@@ -63,7 +63,7 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
-  color: #52627a;
+  color: var(--color-slate);
   font-size: 12px;
 }
 .filters label {
@@ -75,15 +75,15 @@
   width: 100%;
   min-height: 44px;
   padding: 8px 12px;
-  border: 1px solid #c8d8f1;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 10px;
-  color: #192a45;
-  background: #fff;
+  color: var(--color-ink);
+  background: var(--color-surface);
   font: inherit;
 }
 .filters select:focus-visible {
-  outline: 3px solid #0868e9;
-  outline-offset: 3px;
+  outline: var(--focus-ring-width) solid var(--color-brand);
+  outline-offset: var(--focus-ring-offset);
 }
 .pagination {
   display: flex;
@@ -98,10 +98,10 @@
   min-width: 0;
   padding: 4px 6px 4px 14px;
   margin-bottom: 18px;
-  border: 1px solid #c8d8f1;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 12px;
-  background: #fff;
-  color: #52627a;
+  background: var(--color-surface);
+  color: var(--color-slate);
 }
 .search > svg {
   flex-shrink: 0;
@@ -112,20 +112,20 @@
   min-height: 42px;
   font: inherit;
   font-size: 14px;
-  color: #192a45;
+  color: var(--color-ink);
   background: transparent;
   border: 0;
 }
 .search input::placeholder {
-  color: #52627a;
+  color: var(--color-slate);
   opacity: 1;
 }
 .search input::-webkit-search-cancel-button {
   appearance: none;
 }
 .search input:focus-visible {
-  outline: 2px solid #0868e9;
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-brand);
+  outline-offset: var(--focus-ring-offset);
   border-radius: 4px;
 }
 .search button {
@@ -138,7 +138,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #1455ad;
+  color: var(--color-brand);
   cursor: pointer;
 }
 .clientName {
@@ -150,7 +150,7 @@
 }
 .clientName > span {
   font-size: 11px;
-  color: #52627a;
+  color: var(--color-slate);
 }
 .clientName > strong {
   font-weight: 550;
@@ -167,11 +167,12 @@
 }
 .card {
   min-width: 0;
-  background: #fff;
-  border: 1px solid #e0e7f0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 18px;
   padding: 21px;
-  box-shadow: 0 3px 12px #233c5d04;
+  box-shadow: 0 3px 12px
+    color-mix(in srgb, var(--color-brand-hover) 2%, transparent);
 }
 .cardHeading {
   display: flex;
@@ -193,17 +194,13 @@
   flex-shrink: 0;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
-  color: #52627a;
+  color: var(--color-slate);
 }
+/* Layout of the shared StatusChip in a card: long reasons wrap. Colors come from the chip. */
 .badge {
-  display: inline-flex;
-  gap: 5px;
-  align-items: center;
   max-width: 100%;
-  border-radius: 7px;
-  padding: 5px 8px;
-  font-size: 11px;
-  font-weight: 650;
+  border-radius: var(--radius-sm);
+  white-space: normal;
 }
 /* A rejection reason can be long: it wraps instead of being cut. */
 .badge > span {
@@ -212,18 +209,6 @@
 }
 .badge > svg {
   flex-shrink: 0;
-}
-.DELIVERED {
-  background: #eaf6f0;
-  color: #236446;
-}
-.NOT_COLLECTED {
-  background: #fff3dd;
-  color: #805609;
-}
-.CANCELLED {
-  background: #fcf0f0;
-  color: #a13b42;
 }
 .items {
   list-style: none;
@@ -245,7 +230,7 @@
   overflow-wrap: anywhere;
 }
 .quantity {
-  color: #52627a;
+  color: var(--color-slate);
   font-variant-numeric: tabular-nums;
 }
 .amount {
@@ -258,7 +243,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-top: 1px solid #edf0f5;
+  border-top: 1px solid var(--color-brand-tint);
   padding-top: 15px;
   font-size: 13px;
 }
@@ -269,7 +254,7 @@
   font-variant-numeric: tabular-nums;
 }
 .noItems {
-  color: #52627a;
+  color: var(--color-slate);
   font-size: 13px;
   margin: 22px 0;
 }
@@ -279,17 +264,17 @@
   align-items: center;
   text-align: center;
   padding: 64px 24px;
-  border: 1px dashed #cbd7e7;
+  border: 1px dashed var(--color-brand-tint-2);
   border-radius: 18px;
-  background: #ffffff80;
+  background: color-mix(in srgb, var(--color-surface) 50%, transparent);
 }
 .emptyIcon {
   display: grid;
   place-items: center;
   width: 58px;
   height: 58px;
-  background: #eaf2ff;
-  color: #185dbb;
+  background: var(--color-brand-tint);
+  color: var(--color-brand);
   border-radius: 18px;
   margin-bottom: 20px;
 }
@@ -300,7 +285,7 @@
 }
 .empty p {
   max-width: 350px;
-  color: #52627a;
+  color: var(--color-slate);
   font-size: 14px;
   line-height: 1.6;
   margin: 10px 0 0;
@@ -310,10 +295,10 @@
   align-items: center;
   gap: 12px;
   padding: 16px;
-  background: #fff7ed;
-  border: 1px solid #efd7b2;
+  background: var(--color-brand-tint);
+  border: 1px solid var(--color-brand-tint);
   border-radius: 14px;
-  color: #714715;
+  color: var(--color-ink);
   margin-bottom: 20px;
   font-size: 14px;
 }
@@ -337,20 +322,20 @@
   flex-shrink: 0;
 }
 .loading > p {
-  color: #52627a;
+  color: var(--color-slate);
   font-size: 14px;
   margin-bottom: 16px;
 }
 .skeletons > div {
   height: 240px;
-  border: 1px solid #e0e7f0;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 18px;
   background: linear-gradient(
-    #fff 0 25%,
-    #eef2f8 25% 28%,
-    #fff 28% 55%,
-    #eef2f8 55% 58%,
-    #fff 58%
+    var(--color-surface) 0 25%,
+    var(--color-brand-tint) 25% 28%,
+    var(--color-surface) 28% 55%,
+    var(--color-brand-tint) 55% 58%,
+    var(--color-surface) 58%
   );
 }
 .srOnly {

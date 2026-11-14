@@ -1,315 +1,229 @@
+/*
+ * Order card of the worker board (ola 2, T3). Tokens only. Sizes in real pixels on the board
+ * drawn at scale(0.7): calc(N / var(--worker-zoom)) is N px on screen, so the main action is
+ * 56 px tall and names read at 1 m.
+ */
 .card {
+  --rpx: calc(1px / var(--worker-zoom, 1));
+
   position: relative;
-
   width: 100%;
-
   display: flex;
   flex-direction: column;
-
-  gap: 9px;
-
-  padding: 12px;
-
-  border-radius: 16px;
-
-  background: rgba(255, 255, 255, 0.97);
-
-  box-shadow:
-    0 5px 16px rgba(5, 52, 115, 0.12),
-    0 1px 2px rgba(5, 52, 115, 0.06);
-
-  /* W9: no entrance on mount. Opening the module or a polling refresh never moves a card;
-     only an order that just changed column plays .arrived. */
+  gap: calc(10 * var(--rpx));
+  padding: calc(12 * var(--rpx));
+  border: 1px solid var(--color-line);
+  border-radius: calc(20 * var(--rpx));
+  background: var(--color-surface);
+  /* W9: no entrance on mount; only .arrived and .appeared play, once. */
   transition: box-shadow var(--motion-fast, 120ms) var(--ease-out, ease-out);
 }
 
-/* Hover only deepens the shadow: no lift on a touch-first board. */
 .card:hover {
-  box-shadow:
-    0 10px 25px rgba(5, 52, 115, 0.15),
-    0 2px 4px rgba(5, 52, 115, 0.07);
+  box-shadow: var(--shadow-raised);
 }
 
-/* =========================================================
-   INFORMACIÓN DEL ESTUDIANTE
-   ========================================================= */
+.delivered {
+  background: var(--color-bg);
+}
 
 .mainInfo {
   position: relative;
-
   width: 100%;
-
   display: flex;
   align-items: center;
-
-  gap: 10px;
-
+  gap: calc(10 * var(--rpx));
+  min-height: calc(48 * var(--rpx));
   padding: 2px;
-
-  color: inherit;
-
-  background: transparent;
-
   border: 0;
-
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
   text-align: left;
-
   cursor: pointer;
-
   -webkit-tap-highlight-color: transparent;
 }
 
-.mainInfo:focus-visible {
-  outline: 3px solid rgba(8, 104, 233, 0.22);
-
-  outline-offset: 3px;
-
-  border-radius: 10px;
-}
-
-/* =========================================================
-   ICONO DEL ESTUDIANTE
-   ========================================================= */
-
 .userIcon {
-  width: 32px;
-  height: 32px;
-
+  width: calc(36 * var(--rpx));
+  height: calc(36 * var(--rpx));
   flex-shrink: 0;
-
   display: grid;
   place-items: center;
-
-  color: #0757b7;
-
-  background: #e5f0ff;
-
-  border-radius: 50%;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand-tint);
+  color: var(--color-brand);
 }
-
-/* =========================================================
-   NOMBRE E ID
-   ========================================================= */
 
 .student {
   min-width: 0;
-
   display: flex;
   flex-direction: column;
-
   gap: 3px;
 }
 
 .student strong {
   overflow: hidden;
-
-  color: #122c67;
-
-  font-size: 15px;
-  font-weight: 600;
-
+  color: var(--color-ink);
+  font-size: calc(18 * var(--rpx));
+  font-weight: 700;
   line-height: 1.25;
-
   white-space: nowrap;
-
   text-overflow: ellipsis;
 }
 
 .student span {
-  color: #5072ad;
-
-  font-size: 13px;
-  font-weight: 400;
-
+  color: var(--color-text-soft);
+  font-size: calc(15 * var(--rpx));
+  font-weight: 500;
   line-height: 1.25;
-}
-
-/* =========================================================
-   TIEMPO / METADATA
-   ========================================================= */
-
-.time {
-  margin-left: auto;
-
-  align-self: flex-start;
-
-  flex-shrink: 0;
-
-  color: #7591bd;
-
-  font-size: 12px;
-  font-weight: 400;
-
-  line-height: 1.3;
-
-  white-space: nowrap;
-}
-
-/* =========================================================
-   FLECHA
-   ========================================================= */
-
-.arrow {
-  flex-shrink: 0;
-
-  color: #0759ba;
-}
-
-/* =========================================================
-   ESTUDIANTE AVISADO
-   ========================================================= */
-
-.pickupTime {
-  display: flex;
-  align-items: center;
-
-  gap: 6px;
-
-  width: fit-content;
-
-  margin: 0 5px 1px;
-
-  padding: 6px 10px;
-
-  color: #1c4fa1;
-
-  background: #eef4ff;
-
-  border-radius: 999px;
-
-  font-size: 12px;
-  font-weight: 600;
-
-  line-height: 1.2;
-
   font-variant-numeric: tabular-nums;
 }
 
-.calledStatus {
-  display: flex;
+.time {
+  margin-left: auto;
+  align-self: flex-start;
+  flex-shrink: 0;
+  color: var(--color-text-soft);
+  font-size: calc(14 * var(--rpx));
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.arrow {
+  flex-shrink: 0;
+  color: var(--color-brand);
+}
+
+/* Pickup time as a chip (informative only). */
+.pickupTime {
+  display: inline-flex;
   align-items: center;
-
-  gap: 7px;
-
+  gap: 6px;
   width: fit-content;
-
-  margin: 0 5px 1px;
-
-  padding: 6px 10px;
-
-  color: #087f5b;
-
-  background: #eaf8f3;
-
-  border-radius: 999px;
-
-  font-size: 12px;
-  font-weight: 500;
-
+  padding: calc(5 * var(--rpx)) calc(12 * var(--rpx));
+  border-radius: var(--radius-pill);
+  background: var(--color-brand-tint);
+  color: var(--color-brand-hover);
+  font-size: calc(14 * var(--rpx));
+  font-weight: 700;
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
 
+/* «Cliente avisado»: the «Llamado» chip of the shared map. */
+.calledStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  padding: calc(5 * var(--rpx)) calc(12 * var(--rpx));
+  border-radius: var(--radius-pill);
+  background: var(--color-ink);
+  color: var(--color-on-color);
+  font-size: calc(14 * var(--rpx));
+  font-weight: 700;
+  line-height: 1.2;
   animation: calledAppear var(--motion-base, 180ms) var(--ease-out, ease-out);
 }
 
 .calledDot {
   width: 7px;
   height: 7px;
-
   flex-shrink: 0;
-
-  background: #12b886;
-
-  border-radius: 50%;
-
-  box-shadow: 0 0 0 3px rgba(18, 184, 134, 0.12);
+  border-radius: var(--radius-pill);
+  background: var(--color-on-color);
 }
 
-/* =========================================================
-   BOTÓN DE ACCIÓN
-   ========================================================= */
-
+/* Main action: brand; «Marcar como listo» in success (data-status="preparing"). */
 .actionButton {
   width: 100%;
-
-  min-height: 42px;
-
+  min-height: calc(56 * var(--rpx));
   display: flex;
   align-items: center;
   justify-content: center;
-
   gap: 9px;
-
-  color: #075be0;
-
-  background: linear-gradient(135deg, #d8eaff, #c9e1ff);
-
   border: 0;
-
-  border-radius: 12px;
-
-  font-size: 14px;
-  font-weight: 600;
-
+  border-radius: calc(20 * var(--rpx));
+  background: var(--color-brand);
+  color: var(--color-on-color);
+  font-size: calc(17 * var(--rpx));
+  font-weight: 700;
   line-height: 1.2;
-
   cursor: pointer;
-
   transition:
     transform var(--motion-fast, 120ms) var(--ease-out, ease-out),
     background var(--motion-fast, 120ms) var(--ease-out, ease-out);
-
   -webkit-tap-highlight-color: transparent;
 }
 
 .actionButton:hover:not(:disabled) {
-  background: linear-gradient(135deg, #cee4ff, #bcd9ff);
-
-  box-shadow: 0 5px 13px rgba(17, 103, 225, 0.13);
+  background: var(--color-brand-hover);
 }
 
+.actionButton[data-status="preparing"] {
+  background: var(--color-success);
+}
+
+.actionButton[data-status="preparing"]:hover:not(:disabled) {
+  background: var(--color-success-ink);
+}
+
+/* The button sinks ~3 % when pressed. */
 .actionButton:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
-.actionButton:focus-visible {
-  outline: 3px solid rgba(8, 104, 233, 0.22);
-
-  outline-offset: 3px;
+.actionButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
-/* =========================================================
-   ACCIÓN DESHABILITADA
-   ========================================================= */
-
-.actionDisabled {
-  color: #637aa2;
-
-  background: #e4ecf7;
-
+.actionDisabled,
+.actionDisabled:disabled {
+  min-height: calc(44 * var(--rpx));
+  background: var(--color-neutral-chip-bg);
+  color: var(--color-neutral-chip-ink);
   cursor: default;
+  opacity: 1;
 }
-
-.actionDisabled:focus-visible {
-  outline: none;
-}
-
-/* =========================================================
-   TIEMPO DE ENTREGA
-   ========================================================= */
 
 .deliveredTime {
-  font-weight: 500;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* W11: static «Nuevo» badge for one minute. No animation, no sound. */
+.newBadge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: var(--color-on-color);
+  font-size: calc(12 * var(--rpx));
+  font-weight: 800;
+  vertical-align: middle;
 }
 
 /* =========================================================
-   ANIMACIONES
+   MOVIMIENTO (design-motion-principles)
    ========================================================= */
 
-/* W9 (Emil: 180 ms, ease-out, no scale): the order just arrived in this column. */
+/* W9: the order just changed column while the board was on screen. */
 @keyframes cardIn {
   from {
     opacity: 0;
     transform: translateY(8px);
+  }
+}
+
+/* A new order is highlighted in brand-tint once, when it appears with the board on screen. */
+@keyframes appear {
+  from {
+    background-color: var(--color-brand-tint);
   }
 }
 
@@ -319,52 +233,30 @@
   }
 }
 
-.arrived {
-  animation: cardIn var(--motion-base, 180ms) var(--ease-out, ease-out) both;
-}
-
 @keyframes calledAppear {
   from {
     opacity: 0;
   }
 }
 
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
+.arrived {
+  animation: cardIn var(--motion-base, 180ms) var(--ease-out, ease-out) both;
+}
+
+.appeared {
+  animation:
+    cardIn var(--motion-base, 180ms) var(--ease-out, ease-out) both,
+    appear 1600ms var(--ease-out, ease-out) both;
+}
 
 @media (max-width: 760px) {
-  .card {
-    padding: 10px;
-
-    border-radius: 16px;
-  }
-
-  .student strong {
-    font-size: 15px;
-  }
-
-  .student span {
-    font-size: 12px;
-  }
-
   .time {
     display: none;
   }
-
-  .actionButton {
-    min-height: 40px;
-
-    font-size: 13px;
-  }
 }
 
-/* =========================================================
-   REDUCCIÓN DE MOVIMIENTO
-   ========================================================= */
-
-/* Reduced motion: no movement. The arrival keeps a short fade so the change is still
-   noticed, and the aria-live announcement says it in words (W8). */
+/* Reduced motion: only opacity; the «Nuevo» badge and the aria-live announcement (W8)
+   still tell a new order. */
 @media (prefers-reduced-motion: reduce) {
   .card,
   .actionButton,
@@ -380,18 +272,8 @@
   .arrived {
     animation: cardFade var(--motion-fast, 120ms) linear both;
   }
-}
 
-/* W11: static «Nuevo» badge for one minute. No animation, no sound. */
-.newBadge {
-  display: inline-block;
-  margin-left: 8px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #0b63ce;
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  vertical-align: middle;
+  .appeared {
+    animation: cardFade var(--motion-fast, 120ms) linear both;
+  }
 }

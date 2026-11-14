@@ -46,7 +46,7 @@
 
   border-radius: 16px;
 
-  background: #ffffff;
+  background: var(--color-surface);
 
   box-shadow:
     0 5px 18px rgba(16, 75, 150, 0.13),
@@ -73,7 +73,7 @@
 .brandInfo h1 {
   margin: 0;
 
-  color: #102d68;
+  color: var(--color-brand-hover);
 
   font-size: clamp(26px, 2vw, 28px);
   font-weight: 700;
@@ -84,15 +84,15 @@
 }
 
 .brandInfo h1 span {
-  color: #1468e8;
+  color: var(--color-brand);
 }
 
 .brandInfo p {
   margin: 5px 0 0;
 
-  color: #7894c1;
+  color: var(--color-text-soft);
 
-  font-size: 13px;
+  font-size: calc(13px / var(--worker-zoom, 1));
   font-weight: 400;
 
   line-height: 1.2;
@@ -117,7 +117,7 @@
 
 .search {
   width: min(390px, 32vw);
-  height: 44px;
+  height: calc(48px / var(--worker-zoom, 1));
 
   display: flex;
   align-items: center;
@@ -126,9 +126,9 @@
 
   padding: 0 15px;
 
-  color: #1658b7;
+  color: var(--color-brand);
 
-  background: #eaf2ff;
+  background: var(--color-brand-tint);
 
   border-radius: 12px;
 
@@ -138,11 +138,11 @@
 }
 
 .search:hover {
-  background: #e5efff;
+  background: var(--color-brand-tint);
 }
 
 .search:focus-within {
-  background: #ffffff;
+  background: var(--color-surface);
 
   box-shadow:
     0 0 0 3px rgba(20, 104, 232, 0.1),
@@ -179,19 +179,19 @@
 
   flex: 1;
 
-  color: #173e7b;
+  color: var(--color-brand-hover);
 
   background: transparent;
 
   border: 0;
   outline: 0;
 
-  font-size: 14px;
+  font-size: calc(14px / var(--worker-zoom, 1));
   font-weight: 400;
 }
 
 .search input::placeholder {
-  color: #7895c4;
+  color: var(--color-text-soft);
 
   font-weight: 400;
 }
@@ -208,7 +208,7 @@
 
   padding: 2px;
 
-  color: #1658b7;
+  color: var(--color-brand);
 
   background: transparent;
 
@@ -227,9 +227,9 @@
 
   gap: 9px;
 
-  color: #102d68;
+  color: var(--color-brand-hover);
 
-  font-size: 14px;
+  font-size: calc(14px / var(--worker-zoom, 1));
   font-weight: 500;
 
   white-space: nowrap;
@@ -241,22 +241,22 @@
 
   flex-shrink: 0;
 
-  background: #19b66b;
+  background: var(--color-success);
 
   border-radius: 50%;
 }
 
 /* W1: static dot; the color tells the state, nothing pulses. */
 .statusWarning {
-  color: #7a4b00;
+  color: var(--color-brand-hover);
 }
 
 .statusWarning .statusDot {
-  background: #d98b00;
+  background: var(--color-brand-hover);
 }
 
 .statusPending .statusDot {
-  background: #9aa8bc;
+  background: var(--color-text-soft);
 }
 
 /* =========================================================
@@ -308,7 +308,7 @@
   }
 
   .brandInfo h1 {
-    font-size: 24px;
+    font-size: calc(24px / var(--worker-zoom, 1));
 
     letter-spacing: -0.8px;
   }
@@ -316,7 +316,7 @@
   .brandInfo p {
     margin-top: 3px;
 
-    font-size: 12px;
+    font-size: calc(12px / var(--worker-zoom, 1));
     font-weight: 400;
   }
 
@@ -365,7 +365,7 @@
   .searchOpen input {
     display: block;
 
-    font-size: 14px;
+    font-size: calc(14px / var(--worker-zoom, 1));
   }
 
   .status span:last-child {
@@ -389,10 +389,11 @@
   }
 }
 .logout {
-  border: 1px solid #d5e3f5;
+  border: 1px solid var(--color-brand-tint-2);
   border-radius: 12px;
-  padding: 10px 14px;
-  background: #f0f6ff;
-  color: #235487;
-  font-size: 14px;
+  min-height: calc(48px / var(--worker-zoom, 1));
+  padding: 0 calc(16px / var(--worker-zoom, 1));
+  background: var(--color-brand-tint);
+  color: var(--color-brand-hover);
+  font-size: calc(14px / var(--worker-zoom, 1));
 }
