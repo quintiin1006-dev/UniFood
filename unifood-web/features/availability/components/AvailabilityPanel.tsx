@@ -1,7 +1,11 @@
 "use client";
 import { RefreshCw, CircleAlert } from "lucide-react";
 import { useAvailability } from "../useAvailability";
-import { formatBusinessDate } from "../presentation";
+import {
+  OPEN_WITHOUT_PRODUCTS_MESSAGE,
+  formatBusinessDate,
+  openWithoutAvailableProducts,
+} from "../presentation";
 import { AvailabilitySwitch } from "./AvailabilitySwitch";
 import { CategoryCarousel } from "./CategoryCarousel";
 import styles from "./Availability.module.css";
@@ -135,6 +139,16 @@ export function AvailabilityPanel() {
               </p>
             </div>
           </section>
+          {openWithoutAvailableProducts(state.data) && (
+            <p
+              id="availability-open-without-products"
+              className={styles.openWarning}
+              role="status"
+            >
+              <CircleAlert size={20} aria-hidden="true" />
+              <span>{OPEN_WITHOUT_PRODUCTS_MESSAGE}</span>
+            </p>
+          )}
           {state.data.categories.map((group) => (
             <CategoryCarousel
               key={group.category}
