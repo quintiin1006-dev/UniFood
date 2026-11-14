@@ -6,16 +6,14 @@ import styles from "./AdminDashboard.module.css";
 
 const issueText: Record<DashboardCheckCode, string> = {
   TERMINAL_DATE_VALIDITY:
-    "Algunos pedidos revisados tienen fechas de finalización no válidas; esos eventos no se contabilizan como finalizaciones verificables.",
-  HEADER_AMOUNT_VALIDITY: "Hay importes de pedidos que no se pueden calcular.",
+    "Algunos pedidos tienen una fecha de cierre no válida y no se cuentan como finalizados.",
+  HEADER_AMOUNT_VALIDITY: "No se pudo calcular el valor de algunos pedidos.",
   ITEM_INTEGRITY:
-    "Faltan detalles fiables de algunos productos; sus indicadores pueden no estar disponibles.",
+    "A algunos pedidos les falta el detalle de productos; ciertos rankings pueden no mostrarse.",
   HEADER_ITEM_RECONCILIATION:
-    "Algunos importes de pedidos difieren de sus productos. Se conservan los valores históricos.",
-  HISTORICAL_NAME:
-    "Algunos productos no tienen un nombre histórico disponible.",
-  UNDATED_TERMINALS:
-    "Hay pedidos históricos sin una fecha de finalización válida.",
+    "El total de algunos pedidos no coincide con sus productos; se muestra el valor registrado.",
+  HISTORICAL_NAME: "Algunos productos no conservan su nombre original.",
+  UNDATED_TERMINALS: "Hay pedidos antiguos sin fecha de cierre.",
 };
 const warningIssues: [string, DashboardCheckCode][] = [
   ["INVALID_TERMINAL_DATES_", "TERMINAL_DATE_VALIDITY"],
@@ -33,13 +31,11 @@ export function DashboardCoverage({ coverage }: { coverage: Coverage }) {
       notes.add(
         check.code === "UNDATED_TERMINALS"
           ? "No se ha comprobado todo el histórico de pedidos."
-          : "Hay comprobaciones pendientes sobre los pedidos del período.",
+          : "Aún quedan revisiones pendientes sobre los pedidos del período.",
       );
   }
   if (coverage.provenance.status === "UNKNOWN")
-    notes.add(
-      "No se puede confirmar qué pedidos corresponden a operaciones reales.",
-    );
+    notes.add("Las cifras pueden incluir pedidos de prueba.");
   for (const warning of coverage.warnings) {
     const match = warningIssues.find(([prefix]) =>
       warning.code.startsWith(prefix),
@@ -48,18 +44,13 @@ export function DashboardCoverage({ coverage }: { coverage: Coverage }) {
     else if (warning.code === "UNDATED_TERMINALS_NOT_ASSESSED")
       notes.add("No se ha comprobado todo el histórico de pedidos.");
     else if (warning.code === "UNVERIFIED_ORDER_PROVENANCE")
-      notes.add(
-        "No se puede confirmar qué pedidos corresponden a operaciones reales.",
-      );
+      notes.add("Las cifras pueden incluir pedidos de prueba.");
     else if (warning.code === "NO_VERIFIABLE_EVENTS")
-      notes.add(
-        "No hay eventos verificables; esto no confirma ausencia total de actividad.",
-      );
-    else
-      issues.add("Existe otra limitación en los datos que requiere atención.");
+      notes.add("No hay pedidos finalizados con fecha en este período.");
+    else issues.add("Hay otra limitación en los datos.");
   }
   if (!issues.size && !notes.size)
-    notes.add("No se ha verificado toda la información de este período.");
+    notes.add("Las cifras de este período son orientativas.");
   const invalidDates = issues.has(issueText.TERMINAL_DATE_VALIDITY);
   return (
     <aside
@@ -70,10 +61,10 @@ export function DashboardCoverage({ coverage }: { coverage: Coverage }) {
       <h2 id="dashboard-coverage-title">Información sobre los datos</h2>
       <p>
         {invalidDates
-          ? "Algunas estadísticas podrían no incluir todos los pedidos."
+          ? "Algunas cifras podrían no incluir todos los pedidos."
           : issues.size
-            ? "Hay datos que afectan la fiabilidad de algunas estadísticas."
-            : "Hay comprobaciones pendientes sobre los pedidos."}
+            ? "Algunas cifras pueden estar incompletas."
+            : "Las cifras son orientativas mientras terminamos de revisar los pedidos."}
       </p>
       <details open={issues.size > 0}>
         <summary>¿Por qué?</summary>

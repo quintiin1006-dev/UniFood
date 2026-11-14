@@ -342,7 +342,7 @@ test("uncertain committed POST preserves draft, reports no false success and nev
   await drawer(page)
     .getByRole("button", { name: "Guardar producto", exact: true })
     .click();
-  await expect(drawer(page)).toContainText("No pudimos confirmar el resultado");
+  await expect(drawer(page)).toContainText("No pudimos confirmar si se guardó");
   await expect(drawer(page).getByLabel("Nombre", { exact: true })).toHaveValue(
     "Resultado incierto",
   );

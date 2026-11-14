@@ -151,7 +151,7 @@ export function ProductDrawer({
             }
             setBlocked(true);
             setMessage(
-              "El producto está guardado. La imagen sigue en proceso; comprueba el resultado antes de reintentar.",
+              "El producto está guardado. La imagen todavía se está procesando; revisa si quedó antes de volver a subirla.",
             );
             return;
           }
@@ -174,10 +174,10 @@ export function ProductDrawer({
       );
       setMessage(
         (imagePhase
-          ? "El producto comercial está guardado. La imagen no está confirmada. "
+          ? "El producto está guardado, pero no sabemos si la imagen quedó. "
           : "") +
           (uncertain
-            ? "No pudimos confirmar el resultado. Conservamos tu borrador. Revisa el catálogo antes de iniciar otra operación; no se reenviará automáticamente."
+            ? "No pudimos confirmar si se guardó. Conservamos tu borrador. Revisa el catálogo antes de volver a intentarlo; no lo enviaremos de nuevo por nuestra cuenta."
             : error.message),
       );
     } finally {
@@ -236,9 +236,9 @@ export function ProductDrawer({
         <div className={styles.discard} role="alert">
           <h3>¿Cerrar el editor?</h3>
           <p>
-            Se descartará el borrador. Una operación cuyo resultado no pudo
-            confirmarse podría haberse guardado; revisa el catálogo antes de
-            volver a crearla.
+            Se descartará el borrador. Si un guardado quedó sin confirmar, puede
+            que sí se haya guardado: revisa el catálogo antes de volver a crear
+            el producto.
           </p>
           <button type="button" onClick={() => setDiscard(false)}>
             Seguir revisando
@@ -376,9 +376,7 @@ export function ProductDrawer({
                     selected.size > IMAGE_MAX_BYTES ||
                     !["image/jpeg", "image/png"].includes(selected.type)
                   ) {
-                    setMessage(
-                      "Selecciona JPEG o PNG estática de hasta 3 MiB.",
-                    );
+                    setMessage("Selecciona una foto JPEG o PNG de hasta 3 MB.");
                     event.target.value = "";
                     return;
                   }
@@ -389,8 +387,8 @@ export function ProductDrawer({
                 }}
               />
               <p id="catalog-image-help">
-                JPEG o PNG estática, hasta 3 MiB. Lados de 256 a 4096 px y
-                máximo 16 millones de píxeles.
+                Foto JPEG o PNG de hasta 3 MB, entre 256 y 4096 píxeles por
+                lado.
               </p>
               {(preview || (!removeImage && confirmed?.imageUrl)) && (
                 <div className={styles.imagePreview}>
@@ -465,7 +463,7 @@ export function ProductDrawer({
                             [403, 404, 409].includes(result.failureStatus!),
                           );
                           setMessage(
-                            "El producto permanece guardado. La imagen no se aplicó. " +
+                            "El producto sigue guardado, pero la imagen no se aplicó. " +
                               new AdminCatalogError(
                                 result.failureStatus!,
                                 catalogErrorCode(
@@ -476,7 +474,7 @@ export function ProductDrawer({
                           );
                         } else
                           setMessage(
-                            "La imagen sigue en proceso. Puedes volver a comprobar el resultado.",
+                            "La imagen todavía se está procesando. Puedes volver a revisar en un momento.",
                           );
                       } catch (cause) {
                         const error =
@@ -486,7 +484,7 @@ export function ProductDrawer({
                         if (error.status === 404) {
                           setRetryMissing(true);
                           setMessage(
-                            "No hay una operación confirmada. Puedes reenviar exactamente el mismo intento, sin volver a crear el producto.",
+                            "La imagen no llegó a guardarse. Puedes volver a intentarlo; el producto no se duplicará.",
                           );
                         } else setMessage(error.message);
                       } finally {
@@ -498,8 +496,8 @@ export function ProductDrawer({
                     {reconciling
                       ? "Comprobando…"
                       : retryMissing
-                        ? "Reenviar mismo intento de imagen"
-                        : "Comprobar resultado de imagen"}
+                        ? "Volver a intentar la imagen"
+                        : "Revisar si la imagen quedó"}
                   </button>
                 </>
               )}

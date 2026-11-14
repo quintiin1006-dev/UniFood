@@ -9,7 +9,7 @@ export const CATALOG_MESSAGES = {
   ADMIN_CATALOG_DUPLICATE_NAME:
     "Ya existe un producto con ese nombre en tu cafetería.",
   ADMIN_CATALOG_CAFETERIA_INACTIVE:
-    "La cafetería está inactiva. Los cambios están deshabilitados.",
+    "La cafetería está inactiva y todavía no está visible para los clientes. El catálogo se podrá editar cuando el equipo de UniFood la active.",
   ADMIN_CATALOG_UNAUTHORIZED:
     "Tu sesión no está disponible. Inicia sesión para consultar el catálogo.",
   ADMIN_CATALOG_FORBIDDEN: "No tienes permisos para consultar este catálogo.",

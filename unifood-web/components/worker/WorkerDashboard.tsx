@@ -10,6 +10,18 @@ import BottomNav, { type WorkerModule } from "@/components/worker/BottomNav";
 
 import { useOrders } from "@/features/orders/hooks/useOrders";
 import { RejectOrderDialog } from "@/features/orders/components/RejectOrderDialog";
+import { OrderActionAlert } from "@/features/orders/components/OrderActionAlert";
+import {
+  BoardAnnouncer,
+  BoardError,
+  BoardLoading,
+  SearchEmpty,
+  StaleListingBanner,
+} from "@/features/orders/components/BoardFeedback";
+import {
+  listingErrorView,
+  syncStatusLabel,
+} from "@/features/orders/listingStatus";
 
 import type { Order } from "@/types/order";
 import { AvailabilityPanel } from "@/features/availability/components/AvailabilityPanel";
@@ -24,14 +36,36 @@ export default function WorkerDashboard() {
     busyOrderIds,
     busyActions,
     loading,
-    error,
     actionError,
     isPriorityError,
     handleOrderAction,
     handleOrderReject,
     handleCalledOrderAction,
     clearActionError,
+    syncFailure,
+    lastSyncedAt,
+    announcement,
+    newOrderIds,
+    retry,
   } = useOrders(activeModule === "orders" || activeModule === "calls");
+
+  const [retrying, setRetrying] = useState(false);
+
+  const onRetry = () => {
+    setRetrying(true);
+    void retry().finally(() => setRetrying(false));
+  };
+
+  const clearSearch = () => {
+    setSearch("");
+    document.getElementById("worker-search-input")?.focus();
+  };
+
+  /* W1, W2 and L1: the same truthful states for Pedidos and Llamadas. */
+  const listingView = syncFailure ? listingErrorView(syncFailure) : null;
+  const listingBlocked =
+    !!listingView && (listingView.withdraw || lastSyncedAt === null);
+  const listingModule = activeModule === "orders" || activeModule === "calls";
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
@@ -170,41 +204,25 @@ export default function WorkerDashboard() {
          PEDIDOS
          ===================================================== */
 
-    if (activeModule === "orders") {
-      if (loading) {
-        return (
-          <section
-            style={{
-              flex: 1,
-              display: "grid",
-              placeItems: "center",
-              color: "rgba(255,255,255,.8)",
-            }}
-          >
-            <p>Cargando pedidos...</p>
-          </section>
-        );
-      }
+    if (listingModule && listingBlocked && listingView)
+      return (
+        <BoardError view={listingView} retrying={retrying} onRetry={onRetry} />
+      );
 
-      if (error) {
-        return (
-          <section
-            style={{
-              flex: 1,
-              display: "grid",
-              placeItems: "center",
-              color: "rgba(255,255,255,.8)",
-            }}
-          >
-            <p>{error}</p>
-          </section>
-        );
-      }
+    if (listingModule && loading && lastSyncedAt === null)
+      return <BoardLoading />;
+
+    if (activeModule === "orders") {
+      // W5: a search without matches says so instead of four «No hay pedidos».
+      if (search.trim() && filteredOrders.length === 0)
+        return <SearchEmpty query={search} onClear={clearSearch} />;
 
       return (
         <KanbanBoard
           busyOrderIds={busyOrderIds}
           orders={filteredOrders}
+          newOrderIds={newOrderIds}
+          now={now}
           onOpenOrder={setSelectedOrder}
           onAction={onOrderAction}
           onReject={setOrderToReject}
@@ -231,6 +249,7 @@ export default function WorkerDashboard() {
           }
           search={search}
           onSearchChange={setSearch}
+          onClearSearch={clearSearch}
           onSelectOrder={setSelectedOrder}
           onDeliver={onOrderAction}
           onRemind={onRemindOrder}
@@ -271,9 +290,21 @@ export default function WorkerDashboard() {
         activeModule={activeModule}
         search={search}
         onSearchChange={setSearch}
+        syncStatus={
+          listingModule
+            ? syncStatusLabel(lastSyncedAt, syncFailure !== null)
+            : undefined
+        }
       />
 
-      <div className="worker-main">{renderModule()}</div>
+      <div className="worker-main">
+        {listingModule && listingView && !listingBlocked && (
+          <StaleListingBanner retrying={retrying} onRetry={onRetry} />
+        )}
+        {renderModule()}
+      </div>
+
+      {listingModule && <BoardAnnouncer message={announcement} />}
 
       {/* =====================================================
           NAVEGACIÓN INFERIOR
@@ -315,94 +346,15 @@ export default function WorkerDashboard() {
 
       {actionError &&
         (activeModule === "orders" || activeModule === "calls") && (
-          <div
-            role="alert"
-            onClick={clearActionError}
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 9999,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "rgba(0, 0, 0, 0.18)",
-              backdropFilter: "blur(4px)",
-              padding: "24px",
-              cursor: "pointer",
-            }}
-          >
-            <div
-              onClick={(event) => event.stopPropagation()}
-              style={{
-                width: "min(440px, 100%)",
-                background: "rgba(255, 255, 255, 0.98)",
-                borderRadius: "24px",
-                padding: "28px",
-                boxShadow: "0 24px 70px rgba(0,0,0,.25)",
-                textAlign: "center",
-                cursor: "default",
-              }}
-            >
-              <div
-                style={{
-                  width: "56px",
-                  height: "56px",
-                  margin: "0 auto 16px",
-                  borderRadius: "50%",
-                  display: "grid",
-                  placeItems: "center",
-                  background: "#fee2e2",
-                  color: "#dc2626",
-                  fontSize: "28px",
-                  fontWeight: 700,
-                }}
-              >
-                !
-              </div>
-
-              <h2
-                style={{
-                  margin: "0 0 10px",
-                  fontSize: "20px",
-                  fontWeight: 700,
-                  color: "#172033",
-                }}
-              >
-                {isPriorityError
-                  ? "Acción no disponible"
-                  : "No se pudo completar la acción"}
-              </h2>
-
-              <p
-                style={{
-                  margin: "0 0 24px",
-                  fontSize: "15px",
-                  lineHeight: 1.5,
-                  color: "#5d6678",
-                }}
-              >
-                {actionError}
-              </p>
-
-              <button
-                type="button"
-                onClick={clearActionError}
-                style={{
-                  width: "100%",
-                  border: "none",
-                  borderRadius: "var(--radius-control)",
-                  padding: "13px 18px",
-                  background: "#0b63ce",
-                  color: "#ffffff",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Entendido
-              </button>
-            </div>
-          </div>
+          <OrderActionAlert
+            title={
+              isPriorityError
+                ? "Acción no disponible"
+                : "No se pudo completar la acción"
+            }
+            message={actionError}
+            onClose={clearActionError}
+          />
         )}
     </main>
   );

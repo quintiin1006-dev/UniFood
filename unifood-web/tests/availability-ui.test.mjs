@@ -288,3 +288,26 @@ test("the availability contract requires the six categories in the backend order
     null,
   );
 });
+
+test("A1: an open cafeteria without available products shows a persistent warning, no confirmation", () => {
+  const warning =
+    /La cafetería está abierta, pero no hay productos disponibles/;
+  const open = render({ data: availabilityFixture({ open: true }) });
+  assert.match(open, warning);
+  assert.match(
+    open,
+    /id="availability-open-without-products"[^>]*role="status"/,
+  );
+  assert.ok(!open.includes('role="alertdialog"'));
+  // The switch to open stays a plain switch: nothing asks before opening.
+  assert.match(open, /aria-checked="true" aria-label="Apertura de cafetería"/);
+  assert.doesNotMatch(
+    render({ data: availabilityFixture({ open: true, available: true }) }),
+    warning,
+  );
+  assert.doesNotMatch(render({ data: availabilityFixture() }), warning);
+  assert.doesNotMatch(
+    render({ data: availabilityFixture({ active: false, open: true }) }),
+    warning,
+  );
+});

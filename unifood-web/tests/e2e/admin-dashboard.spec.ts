@@ -77,8 +77,8 @@ test("dashboard integrates the ADMIN shell, exact metrics, accessible trend and 
     await expect(
       dashboard.getByRole("heading", { name: title, exact: true }),
     ).toBeVisible();
-  await expect(dashboard).toContainText("25,00 %");
-  await expect(dashboard).toContainText("$ 30,00");
+  await expect(dashboard).toContainText("25 %");
+  await expect(dashboard).toContainText("$30");
   await expect(dashboard).not.toContainText(
     /Próximamente|PRIVATE|UNVERIFIED_ORDER_PROVENANCE|SQL/,
   );
@@ -100,7 +100,7 @@ test("dashboard integrates the ADMIN shell, exact metrics, accessible trend and 
   await expect(
     dashboard.getByRole("table", { name: "Comprobaciones de cobertura" }),
   ).toHaveCount(0);
-  await expect(dashboard).toContainText("operaciones reales");
+  await expect(dashboard).toContainText("pedidos de prueba");
   const response = await page.request.get("/api/admin/dashboard?range=TODAY");
   expect(response.headers()["cache-control"]).toBe("no-store");
   expect(await response.text()).not.toMatch(/PRIVATE/);
@@ -302,7 +302,7 @@ test("slow obsolete period cannot restore old metrics after a newer empty result
   await view(page).getByRole("button", { name: "Hoy", exact: true }).click();
   await ready(page);
   await expect(view(page)).toContainText(
-    "no confirma ausencia total de actividad",
+    "No hay pedidos finalizados con fecha en este período.",
   );
   await page.waitForTimeout(2100);
   await expect(view(page)).toContainText("Sin base de cálculo");
@@ -322,13 +322,13 @@ test("incomplete rankings retain header values and unknown units are never zero"
   });
   await expect(section).toContainText("Ranking no disponible");
   await expect(section).toContainText("No calculable");
-  await expect(section).toContainText("$ 30,00");
+  await expect(section).toContainText("$30");
   await expect(section.getByRole("table")).toHaveCount(0);
   await expect(
     view(page).locator("#dashboard-coverage details"),
   ).toHaveAttribute("open", "");
   await expect(view(page).locator("#dashboard-coverage")).toContainText(
-    "Faltan detalles fiables",
+    "falta el detalle de productos",
   );
   await expect(
     view(page)
@@ -612,7 +612,7 @@ test("large counts and exact cents wrap without Number precision loss", async ({
   await login(page);
   await ready(page);
   await expect(view(page)).toContainText("900.719.925.474.099.312.345");
-  await expect(view(page)).toContainText("$ 12.345.678.901.234.567.890.123,45");
+  await expect(view(page)).toContainText("$12.345.678.901.234.567.890.123");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

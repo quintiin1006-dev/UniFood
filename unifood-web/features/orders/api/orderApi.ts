@@ -5,6 +5,23 @@ import {
   calledOrderActionMessage,
   type CalledOrderAction,
 } from "@/features/orders/calledOrderActions";
+import {
+  orderActionMessage,
+  rejectionMessage,
+} from "@/features/orders/orderActionMessages";
+
+/** The `code` of Spring's ApiErrorResponse, or null for a body that is not JSON. */
+async function readErrorCode(response: Response): Promise<unknown> {
+  try {
+    return ((await response.json()) as { code?: unknown } | null)?.code ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** A fixed message with the status and code the board needs (W4). */
+const actionError = (message: string, status: number, code: unknown) =>
+  Object.assign(new Error(message), { status, code });
 
 function getActionEndpoint(order: Order): string | null {
   switch (order.status) {
@@ -53,11 +70,15 @@ export async function getOperationalOrders(): Promise<{
   });
 
   if (!response.ok) {
-    throw new Error(
-      await readErrorMessage(
-        response,
-        `Error al obtener pedidos: ${response.status}`,
+    // The status lets the board choose a fixed message and its next step (listingStatus.ts).
+    throw Object.assign(
+      new Error(
+        await readErrorMessage(
+          response,
+          `Error al obtener pedidos: ${response.status}`,
+        ),
       ),
+      { status: response.status },
     );
   }
 
@@ -83,23 +104,24 @@ export async function advanceOrder(order: Order): Promise<Order> {
     return order;
   }
 
-  const response = await fetch(endpoint, {
-    method: "PATCH",
-  });
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      method: "PATCH",
+      cache: "no-store",
+      signal: AbortSignal.timeout(30000),
+    });
+  } catch {
+    throw actionError(orderActionMessage(0, null), 0, null);
+  }
 
   if (!response.ok) {
-    const message = await readErrorMessage(
-      response,
-      "No se pudo actualizar el pedido.",
+    const code = await readErrorCode(response);
+    throw actionError(
+      orderActionMessage(response.status, code),
+      response.status,
+      code,
     );
-
-    const error = new Error(message) as Error & {
-      status?: number;
-    };
-
-    error.status = response.status;
-
-    throw error;
   }
 
   const updatedBackendOrder: BackendOrder = await response.json();
@@ -151,20 +173,26 @@ export async function rejectOrder(
       "Solo un pedido pendiente o en preparación puede rechazarse.",
     );
 
-  const response = await fetch(`/api/orders/${order.id}/reject`, {
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ reason }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`/api/orders/${order.id}/reject`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ reason }),
+      cache: "no-store",
+      signal: AbortSignal.timeout(30000),
+    });
+  } catch {
+    throw actionError(rejectionMessage(0, null), 0, null);
+  }
 
   if (!response.ok) {
-    const message = await readErrorMessage(
-      response,
-      "No se pudo rechazar el pedido.",
+    const code = await readErrorCode(response);
+    throw actionError(
+      rejectionMessage(response.status, code),
+      response.status,
+      code,
     );
-    const error = new Error(message) as Error & { status?: number };
-    error.status = response.status;
-    throw error;
   }
 
   const updatedBackendOrder: BackendOrder = await response.json();

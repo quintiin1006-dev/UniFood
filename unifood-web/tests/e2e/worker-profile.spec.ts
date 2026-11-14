@@ -43,6 +43,11 @@ async function login(page: Page, email = "worker@example.invalid") {
   await expect(page).toHaveURL(
     email.startsWith("client") ? /\/cuenta$/ : /\/worker$/,
   );
+  // `next dev` pins its indicator at the bottom left, over the first bottom-nav button
+  // («Pedidos») at 390px. Production builds do not render it. Same as worker-history.
+  await page.addStyleTag({
+    content: "nextjs-portal { visibility: hidden !important; }",
+  });
 }
 async function enter(page: Page) {
   await page.getByRole("button", { name: "Mi perfil", exact: true }).click();

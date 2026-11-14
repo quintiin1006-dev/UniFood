@@ -133,9 +133,15 @@ test("complete API flow, backend priority rejection and terminal states", async 
     requests.push([url, options.method]);
     if (options.method === "GET") return Response.json([fixture]);
     if (url.endsWith("/prepare") && rejectPriority) {
-      return new Response("El pedido anterior debe ser procesado primero.", {
-        status: 409,
-      });
+      // Spring's ApiErrorResponse: the board shows a fixed text chosen by its code (W4).
+      return Response.json(
+        {
+          status: 409,
+          code: "ORDER_PROCESSING_SEQUENCE_VIOLATION",
+          message: "Texto interno de Spring",
+        },
+        { status: 409 },
+      );
     }
     const statuses = {
       prepare: "PREPARING",
@@ -152,7 +158,12 @@ test("complete API flow, backend priority rejection and terminal states", async 
     let [order] = await api.getOrders();
     await assert.rejects(
       api.advanceOrder(order),
-      (error) => error.status === 409 && /pedido anterior/.test(error.message),
+      (error) =>
+        error.status === 409 &&
+        error.code === "ORDER_PROCESSING_SEQUENCE_VIOLATION" &&
+        error.message ===
+          "Primero pasa a preparación el pedido más antiguo de hoy." &&
+        !/Spring/.test(error.message),
     );
     assert.equal(order.status, "pending");
     rejectPriority = false;

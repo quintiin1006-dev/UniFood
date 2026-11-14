@@ -8,6 +8,14 @@ import {
   runCalledOrderAction,
 } from "@/features/orders/api/orderApi";
 import type { CalledOrderAction } from "@/features/orders/calledOrderActions";
+import { isSequenceViolation } from "@/features/orders/orderActionMessages";
+import {
+  listingErrorView,
+  listingFailure,
+  newOrderAnnouncement,
+  transitionAnnouncement,
+  type ListingFailure,
+} from "@/features/orders/listingStatus";
 import type { Order } from "@/types/order";
 
 export function useOrders(enabled = true) {
@@ -21,6 +29,14 @@ export function useOrders(enabled = true) {
   const [busyActions, setBusyActions] = useState<
     Record<string, CalledOrderAction>
   >({});
+  // Truthful listing state (docs/ui-paneles.md, W1, W2, W8 and W11). Appended after the
+  // original states so their order does not change.
+  const [syncFailure, setSyncFailure] = useState<ListingFailure | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
+  const [announcement, setAnnouncement] = useState("");
+  const [newOrderIds, setNewOrderIds] = useState<Record<string, number>>({});
+  /** Whether a listing was read since the last withdrawal; the first read marks nothing new. */
+  const hasRead = useRef(false);
   const pending = useRef(new Set<string>());
   const revision = useRef(0);
   const activeRefresh = useRef<number | null>(null);
@@ -32,8 +48,32 @@ export function useOrders(enabled = true) {
   );
 
   const replaceOrders = useCallback((next: Order[]) => {
+    const previous = latestOrders.current;
     latestOrders.current = next;
     setOrders(next);
+    if (!hasRead.current) return;
+    const before = new Map(previous.map((order) => [order.id, order.status]));
+    const messages: string[] = [];
+    const fresh: Record<string, number> = {};
+    for (const order of next) {
+      const status = before.get(order.id);
+      if (status === undefined) {
+        messages.push(newOrderAnnouncement(order.student));
+        fresh[order.id] = Date.now();
+      } else if (status !== order.status)
+        messages.push(transitionAnnouncement(order.student, order.status));
+    }
+    if (messages.length) setAnnouncement(messages.join(" "));
+    setNewOrderIds((current) => {
+      const ids = new Set(next.map((order) => order.id));
+      const kept = Object.entries(current).filter(([id]) => ids.has(id));
+      if (
+        !Object.keys(fresh).length &&
+        kept.length === Object.keys(current).length
+      )
+        return current;
+      return { ...Object.fromEntries(kept), ...fresh };
+    });
   }, []);
 
   const refresh = useCallback(
@@ -83,9 +123,19 @@ export function useOrders(enabled = true) {
             delay > 0 ? Math.min(delay, 2_147_483_647) : 30000,
           );
         }
+        hasRead.current = true;
         setError(null);
+        setSyncFailure(null);
+        setLastSyncedAt(Date.now());
       } catch (cause) {
         if (version === revision.current) {
+          const failure = listingFailure(cause);
+          setSyncFailure(failure);
+          // 401 and 403: the account can no longer see these orders.
+          if (listingErrorView(failure).withdraw) {
+            hasRead.current = false;
+            replaceOrders([]);
+          }
           setError(
             cause instanceof Error
               ? cause.message
@@ -164,15 +214,14 @@ export function useOrders(enabled = true) {
         );
         return updated;
       } catch (cause) {
-        const apiError = cause as Error & { status?: number };
+        const apiError = cause as Error & { code?: unknown };
         const message =
           cause instanceof Error
             ? cause.message
             : "No se pudo actualizar el pedido.";
+        // W4: by code, never by matching Spring's text.
         setIsPriorityError(
-          current.status === "pending" &&
-            apiError.status === 409 &&
-            /pedido anterior/i.test(message),
+          current.status === "pending" && isSequenceViolation(apiError.code),
         );
         setActionError(message);
         return null;
@@ -296,5 +345,10 @@ export function useOrders(enabled = true) {
     handleOrderReject,
     handleCalledOrderAction,
     clearActionError,
+    syncFailure,
+    lastSyncedAt,
+    announcement,
+    newOrderIds,
+    retry: refresh,
   };
 }

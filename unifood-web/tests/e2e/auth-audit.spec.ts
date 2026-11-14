@@ -450,10 +450,13 @@ for (const [name, status] of [
       false,
     );
     await expect(
+      // docs/ui-paneles.md W2: a fixed text and next step chosen by status.
       page.getByText(
-        name === "backenddisconnect"
-          ? "No se pudo conectar con el backend de pedidos. Revisa que esté disponible."
-          : "No se pudo resolver la cafetería de tu cuenta.",
+        status === 401
+          ? "Inicia sesión de nuevo para ver los pedidos."
+          : status === 403
+            ? "No se pudo resolver la cafetería de tu cuenta."
+            : "Revisa la conexión. Lo seguimos intentando cada 10 segundos.",
         { exact: true },
       ),
     ).toBeVisible();
