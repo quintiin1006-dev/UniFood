@@ -3,7 +3,7 @@ import { useRef } from "react";
 import { History, RefreshCw, Search, X } from "lucide-react";
 import { useWorkerHistory } from "../useWorkerHistory";
 import { formatBusinessDate } from "../presentation";
-import { HistoryOrderCard } from "./HistoryOrderCard";
+import { HistoryOrderRow } from "./HistoryOrderRow";
 import type { HistoryRange, HistoryStatus } from "../types";
 import styles from "./WorkerHistory.module.css";
 import { Notice } from "@/components/ui/Notice";
@@ -194,12 +194,12 @@ export function WorkerHistoryPanel() {
             </div>
           ) : (
             <div
-              className={styles.cards}
+              className={styles.list}
               aria-label="Pedidos finalizados"
               aria-busy={state.refreshing}
             >
               {state.data.orders.map((order) => (
-                <HistoryOrderCard key={order.id} order={order} />
+                <HistoryOrderRow key={order.id} order={order} />
               ))}
             </div>
           )}

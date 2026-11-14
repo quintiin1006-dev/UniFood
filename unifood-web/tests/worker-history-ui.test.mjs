@@ -53,32 +53,63 @@ test("monthly controls and load more are accessible without WORKER metrics", () 
   const snapshot = render({ query: "this query is not locally re-evaluated" });
   assert.match(snapshot, /Juan Pérez/);
 });
-test("history UI renders terminal labels, historical items/quantity, totals and backend order", () => {
+test("history UI lists terminal states collapsed; each row has a labelled toggle (ola 2 · D3)", () => {
   const markup = render();
   for (const text of [
     "Historial",
     "Juan Pérez",
     "Entregado",
     "No recogido",
+    "Hora de Bogotá",
+    "Ver detalle",
+  ])
+    assert.ok(markup.includes(text), text);
+  assert.ok(markup.indexOf("A91C6F2D") < markup.indexOf("B72D5A10"));
+  assert.match(markup, /aria-expanded="false"/);
+  assert.doesNotMatch(markup, /Almuerzo del día/);
+  assert.doesNotMatch(markup, /PENDING|PREPARING|clientDocument/);
+});
+
+test("an expanded history row shows the reason, the items, quantities and the total", () => {
+  const { HistoryOrderRow } = availabilityLoader()(
+    "features/worker-history/components/HistoryOrderRow.tsx",
+  );
+  const markup = workerHistoryFixture()
+    .orders.map((order) =>
+      renderToStaticMarkup(
+        React.createElement(HistoryOrderRow, { order, defaultOpen: true }),
+      ),
+    )
+    .join("");
+  for (const text of [
     "Rechazado por la cafetería: Se acabó el ingrediente principal",
     "Almuerzo del día",
     "2×",
     "30.000",
     "19.000",
     "Total",
-    "14 de octubre de 2026",
-    "Hora de Bogotá",
   ])
     assert.ok(markup.includes(text), text);
-  assert.ok(markup.indexOf("A91C6F2D") < markup.indexOf("B72D5A10"));
+  assert.match(markup, /aria-expanded="true"/);
   assert.match(markup, /dateTime="2026-10-14T17:43:00Z"/);
   assert.match(markup, /12:43/);
   assert.doesNotMatch(markup, /PENDING|PREPARING|clientDocument/);
   const fractional = workerHistoryFixture();
   fractional.orders[0].total = 19000.5;
   fractional.orders[0].items[0].subtotal = 15000.5;
-  const fractions = render({ data: fractional });
-  // Whole pesos, the shared format (I6): a snapshot with cents rounds half up.
+  // Expanded rows show the amounts: whole pesos (I6), a snapshot with cents rounds half up.
+  const fractions = fractional.orders
+    .map((order) =>
+      renderToStaticMarkup(
+        React.createElement(
+          availabilityLoader()(
+            "features/worker-history/components/HistoryOrderRow.tsx",
+          ).HistoryOrderRow,
+          { order, defaultOpen: true },
+        ),
+      ),
+    )
+    .join("");
   assert.match(fractions, /\$19\.001/);
   assert.match(fractions, /\$15\.001/);
   assert.doesNotMatch(fractions, /,50/);
