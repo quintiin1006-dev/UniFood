@@ -530,3 +530,130 @@ verde apagados; sin amarillo ni colores extra. Los valores viven **solo** en
 | `Notice`                        | Mensaje de respuesta: éxito en verde, error en rojo (`alert`), aviso o información en `brand-tint` (`status`); `floating` lo convierte en toast |
 
 `lib/messages.ts` reúne los textos que varios paneles repetían palabra por palabra (sesión no verificable, sesión vencida, pedido que cambió de estado), sin cambiar su redacción.
+
+## Ola 3: ajustes tras la prueba del dueño (14 nov 2026)
+
+Demo el 28 de noviembre; congelamiento de código el 21. Decisiones del dueño aplicadas aquí; las
+que no estaban en su lista se marcan como tales.
+
+### Paleta de marca oficial (D1)
+
+| Token | Valor | Uso |
+| --- | --- | --- |
+| `--color-brand` / `-hover` | `#0B5FFF` / `#0A4FD6` | Acción principal, enlaces, foco |
+| `--color-brand-navy` | `#0B2D6B` | **Solo titulares de marca**; el texto de cuerpo sigue en `ink` |
+| `--color-brand-celeste` | `#3BA7FF` | Acento sobre navy o como relleno; **no como texto sobre blanco** |
+| `--color-brand-tint` | `#EAF4FF` | Hielo: avisos, nav activa, resaltes |
+| `--color-brand-tint-2` | `#D6E8FF` | Borde suave del tinte (decisión propia: el dueño no fijó este valor) |
+
+Rojo y verde apagados se mantienen. Contraste AA calculado (WCAG 2.x):
+
+| Pareja | Contraste |
+| --- | --- |
+| ink / surface, ink / bg | 17,85 : 1 · 16,65 : 1 (AAA) |
+| text-soft / surface, text-soft / bg | 4,97 : 1 · 4,64 : 1 (AA) |
+| slate / surface, slate / brand-tint | 7,87 : 1 · 7,08 : 1 (AAA) |
+| brand / surface, brand / bg | 5,13 : 1 · 4,78 : 1 (AA) |
+| white / brand, white / brand-hover | 5,13 : 1 · 6,77 : 1 (AA) |
+| brand-hover / brand-tint | 6,09 : 1 (AA) |
+| navy / surface, navy / brand-tint | 13,11 : 1 · 11,79 : 1 (AAA) |
+| success-ink / success-bg, danger-ink / danger-bg | 6,67 : 1 · 6,67 : 1 (AA) |
+| danger / surface, white / success | 5,29 : 1 · 5,00 : 1 (AA) |
+| **celeste / surface** | **2,57 : 1 — no es texto** (solo acento o relleno) |
+| **text-soft / brand-tint** | **4,47 : 1 — usar `slate` sobre el tinte** |
+
+### Excepción deliberada: Pedidos y Llamadas (D2)
+
+Pedidos y Llamadas **no siguen los tokens**: vuelven al aspecto anterior al rediseño (mismos
+colores exactos, degradado azul, marca de agua con el ícono de UniFood y columnas transparentes).
+Se conservan las mejoras de jerarquía y de lectura (observaciones destacadas, hora de recogida en
+chip, «Cliente avisado», cantidades). Implementación: `*.classic.module.css` (copias de los CSS
+anteriores al merge de #117) y la prop `variant` en `KanbanBoard`, `OrderCard`, `CallsBoard`,
+`OrderDetail`, `Header` y `BottomNav`. Historial, Disponibilidad y Perfil siguen con el estilo nuevo.
+Los cuatro hex sueltos de Pedidos y Llamadas son esa excepción; no se mezclan con los tokens.
+
+Compartidos y **sin** variante clásica (decisión propia): los diálogos y franjas de estado
+(`RejectOrderDialog`, `CalledOrderActions`, `OrderActionAlert`, `BoardFeedback`). Si el dueño quiere
+también el aspecto antiguo en ellos, es un cambio aparte.
+
+### Historial en lista (D3)
+
+Arriba no cambia (título, período, buscador, filtros, Actualizar). Las tarjetas pasan a un
+contenedor grande con una fila por pedido: nombre del cliente y referencia a la izquierda; a la
+derecha, un chip compacto de estado y el botón «Ver detalle» (acordeón). El chip compacto es
+`StatusChip` con `className={styles.compactChip}`; para quitarlo basta con eliminar ese elemento de
+`HistoryOrderRow.tsx`. Carga por meses, paginación y búsqueda se mantienen.
+
+Datos del detalle: motivo de rechazo o cancelación, fecha y hora de cierre, productos con cantidades
+y total. **No se muestran** observaciones, hora de recogida ni horas por estado: el contrato de
+historial no las trae (ver «Pendientes de endpoint»).
+
+### Barra lateral y dashboard del admin (D4)
+
+- Barra lateral blanca con borde `line`; ítem activo en `brand-tint` con texto e ícono `brand`; marca en `navy`.
+- Dashboard «simple y útil»: tres números grandes (recibidos, entregados, no recogidos) y el valor de
+  pedidos registrados con su explicación; un gráfico por día; productos más pedidos. «Tasa de no
+  recogida», «unidades no recogidas» y los no recogidos por producto van en **«Ver más detalle»**
+  (panel colapsable). El selector de período, Actualizar y la caché de días pasados no cambian.
+- El catálogo del admin mantiene su diseño.
+
+### Cliente, inicio (D5)
+
+- «Ver el menú completo»: botón secundario de ancho completo, 48 px, radio 20, con flecha y estados
+  hover, focus y pulsado.
+- «+» de 40 px abajo a la derecha de cada tarjeta. Usa `add` y `update` del carrito existente, sin
+  reescribir reglas. Tras agregar aparece `− n +`. Agotado o cerrada: botón deshabilitado con el
+  motivo en texto. El «+» está junto al enlace de la tarjeta, no dentro, así que su clic no abre el
+  producto; el clic en el resto de la tarjeta sí.
+- El badge del carrito ya anima al cambiar (`cart-pop`, desde 0,9).
+
+### Pantalla de carga, esqueletos y transiciones (D1)
+
+- Loader: el ícono de UniFood (`public/unifood-mark.svg`, dibujado a partir del PNG con el degradado
+  de marca) con un anillo que gira. Es invisible los primeros 300 ms; con movimiento reducido el
+  anillo queda quieto.
+- Entre rutas de cuenta y de admin, el encabezado y la barra se mantienen y el contenido muestra un
+  esqueleto (también con el retardo de 300 ms).
+- **View Transitions**: no se usa. El React instalado (19.2.8) no exporta `ViewTransition`; la guía de
+  Next lo presenta como API de React de uso experimental.
+
+### Tiempos medidos (build de producción local, `next build` + `next start`)
+
+Medidos con Playwright sobre Edge, desde el clic hasta que aparece el contenido. 5 muestras por
+cambio; mediana entre paréntesis.
+
+| Cambio | Muestras (ms) | Mediana |
+| --- | --- | --- |
+| Pedidos → Llamadas | 117, 54, 78, 54, 71 | **71 ms** |
+| Llamadas → Historial | 119, 56, 45, 42, 53 | **53 ms** |
+| Historial → Pedidos | 92, 483, 57, 68, 68 | **68 ms** (483 ms es la primera carga) |
+| Inicio → Carrito | 145, 89, 96, 83, 88 | **89 ms** |
+| Carrito → Inicio | 89, 90, 89, 75, 93 | **89 ms** |
+
+Incluyen el coste del propio clic de Playwright. No son mediciones con usuarios reales.
+
+### Pantalla de elegir sede (prueba visual con datos locales)
+
+Con el simulador local (`client@example.invalid`, nunca staging) se revisó `/cuenta?elegir=1` en
+escritorio y celular: tres sedes, con y sin cafeterías, sobre los tokens nuevos. Se ve coherente
+(tarjetas de radio 28, chevron y ícono de ubicación en tinte). **No se revisó** la pantalla de
+cafeterías con datos reales ni la de sede sin cafeterías en escritorio con interacción.
+
+### Pendientes de endpoint (solo lectura, no implementados)
+
+- **Horas pico** (dashboard): el contrato no trae pedidos por hora. Hace falta un endpoint de solo
+  lectura que agrupe los pedidos por hora de creación en `America/Bogota`, por día de negocio.
+- **Historial**: observaciones del pedido, hora de recogida y hora de cada estado en
+  `GET /api/worker/orders/history`, para que la fila desplegable las muestre.
+
+### Pruebas adaptadas por este cambio
+
+- `tests/e2e/admin-dashboard.spec.ts` (13 casos): abren «Ver más detalle» antes de verificar tasa,
+  unidades, no recogidos y el informe; el resumen tiene 3 definiciones; la barra lateral se verifica en
+  blanco. Ningún caso se borró.
+- `tests/e2e/worker-history.spec.ts`: despliega las filas antes de leer motivos, productos y totales;
+  el total se espera en pesos sin decimales (`$19.001`).
+- `tests/e2e/login-layout.spec.ts-snapshots/client-*.png`: regeneradas por el cambio de paleta.
+- `tests/worker-history-ui.test.mjs` y `tests/admin-dashboard-ui.test.mjs`: estructura nueva.
+- `tests/client-product-add.test.mjs` (nueva): estados del «+».
+- `tests/ui-loader.test.mjs` (nueva): retardo de 300 ms y SVG.
