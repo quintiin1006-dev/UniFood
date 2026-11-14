@@ -1,17 +1,10 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useRef, useState } from "react";
 
 import Image from "next/image";
 
-import {
-  Search,
-  X,
-} from "lucide-react";
+import { Search, X } from "lucide-react";
 
 import styles from "./Header.module.css";
 import LogoutButton from "@/features/auth/components/LogoutButton";
@@ -21,6 +14,8 @@ interface HeaderProps {
   activeModule?: WorkerModule;
   search: string;
   onSearchChange: (value: string) => void;
+  /** Last read of the order listing (W1); absent in modules that do not poll. */
+  syncStatus?: { text: string; tone: "ok" | "warning" | "pending" };
 }
 
 const searchInputId = "worker-search-input";
@@ -29,19 +24,19 @@ export default function Header({
   activeModule = "orders",
   search,
   onSearchChange,
+  syncStatus,
 }: HeaderProps) {
   const titles: Record<WorkerModule, string> = {
-    orders: "Gestión de pedidos", calls: "Llamadas", history: "Historial",
-    availability: "Disponibilidad", profile: "Mi perfil",
+    orders: "Gestión de pedidos",
+    calls: "Llamadas",
+    history: "Historial",
+    availability: "Disponibilidad",
+    profile: "Mi perfil",
   };
   const showSearch = activeModule === "orders" || activeModule === "calls";
-  const [
-    mobileSearchOpen,
-    setMobileSearchOpen,
-  ] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
-  const inputRef =
-    useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (mobileSearchOpen) {
@@ -73,87 +68,70 @@ export default function Header({
       </div>
 
       <div className={styles.actions}>
-        {showSearch && <div
-          className={`${styles.search} ${
-            mobileSearchOpen
-              ? styles.searchOpen
-              : ""
-          }`}
-          role="search"
-        >
-          <button
-            type="button"
-            className={styles.searchToggle}
-            onClick={() =>
-              setMobileSearchOpen(
-                (open) => !open
-              )
-            }
-            aria-label={
-              mobileSearchOpen
-                ? "Cerrar búsqueda"
-                : "Abrir búsqueda"
-            }
-            aria-expanded={
-              mobileSearchOpen
-            }
-            aria-controls={
-              searchInputId
-            }
+        {showSearch && (
+          <div
+            className={`${styles.search} ${
+              mobileSearchOpen ? styles.searchOpen : ""
+            }`}
+            role="search"
           >
-            <Search
-              size={19}
-              strokeWidth={2.2}
-            />
-          </button>
-
-          <input
-            ref={inputRef}
-            id={searchInputId}
-            type="search"
-            value={search}
-            onChange={(event) =>
-              onSearchChange(
-                event.target.value
-              )
-            }
-            placeholder="Buscar estudiante o producto..."
-            aria-label="Buscar estudiante o producto"
-            onKeyDown={(event) => {
-              if (
-                event.key === "Escape"
-              ) {
-                setMobileSearchOpen(
-                  false
-                );
-              }
-            }}
-          />
-
-          {mobileSearchOpen && (
             <button
               type="button"
-              className={
-                styles.searchClose
+              className={styles.searchToggle}
+              onClick={() => setMobileSearchOpen((open) => !open)}
+              aria-label={
+                mobileSearchOpen ? "Cerrar búsqueda" : "Abrir búsqueda"
               }
-              onClick={() =>
-                setMobileSearchOpen(false)
-              }
-              aria-label="Cerrar búsqueda"
+              aria-expanded={mobileSearchOpen}
+              aria-controls={searchInputId}
             >
-              <X
-                size={18}
-                strokeWidth={2.4}
-              />
+              <Search size={19} strokeWidth={2.2} />
             </button>
-          )}
-        </div>}
 
-        <div className={styles.status}>
-          <span className={styles.statusDot} />
+            <input
+              ref={inputRef}
+              id={searchInputId}
+              type="search"
+              value={search}
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder="Buscar estudiante o producto..."
+              aria-label="Buscar estudiante o producto"
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setMobileSearchOpen(false);
+                }
+              }}
+            />
 
-          <span>En línea</span>
-        </div>
+            {mobileSearchOpen && (
+              <button
+                type="button"
+                className={styles.searchClose}
+                onClick={() => setMobileSearchOpen(false)}
+                aria-label="Cerrar búsqueda"
+              >
+                <X size={18} strokeWidth={2.4} />
+              </button>
+            )}
+          </div>
+        )}
+
+        {syncStatus && (
+          <div
+            className={`${styles.status} ${
+              syncStatus.tone === "warning"
+                ? styles.statusWarning
+                : syncStatus.tone === "pending"
+                  ? styles.statusPending
+                  : ""
+            }`}
+            title={syncStatus.text}
+          >
+            <span className={styles.statusDot} aria-hidden="true" />
+
+            <span>{syncStatus.text}</span>
+          </div>
+        )}
         <LogoutButton entrypoint="panel" className={styles.logout} />
       </div>
     </header>

@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { NEW_ORDER_BADGE_MS } from "@/features/orders/listingStatus";
 import type { Order } from "@/types/order";
 import OrderCard from "./OrderCard";
 import styles from "./KanbanBoard.module.css";
@@ -15,6 +16,9 @@ import styles from "./KanbanBoard.module.css";
 interface KanbanBoardProps {
   orders: Order[];
   busyOrderIds: string[];
+  /** When each order first appeared after the first read (W11). */
+  newOrderIds?: Record<string, number>;
+  now: number;
   onOpenOrder: (order: Order) => void;
   onAction: (order: Order) => void;
   onReject?: (order: Order) => void;
@@ -57,6 +61,8 @@ const columns: Column[] = [
 export default function KanbanBoard({
   orders,
   busyOrderIds,
+  newOrderIds = {},
+  now,
   onOpenOrder,
   onAction,
   onReject,
@@ -68,15 +74,14 @@ export default function KanbanBoard({
           column.statuses.includes(order.status),
         );
 
+        // Every delivery of today, newest first; the column scrolls (owner's decision 9).
         const visibleOrders =
           column.id === "delivered"
-            ? [...columnOrders]
-                .sort(
-                  (a, b) =>
-                    new Date(b.deliveredAt ?? "").getTime() -
-                    new Date(a.deliveredAt ?? "").getTime(),
-                )
-                .slice(0, 5)
+            ? [...columnOrders].sort(
+                (a, b) =>
+                  new Date(b.deliveredAt ?? "").getTime() -
+                  new Date(a.deliveredAt ?? "").getTime(),
+              )
             : columnOrders;
 
         const ColumnIcon = column.icon;
@@ -110,6 +115,10 @@ export default function KanbanBoard({
                     key={order.id}
                     order={order}
                     busy={busyOrderIds.includes(order.id)}
+                    isNew={
+                      newOrderIds[order.id] !== undefined &&
+                      now - newOrderIds[order.id] < NEW_ORDER_BADGE_MS
+                    }
                     onOpen={() => onOpenOrder(order)}
                     onAction={() => onAction(order)}
                     onReject={onReject}

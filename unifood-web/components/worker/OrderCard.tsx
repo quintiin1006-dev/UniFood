@@ -24,6 +24,8 @@ interface OrderCardProps {
   onAction: (order: Order) => void;
   onReject?: (order: Order) => void;
   busy?: boolean;
+  /** Appeared in the last minute (W11): a static badge, no sound and no motion. */
+  isNew?: boolean;
 }
 
 export default function OrderCard({
@@ -32,6 +34,7 @@ export default function OrderCard({
   onAction,
   onReject,
   busy = false,
+  isNew = false,
 }: OrderCardProps) {
   const ActionIcon = ACTION_ICONS[order.status];
 
@@ -59,7 +62,10 @@ export default function OrderCard({
         </div>
 
         <div className={styles.student}>
-          <strong>{order.student}</strong>
+          <strong>
+            {order.student}
+            {isNew && <span className={styles.newBadge}>Nuevo</span>}
+          </strong>
 
           {identity && <span>{identity}</span>}
         </div>
