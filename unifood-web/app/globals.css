@@ -41,7 +41,6 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
-
 /* =========================================================
    CONTENEDOR PRINCIPAL
    ========================================================= */
@@ -68,12 +67,7 @@ button {
       rgba(35, 129, 239, 0.26),
       transparent 40%
     ),
-    linear-gradient(
-      145deg,
-      #063d82 0%,
-      #0756a9 48%,
-      #043d7f 100%
-    );
+    linear-gradient(145deg, #063d82 0%, #0756a9 48%, #043d7f 100%);
 
   isolation: isolate;
 }
@@ -91,18 +85,16 @@ button {
 
   pointer-events: none;
 
-  background:
-    radial-gradient(
-      circle at 50% 70%,
-      rgba(255, 255, 255, 0.035),
-      transparent 35%
-    );
+  background: radial-gradient(
+    circle at 50% 70%,
+    rgba(255, 255, 255, 0.035),
+    transparent 35%
+  );
 
   opacity: 0.8;
 
   z-index: 0;
 }
-
 
 /* =========================================================
    CONTENIDO PRINCIPAL
@@ -125,8 +117,7 @@ button {
 
   overflow: hidden;
 
-  padding:
-    14px 24px 7px;
+  padding: 14px 24px 7px;
 
   /*
    * Permite controlar correctamente
@@ -134,7 +125,6 @@ button {
    */
   isolation: isolate;
 }
-
 
 /* =========================================================
    LOGO UNIFOOD CENTRAL
@@ -149,34 +139,27 @@ button {
   left: 50%;
   top: 52%;
 
-  transform:
-    translate(-50%, -50%);
+  transform: translate(-50%, -50%);
 
   width: 420px;
   height: 420px;
 
-  background-image:
-    url("/unifood-pantalla.png");
+  background-image: url("/unifood-pantalla.png");
 
-  background-repeat:
-    no-repeat;
+  background-repeat: no-repeat;
 
-  background-position:
-    center;
+  background-position: center;
 
-  background-size:
-    contain;
+  background-size: contain;
 
   /*
    * Transparencia de la marca de agua.
    */
-  opacity: 0.10;
+  opacity: 0.1;
 
-  pointer-events:
-    none;
+  pointer-events: none;
 
-  user-select:
-    none;
+  user-select: none;
 
   /*
    * El logo queda sobre el fondo,
@@ -184,7 +167,6 @@ button {
    */
   z-index: 0;
 }
-
 
 /* =========================================================
    CONTENIDO DEL KANBAN
@@ -200,7 +182,6 @@ button {
   min-width: 0;
 }
 
-
 /* =========================================================
    HEADER
    ========================================================= */
@@ -210,7 +191,6 @@ button {
 
   z-index: 5;
 }
-
 
 /* =========================================================
    NAVEGACIÓN INFERIOR
@@ -222,103 +202,74 @@ button {
   z-index: 5;
 }
 
-
 /* =========================================================
    TABLET / PANTALLAS MEDIANAS
    ========================================================= */
 
 @media (max-width: 1150px) {
-
   .worker-main {
-    padding:
-      12px 16px 7px;
+    padding: 12px 16px 7px;
   }
 
   .worker-main::before {
-    width:
-      360px;
+    width: 360px;
 
-    height:
-      360px;
+    height: 360px;
 
-    opacity:
-      0.09;
+    opacity: 0.09;
   }
 }
-
 
 /* =========================================================
    MÓVIL
    ========================================================= */
 
 @media (max-width: 760px) {
-
   body {
-    overflow-y:
-      auto;
+    overflow-y: auto;
   }
-
 
   .worker-page {
-    height:
-      auto;
+    height: auto;
 
-    min-height:
-      100vh;
+    min-height: 100vh;
 
-    overflow-y:
-      auto;
+    overflow-y: auto;
 
-    overflow-x:
-      hidden;
+    overflow-x: hidden;
   }
-
 
   .worker-main {
-    flex:
-      none;
+    flex: none;
 
-    min-height:
-      calc(100vh - 140px);
+    min-height: calc(100vh - 140px);
 
-    overflow:
-      visible;
+    overflow: visible;
 
-    padding:
-      10px 10px 6px;
+    padding: 10px 10px 6px;
   }
-
 
   .worker-main::before {
-    width:
-      280px;
+    width: 280px;
 
-    height:
-      280px;
+    height: 280px;
 
-    top:
-      50%;
+    top: 50%;
 
-    opacity:
-      0.08;
+    opacity: 0.08;
   }
 }
-
 
 /* =========================================================
    REDUCIR ANIMACIONES
    ========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
-
   * {
-    scroll-behavior:
-      auto !important;
+    scroll-behavior: auto !important;
 
-    animation-duration:
-      0.01ms !important;
+    animation-duration: 0.01ms !important;
 
-    animation-iteration-count:
-      1 !important;
+    animation-iteration-count: 1 !important;
   }
 }

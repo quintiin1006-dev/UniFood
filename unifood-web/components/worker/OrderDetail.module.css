@@ -20,7 +20,6 @@
     both;
 }
 
-
 /* =====================================================
    MODAL
    ===================================================== */
@@ -52,11 +51,8 @@
 
   scrollbar-width: thin;
 
-  scrollbar-color:
-    #cbd9ec
-    transparent;
+  scrollbar-color: #cbd9ec transparent;
 }
-
 
 /* =====================================================
    SCROLLBAR DEL MODAL
@@ -79,7 +75,6 @@
 .modal::-webkit-scrollbar-thumb:hover {
   background: #b4c7e0;
 }
-
 
 /* =====================================================
    CERRAR
@@ -120,13 +115,10 @@
 }
 
 .close:focus-visible {
-  outline:
-    3px solid
-    rgba(8, 104, 233, 0.22);
+  outline: 3px solid rgba(8, 104, 233, 0.22);
 
   outline-offset: 3px;
 }
-
 
 /* =====================================================
    ESTUDIANTE
@@ -160,7 +152,6 @@
   font-weight: 600;
 }
 
-
 /* Nombre del estudiante */
 
 .header h2 {
@@ -181,7 +172,6 @@
   letter-spacing: -0.2px;
 }
 
-
 /* ID del estudiante */
 
 .header p {
@@ -195,7 +185,6 @@
   line-height: 1.3;
 }
 
-
 /* =====================================================
    DIVISOR
    ===================================================== */
@@ -207,7 +196,6 @@
 
   background: #e3e8ef;
 }
-
 
 /* =====================================================
    SECCIONES
@@ -252,7 +240,6 @@
   color: #172033;
 }
 
-
 /* =====================================================
    ITEMS
    ===================================================== */
@@ -279,9 +266,7 @@
    */
   background: #f7f9fc;
 
-  border:
-    1px solid
-    #e7ebf1;
+  border: 1px solid #e7ebf1;
 
   color: #4f5d70;
 
@@ -300,7 +285,6 @@
 
   border-color: #dfe5ed;
 }
-
 
 /* =====================================================
    NOMBRE + SUBTOTAL
@@ -345,10 +329,8 @@
 
   line-height: 1.4;
 
-  font-variant-numeric:
-    tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
-
 
 /* =====================================================
    PRECIO UNITARIO
@@ -367,7 +349,6 @@
   line-height: 1.35;
 }
 
-
 /* =====================================================
    BEBIDA / INFORMACIÓN ADICIONAL
    ===================================================== */
@@ -384,7 +365,6 @@
 
   line-height: 1.45;
 }
-
 
 /* =====================================================
    TOTAL
@@ -407,9 +387,7 @@
    */
   background: #f7f9fc;
 
-  border:
-    1px solid
-    #e3e8ef;
+  border: 1px solid #e3e8ef;
 
   border-radius: 16px;
 
@@ -437,10 +415,8 @@
 
   letter-spacing: -0.2px;
 
-  font-variant-numeric:
-    tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
-
 
 /* =====================================================
    OBSERVACIONES
@@ -460,7 +436,6 @@
 
   line-height: 1.5;
 }
-
 
 /* =====================================================
    TIEMPO
@@ -504,7 +479,6 @@
   line-height: 1.3;
 }
 
-
 /* =====================================================
    ACCIÓN PRINCIPAL
    ===================================================== */
@@ -527,12 +501,7 @@
    * El azul se mantiene aquí
    * porque es la acción principal.
    */
-  background:
-    linear-gradient(
-      135deg,
-      #176fe9,
-      #0754bd
-    );
+  background: linear-gradient(135deg, #176fe9, #0754bd);
 
   border: 0;
 
@@ -547,9 +516,7 @@
 
   line-height: 1.2;
 
-  box-shadow:
-    0 7px 17px
-    rgba(11, 91, 206, 0.2);
+  box-shadow: 0 7px 17px rgba(11, 91, 206, 0.2);
 
   cursor: pointer;
 
@@ -561,20 +528,15 @@
 }
 
 .action:hover:not(:disabled) {
-  box-shadow:
-    0 10px 22px
-    rgba(11, 91, 206, 0.26);
+  box-shadow: 0 10px 22px rgba(11, 91, 206, 0.26);
 }
 
 .action:active:not(:disabled) {
-  transform:
-    scale(0.98);
+  transform: scale(0.98);
 }
 
 .action:focus-visible {
-  outline:
-    3px solid
-    rgba(8, 104, 233, 0.25);
+  outline: 3px solid rgba(8, 104, 233, 0.25);
 
   outline-offset: 3px;
 }
@@ -592,7 +554,6 @@
 .action:disabled:focus-visible {
   outline: none;
 }
-
 
 /* =====================================================
    ANIMACIONES
@@ -621,7 +582,6 @@
   }
 }
 
-
 /* =====================================================
    RESPONSIVE
    ===================================================== */
@@ -639,8 +599,7 @@
 
     padding: 23px;
 
-    border-radius:
-      24px 24px 0 0;
+    border-radius: 24px 24px 0 0;
   }
 
   .header h2 {
@@ -667,7 +626,6 @@
     font-size: 13px;
   }
 }
-
 
 /* =====================================================
    ACCESIBILIDAD
