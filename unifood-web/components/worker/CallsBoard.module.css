@@ -1253,3 +1253,27 @@
   font-weight: 600;
   text-align: center;
 }
+
+/* D1: pickup time in the delivery detail. */
+.pickupBadge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eaf2ff;
+  color: #174a8c;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

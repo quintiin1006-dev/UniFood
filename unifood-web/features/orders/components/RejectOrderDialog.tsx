@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { XCircle } from "lucide-react";
+import { X, XCircle } from "lucide-react";
 import {
   MAX_REJECTION_REASON,
   checkRejectionReason,
@@ -60,19 +60,46 @@ export function RejectOrderDialog({
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
   const field = useRef<HTMLTextAreaElement>(null);
+  const form = useRef<HTMLFormElement>(null);
   const titleId = useId();
   const hintId = useId();
   const errorId = useId();
   const length = reasonLength(reason);
   const check = checkRejectionReason(reason);
 
+  // D5: focus goes to the reason and comes back to the button that opened the dialog.
   useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
     field.current?.focus();
+    return () => opener?.focus();
   }, []);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !inFlight.current) onClose();
+      if (event.key === "Escape" && !inFlight.current) {
+        onClose();
+        return;
+      }
+      // D5: Tab stays inside the dialog.
+      if (event.key !== "Tab" || !form.current) return;
+      const controls = [
+        ...form.current.querySelectorAll<HTMLElement>(
+          "button:not(:disabled), textarea:not(:disabled)",
+        ),
+      ];
+      if (!controls.length) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      } else if (!form.current.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -101,6 +128,7 @@ export function RejectOrderDialog({
   return (
     <div className={styles.backdrop}>
       <form
+        ref={form}
         className={styles.dialog}
         role="dialog"
         aria-modal="true"
@@ -109,6 +137,15 @@ export function RejectOrderDialog({
         onSubmit={submit}
         noValidate
       >
+        <button
+          type="button"
+          className={styles.close}
+          onClick={onClose}
+          disabled={submitting}
+          aria-label="Cerrar sin rechazar"
+        >
+          <X size={20} aria-hidden="true" />
+        </button>
         <h2 id={titleId} className={styles.title}>
           ¿Rechazar pedido?
         </h2>
