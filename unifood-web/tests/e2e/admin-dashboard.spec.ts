@@ -890,6 +890,10 @@ for (const width of [390, 768, 1440])
           ),
         )
         .toBe(true);
+      // The login is now a client navigation (ola 4 · F2), so the last gesture was the pointer
+      // click on «Iniciar sesión». A key press puts the browser in keyboard modality, where
+      // :focus-visible applies, so the ring is measured as a keyboard user sees it.
+      await page.keyboard.press("Shift");
       await current.focus();
       await expect(current).toBeFocused();
       const focus = await current.evaluate((element) => {
