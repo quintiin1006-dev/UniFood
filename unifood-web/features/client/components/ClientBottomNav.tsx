@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { House, UserRound, ShoppingCart, ReceiptText } from "lucide-react";
+import { Icon } from "@/components/ui/Icon";
 import { useClientCart } from "./ClientCartProvider";
 import { cafeteriaHref } from "../domain/context";
 import styles from "./ClientShell.module.css";
@@ -25,7 +25,11 @@ export default function ClientBottomNav() {
           className={styles.navItem}
           aria-current={!profileActive && !cartActive ? "page" : undefined}
         >
-          <House size={22} aria-hidden="true" />
+          <Icon
+            name="inicio"
+            size={22}
+            tone={!profileActive && !cartActive ? "active" : "inherit"}
+          />
           <span>Inicio</span>
         </Link>
         <button
@@ -34,7 +38,7 @@ export default function ClientBottomNav() {
           disabled
           aria-label="Pedidos, próximamente"
         >
-          <ReceiptText size={22} aria-hidden="true" />
+          <Icon name="mi-pedido" size={22} />
           <span>Pedidos</span>
         </button>
         <Link
@@ -44,7 +48,11 @@ export default function ClientBottomNav() {
           aria-label={`Carrito${count ? `, ${count} ${count === 1 ? "unidad" : "unidades"}` : ""}`}
         >
           <span className={styles.cartIcon}>
-            <ShoppingCart size={22} aria-hidden="true" />
+            <Icon
+              name="carrito"
+              size={22}
+              tone={cartActive ? "active" : "inherit"}
+            />
             {count > 0 && (
               <span className={styles.cartBadge} key={count} aria-hidden="true">
                 {count}
@@ -58,7 +66,11 @@ export default function ClientBottomNav() {
           className={styles.navItem}
           aria-current={profileActive ? "page" : undefined}
         >
-          <UserRound size={22} aria-hidden="true" />
+          <Icon
+            name="perfil"
+            size={22}
+            tone={profileActive ? "active" : "inherit"}
+          />
           <span>Perfil</span>
         </Link>
       </div>

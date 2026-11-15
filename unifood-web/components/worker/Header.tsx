@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import Image from "next/image";
 
-import { Search, X } from "lucide-react";
+import { Icon } from "@/components/ui/Icon";
 
 import modernStyles from "./Header.module.css";
 import classicStyles from "./Header.classic.module.css";
@@ -90,7 +90,7 @@ export default function Header({
               aria-expanded={mobileSearchOpen}
               aria-controls={searchInputId}
             >
-              <Search size={19} strokeWidth={2.2} />
+              <Icon name="busqueda" size={19} />
             </button>
 
             <input
@@ -115,7 +115,7 @@ export default function Header({
                 onClick={() => setMobileSearchOpen(false)}
                 aria-label="Cerrar búsqueda"
               >
-                <X size={18} strokeWidth={2.4} />
+                <Icon name="cerrar" size={18} />
               </button>
             )}
           </div>

@@ -1,8 +1,4 @@
-import {
-  CheckCircle2,
-  ChefHat,
-  Megaphone,
-} from "lucide-react";
+import type { IconName } from "@/components/ui/Icon";
 
 import type {
   Order,
@@ -43,26 +39,26 @@ export const ACTION_LABELS: Record<
 
 export const ACTION_ICONS: Record<
   OrderStatus,
-  typeof ChefHat
+  IconName
 > = {
-  not_collected: CheckCircle2,
+  not_collected: "exito",
   pending:
-    ChefHat,
+    "cocina",
 
   preparing:
-    CheckCircle2,
+    "exito",
 
   ready:
-    Megaphone,
+    "llamadas",
 
   called:
-    CheckCircle2,
+    "exito",
 
   delivered:
-    CheckCircle2,
+    "exito",
 
   cancelled:
-    CheckCircle2,
+    "exito",
 };
 
 export function getNextStatus(

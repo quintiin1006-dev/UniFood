@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Clock, UserRound } from "lucide-react";
+import { Icon } from "@/components/ui/Icon";
 
 import {
   ACTION_ICONS,
@@ -48,7 +48,6 @@ export default function OrderCard({
   appeared = false,
 }: OrderCardProps) {
   const styles = variant === "classic" ? classicStyles : modernStyles;
-  const ActionIcon = ACTION_ICONS[order.status];
 
   const actionLabel = ACTION_LABELS[order.status];
 
@@ -72,7 +71,7 @@ export default function OrderCard({
         aria-label={`Ver pedido de ${order.student}`}
       >
         <div className={styles.userIcon}>
-          <UserRound size={18} strokeWidth={2.3} />
+          <Icon name="perfil" size={18} />
         </div>
 
         <div className={styles.student}>
@@ -86,13 +85,13 @@ export default function OrderCard({
 
         <div className={styles.time}>{formatRelativeTime(order.createdAt)}</div>
 
-        <ArrowRight size={21} strokeWidth={2.2} className={styles.arrow} />
+        <Icon name="flecha-derecha" size={21} className={styles.arrow} />
       </button>
 
       {/* Hora de recogida pedida por el cliente: solo informativa */}
       {pickup && (
         <div className={styles.pickupTime}>
-          <Clock size={14} strokeWidth={2.3} aria-hidden="true" />
+          <Icon name="reloj" size={14} />
 
           <span>{pickup}</span>
         </div>
@@ -122,7 +121,11 @@ export default function OrderCard({
         aria-busy={busy || undefined}
       >
         {/* F3: the click answers at once; the card moves when the server confirms. */}
-        {busy ? <Spinner /> : <ActionIcon size={18} strokeWidth={2.3} />}
+        {busy ? (
+          <Spinner />
+        ) : (
+          <Icon name={ACTION_ICONS[order.status]} size={18} />
+        )}
 
         <span>{busy ? "Guardando…" : actionLabel}</span>
 
