@@ -612,8 +612,9 @@ historial no las trae (ver «Pendientes de endpoint»).
 - Loader: el ícono de UniFood (`public/unifood-mark.svg`, dibujado a partir del PNG con el degradado
   de marca) con un anillo que gira. Es invisible los primeros 300 ms; con movimiento reducido el
   anillo queda quieto.
-- Entre rutas de cuenta y de admin, el encabezado y la barra se mantienen y el contenido muestra un
-  esqueleto (también con el retardo de 300 ms).
+- Entre rutas de cuenta y de admin, el encabezado y la barra se mantienen y el contenido muestra el
+  loader en línea (también con el retardo de 300 ms). Ola 4 cambió el esqueleto genérico por el
+  loader de marca; ver «Ola 4».
 - **View Transitions**: no se usa. El React instalado (19.2.8) no exporta `ViewTransition`; la guía de
   Next lo presenta como API de React de uso experimental.
 
@@ -657,3 +658,50 @@ cafeterías con datos reales ni la de sede sin cafeterías en escritorio con int
 - `tests/worker-history-ui.test.mjs` y `tests/admin-dashboard-ui.test.mjs`: estructura nueva.
 - `tests/client-product-add.test.mjs` (nueva): estados del «+».
 - `tests/ui-loader.test.mjs` (nueva): retardo de 300 ms y SVG.
+
+## Ola 4: feedback del sistema e íconos propios (15 nov 2026)
+
+Mapa completo de estados y mensajes por pantalla: `docs/catalogo-feedback.md`.
+
+### Carga y transiciones
+
+- **Login:** nunca muestra loader. El botón pasa a «Entrando…» con spinner y el formulario permanece
+  hasta llegar al destino (`router.replace` con `prefetch`). Se eliminó `app/loading.tsx`, que
+  mostraba un loader raíz entre el login y el panel.
+- **Cambio de ruta en cliente (`/cuenta`) y admin:** `UniFoodLoader` en línea, invisible los primeros
+  300 ms; cabecera, pestañas y barra lateral siguen visibles.
+- **Primera carga de datos:** esqueletos con la forma del contenido. El tablero del worker muestra 4
+  columnas de esqueleto y su encabezado no dice nada hasta la primera lectura (ya no «Conectando…»).
+- **Acciones:** spinner compartido (`components/ui/Spinner`, prop `loading` de `Button`) con texto de
+  progreso: «Entrando…», «Enviando pedido…», «Guardando…». Con movimiento reducido el anillo queda
+  quieto.
+- **UI optimista:** avanzar un pedido en el worker mueve la tarjeta de inmediato con «Guardando…»; si
+  el servidor rechaza, vuelve a su columna y el aviso explica el motivo. La disponibilidad ya era
+  optimista. Crear pedido y aceptar términos no son optimistas: muestran progreso.
+
+### Íconos propios (`components/ui/Icon.tsx`)
+
+- `<Icon name="…" />`: 13 glifos del dueño (propuesta 2, 7-nov-2026) y 28 dibujados en el mismo
+  estilo (24×24, trazo 1.8, round, `currentColor`). `tienda` reutiliza el glifo de `cafeterias`.
+- `tone`: `inherit` (por defecto), `inactive` (texto suave) y `active` (marca con relleno al 14 %).
+  Decorativo con `aria-hidden`; con `label`, `role="img"` y `aria-label`.
+- `<IconTile name="…" />`: tarjeta de módulo de 48 px, radio 14, degradado 150deg celeste → marca
+  (45 %) → marino y glifo blanco con trazo 1.9.
+- Ya reemplazan a lucide en la navegación de los cuatro roles, el encabezado y el tablero del worker,
+  la tarjeta de pedido y los encabezados de admin y super admin.
+
+### Catálogo de mensajes (`features/shared/messages.ts`)
+
+- Eventos de UI compartidos y un mensaje por cada `ErrorCode` del backend (61). Los mapas por
+  pantalla (`features/*/errors.ts`) toman sus textos de aquí; `lib/messages.ts` los reexporta.
+- `tests/messages-catalog.test.mjs` lee `ErrorCode.java` y falla si falta un mensaje, si sobra un
+  código o si un texto se repite fuera del catálogo.
+
+### Página de revisión `/dev/feedback`
+
+- Muestra juntos los botones en cada estado, los avisos, el banner sin conexión, los errores del
+  tablero, los esqueletos, el loader, los estados vacíos, el diálogo de confirmación, el set de
+  íconos y la tabla de mensajes por `ErrorCode`, con sus textos reales.
+- Solo para desarrollo: en `next dev` se abre en `http://localhost:3000/dev/feedback`. En producción
+  (`NODE_ENV=production`) llama a `notFound()` y responde 404; no tiene enlaces desde la app y no se
+  indexa. Pruebas: `tests/dev-feedback.test.mjs` y `tests/e2e/dev-feedback.spec.ts`.

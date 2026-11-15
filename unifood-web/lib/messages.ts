@@ -1,10 +1,7 @@
-// Single catalogue of the response texts that several panels repeat word for word
-// (docs/ui-paneles.md, «Tokens», mensajes de respuesta). Same meaning and wording as before.
-
-export const SESSION_CHECK_UNAVAILABLE =
-  "No pudimos verificar tu sesión en este momento. Inténtalo nuevamente.";
-
-export const SESSION_EXPIRED = "Tu sesión expiró. Inicia sesión de nuevo.";
-
-export const ORDER_STATE_CHANGED =
-  "El pedido ya cambió de estado. Revisa el tablero actualizado.";
+// The shared UI texts now live in the central catalogue (features/shared/messages, ola 4 · F5).
+// Re-exported here so existing imports keep working.
+export {
+  ORDER_STATE_CHANGED,
+  SESSION_CHECK_UNAVAILABLE,
+  SESSION_EXPIRED,
+} from "@/features/shared/messages";

@@ -1,24 +1,22 @@
+import { BACKEND_ERROR_MESSAGES } from "@/features/shared/messages";
 export const SUPER_ADMIN_MESSAGES = {
   SUPER_ADMIN_UNAUTHORIZED:
     "Tu sesión no está disponible. Inicia sesión para continuar.",
-  SUPER_ADMIN_FORBIDDEN: "No tienes permisos para la administración global.",
+  SUPER_ADMIN_FORBIDDEN: BACKEND_ERROR_MESSAGES.SUPER_ADMIN_FORBIDDEN,
   SUPER_ADMIN_TEMPORARILY_UNAVAILABLE:
-    "No pudimos cargar las cafeterías en este momento.",
+    BACKEND_ERROR_MESSAGES.SUPER_ADMIN_TEMPORARILY_UNAVAILABLE,
   SUPER_ADMIN_BAD_GATEWAY:
     "No pudimos cargar un listado válido. Inténtalo nuevamente.",
-  SUPER_ADMIN_INTERNAL_ERROR: "No pudimos cargar las cafeterías.",
+  SUPER_ADMIN_INTERNAL_ERROR: BACKEND_ERROR_MESSAGES.SUPER_ADMIN_INTERNAL_ERROR,
   AUTH_TEMPORARILY_UNAVAILABLE:
     "No pudimos verificar tu sesión en este momento. Inténtalo nuevamente.",
-  SUPER_ADMIN_INVALID_REQUEST: "La solicitud no es válida.",
-  BILLING_INVALID_REQUEST:
-    "Revisa el modelo de cobro y sus montos en pesos enteros.",
+  SUPER_ADMIN_INVALID_REQUEST:
+    BACKEND_ERROR_MESSAGES.SUPER_ADMIN_INVALID_REQUEST,
+  BILLING_INVALID_REQUEST: BACKEND_ERROR_MESSAGES.BILLING_INVALID_REQUEST,
   CAFETERIA_NOT_FOUND: "No encontramos esa cafetería.",
-  VISIBILITY_STATE_CHANGED:
-    "Otra persona cambió esta cafetería. Revisa el valor actual e inténtalo de nuevo.",
-  BILLING_STATE_CHANGED:
-    "Otra persona cambió esta cafetería. Revisa el valor actual e inténtalo de nuevo.",
-  CAFETERIA_REQUIRES_ADMIN:
-    "Asigna un administrador activo antes de hacer visible esta cafetería.",
+  VISIBILITY_STATE_CHANGED: BACKEND_ERROR_MESSAGES.VISIBILITY_STATE_CHANGED,
+  BILLING_STATE_CHANGED: BACKEND_ERROR_MESSAGES.BILLING_STATE_CHANGED,
+  CAFETERIA_REQUIRES_ADMIN: BACKEND_ERROR_MESSAGES.CAFETERIA_REQUIRES_ADMIN,
 } as const;
 
 export type SuperAdminErrorCode = keyof typeof SUPER_ADMIN_MESSAGES;

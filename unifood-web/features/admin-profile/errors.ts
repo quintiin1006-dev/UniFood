@@ -1,12 +1,13 @@
 import { SESSION_CHECK_UNAVAILABLE } from "@/lib/messages";
+import { BACKEND_ERROR_MESSAGES } from "@/features/shared/messages";
 export const PROFILE_MESSAGES = {
   ADMIN_PROFILE_UNAUTHORIZED:
     "Tu sesión no está disponible. Inicia sesión para consultar tu perfil.",
-  ADMIN_PROFILE_FORBIDDEN: "No tienes permisos para consultar este perfil.",
+  ADMIN_PROFILE_FORBIDDEN: BACKEND_ERROR_MESSAGES.ADMIN_PROFILE_FORBIDDEN,
   ADMIN_PROFILE_TEMPORARILY_UNAVAILABLE:
-    "No pudimos cargar tu perfil en este momento. Inténtalo nuevamente.",
+    BACKEND_ERROR_MESSAGES.ADMIN_PROFILE_TEMPORARILY_UNAVAILABLE,
   ADMIN_PROFILE_INTERNAL_ERROR:
-    "No pudimos cargar tu perfil. Inténtalo nuevamente.",
+    BACKEND_ERROR_MESSAGES.ADMIN_PROFILE_INTERNAL_ERROR,
   ADMIN_PROFILE_BAD_GATEWAY:
     "No pudimos cargar un perfil válido. Inténtalo nuevamente.",
   AUTH_TEMPORARILY_UNAVAILABLE: SESSION_CHECK_UNAVAILABLE,

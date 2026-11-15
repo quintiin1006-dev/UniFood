@@ -2,13 +2,13 @@
 // Chosen by the code of Spring's ApiErrorResponse; Spring's text never reaches the worker,
 // as the reminders already do in calledOrderActions.ts.
 import { ORDER_STATE_CHANGED, SESSION_EXPIRED } from "@/lib/messages";
-import { MAX_REJECTION_REASON } from "./rejectionReason";
+import { BACKEND_ERROR_MESSAGES } from "@/features/shared/messages";
 
 export { ORDER_STATE_CHANGED };
 
 /** FIFO of the day (docs/decisiones.md §6): only the oldest PENDING of today can be prepared. */
 export const ORDER_SEQUENCE_MESSAGE =
-  "Primero pasa a preparación el pedido más antiguo de hoy.";
+  BACKEND_ERROR_MESSAGES.ORDER_PROCESSING_SEQUENCE_VIOLATION;
 
 export const isSequenceViolation = (code: unknown) =>
   code === "ORDER_PROCESSING_SEQUENCE_VIOLATION";
@@ -32,7 +32,7 @@ export function orderActionMessage(status: number, code: unknown): string {
     status === 409
   )
     return code === "ORDER_CANCELLED_BY_CLIENT"
-      ? "El cliente canceló este pedido."
+      ? BACKEND_ERROR_MESSAGES.ORDER_CANCELLED_BY_CLIENT
       : ORDER_STATE_CHANGED;
   return (
     common(status) ?? "No se pudo actualizar el pedido. Inténtalo de nuevo."
@@ -42,9 +42,9 @@ export function orderActionMessage(status: number, code: unknown): string {
 /** Rejection with a reason (B18). */
 export function rejectionMessage(status: number, code: unknown): string {
   if (code === "REJECTION_REASON_REQUIRED")
-    return "Escribe el motivo del rechazo, con al menos 3 caracteres.";
+    return BACKEND_ERROR_MESSAGES.REJECTION_REASON_REQUIRED;
   if (code === "REJECTION_REASON_TOO_LONG")
-    return `El motivo del rechazo admite hasta ${MAX_REJECTION_REASON} caracteres.`;
+    return BACKEND_ERROR_MESSAGES.REJECTION_REASON_TOO_LONG;
   if (
     code === "INVALID_ORDER_STATE" ||
     code === "ORDER_CONCURRENT_MODIFICATION" ||
