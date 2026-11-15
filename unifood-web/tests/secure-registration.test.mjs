@@ -1366,3 +1366,78 @@ test("accepting terms is limited to the caller's own client, to valid versions a
     denied,
   );
 });
+
+test("the pre-024 signature of complete_registration no longer exists, so no call can skip the terms", async (t) => {
+  const db = await createAuthDatabase();
+  t.after(() => db.close());
+  const id = await ready(db, "ana@ustavillavo.edu.co");
+  assert.equal(
+    (
+      await one(
+        db,
+        "SELECT to_regprocedure('public.complete_registration(text, text, boolean)') IS NULL AS gone",
+      )
+    ).gone,
+    true,
+  );
+  // An authenticated browser call with the old three arguments is not a function any more.
+  await assert.rejects(
+    as(
+      db,
+      "authenticated",
+      id,
+      "SELECT public.complete_registration('Ana Torres', '7654321', true)",
+    ),
+    fails(/does not exist/),
+  );
+  // Without the terms argument the five-argument call still fails: no acceptance, no profile.
+  await assert.rejects(
+    as(
+      db,
+      "authenticated",
+      id,
+      "SELECT public.complete_registration('Ana Torres', '7654321', true, false, '2026-11-v1')",
+    ),
+    fails(/REGISTRATION_TERMS_REQUIRED/),
+  );
+  assert.equal(await count(db, "public.clients"), 0);
+});
+
+test("the terms functions take no user id, use auth.uid(), and pin search_path", async (t) => {
+  const db = await createAuthDatabase();
+  t.after(() => db.close());
+  const rows = (
+    await db.query(`
+      SELECT p.proname, p.prosecdef AS definer,
+             pg_get_function_arguments(p.oid) AS args,
+             array_to_string(p.proconfig, ',') AS config,
+             pg_get_functiondef(p.oid) AS body
+      FROM pg_proc p
+      WHERE p.oid IN (
+        to_regprocedure('public.client_terms_accepted(text)'),
+        to_regprocedure('public.accept_client_terms(text)'),
+        to_regprocedure('public.complete_registration(text, text, boolean, boolean, text)'))
+      ORDER BY p.proname`)
+  ).rows;
+  assert.deepEqual(
+    rows.map((row) => [row.proname, row.definer, row.config]),
+    [
+      ["accept_client_terms", true, 'search_path=""'],
+      ["client_terms_accepted", true, 'search_path=""'],
+      ["complete_registration", true, 'search_path=""'],
+    ],
+  );
+  for (const row of rows) {
+    assert.doesNotMatch(row.args, /uuid/i, row.proname);
+    assert.match(
+      row.body,
+      /auth\.uid\(\)/,
+      row.proname === "complete_registration" ? "" : row.proname,
+    );
+  }
+  // Only the caller's own row is touched: the functions reference no other account.
+  for (const name of ["client_terms_accepted", "accept_client_terms"]) {
+    const body = rows.find((row) => row.proname === name).body;
+    assert.match(body, /user_id = auth\.uid\(\)/, name);
+  }
+});
