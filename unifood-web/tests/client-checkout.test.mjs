@@ -60,6 +60,29 @@ test("a pickup time must be later than now and today in Bogotá, and goes out wi
   assert.match(checkout.pickupLabel("2026-11-20T15:30:00-05:00"), /3:30/);
 });
 
+test("a past or current pickup time gets the inline message, and the note stops at 200 characters", () => {
+  assert.equal(
+    checkout.pickupInstant("12:00", noon).error,
+    "Elige una hora posterior a la actual.",
+  );
+  assert.equal(
+    checkout.pickupInstant("11:00", noon).error,
+    "Elige una hora posterior a la actual.",
+  );
+  assert.deepEqual(checkout.limitNote("corto"), {
+    note: "corto",
+    truncated: false,
+  });
+  assert.deepEqual(checkout.limitNote("a".repeat(200)), {
+    note: "a".repeat(200),
+    truncated: false,
+  });
+  const pasted = checkout.limitNote("a".repeat(195) + "😀".repeat(10));
+  assert.equal(pasted.truncated, true);
+  assert.equal(checkout.noteLength(pasted.note), 200);
+  assert.equal(pasted.note, "a".repeat(195) + "😀".repeat(5));
+});
+
 test("the order body carries ids, quantities, one trimmed note and the optional time", () => {
   const plain = checkout.buildOrderRequest(state, "", null);
   assert.deepEqual(plain, {

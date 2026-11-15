@@ -170,12 +170,14 @@ test("a note and a chosen pickup time travel with the order and appear in the co
   await expect(time).toHaveAttribute("min", /^\d\d:\d\d$/);
   // Past times are refused in the browser and nothing is sent.
   await time.fill("00:00");
-  await accept(page);
-  await confirmButton(page).click();
-  await expect(alertBox(page)).toContainText("posterior a la actual");
+  await expect(page.locator("#pickup-error")).toContainText(
+    "Elige una hora posterior a la actual.",
+  );
+  await expect(confirmButton(page)).toBeDisabled();
   expect(sent).toHaveLength(0);
   const later = bogotaTime(15);
   await time.fill(later);
+  await accept(page);
   await page.getByLabel(/Nota para el pedido/).fill("Sin cebolla, por favor");
   await confirmButton(page).click();
   await expect(
@@ -191,7 +193,7 @@ test("a note and a chosen pickup time travel with the order and appear in the co
   );
 });
 
-test("the note is limited to 200 characters in the browser", async ({
+test("the note keeps at most 200 characters and says so when the limit is reached", async ({
   page,
 }) => {
   const sent = recordOrders(page);
@@ -199,16 +201,15 @@ test("the note is limited to 200 characters in the browser", async ({
   await openSummary(page);
   const note = page.getByLabel(/Nota para el pedido/);
   await note.fill("a".repeat(201));
-  await expect(page.getByText("201/200 caracteres")).toBeVisible();
+  await expect(note).toHaveValue("a".repeat(200));
+  await expect(page.getByText("El límite es de 200 caracteres.")).toBeVisible();
   await accept(page);
-  await confirmButton(page).click();
-  await expect(alertBox(page)).toContainText("hasta 200 caracteres");
-  expect(sent).toHaveLength(0);
-  await note.fill("a".repeat(200));
   await confirmButton(page).click();
   await expect(
     page.getByRole("heading", { name: "Pedido enviado" }),
   ).toBeVisible({ timeout: 30_000 });
+  expect(sent).toHaveLength(1);
+  expect(sent[0].body.note).toBe("a".repeat(200));
 });
 
 test("each rejection shows a fixed Spanish message with its next step and keeps the cart", async ({

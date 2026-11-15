@@ -40,8 +40,7 @@ export function earliestPickup(now: Date): string | null {
   return next < 24 * 60 ? toClock(next) : null;
 }
 
-export const PICKUP_TIME_MESSAGE =
-  "Elige una hora de hoy posterior a la actual, o envía el pedido lo antes posible.";
+export const PICKUP_TIME_MESSAGE = "Elige una hora posterior a la actual.";
 
 export type PickupResult =
   { ok: true; iso: string } | { ok: false; error: string };
@@ -66,6 +65,16 @@ export function pickupLabel(iso: string) {
 }
 
 export const noteLength = (note: string) => Array.from(note.trim()).length;
+
+/**
+ * What the note field keeps while typing or pasting: at most NOTE_LIMIT characters (code
+ * points, as Spring counts them). `truncated` tells the UI the limit was reached.
+ */
+export function limitNote(value: string): { note: string; truncated: boolean } {
+  const chars = Array.from(value);
+  if (chars.length <= NOTE_LIMIT) return { note: value, truncated: false };
+  return { note: chars.slice(0, NOTE_LIMIT).join(""), truncated: true };
+}
 
 export type OrderRequest = {
   cafeteriaId: string;
