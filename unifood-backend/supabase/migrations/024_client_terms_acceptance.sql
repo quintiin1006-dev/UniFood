@@ -43,7 +43,7 @@ COMMENT ON COLUMN public.clients.terms_version IS
 -- body is the one of 018; the only changes are the terms check and the stored terms columns.
 DROP FUNCTION IF EXISTS public.complete_registration(text, text, boolean);
 
-CREATE FUNCTION public.complete_registration(
+CREATE OR REPLACE FUNCTION public.complete_registration(
   full_name text, institutional_code text, privacy_accepted boolean,
   terms_accepted boolean, terms_version text
 ) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
@@ -122,7 +122,7 @@ END;
 $$;
 
 -- Whether the caller's client accepted exactly this version. Only the caller's own row.
-CREATE FUNCTION public.client_terms_accepted(current_version text)
+CREATE OR REPLACE FUNCTION public.client_terms_accepted(current_version text)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.clients c
@@ -134,7 +134,7 @@ $$;
 
 -- Records the acceptance of one terms version by the caller's own client. Accepting again
 -- only refreshes the timestamp; a client whose row does not exist cannot accept anything.
-CREATE FUNCTION public.accept_client_terms(current_version text)
+CREATE OR REPLACE FUNCTION public.accept_client_terms(current_version text)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 DECLARE
   updated integer;
@@ -155,10 +155,30 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.complete_registration(text, text, boolean, boolean, text)
-  FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.client_terms_accepted(text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.accept_client_terms(text) FROM PUBLIC, anon, authenticated;
+-- CREATE OR REPLACE keeps the privileges a function already had, so the grants are rebuilt
+-- from nothing on every run. service_role is revoked too: the backend reaches these through
+-- the user's own session, never with the service key. Roles are checked first, because a
+-- temporary test cluster has only the ones its fixture creates (same guard as 018).
+DO $$
+DECLARE
+  target text;
+  grantee text;
+BEGIN
+  FOREACH target IN ARRAY ARRAY[
+    'public.complete_registration(text, text, boolean, boolean, text)',
+    'public.client_terms_accepted(text)',
+    'public.accept_client_terms(text)'
+  ] LOOP
+    EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC', target);
+    FOREACH grantee IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
+      IF EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = grantee) THEN
+        EXECUTE format('REVOKE ALL ON FUNCTION %s FROM %I', target, grantee);
+      END IF;
+    END LOOP;
+  END LOOP;
+END;
+$$;
+
 GRANT EXECUTE ON FUNCTION public.complete_registration(text, text, boolean, boolean, text)
   TO authenticated;
 GRANT EXECUTE ON FUNCTION public.client_terms_accepted(text) TO authenticated;
@@ -172,12 +192,24 @@ COMMIT;
 -- DROP FUNCTION IF EXISTS public.accept_client_terms(text);
 -- DROP FUNCTION IF EXISTS public.client_terms_accepted(text);
 -- DROP FUNCTION IF EXISTS public.complete_registration(text, text, boolean, boolean, text);
--- CREATE FUNCTION public.complete_registration(
+-- CREATE OR REPLACE FUNCTION public.complete_registration(
 --   full_name text, institutional_code text, privacy_accepted boolean
 -- ) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 --   -- body as in 018_secure_registration.sql
 -- $$;
--- REVOKE ALL ON FUNCTION public.complete_registration(text, text, boolean) FROM PUBLIC, anon, authenticated;
+-- DO $block$
+-- DECLARE
+--   grantee text;
+-- BEGIN
+--   EXECUTE 'REVOKE ALL ON FUNCTION public.complete_registration(text, text, boolean) FROM PUBLIC';
+--   FOREACH grantee IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
+--     IF EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = grantee) THEN
+--       EXECUTE format(
+--         'REVOKE ALL ON FUNCTION public.complete_registration(text, text, boolean) FROM %I', grantee);
+--     END IF;
+--   END LOOP;
+-- END;
+-- $block$;
 -- GRANT EXECUTE ON FUNCTION public.complete_registration(text, text, boolean) TO authenticated;
 -- ALTER TABLE public.clients
 --   DROP CONSTRAINT IF EXISTS chk_clients_terms_version_format,

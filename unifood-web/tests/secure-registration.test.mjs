@@ -1441,3 +1441,150 @@ test("the terms functions take no user id, use auth.uid(), and pin search_path",
     assert.match(body, /user_id = auth\.uid\(\)/, name);
   }
 });
+
+// 024 is written to be run again without failing: CREATE OR REPLACE for its three functions,
+// IF NOT EXISTS for the columns and a guarded block for the constraints.
+const migration024Url = new URL(
+  "../../unifood-backend/supabase/migrations/024_client_terms_acceptance.sql",
+  import.meta.url,
+);
+const terms024 = () => readFile(migration024Url, "utf8");
+// Privileges and definitions of everything 024 owns, as one comparable snapshot.
+const TERMS_FUNCTIONS_SQL = `
+  SELECT p.proname,
+         pg_get_function_identity_arguments(p.oid) AS args,
+         pg_get_functiondef(p.oid) AS body,
+         COALESCE(array_to_string(p.proacl::text[], ','), '<none>') AS acl
+  FROM pg_proc p
+  WHERE p.oid IN (
+    to_regprocedure('public.complete_registration(text, text, boolean, boolean, text)'),
+    to_regprocedure('public.client_terms_accepted(text)'),
+    to_regprocedure('public.accept_client_terms(text)'))
+  ORDER BY p.proname`;
+
+test("024 can be run again: functions, privileges, columns and stored acceptances stay as they were", async (t) => {
+  const db = await createAuthDatabase();
+  t.after(() => db.close());
+  const id = await ready(db, "ana@ustavillavo.edu.co");
+  await complete(db, id);
+  const snapshot = async () => ({
+    functions: (await db.query(TERMS_FUNCTIONS_SQL)).rows,
+    columns: (
+      await db.query(`
+        SELECT column_name, data_type, is_nullable FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'clients'
+          AND column_name IN ('terms_accepted_at', 'terms_version')
+        ORDER BY column_name`)
+    ).rows,
+    constraints: (
+      await db.query(`
+        SELECT conname FROM pg_catalog.pg_constraint
+        WHERE conrelid = 'public.clients'::regclass AND conname LIKE 'chk_clients_terms%'
+        ORDER BY conname`)
+    ).rows,
+    acceptance: (
+      await db.query(
+        `SELECT terms_version, terms_accepted_at IS NOT NULL AS accepted
+         FROM public.clients WHERE user_id = $1`,
+        [id],
+      )
+    ).rows,
+  });
+  const before = await snapshot();
+  assert.equal(before.functions.length, 3);
+  assert.equal(before.columns.length, 2);
+  assert.equal(before.constraints.length, 2);
+  assert.deepEqual(before.acceptance, [
+    { terms_version: TERMS, accepted: true },
+  ]);
+
+  // The whole migration a second time, exactly as the first run reads it.
+  await db.exec(await terms024());
+  assert.deepEqual(await snapshot(), before);
+  // The old three-argument signature does not come back either.
+  assert.equal(
+    (
+      await one(
+        db,
+        "SELECT to_regprocedure('public.complete_registration(text, text, boolean)') IS NULL AS gone",
+      )
+    ).gone,
+    true,
+  );
+  // And step 2 still works for a fresh account after the rerun.
+  const second = await ready(db, "eva@ustavillavo.edu.co");
+  await complete(db, second, { code: "7654321" });
+});
+
+test("024 revokes service_role too, when that role exists", async (t) => {
+  const db = await createAuthDatabase();
+  t.after(() => db.close());
+  // Supabase has service_role; the fixtures do not create it, so 024 guards every REVOKE.
+  await db.exec("CREATE ROLE service_role");
+  // As if Supabase's default privileges had granted it: the rerun must take it away.
+  for (const target of [
+    "public.complete_registration(text, text, boolean, boolean, text)",
+    "public.client_terms_accepted(text)",
+    "public.accept_client_terms(text)",
+  ])
+    await db.exec(`GRANT EXECUTE ON FUNCTION ${target} TO service_role, anon`);
+  assert.match(
+    (await db.query(TERMS_FUNCTIONS_SQL)).rows[0].acl,
+    /service_role=X/,
+  );
+  await db.exec(await terms024());
+  const rows = (await db.query(TERMS_FUNCTIONS_SQL)).rows;
+  assert.equal(rows.length, 3);
+  for (const row of rows) {
+    assert.doesNotMatch(row.acl, /service_role=/, `${row.proname}: ${row.acl}`);
+    assert.doesNotMatch(row.acl, /\banon=/, `${row.proname}: ${row.acl}`);
+    // PUBLIC is the empty grantee in an ACL entry such as "=X/owner".
+    assert.doesNotMatch(row.acl, /(^|,)=/, `${row.proname}: ${row.acl}`);
+    assert.match(row.acl, /authenticated=X/, `${row.proname}: ${row.acl}`);
+  }
+});
+
+test("native PostgreSQL runs 024 twice and keeps only authenticated executing it", async (t) => {
+  const binaries = await postgresBinaries();
+  if (!binaries) return t.skip("Native PostgreSQL is not installed");
+  const db = await createNativeAuthDatabase(binaries, {
+    simulateServerPreauthorization: false,
+  });
+  t.after(() => db.close());
+  await db.query("CREATE ROLE service_role");
+  const sql = await terms024();
+  // Twice in a row on a schema that already has it from the migration run, with the
+  // privileges Supabase's default grants would have left in between.
+  await db.query(sql);
+  await db.query(`
+    GRANT EXECUTE ON FUNCTION
+      public.complete_registration(text, text, boolean, boolean, text),
+      public.client_terms_accepted(text),
+      public.accept_client_terms(text)
+    TO service_role, anon;`);
+  await db.query(sql);
+  const acl = await db.query(`
+    SELECT p.proname || ' ' || COALESCE(array_to_string(p.proacl::text[], ','), '<none>')
+    FROM pg_proc p
+    WHERE p.oid IN (
+      to_regprocedure('public.complete_registration(text, text, boolean, boolean, text)'),
+      to_regprocedure('public.client_terms_accepted(text)'),
+      to_regprocedure('public.accept_client_terms(text)'))
+    ORDER BY p.proname`);
+  const lines = acl
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  assert.equal(lines.length, 3, acl);
+  for (const line of lines) {
+    assert.match(line, /authenticated=X/, line);
+    assert.doesNotMatch(line, /service_role=/, line);
+    assert.doesNotMatch(line, /anon=/, line);
+  }
+  assert.equal(
+    await db.query(
+      "SELECT to_regprocedure('public.complete_registration(text, text, boolean)') IS NULL",
+    ),
+    "t",
+  );
+});
