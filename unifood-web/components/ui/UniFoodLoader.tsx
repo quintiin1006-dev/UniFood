@@ -5,9 +5,20 @@ import styles from "./loader.module.css";
  * The whole loader is invisible for the first 300 ms, so a fast load never flashes.
  * Reduced motion keeps the ring still; the state is still announced to screen readers.
  */
-export function UniFoodLoader({ label = "Cargando" }: { label?: string }) {
+export function UniFoodLoader({
+  label = "Cargando",
+  inline = false,
+}: {
+  label?: string;
+  /** Inside a layout whose header and navigation stay visible: fills the content area only. */
+  inline?: boolean;
+}) {
   return (
-    <div className={styles.loader} role="status" aria-live="polite">
+    <div
+      className={inline ? styles.inline : styles.loader}
+      role="status"
+      aria-live="polite"
+    >
       <div className={styles.stage}>
         <svg className={styles.ring} viewBox="0 0 120 120" aria-hidden="true">
           <circle className={styles.track} cx="60" cy="60" r="56" />

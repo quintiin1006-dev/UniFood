@@ -77,26 +77,13 @@
   }
 }
 
-/* Content skeleton: static blocks, shown after the same 300 ms delay. */
-.skeleton {
+/* Inside a fixed layout (client, admin): fills the content area and keeps the header and tabs visible. */
+.inline {
+  position: relative;
+  min-height: 60vh;
   display: grid;
-  gap: 12px;
-  padding: 24px 16px;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
   animation: appear 200ms var(--ease-soft) 300ms both;
-}
-
-.skeletonTitle,
-.skeletonBlock {
-  display: block;
-  border-radius: var(--radius-md);
-  background: var(--color-brand-tint-2);
-}
-
-.skeletonTitle {
-  width: 40%;
-  height: 28px;
-}
-
-.skeletonBlock {
-  height: 96px;
 }

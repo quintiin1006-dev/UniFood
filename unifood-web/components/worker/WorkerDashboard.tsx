@@ -301,7 +301,7 @@ export default function WorkerDashboard() {
         onSearchChange={setSearch}
         syncStatus={
           listingModule
-            ? syncStatusLabel(lastSyncedAt, syncFailure !== null)
+            ? (syncStatusLabel(lastSyncedAt, syncFailure !== null) ?? undefined)
             : undefined
         }
         variant={listingVariant}

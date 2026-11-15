@@ -15,7 +15,7 @@ test("the loader is invisible for 300 ms and reduced motion stops the ring", () 
   );
   assert.match(
     css,
-    /\.skeleton \{[^}]*animation: appear 200ms var\(--ease-soft\) 300ms both/,
+    /\.inline \{[^}]*animation: appear 200ms var\(--ease-soft\) 300ms both/,
   );
   assert.match(
     css,
