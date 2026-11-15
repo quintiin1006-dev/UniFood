@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TERMS_PATH } from "@/features/auth/legal";
+import { Spinner } from "@/components/ui/Spinner";
 import styles from "./TermsGate.module.css";
 
 const SAVE_ERROR = "No pudimos guardar tu aceptación. Inténtalo de nuevo.";
@@ -96,7 +97,9 @@ export default function TermsGate() {
             type="submit"
             className={styles.primary}
             disabled={!accepted || busy}
+            aria-busy={busy || undefined}
           >
+            {busy && <Spinner />}
             {busy ? "Un momento…" : "Aceptar y continuar"}
           </button>
         </form>
