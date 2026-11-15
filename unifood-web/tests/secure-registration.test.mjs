@@ -71,17 +71,25 @@ async function as(db, role, uid, sql, params = [], amr = "otp") {
   }
 }
 // Step 2, with the user's own session.
+const TERMS = "2026-11-v1";
 const complete = (
   db,
   uid,
-  { name = "Ana Torres", code = student, privacy = true, amr = "otp" } = {},
+  {
+    name = "Ana Torres",
+    code = student,
+    privacy = true,
+    terms = true,
+    version = TERMS,
+    amr = "otp",
+  } = {},
 ) =>
   as(
     db,
     "authenticated",
     uid,
-    "SELECT public.complete_registration($1, $2, $3)",
-    [name, code, privacy],
+    "SELECT public.complete_registration($1, $2, $3, $4, $5)",
+    [name, code, privacy, terms, version],
     amr,
   );
 
@@ -266,7 +274,7 @@ test("step 2 needs a session issued by verifying the emailed code", async (t) =>
   await complete(db, id, { amr: "otp" });
 });
 
-test("step 2 stores name, code and privacy, and activates as CLIENT", async (t) => {
+test("step 2 stores name, code, privacy and the terms version, and activates as CLIENT", async (t) => {
   const db = await createAuthDatabase();
   t.after(() => db.close());
   const id = await ready(db, "ana@ustavillavo.edu.co");
@@ -277,7 +285,8 @@ test("step 2 stores name, code and privacy, and activates as CLIENT", async (t) 
   const row = await one(
     db,
     `SELECT u.is_active, c.full_name, c.institutional_code, c.client_type,
-            c.privacy_accepted_at IS NOT NULL AS privacy, r.name AS role
+            c.privacy_accepted_at IS NOT NULL AS privacy,
+            c.terms_accepted_at IS NOT NULL AS terms, c.terms_version, r.name AS role
      FROM public.users u
      JOIN public.clients c ON c.user_id = u.id
      JOIN public.user_roles ur ON ur.user_id = u.id
@@ -291,6 +300,8 @@ test("step 2 stores name, code and privacy, and activates as CLIENT", async (t) 
     institutional_code: "0012345",
     client_type: "STUDENT",
     privacy: true,
+    terms: true,
+    terms_version: TERMS,
     role: "CLIENT",
   });
   assert.equal(await count(db, "public.pending_registrations"), 0);
@@ -312,24 +323,13 @@ test("step 2 works only once and only for the caller's account", async (t) => {
     ),
     { is_active: false, clients: 0 },
   );
+  const anonymousCall =
+    "SELECT public.complete_registration('Ana Torres', '7654321', true, true, '2026-11-v1')";
   await assert.rejects(
-    as(
-      db,
-      "authenticated",
-      null,
-      "SELECT public.complete_registration('Ana Torres', '7654321', true)",
-    ),
+    as(db, "authenticated", null, anonymousCall),
     fails(/REGISTRATION_NOT_AUTHENTICATED/),
   );
-  await assert.rejects(
-    as(
-      db,
-      "anon",
-      null,
-      "SELECT public.complete_registration('Ana Torres', '7654321', true)",
-    ),
-    denied,
-  );
+  await assert.rejects(as(db, "anon", null, anonymousCall), denied);
 });
 
 test("names must be readable text, with no blanks, markup or hidden characters", async (t) => {
@@ -1214,7 +1214,7 @@ test(
       SET ROLE authenticated;
       SELECT set_config('request.jwt.claim.sub', '${id}', false);
       SELECT set_config('request.jwt.claims', '{"amr": [{"method": "otp"}]}', false);
-      SELECT public.complete_registration('Ana Torres', '${student}', true);`;
+      SELECT public.complete_registration('Ana Torres', '${student}', true, true, '2026-11-v1');`;
 
     const first = db.session();
     const second = db.session();
@@ -1269,4 +1269,322 @@ test("setup_auth.sql refuses to run after 018", async (t) => {
     )
   ).prosrc;
   assert.match(source, /registration_domain_rule/);
+});
+
+test("step 2 refuses to finish without accepting the terms of a valid version", async (t) => {
+  const db = await createAuthDatabase();
+  t.after(() => db.close());
+  const id = await ready(db, "ana@ustavillavo.edu.co");
+  for (const terms of [false, null])
+    await assert.rejects(
+      complete(db, id, { terms }),
+      fails(/REGISTRATION_TERMS_REQUIRED/),
+      String(terms),
+    );
+  for (const version of [
+    null,
+    "",
+    "2026-11 v1",
+    "x".repeat(33),
+    "2026-11-v1'; --",
+  ])
+    await assert.rejects(
+      complete(db, id, { version }),
+      fails(/REGISTRATION_TERMS_REQUIRED/),
+      JSON.stringify(version),
+    );
+  assert.equal(await count(db, "public.clients"), 0);
+  await complete(db, id);
+});
+
+test("a client without an accepted version is asked once, and a new version asks again", async (t) => {
+  const db = await createAuthDatabase();
+  t.after(() => db.close());
+  const id = await ready(db, "ana@ustavillavo.edu.co");
+  await complete(db, id);
+  // A client registered before 024: no acceptance stored yet.
+  await db.exec(
+    "UPDATE public.clients SET terms_accepted_at = NULL, terms_version = NULL WHERE user_id = '" +
+      id +
+      "'",
+  );
+  const accepted = () =>
+    as(db, "authenticated", id, "SELECT public.client_terms_accepted($1)", [
+      TERMS,
+    ]);
+  const state = async () => (await accepted()).rows[0].client_terms_accepted;
+  assert.equal(await state(), false);
+  await as(db, "authenticated", id, "SELECT public.accept_client_terms($1)", [
+    TERMS,
+  ]);
+  assert.equal(await state(), true);
+  // The same version does not ask again; another client's acceptance does not count.
+  await as(db, "authenticated", id, "SELECT public.accept_client_terms($1)", [
+    TERMS,
+  ]);
+  assert.equal(await state(), true);
+  const next = await as(
+    db,
+    "authenticated",
+    id,
+    "SELECT public.client_terms_accepted($1)",
+    ["2026-12-v1"],
+  );
+  assert.equal(next.rows[0].client_terms_accepted, false);
+});
+
+test("accepting terms is limited to the caller's own client, to valid versions and to anon-free sessions", async (t) => {
+  const db = await createAuthDatabase();
+  t.after(() => db.close());
+  const pending = await ready(db, "eva@ustavillavo.edu.co");
+  await assert.rejects(
+    as(db, "authenticated", pending, "SELECT public.accept_client_terms($1)", [
+      TERMS,
+    ]),
+    fails(/TERMS_NOT_A_CLIENT/),
+  );
+  const id = await ready(db, "ana@ustavillavo.edu.co");
+  await complete(db, id);
+  await assert.rejects(
+    as(db, "authenticated", id, "SELECT public.accept_client_terms($1)", [
+      "bad version!",
+    ]),
+    fails(/TERMS_VERSION_INVALID/),
+  );
+  await assert.rejects(
+    as(db, "authenticated", null, "SELECT public.accept_client_terms($1)", [
+      TERMS,
+    ]),
+    fails(/TERMS_NOT_AUTHENTICATED/),
+  );
+  await assert.rejects(
+    as(db, "anon", null, "SELECT public.accept_client_terms($1)", [TERMS]),
+    denied,
+  );
+  await assert.rejects(
+    as(db, "anon", null, "SELECT public.client_terms_accepted($1)", [TERMS]),
+    denied,
+  );
+});
+
+test("the pre-024 signature of complete_registration no longer exists, so no call can skip the terms", async (t) => {
+  const db = await createAuthDatabase();
+  t.after(() => db.close());
+  const id = await ready(db, "ana@ustavillavo.edu.co");
+  assert.equal(
+    (
+      await one(
+        db,
+        "SELECT to_regprocedure('public.complete_registration(text, text, boolean)') IS NULL AS gone",
+      )
+    ).gone,
+    true,
+  );
+  // An authenticated browser call with the old three arguments is not a function any more.
+  await assert.rejects(
+    as(
+      db,
+      "authenticated",
+      id,
+      "SELECT public.complete_registration('Ana Torres', '7654321', true)",
+    ),
+    fails(/does not exist/),
+  );
+  // Without the terms argument the five-argument call still fails: no acceptance, no profile.
+  await assert.rejects(
+    as(
+      db,
+      "authenticated",
+      id,
+      "SELECT public.complete_registration('Ana Torres', '7654321', true, false, '2026-11-v1')",
+    ),
+    fails(/REGISTRATION_TERMS_REQUIRED/),
+  );
+  assert.equal(await count(db, "public.clients"), 0);
+});
+
+test("the terms functions take no user id, use auth.uid(), and pin search_path", async (t) => {
+  const db = await createAuthDatabase();
+  t.after(() => db.close());
+  const rows = (
+    await db.query(`
+      SELECT p.proname, p.prosecdef AS definer,
+             pg_get_function_arguments(p.oid) AS args,
+             array_to_string(p.proconfig, ',') AS config,
+             pg_get_functiondef(p.oid) AS body
+      FROM pg_proc p
+      WHERE p.oid IN (
+        to_regprocedure('public.client_terms_accepted(text)'),
+        to_regprocedure('public.accept_client_terms(text)'),
+        to_regprocedure('public.complete_registration(text, text, boolean, boolean, text)'))
+      ORDER BY p.proname`)
+  ).rows;
+  assert.deepEqual(
+    rows.map((row) => [row.proname, row.definer, row.config]),
+    [
+      ["accept_client_terms", true, 'search_path=""'],
+      ["client_terms_accepted", true, 'search_path=""'],
+      ["complete_registration", true, 'search_path=""'],
+    ],
+  );
+  for (const row of rows) {
+    assert.doesNotMatch(row.args, /uuid/i, row.proname);
+    assert.match(
+      row.body,
+      /auth\.uid\(\)/,
+      row.proname === "complete_registration" ? "" : row.proname,
+    );
+  }
+  // Only the caller's own row is touched: the functions reference no other account.
+  for (const name of ["client_terms_accepted", "accept_client_terms"]) {
+    const body = rows.find((row) => row.proname === name).body;
+    assert.match(body, /user_id = auth\.uid\(\)/, name);
+  }
+});
+
+// 024 is written to be run again without failing: CREATE OR REPLACE for its three functions,
+// IF NOT EXISTS for the columns and a guarded block for the constraints.
+const migration024Url = new URL(
+  "../../unifood-backend/supabase/migrations/024_client_terms_acceptance.sql",
+  import.meta.url,
+);
+const terms024 = () => readFile(migration024Url, "utf8");
+// Privileges and definitions of everything 024 owns, as one comparable snapshot.
+const TERMS_FUNCTIONS_SQL = `
+  SELECT p.proname,
+         pg_get_function_identity_arguments(p.oid) AS args,
+         pg_get_functiondef(p.oid) AS body,
+         COALESCE(array_to_string(p.proacl::text[], ','), '<none>') AS acl
+  FROM pg_proc p
+  WHERE p.oid IN (
+    to_regprocedure('public.complete_registration(text, text, boolean, boolean, text)'),
+    to_regprocedure('public.client_terms_accepted(text)'),
+    to_regprocedure('public.accept_client_terms(text)'))
+  ORDER BY p.proname`;
+
+test("024 can be run again: functions, privileges, columns and stored acceptances stay as they were", async (t) => {
+  const db = await createAuthDatabase();
+  t.after(() => db.close());
+  const id = await ready(db, "ana@ustavillavo.edu.co");
+  await complete(db, id);
+  const snapshot = async () => ({
+    functions: (await db.query(TERMS_FUNCTIONS_SQL)).rows,
+    columns: (
+      await db.query(`
+        SELECT column_name, data_type, is_nullable FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'clients'
+          AND column_name IN ('terms_accepted_at', 'terms_version')
+        ORDER BY column_name`)
+    ).rows,
+    constraints: (
+      await db.query(`
+        SELECT conname FROM pg_catalog.pg_constraint
+        WHERE conrelid = 'public.clients'::regclass AND conname LIKE 'chk_clients_terms%'
+        ORDER BY conname`)
+    ).rows,
+    acceptance: (
+      await db.query(
+        `SELECT terms_version, terms_accepted_at IS NOT NULL AS accepted
+         FROM public.clients WHERE user_id = $1`,
+        [id],
+      )
+    ).rows,
+  });
+  const before = await snapshot();
+  assert.equal(before.functions.length, 3);
+  assert.equal(before.columns.length, 2);
+  assert.equal(before.constraints.length, 2);
+  assert.deepEqual(before.acceptance, [
+    { terms_version: TERMS, accepted: true },
+  ]);
+
+  // The whole migration a second time, exactly as the first run reads it.
+  await db.exec(await terms024());
+  assert.deepEqual(await snapshot(), before);
+  // The old three-argument signature does not come back either.
+  assert.equal(
+    (
+      await one(
+        db,
+        "SELECT to_regprocedure('public.complete_registration(text, text, boolean)') IS NULL AS gone",
+      )
+    ).gone,
+    true,
+  );
+  // And step 2 still works for a fresh account after the rerun.
+  const second = await ready(db, "eva@ustavillavo.edu.co");
+  await complete(db, second, { code: "7654321" });
+});
+
+test("024 revokes service_role too, when that role exists", async (t) => {
+  const db = await createAuthDatabase();
+  t.after(() => db.close());
+  // Supabase has service_role; the fixtures do not create it, so 024 guards every REVOKE.
+  await db.exec("CREATE ROLE service_role");
+  // As if Supabase's default privileges had granted it: the rerun must take it away.
+  for (const target of [
+    "public.complete_registration(text, text, boolean, boolean, text)",
+    "public.client_terms_accepted(text)",
+    "public.accept_client_terms(text)",
+  ])
+    await db.exec(`GRANT EXECUTE ON FUNCTION ${target} TO service_role, anon`);
+  assert.match(
+    (await db.query(TERMS_FUNCTIONS_SQL)).rows[0].acl,
+    /service_role=X/,
+  );
+  await db.exec(await terms024());
+  const rows = (await db.query(TERMS_FUNCTIONS_SQL)).rows;
+  assert.equal(rows.length, 3);
+  for (const row of rows) {
+    assert.doesNotMatch(row.acl, /service_role=/, `${row.proname}: ${row.acl}`);
+    assert.doesNotMatch(row.acl, /\banon=/, `${row.proname}: ${row.acl}`);
+    // PUBLIC is the empty grantee in an ACL entry such as "=X/owner".
+    assert.doesNotMatch(row.acl, /(^|,)=/, `${row.proname}: ${row.acl}`);
+    assert.match(row.acl, /authenticated=X/, `${row.proname}: ${row.acl}`);
+  }
+});
+
+test("native PostgreSQL runs 024 twice and keeps only authenticated executing it", async (t) => {
+  const binaries = await postgresBinaries();
+  if (!binaries) return t.skip("Native PostgreSQL is not installed");
+  const db = await createNativeAuthDatabase(binaries, {
+    simulateServerPreauthorization: false,
+  });
+  t.after(() => db.close());
+  await db.query("CREATE ROLE service_role");
+  const sql = await terms024();
+  // Twice in a row on a schema that already has it from the migration run, with the
+  // privileges Supabase's default grants would have left in between.
+  await db.query(sql);
+  await db.query(`
+    GRANT EXECUTE ON FUNCTION
+      public.complete_registration(text, text, boolean, boolean, text),
+      public.client_terms_accepted(text),
+      public.accept_client_terms(text)
+    TO service_role, anon;`);
+  await db.query(sql);
+  const acl = await db.query(`
+    SELECT p.proname || ' ' || COALESCE(array_to_string(p.proacl::text[], ','), '<none>')
+    FROM pg_proc p
+    WHERE p.oid IN (
+      to_regprocedure('public.complete_registration(text, text, boolean, boolean, text)'),
+      to_regprocedure('public.client_terms_accepted(text)'),
+      to_regprocedure('public.accept_client_terms(text)'))
+    ORDER BY p.proname`);
+  const lines = acl
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  assert.equal(lines.length, 3, acl);
+  for (const line of lines) {
+    assert.match(line, /authenticated=X/, line);
+    assert.doesNotMatch(line, /service_role=/, line);
+    assert.doesNotMatch(line, /anon=/, line);
+  }
+  assert.equal(
+    await db.query(
+      "SELECT to_regprocedure('public.complete_registration(text, text, boolean)') IS NULL",
+    ),
+    "t",
+  );
 });

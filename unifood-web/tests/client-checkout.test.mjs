@@ -28,7 +28,6 @@ const noon = new Date("2026-11-20T12:00:00-05:00");
 const input = (extra = {}) => ({
   note: "",
   pickupTime: "",
-  accepted: true,
   ...extra,
 });
 
@@ -58,6 +57,29 @@ test("a pickup time must be later than now and today in Bogotá, and goes out wi
     null,
   );
   assert.match(checkout.pickupLabel("2026-11-20T15:30:00-05:00"), /3:30/);
+});
+
+test("a past or current pickup time gets the inline message, and the note stops at 200 characters", () => {
+  assert.equal(
+    checkout.pickupInstant("12:00", noon).error,
+    "Elige una hora posterior a la actual.",
+  );
+  assert.equal(
+    checkout.pickupInstant("11:00", noon).error,
+    "Elige una hora posterior a la actual.",
+  );
+  assert.deepEqual(checkout.limitNote("corto"), {
+    note: "corto",
+    truncated: false,
+  });
+  assert.deepEqual(checkout.limitNote("a".repeat(200)), {
+    note: "a".repeat(200),
+    truncated: false,
+  });
+  const pasted = checkout.limitNote("a".repeat(195) + "😀".repeat(10));
+  assert.equal(pasted.truncated, true);
+  assert.equal(checkout.noteLength(pasted.note), 200);
+  assert.equal(pasted.note, "a".repeat(195) + "😀".repeat(5));
 });
 
 test("the order body carries ids, quantities, one trimmed note and the optional time", () => {
@@ -91,7 +113,7 @@ test("the order body carries ids, quantities, one trimmed note and the optional 
   ]);
 });
 
-test("review applies the cart rules, the 200-character note, the pickup time and the terms", () => {
+test("review applies the cart rules, the 200-character note and the pickup time, with no terms step", () => {
   const ok = checkout.reviewOrder(state, central, input(), noon);
   assert.equal(ok.ok, true);
   assert.equal("requestedPickupAt" in ok.request, false);
@@ -124,11 +146,8 @@ test("review applies the cart rules, the 200-character note, the pickup time and
   assert.equal(long.field, "note");
   // Emoji count as one character, like length() in PostgreSQL.
   assert.equal(checkout.noteLength("😀".repeat(200)), 200);
-  assert.equal(
-    checkout.reviewOrder(state, central, input({ accepted: false }), noon)
-      .field,
-    "terms",
-  );
+  // Ordering no longer asks for any acceptance: the terms are accepted at registration.
+  assert.equal("accepted" in input(), false);
   const closed = menuDomain.toCafeteriaMenu(
     fixtures.clientMenus[fixtures.CAFETERIA_BLOQUE_B],
   );

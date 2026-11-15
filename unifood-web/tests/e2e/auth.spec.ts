@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("mobile login: password visibility, remember, language and responsive layout", async ({
+test("mobile login: password visibility, remember and responsive layout", async ({
   page,
 }, testInfo) => {
   await page.goto("/login");
@@ -15,11 +15,7 @@ test("mobile login: password visibility, remember, language and responsive layou
   await expect(password).toHaveAttribute("type", "password");
   await page.getByRole("checkbox").uncheck();
   await expect(page.getByRole("checkbox")).not.toBeChecked();
-  await page.getByRole("combobox").selectOption("en");
-  await expect(
-    page.getByRole("heading", { name: "Your food, no waiting" }),
-  ).toBeVisible();
-  await page.getByRole("combobox").selectOption("es");
+  await expect(page.getByRole("combobox")).toHaveCount(0);
   await password.clear();
   expect(
     await page.evaluate(

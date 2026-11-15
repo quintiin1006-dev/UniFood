@@ -65,8 +65,6 @@ function recordOrders(page: Page) {
 }
 const confirmButton = (page: Page) =>
   page.getByRole("button", { name: /^(Confirmar pedido|Reintentar envío)$/ });
-const accept = (page: Page) =>
-  page.getByRole("checkbox", { name: /He revisado mi pedido/ }).check();
 const alertBox = (page: Page) => page.getByRole("main").getByRole("alert");
 /** HH:mm in Bogotá, minutes ahead of the real clock. */
 function bogotaTime(minutesAhead: number) {
@@ -114,9 +112,12 @@ for (const width of [320, 375, 390, 412, 430, 1280]) {
     await expect(page.getByLabel("Lo antes posible")).toBeChecked();
     await expect(page.locator("#pickup-time")).toHaveCount(0);
     const confirm = confirmButton(page);
-    await expect(confirm).toBeDisabled();
-    await accept(page);
     await expect(confirm).toBeEnabled();
+    // Ordering needs no acceptance: the terms are shown as a link under the button.
+    await expect(page.getByRole("checkbox")).toHaveCount(0);
+    await expect(
+      page.getByRole("link", { name: "términos y condiciones" }),
+    ).toHaveAttribute("href", "/terminos");
     await noOverflow(page);
     await page.screenshot({
       path: testInfo.outputPath(`checkout-${width}.png`),
@@ -170,9 +171,10 @@ test("a note and a chosen pickup time travel with the order and appear in the co
   await expect(time).toHaveAttribute("min", /^\d\d:\d\d$/);
   // Past times are refused in the browser and nothing is sent.
   await time.fill("00:00");
-  await accept(page);
-  await confirmButton(page).click();
-  await expect(alertBox(page)).toContainText("posterior a la actual");
+  await expect(page.locator("#pickup-error")).toContainText(
+    "Elige una hora posterior a la actual.",
+  );
+  await expect(confirmButton(page)).toBeDisabled();
   expect(sent).toHaveLength(0);
   const later = bogotaTime(15);
   await time.fill(later);
@@ -191,7 +193,7 @@ test("a note and a chosen pickup time travel with the order and appear in the co
   );
 });
 
-test("the note is limited to 200 characters in the browser", async ({
+test("the note keeps at most 200 characters and says so when the limit is reached", async ({
   page,
 }) => {
   const sent = recordOrders(page);
@@ -199,16 +201,14 @@ test("the note is limited to 200 characters in the browser", async ({
   await openSummary(page);
   const note = page.getByLabel(/Nota para el pedido/);
   await note.fill("a".repeat(201));
-  await expect(page.getByText("201/200 caracteres")).toBeVisible();
-  await accept(page);
-  await confirmButton(page).click();
-  await expect(alertBox(page)).toContainText("hasta 200 caracteres");
-  expect(sent).toHaveLength(0);
-  await note.fill("a".repeat(200));
+  await expect(note).toHaveValue("a".repeat(200));
+  await expect(page.getByText("El límite es de 200 caracteres.")).toBeVisible();
   await confirmButton(page).click();
   await expect(
     page.getByRole("heading", { name: "Pedido enviado" }),
   ).toBeVisible({ timeout: 30_000 });
+  expect(sent).toHaveLength(1);
+  expect(sent[0].body.note).toBe("a".repeat(200));
 });
 
 test("each rejection shows a fixed Spanish message with its next step and keeps the cart", async ({
@@ -235,7 +235,6 @@ test("each rejection shows a fixed Spanish message with its next step and keeps 
     ["ORDER_TEMPORARILY_UNAVAILABLE", /carrito se conserva/, null],
   ];
   const note = page.getByLabel(/Nota para el pedido/);
-  await accept(page);
   for (const [code, message, action] of cases) {
     await note.fill(`__error:${code}`);
     await confirmButton(page).click();
@@ -265,7 +264,6 @@ test("a retry after a temporary failure reuses the Idempotency-Key; changing the
   await login(page);
   await openSummary(page);
   const note = page.getByLabel(/Nota para el pedido/);
-  await accept(page);
   await note.fill("__fail-once");
   await confirmButton(page).click();
   await expect(alertBox(page)).toContainText("Revisa tu conexión", {
@@ -290,7 +288,6 @@ test("a response lost after the order was created is recovered with the same key
   const sent = recordOrders(page);
   await login(page);
   await openSummary(page);
-  await accept(page);
   await page.getByLabel(/Nota para el pedido/).fill("__lose-response");
   await confirmButton(page).click();
   await expect(alertBox(page)).toContainText("Revisa tu conexión", {
@@ -316,7 +313,6 @@ test("editing the note after a failure starts a new attempt with a new key", asy
   const sent = recordOrders(page);
   await login(page);
   await openSummary(page);
-  await accept(page);
   const note = page.getByLabel(/Nota para el pedido/);
   await note.fill("__fail-once");
   await confirmButton(page).click();
@@ -334,7 +330,6 @@ test("a double click sends the order once", async ({ page }) => {
   const sent = recordOrders(page);
   await login(page);
   await openSummary(page);
-  await accept(page);
   await confirmButton(page).dblclick();
   await expect(
     page.getByRole("heading", { name: "Pedido enviado" }),
@@ -348,7 +343,6 @@ test("checkout revalidates persisted changes before confirming and cannot confir
   const sent = recordOrders(page);
   await login(page);
   await openSummary(page);
-  await accept(page);
   // A same-tab storage write deliberately skips the storage event: submit must reread it.
   await page.evaluate((key) => {
     const saved = JSON.parse(localStorage.getItem(key)!);
@@ -358,12 +352,8 @@ test("checkout revalidates persisted changes before confirming and cannot confir
   await confirmButton(page).click();
   await expect(page.getByText(/El carrito cambió/)).toBeVisible();
   await expect(
-    page.getByRole("checkbox", { name: /He revisado mi pedido/ }),
-  ).not.toBeChecked();
-  await expect(
     page.getByRole("list", { name: "Productos del pedido" }),
   ).toContainText("3 × Pechuga");
-  await accept(page);
   await page.evaluate((key) => localStorage.removeItem(key), storageKey);
   await confirmButton(page).click();
   await expect(

@@ -216,7 +216,6 @@ export function PanelRecoveryScreen({
                 <div className={styles.fields}>
                   {mode === "request" ? (
                     <Field
-                      language="es"
                       icon={<Mail size={21} aria-hidden="true" />}
                       label="Correo electrónico"
                       type="email"
@@ -234,7 +233,6 @@ export function PanelRecoveryScreen({
                     !updated && (
                       <>
                         <Field
-                          language="es"
                           icon={<LockKeyhole size={21} aria-hidden="true" />}
                           label="Nueva contraseña"
                           name="new-password"
@@ -249,7 +247,6 @@ export function PanelRecoveryScreen({
                           aria-describedby="recovery-password-rules"
                         />
                         <Field
-                          language="es"
                           icon={<LockKeyhole size={21} aria-hidden="true" />}
                           label="Confirmar contraseña"
                           name="confirm-password"

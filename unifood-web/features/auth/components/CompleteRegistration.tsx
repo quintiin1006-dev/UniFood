@@ -18,6 +18,7 @@ import {
 } from "../validation";
 import Brand, { Waves } from "./Brand";
 import { Field } from "./AuthField";
+import { PRIVACY_PATH, TERMS_PATH } from "../legal";
 import { useAuthHydration } from "../useAuthHydration";
 import styles from "./AuthScreen.module.css";
 
@@ -30,6 +31,9 @@ const t = {
   staffCode: "Código institucional (opcional)",
   privacyBefore: "Acepto el tratamiento de mis datos personales según la ",
   privacyLink: "política de privacidad",
+  termsBefore: "Acepto los ",
+  termsLink: "términos y condiciones",
+  termsAfter: " de UniFood.",
   password: "Contraseña",
   confirm: "Confirmar contraseña",
   include: "Tu contraseña debe incluir:",
@@ -43,6 +47,7 @@ const t = {
   wait: "Un momento…",
   invalidName: "Escribe tu nombre completo (entre 3 y 150 caracteres).",
   privacy: "Debes aceptar el tratamiento de tus datos personales.",
+  terms: "Debes aceptar los términos y condiciones.",
   invalidPassword:
     "La contraseña debe cumplir los requisitos y no superar 128 caracteres.",
   mismatch: "Las contraseñas no coinciden.",
@@ -77,6 +82,7 @@ export default function CompleteRegistration({
   const [fullName, setFullName] = useState("");
   const [code, setCode] = useState("");
   const [privacy, setPrivacy] = useState(false);
+  const [terms, setTerms] = useState(false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -94,6 +100,7 @@ export default function CompleteRegistration({
     if (!validInstitutionalCode(trimmedCode, rules))
       return setError(codeHint(rules));
     if (!privacy) return setError(t.privacy);
+    if (!terms) return setError(t.terms);
     if (!validPassword(password)) return setError(t.invalidPassword);
     if (password !== confirm) return setError(t.mismatch);
     setBusy(true);
@@ -106,6 +113,7 @@ export default function CompleteRegistration({
           fullName: fullName.trim(),
           code: trimmedCode,
           privacy: true,
+          terms: true,
           password,
         }),
       });
@@ -142,7 +150,6 @@ export default function CompleteRegistration({
           >
             <div className={styles.fields}>
               <Field
-                language="es"
                 icon={<UserRound size={21} />}
                 label={t.name}
                 name="name"
@@ -155,7 +162,6 @@ export default function CompleteRegistration({
                 disabled={!hydrated || busy}
               />
               <Field
-                language="es"
                 icon={<IdCard size={21} />}
                 label={student ? t.studentCode : t.staffCode}
                 name="institutional-code"
@@ -171,7 +177,6 @@ export default function CompleteRegistration({
                 aria-describedby="code-hint"
               />
               <Field
-                language="es"
                 icon={<LockKeyhole size={21} />}
                 label={t.password}
                 password
@@ -186,7 +191,6 @@ export default function CompleteRegistration({
                 aria-describedby="password-rules"
               />
               <Field
-                language="es"
                 icon={<LockKeyhole size={21} />}
                 label={t.confirm}
                 password
@@ -235,13 +239,35 @@ export default function CompleteRegistration({
                 {t.privacyBefore}
                 <Link
                   className={styles.link}
-                  href="/privacidad"
+                  href={PRIVACY_PATH}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   {t.privacyLink}
                 </Link>
                 .
+              </span>
+            </label>
+            <label className={styles.remember}>
+              <input
+                type="checkbox"
+                name="terms"
+                checked={terms}
+                onChange={(event) => setTerms(event.target.checked)}
+                disabled={!hydrated || busy}
+                required
+              />
+              <span>
+                {t.termsBefore}
+                <Link
+                  className={styles.link}
+                  href={TERMS_PATH}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t.termsLink}
+                </Link>
+                {t.termsAfter}
               </span>
             </label>
             {error && (
