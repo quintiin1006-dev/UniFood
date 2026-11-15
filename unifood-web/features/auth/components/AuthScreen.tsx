@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
-  ChevronDown,
   Info,
   LockKeyhole,
   Mail,
@@ -41,155 +40,79 @@ type DomainCheck =
 // Firefox-only button attribute, absent from the React types: without it the
 // back button sits outside the form and Firefox restores its disabled state.
 const NO_FIREFOX_STATE_RESTORE = { autoComplete: "off" };
-const copy = {
-  es: {
-    panelTitle: "Acceso al panel",
-    panelNote: "Inicia sesión con tu cuenta de trabajo.",
-    panelLabel: "Panel UniFood",
-    panelHeading: "Tu cafetería, en un solo lugar.",
-    panelDescription:
-      "Organiza el trabajo diario y mantén tu operación al día.",
-    food: "Tu comida,",
-    noLines: "sin filas",
-    tagline: "Pide, recoge y sigue con tu día.",
-    identifier: "Usuario o correo institucional",
-    password: "Contraseña",
-    confirm: "Confirmar contraseña",
-    remember: "Mantener sesión iniciada",
-    forgot: "¿Olvidaste tu contraseña?",
-    login: "Iniciar sesión",
-    or: "o",
-    noAccount: "¿No tienes una cuenta?",
-    register: "Registrarse como estudiante",
-    next: "Continuar",
-    useEmail: "Usa tu correo",
-    institutional: "institucional",
-    emailNote:
-      "Te enviaremos un código de verificación para confirmar tu cuenta.",
-    onlyInstitutional:
-      "Usa tu correo @ustavillavo.edu.co o @ustavillavicencio.edu.co.",
-    checking: "Comprobando tu correo…",
-    studentAccount: "Correo válido: cuenta de estudiante.",
-    staffAccount: "Correo válido: cuenta de docente o administrativo.",
-    denied:
-      "Este correo no está habilitado. Usa tu correo institucional, sin «+».",
-    validity: `El código vence en ${OTP_VALIDITY_MINUTES} minutos.`,
-    resendLimit:
-      "Ya pediste varios códigos. Espera unos minutos y revisa tu correo, incluida la carpeta de spam.",
-    createPassword: "Crea una contraseña",
-    secure: "segura",
-    passwordNote: "Debe tener al menos 8 caracteres.",
-    include: "Tu contraseña debe incluir:",
-    rules: [
-      "Mínimo 8 caracteres",
-      "Una letra mayúscula",
-      "Una letra minúscula",
-      "Un número",
-    ],
-    verify: "Verifica",
-    yourEmail: "tu correo",
-    sent: "Te enviamos un código de 6 dígitos a",
-    notReceived: "¿No recibiste el código?",
-    resend: "Reenviar código",
-    verifyButton: "Verificar",
-    code: "Código de verificación",
-    recovery: "Recupera tu",
-    account: "cuenta",
-    recoveryNote:
-      "Ingresa tu correo institucional para restablecer tu contraseña.",
-    sendCode: "Enviar código",
-    reset: "Restablecer contraseña",
-    resetDone: "Tu contraseña se actualizó. Ya puedes iniciar sesión.",
-    wait: "Un momento…",
-    back: "Volver",
-    show: "Mostrar contraseña",
-    hide: "Ocultar contraseña",
-    progress: "Progreso del registro",
-    steps: ["Correo institucional", "Verificación", "Tus datos"],
-    invalidEmail: "Escribe un correo institucional válido.",
-    invalidPassword:
-      "La contraseña debe cumplir los requisitos y no superar 128 caracteres.",
-    mismatch: "Las contraseñas no coinciden.",
-    invalidCode: "Ingresa los 6 dígitos del código.",
-    connection: "No se pudo conectar. Revisa tu conexión e inténtalo de nuevo.",
-    resendDone: "Enviamos un nuevo código. Revisa también tu carpeta de spam.",
-    verifyLink: "Verificar mi correo",
-    recoverySent:
-      "Si existe una cuenta con este correo, recibirás un código para recuperar el acceso.",
-  },
-  en: {
-    panelTitle: "Panel sign in",
-    panelNote: "Sign in with your work account.",
-    panelLabel: "UniFood panel",
-    panelHeading: "Your cafeteria, in one place.",
-    panelDescription:
-      "Organize your daily work and keep your operation up to date.",
-    food: "Your food,",
-    noLines: "no waiting",
-    tagline: "Order, pick up, and get on with your day.",
-    identifier: "Username or institutional email",
-    password: "Password",
-    confirm: "Confirm password",
-    remember: "Keep me signed in",
-    forgot: "Forgot your password?",
-    login: "Sign in",
-    or: "or",
-    noAccount: "Don't have an account?",
-    register: "Register as a student",
-    next: "Continue",
-    useEmail: "Use your",
-    institutional: "institutional email",
-    emailNote: "We'll send you a verification code to confirm your account.",
-    onlyInstitutional:
-      "Use your @ustavillavo.edu.co or @ustavillavicencio.edu.co email.",
-    checking: "Checking your email…",
-    studentAccount: "Valid email: student account.",
-    staffAccount: "Valid email: faculty or staff account.",
-    denied:
-      "This email is not enabled. Use your institutional email, without “+”.",
-    validity: `The code expires in ${OTP_VALIDITY_MINUTES} minutes.`,
-    resendLimit:
-      "You already requested several codes. Wait a few minutes and check your email, including spam.",
-    createPassword: "Create a",
-    secure: "secure password",
-    passwordNote: "Use at least 8 characters.",
-    include: "Your password must include:",
-    rules: [
-      "At least 8 characters",
-      "An uppercase letter",
-      "A lowercase letter",
-      "A number",
-    ],
-    verify: "Verify",
-    yourEmail: "your email",
-    sent: "We sent a 6-digit code to",
-    notReceived: "Didn't receive a code?",
-    resend: "Resend code",
-    verifyButton: "Verify",
-    code: "Verification code",
-    recovery: "Recover your",
-    account: "account",
-    recoveryNote: "Enter your institutional email to reset your password.",
-    sendCode: "Send code",
-    reset: "Reset password",
-    resetDone: "Your password was updated. You can now sign in.",
-    wait: "One moment…",
-    back: "Go back",
-    show: "Show password",
-    hide: "Hide password",
-    progress: "Registration progress",
-    steps: ["Institutional email", "Verification", "Your details"],
-    invalidEmail: "Enter a valid institutional email.",
-    invalidPassword:
-      "Your password must meet the requirements and contain no more than 128 characters.",
-    mismatch: "Passwords do not match.",
-    invalidCode: "Enter all 6 digits of the code.",
-    connection: "Unable to connect. Check your connection and try again.",
-    resendDone: "A new code was sent. Check your spam folder too.",
-    verifyLink: "Verify my email",
-    recoverySent:
-      "If an account exists with this email, you'll receive a recovery code.",
-  },
+const t = {
+  panelTitle: "Acceso al panel",
+  panelNote: "Inicia sesión con tu cuenta de trabajo.",
+  panelLabel: "Panel UniFood",
+  panelHeading: "Tu cafetería, en un solo lugar.",
+  panelDescription: "Organiza el trabajo diario y mantén tu operación al día.",
+  food: "Tu comida,",
+  noLines: "sin filas",
+  tagline: "Pide, recoge y sigue con tu día.",
+  identifier: "Usuario o correo institucional",
+  password: "Contraseña",
+  confirm: "Confirmar contraseña",
+  remember: "Mantener sesión iniciada",
+  forgot: "¿Olvidaste tu contraseña?",
+  login: "Iniciar sesión",
+  or: "o",
+  noAccount: "¿No tienes una cuenta?",
+  register: "Registrarse como estudiante",
+  next: "Continuar",
+  useEmail: "Usa tu correo",
+  institutional: "institucional",
+  emailNote:
+    "Te enviaremos un código de verificación para confirmar tu cuenta.",
+  onlyInstitutional:
+    "Usa tu correo @ustavillavo.edu.co o @ustavillavicencio.edu.co.",
+  checking: "Comprobando tu correo…",
+  studentAccount: "Correo válido: cuenta de estudiante.",
+  staffAccount: "Correo válido: cuenta de docente o administrativo.",
+  denied:
+    "Este correo no está habilitado. Usa tu correo institucional, sin «+».",
+  validity: `El código vence en ${OTP_VALIDITY_MINUTES} minutos.`,
+  resendLimit:
+    "Ya pediste varios códigos. Espera unos minutos y revisa tu correo, incluida la carpeta de spam.",
+  createPassword: "Crea una contraseña",
+  secure: "segura",
+  passwordNote: "Debe tener al menos 8 caracteres.",
+  include: "Tu contraseña debe incluir:",
+  rules: [
+    "Mínimo 8 caracteres",
+    "Una letra mayúscula",
+    "Una letra minúscula",
+    "Un número",
+  ],
+  verify: "Verifica",
+  yourEmail: "tu correo",
+  sent: "Te enviamos un código de 6 dígitos a",
+  notReceived: "¿No recibiste el código?",
+  resend: "Reenviar código",
+  verifyButton: "Verificar",
+  code: "Código de verificación",
+  recovery: "Recupera tu",
+  account: "cuenta",
+  recoveryNote:
+    "Ingresa tu correo institucional para restablecer tu contraseña.",
+  sendCode: "Enviar código",
+  reset: "Restablecer contraseña",
+  resetDone: "Tu contraseña se actualizó. Ya puedes iniciar sesión.",
+  wait: "Un momento…",
+  back: "Volver",
+  show: "Mostrar contraseña",
+  hide: "Ocultar contraseña",
+  progress: "Progreso del registro",
+  steps: ["Correo institucional", "Verificación", "Tus datos"],
+  invalidEmail: "Escribe un correo institucional válido.",
+  invalidPassword:
+    "La contraseña debe cumplir los requisitos y no superar 128 caracteres.",
+  mismatch: "Las contraseñas no coinciden.",
+  invalidCode: "Ingresa los 6 dígitos del código.",
+  connection: "No se pudo conectar. Revisa tu conexión e inténtalo de nuevo.",
+  resendDone: "Enviamos un nuevo código. Revisa también tu carpeta de spam.",
+  verifyLink: "Verificar mi correo",
+  recoverySent:
+    "Si existe una cuenta con este correo, recibirás un código para recuperar el acceso.",
 };
 
 export default function AuthScreen({
@@ -205,8 +128,6 @@ export default function AuthScreen({
 }) {
   // The server HTML must not accept credentials before React attaches events.
   const hydrated = useAuthHydration();
-  const [language, setLanguage] = useState<"es" | "en">("es");
-  const t = copy[language];
   const [mode, setMode] = useState(initialMode);
   const [step, setStep] = useState(0);
   const [email, setEmail] = useState("");
@@ -519,7 +440,7 @@ export default function AuthScreen({
   return (
     <main
       className={`${styles.screen} ${entrypoint === "panel" ? `${styles.panelScreen} ${styles.panelLogin}` : ""}`}
-      lang={language}
+      lang="es"
     >
       <div
         className={`${styles.canvas} ${entrypoint === "panel" ? styles.panelCanvas : ""}`}
@@ -548,21 +469,6 @@ export default function AuthScreen({
                   <ArrowLeft size={23} />
                 </button>
               )}
-              {entrypoint === "client" && (
-                <label className={styles.language}>
-                  <span className={styles.srOnly}>Idioma / Language</span>
-                  <select
-                    value={language}
-                    onChange={(event) =>
-                      setLanguage(event.target.value as "es" | "en")
-                    }
-                  >
-                    <option value="es">Español</option>
-                    <option value="en">English</option>
-                  </select>
-                  <ChevronDown size={17} />
-                </label>
-              )}
             </div>
           )}
           <Brand
@@ -590,7 +496,6 @@ export default function AuthScreen({
               {isLogin && (
                 <>
                   <Field
-                    language={language}
                     icon={<Mail size={21} />}
                     label={t.identifier}
                     name="username"
@@ -604,7 +509,6 @@ export default function AuthScreen({
                     disabled={!hydrated || busy}
                   />
                   <Field
-                    language={language}
                     icon={<LockKeyhole size={21} />}
                     label={t.password}
                     password
@@ -620,7 +524,6 @@ export default function AuthScreen({
               )}
               {(isRegisterEmail || (isRecovery && step === 0)) && (
                 <Field
-                  language={language}
                   icon={<Mail size={21} />}
                   label={`usuario@${usernameDomain}`}
                   aria-label={t.institutional}
@@ -639,7 +542,6 @@ export default function AuthScreen({
               {isPassword && (
                 <>
                   <Field
-                    language={language}
                     icon={<LockKeyhole size={21} />}
                     label={t.password}
                     password
@@ -654,7 +556,6 @@ export default function AuthScreen({
                     aria-describedby="password-rules"
                   />
                   <Field
-                    language={language}
                     icon={<LockKeyhole size={21} />}
                     label={t.confirm}
                     password
