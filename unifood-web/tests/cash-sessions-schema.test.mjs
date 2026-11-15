@@ -367,7 +367,7 @@ test("028 a closed session is immutable; only a reopen with a reason changes it"
   const user = await worker(cafe);
   const session = await open(db, cafe, user);
   await db.query(
-    "INSERT INTO public.cash_movements (session_id, kind, amount, reason, created_by, created_at) VALUES ($1, 'EXPENSE', 10000, 'Compra de hielo', $2, now())",
+    "INSERT INTO public.cash_movements (session_id, request_id, kind, amount, reason, created_by, created_at) VALUES ($1, gen_random_uuid(), 'EXPENSE', 10000, 'Compra de hielo', $2, now())",
     [session, user],
   );
   await assert.rejects(
@@ -400,7 +400,7 @@ test("028 a closed session is immutable; only a reopen with a reason changes it"
     );
   await assert.rejects(
     db.query(
-      "INSERT INTO public.cash_movements (session_id, kind, amount, reason, created_by, created_at) VALUES ($1, 'INCOME', 1000, 'Tarde', $2, now())",
+      "INSERT INTO public.cash_movements (session_id, request_id, kind, amount, reason, created_by, created_at) VALUES ($1, gen_random_uuid(), 'INCOME', 1000, 'Tarde', $2, now())",
       [session, user],
     ),
     check("cash_session_closed_immutable"),

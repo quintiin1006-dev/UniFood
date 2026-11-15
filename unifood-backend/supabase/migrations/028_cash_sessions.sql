@@ -120,6 +120,8 @@ CREATE INDEX IF NOT EXISTS idx_cash_sessions_window
 CREATE TABLE IF NOT EXISTS public.cash_movements (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id uuid NOT NULL REFERENCES public.cash_sessions(id) ON DELETE RESTRICT,
+  -- Chosen by the client per attempt: a repeated tap or retry never records the movement twice.
+  request_id uuid NOT NULL,
   kind text NOT NULL,
   amount bigint NOT NULL,
   reason text NOT NULL,
@@ -128,7 +130,8 @@ CREATE TABLE IF NOT EXISTS public.cash_movements (
   CONSTRAINT chk_cash_movement_kind CHECK (kind IN ('INCOME', 'EXPENSE')),
   CONSTRAINT chk_cash_movement_amount CHECK (amount BETWEEN 1 AND 100000000),
   CONSTRAINT chk_cash_movement_reason
-    CHECK (reason = btrim(reason) AND char_length(reason) BETWEEN 3 AND 200)
+    CHECK (reason = btrim(reason) AND char_length(reason) BETWEEN 3 AND 200),
+  CONSTRAINT uq_cash_movement_request UNIQUE (session_id, request_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_cash_movements_session
