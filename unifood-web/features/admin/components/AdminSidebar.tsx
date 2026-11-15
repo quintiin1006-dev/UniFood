@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Utensils, UserRound } from "lucide-react";
+import { LayoutDashboard, UserRound, Utensils, Wallet } from "lucide-react";
 import styles from "./Admin.module.css";
 
 const navigation = [
   { href: "/admin", label: "Dashboard", Icon: LayoutDashboard },
   { href: "/admin/catalogo", label: "Catálogo", Icon: Utensils },
+  { href: "/admin/caja", label: "Caja", Icon: Wallet },
 ];
 
 export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {

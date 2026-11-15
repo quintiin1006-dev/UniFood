@@ -153,7 +153,12 @@ test("ADMIN profile renders only six read-only account and business fields", () 
 });
 
 test("sidebar has real destinations and exactly one accessible active link", () => {
-  for (const pathname of ["/admin", "/admin/catalogo", "/admin/perfil"]) {
+  for (const pathname of [
+    "/admin",
+    "/admin/catalogo",
+    "/admin/caja",
+    "/admin/perfil",
+  ]) {
     const html = render(
       "features/admin/components/AdminSidebar.tsx",
       "AdminSidebar",
@@ -161,14 +166,19 @@ test("sidebar has real destinations and exactly one accessible active link", () 
       pathname,
     );
     assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
-    for (const href of ["/admin", "/admin/catalogo", "/admin/perfil"])
+    for (const href of [
+      "/admin",
+      "/admin/catalogo",
+      "/admin/caja",
+      "/admin/perfil",
+    ])
       assert.ok(html.includes(`href="${href}"`));
     assert.match(html, /<nav aria-label="Administración"/);
     assert.doesNotMatch(
       html,
       /Asistente IA|Próximamente|Configuración|TU ESPACIO UNIFOOD|Tu cafetería, en un solo lugar/,
     );
-    assert.equal((html.match(/<a /g) ?? []).length, 3);
+    assert.equal((html.match(/<a /g) ?? []).length, 4);
     assert.doesNotMatch(html, /worker/);
   }
 });

@@ -179,3 +179,18 @@ test("amounts are shown as whole pesos with an explicit sign for differences", (
     /20 de noviembre de 2026/,
   );
 });
+
+test("the admin range defaults use the Bogota calendar day", () => {
+  const listing = load("features/cash/useCashListing.ts");
+  // 23:30 in Bogota on the 20th is already the 21st in UTC.
+  assert.equal(
+    listing.bogotaToday(new Date("2026-11-21T04:30:00Z")),
+    "2026-11-20",
+  );
+  assert.equal(
+    listing.bogotaToday(new Date("2026-11-21T05:00:00Z")),
+    "2026-11-21",
+  );
+  assert.equal(listing.shiftDate("2026-11-20", -6), "2026-11-14");
+  assert.equal(listing.shiftDate("2026-03-01", -1), "2026-02-28");
+});
