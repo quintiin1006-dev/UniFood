@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -101,6 +102,7 @@ const copy = {
     reset: "Restablecer contraseña",
     resetDone: "Tu contraseña se actualizó. Ya puedes iniciar sesión.",
     wait: "Un momento…",
+    entering: "Entrando…",
     back: "Volver",
     show: "Mostrar contraseña",
     hide: "Ocultar contraseña",
@@ -174,6 +176,7 @@ const copy = {
     reset: "Reset password",
     resetDone: "Your password was updated. You can now sign in.",
     wait: "One moment…",
+    entering: "Signing in…",
     back: "Go back",
     show: "Show password",
     hide: "Hide password",
@@ -333,8 +336,12 @@ export default function AuthScreen({
     setError("");
     setNotice("");
   }
+  // Client navigation: the login form keeps its «Entrando…» state until the destination is ready,
+  // and no full-page reload flashes a blank screen (ola 4 · destello).
+  const router = useRouter();
   function navigate(path: string) {
-    window.location.assign(path);
+    router.prefetch(path);
+    router.replace(path);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -505,7 +512,9 @@ export default function AuthScreen({
     t.emailNote
   );
   const buttonText = busy
-    ? t.wait
+    ? isLogin
+      ? t.entering
+      : t.wait
     : isLogin
       ? t.login
       : isOtp
@@ -821,7 +830,11 @@ export default function AuthScreen({
               className={`${styles.primary} ${!isLogin ? (isPassword ? styles.passwordContinue : styles.continue) : ""}`}
               type="submit"
               disabled={!hydrated || busy}
+              aria-busy={busy || undefined}
             >
+              {busy && isLogin ? (
+                <span className={styles.spinner} aria-hidden="true" />
+              ) : null}
               {buttonText}
               {!busy && <ArrowRight size={21} />}
             </button>

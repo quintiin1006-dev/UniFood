@@ -15,12 +15,24 @@ import styles from "./BoardFeedback.module.css";
  * entrance animation, so a polling refresh never makes anything move.
  */
 
+/**
+ * Board placeholder with the shape of its columns (ola 4): static blocks, no text block. It
+ * replaces the old «Cargando pedidos…» panel, so the first paint already shows where orders go.
+ */
 export function BoardLoading() {
   return (
-    <section className={styles.state}>
-      <div className={styles.panel} role="status">
-        <p className={styles.title}>Cargando pedidos…</p>
-      </div>
+    <section
+      className={styles.skeletonBoard}
+      role="status"
+      aria-label="Cargando pedidos"
+    >
+      {[0, 1, 2, 3].map((column) => (
+        <div key={column} className={styles.skeletonColumn}>
+          <span className={styles.skeletonHead} />
+          <span className={styles.skeletonCard} />
+          {column < 2 && <span className={styles.skeletonCard} />}
+        </div>
+      ))}
     </section>
   );
 }

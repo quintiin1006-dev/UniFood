@@ -4,8 +4,14 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { availabilityLoader } from "./helpers/load-availability.mjs";
 
+const navigationMock = {
+  __esModule: true,
+  useRouter: () => ({ prefetch() {}, replace() {}, push() {} }),
+};
+
 const AuthScreen = availabilityLoader({
   mocks: {
+    "next/navigation": navigationMock,
     "next/link": {
       __esModule: true,
       default: ({ children, ...props }) => createElement("a", props, children),
@@ -85,6 +91,7 @@ test("/registro keeps its field autofill hints", () => {
 
 const CompleteRegistration = availabilityLoader({
   mocks: {
+    "next/navigation": navigationMock,
     "next/link": {
       __esModule: true,
       default: ({ children, ...props }) => createElement("a", props, children),
