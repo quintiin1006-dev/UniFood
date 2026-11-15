@@ -21,6 +21,8 @@ import { CLIENT_PATH_HEADER } from "@/features/auth/validation";
  */
 function nextWithPath(request: NextRequest) {
   const headers = new Headers(request.headers);
+  // set(), never append(): whatever the browser sent under this name is replaced by the
+  // path this request actually asked for, so the header is always the server's own.
   headers.set(
     CLIENT_PATH_HEADER,
     request.nextUrl.pathname + request.nextUrl.search,
@@ -112,7 +114,7 @@ export async function proxy(request: NextRequest) {
         new URL(path === "/cuenta" ? "/login" : "/panel/login", request.url),
       );
     } else {
-      response = NextResponse.next({ request });
+      response = nextWithPath(request);
     }
   }
   for (const [name, { value, deleting }] of writes) {

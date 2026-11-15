@@ -42,7 +42,9 @@ const acceptBox = (page: Page) =>
 const acceptButton = (page: Page) =>
   page.getByRole("button", { name: "Aceptar y continuar" });
 
-test.afterEach(async ({ page }) => {
+// Each test states what it needs up front, so a slow teardown cannot leave the next one
+// with someone else's state.
+test.beforeEach(async ({ page }) => {
   await setTerms(page, { accepted: true, failing: false });
 });
 
@@ -172,4 +174,33 @@ test("the terms step never appears for a worker or an admin", async ({
       data: { entrypoint: "panel" },
     });
   }
+});
+
+test("a browser cannot choose the destination by sending the path header itself", async ({
+  page,
+}) => {
+  await apiLogin(page);
+  await setTerms(page, { accepted: false });
+  // The proxy overwrites this header with the path actually asked for.
+  await page.setExtraHTTPHeaders({
+    "x-unifood-path": "https://evil.example/cuenta",
+  });
+  await page.goto("/cuenta/carrito");
+  await expect(page).toHaveURL(
+    /\/aceptar-terminos\?destino=%2Fcuenta%2Fcarrito$/,
+  );
+  await expect(page).not.toHaveURL(/evil\.example/);
+
+  // Another client path is ignored just the same: the real one wins.
+  await page.setExtraHTTPHeaders({ "x-unifood-path": "/cuenta/perfil" });
+  await page.goto("/cuenta");
+  await expect(page).toHaveURL(/\/aceptar-terminos\?destino=%2Fcuenta$/);
+
+  // And accepting lands on the real path, never on the injected one.
+  await acceptBox(page).check();
+  await acceptButton(page).click();
+  await expect(page).toHaveURL(new URL("/cuenta", page.url()).href, {
+    timeout: 30_000,
+  });
+  await page.setExtraHTTPHeaders({});
 });
