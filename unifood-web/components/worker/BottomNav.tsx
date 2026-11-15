@@ -6,6 +6,7 @@ import {
   Megaphone,
   Package,
   UserRound,
+  Wallet,
 } from "lucide-react";
 
 import styles from "./BottomNav.module.css";
@@ -15,6 +16,7 @@ export type WorkerModule =
   | "calls"
   | "history"
   | "availability"
+  | "cash"
   | "profile";
 
 interface BottomNavProps {
@@ -44,6 +46,11 @@ const modules = [
     id: "availability" as const,
     label: "Disponibilidad",
     icon: Package,
+  },
+  {
+    id: "cash" as const,
+    label: "Caja",
+    icon: Wallet,
   },
   {
     id: "profile" as const,

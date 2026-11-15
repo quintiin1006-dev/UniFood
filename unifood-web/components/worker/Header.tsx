@@ -31,6 +31,7 @@ export default function Header({
     calls: "Llamadas",
     history: "Historial",
     availability: "Disponibilidad",
+    cash: "Caja",
     profile: "Mi perfil",
   };
   const showSearch = activeModule === "orders" || activeModule === "calls";
