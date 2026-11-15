@@ -86,6 +86,8 @@ const confirmed = new Set();
 const passwords = new Map();
 const refreshTokens = new Map();
 const failures = new Map();
+// Profile id -> whether the client accepted the current terms. Absent means accepted.
+const termsAccepted = new Map();
 const profileAudit = { directBusinessReads: 0, backendProfileReads: 0 };
 // SUPER_ADMIN fixture: one visible cafeteria with its ADMIN, one hidden without one.
 const superAdminState = {};
@@ -451,6 +453,16 @@ createServer(async (request, response) => {
       if (config.data) operationalStates.set(target.id, config.data);
       return json(response, 200, {});
     }
+    // Client terms: accepted by default so other flows are not blocked; a test can unset it.
+    if (url.pathname === "/__test/terms" && request.method === "POST") {
+      let raw = "";
+      for await (const chunk of request) raw += chunk;
+      const config = JSON.parse(raw),
+        target = fixtures.find((entry) => entry.email === config.email);
+      if (!target) return json(response, 400, {});
+      termsAccepted.set(target.id, config.accepted === true);
+      return json(response, 200, {});
+    }
     if (url.pathname === "/__test/availability") {
       if (request.method === "POST") {
         let raw = "";
@@ -706,6 +718,13 @@ createServer(async (request, response) => {
         return json(response, 503, { message: "PRIVATE_LOGOUT_DETAIL" });
       return json(response, 200, {});
     }
+    if (url.pathname === "/rest/v1/rpc/client_terms_accepted")
+      return json(response, 200, termsAccepted.get(profile.id) ?? true);
+    if (url.pathname === "/rest/v1/rpc/accept_client_terms") {
+      termsAccepted.set(profile.id, true);
+      response.writeHead(204);
+      return response.end();
+    }
     // Step 2 of the two-step registration, modelled on migration 018.
     const awaitingStep2 =
       profile.email.startsWith("pendingclient@") && profile.roles.length === 0;
@@ -735,6 +754,11 @@ createServer(async (request, response) => {
         return json(response, 400, {
           code: "P0002",
           message: "REGISTRATION_NOT_PENDING",
+        });
+      if (input.terms_accepted !== true)
+        return json(response, 400, {
+          code: "P0001",
+          message: "REGISTRATION_TERMS_REQUIRED",
         });
       // A code already taken in this fixture, to show the only code-related error.
       if (input.institutional_code === "7000000")

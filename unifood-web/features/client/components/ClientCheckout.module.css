@@ -133,31 +133,16 @@
   font-size: 14px;
   line-height: 1.5;
 }
-.terms h2 {
-  margin: 0;
-  font-size: 18px;
-}
-.terms p {
+.reminder {
+  margin: 10px 0 0;
   color: var(--client-muted);
   font-size: 14px;
-  line-height: 1.6;
-}
-.terms label {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  min-height: 44px;
-  padding-block: 8px;
-  font-size: 15px;
   line-height: 1.5;
-  cursor: pointer;
+  text-align: center;
 }
-.terms input {
-  flex: 0 0 20px;
-  width: 20px;
-  height: 20px;
-  margin-top: 2px;
-  accent-color: var(--client-blue);
+.reminder a {
+  color: var(--client-blue);
+  font-weight: 600;
 }
 .confirmationHeading {
   display: grid;

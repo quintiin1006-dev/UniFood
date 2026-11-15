@@ -25,6 +25,7 @@ import {
   validPassword,
   validRegistrationEmail,
 } from "@/features/auth/validation";
+import { CURRENT_TERMS_VERSION } from "@/features/auth/legal";
 import {
   generateSignupPassword,
   pendingRegistration,
@@ -174,6 +175,8 @@ export async function POST(
         return failRegistration("REGISTRATION_INVALID_NAME");
       if (body.privacy !== true)
         return failRegistration("REGISTRATION_PRIVACY_REQUIRED");
+      if (body.terms !== true)
+        return failRegistration("REGISTRATION_TERMS_REQUIRED");
       if (!validPassword(password)) return fail(passwordRuleMessage);
       const {
         data: { user },
@@ -202,6 +205,8 @@ export async function POST(
         full_name: fullName,
         institutional_code: code || null,
         privacy_accepted: true,
+        terms_accepted: true,
+        terms_version: CURRENT_TERMS_VERSION,
       });
       if (completed.error)
         return failRegistration(registrationErrorCode(completed.error));

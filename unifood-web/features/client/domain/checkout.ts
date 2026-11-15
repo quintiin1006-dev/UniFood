@@ -124,11 +124,10 @@ export type CheckoutInput = {
   note: string;
   /** HH:mm, or empty for "lo antes posible". */
   pickupTime: string;
-  accepted: boolean;
 };
 export type ReviewResult =
   | { ok: true; request: OrderRequest }
-  | { ok: false; error: string; field?: "note" | "pickup" | "terms" };
+  | { ok: false; error: string; field?: "note" | "pickup" };
 
 /** Everything the browser can check before sending; Spring repeats it all. */
 export function reviewOrder(
@@ -151,12 +150,6 @@ export function reviewOrder(
     if (!result.ok) return { ...result, field: "pickup" };
     pickup = result.iso;
   }
-  if (!input.accepted)
-    return {
-      ok: false,
-      error: "Acepta las condiciones de recogida para continuar.",
-      field: "terms",
-    };
   return { ok: true, request: buildOrderRequest(cart, input.note, pickup) };
 }
 

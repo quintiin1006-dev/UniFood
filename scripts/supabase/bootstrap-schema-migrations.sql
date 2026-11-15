@@ -73,7 +73,7 @@ SELECT version, name, present FROM (VALUES
   ('016', '016_catalog_revision.sql', to_regprocedure('public.advance_lunch_version()') IS NOT NULL),
   ('017', '017_catalog_images.sql', to_regclass('public.catalog_image_operations') IS NOT NULL),
   ('018', '018_secure_registration.sql',
-    to_regprocedure('public.complete_registration(text, text, boolean)') IS NOT NULL),
+    COALESCE(to_regprocedure('public.complete_registration(text, text, boolean, boolean, text)'), to_regprocedure('public.complete_registration(text, text, boolean)')) IS NOT NULL),
   ('019', '019_catalog_category_bebida.sql', EXISTS (
     SELECT 1 FROM pg_catalog.pg_enum
     WHERE enumtypid = to_regtype('public.catalog_category') AND enumlabel = 'BEBIDA')),
@@ -84,7 +84,9 @@ SELECT version, name, present FROM (VALUES
   ('022', '022_cafeteria_visibility_billing.sql', to_regclass('public.cafeteria_settings_audit') IS NOT NULL),
   ('023', '023_order_requested_pickup_time.sql', EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'orders' AND column_name = 'requested_pickup_at'))
+    WHERE table_schema = 'public' AND table_name = 'orders' AND column_name = 'requested_pickup_at')),
+  ('024', '024_client_terms_acceptance.sql', to_regprocedure('public.client_terms_accepted(text)') IS NOT NULL
+    AND to_regprocedure('public.accept_client_terms(text)') IS NOT NULL)
 ) AS d(version, name, present);
 
 DO $$

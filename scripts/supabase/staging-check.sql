@@ -86,12 +86,12 @@ WITH account_fks AS (
   ('create_auth_profile uses the domain rule', COALESCE((
     SELECT prosrc LIKE '%registration_domain_rule%' FROM pg_proc
     WHERE oid = to_regprocedure('public.create_auth_profile()')), false)),
-  ('function complete_registration', to_regprocedure('public.complete_registration(text, text, boolean)') IS NOT NULL),
+  ('function complete_registration', to_regprocedure('public.complete_registration(text, text, boolean, boolean, text)') IS NOT NULL OR to_regprocedure('public.complete_registration(text, text, boolean)') IS NOT NULL),
   ('function pending_registration', to_regprocedure('public.pending_registration()') IS NOT NULL),
   ('function purge_unconfirmed_accounts', to_regprocedure('public.purge_unconfirmed_accounts()') IS NOT NULL),
   ('step 2 requires an OTP session after public signup', COALESCE((
     SELECT prosrc LIKE '%REGISTRATION_OTP_SESSION_REQUIRED%' FROM pg_proc
-    WHERE oid = to_regprocedure('public.complete_registration(text, text, boolean)')), false)),
+    WHERE oid = COALESCE(to_regprocedure('public.complete_registration(text, text, boolean, boolean, text)'), to_regprocedure('public.complete_registration(text, text, boolean)'))), false)),
   ('cleanup also removes confirmed incomplete accounts', COALESCE((
     SELECT prosrc NOT LIKE '%email_confirmed_at IS NULL%' AND prosrc LIKE '%was_confirmed%'
     FROM pg_proc WHERE oid = to_regprocedure('public.purge_unconfirmed_accounts()')), false)),
