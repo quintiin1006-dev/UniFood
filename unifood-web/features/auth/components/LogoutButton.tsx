@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { LogOut } from "lucide-react";
+import { dropPushBeforeSignOut } from "@/features/push/signOut";
 import { loginPath, type AuthEntrypoint } from "../validation";
 
 export default function LogoutButton({
@@ -17,6 +18,10 @@ export default function LogoutButton({
     setBusy(true);
     setError("");
     try {
+      // This browser stops receiving the account's notices before the session ends.
+      await dropPushBeforeSignOut(
+        entrypoint === "client" ? "client" : "worker",
+      );
       const response = await fetch("/api/auth/logout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
