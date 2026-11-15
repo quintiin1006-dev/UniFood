@@ -10,6 +10,7 @@ import {
 
 import { formatClockTime, formatRelativeTime } from "@/lib/orderTime";
 
+import { Spinner } from "@/components/ui/Spinner";
 import { OrderNote } from "@/features/orders/components/OrderNote";
 import { RejectOrderButton } from "@/features/orders/components/RejectOrderDialog";
 import { clientIdentity } from "@/features/orders/utils/clientIdentity";
@@ -118,10 +119,12 @@ export default function OrderCard({
         onClick={() => onAction(order)}
         disabled={busy || !canAdvanceOrder(order)}
         aria-label={isDelivered ? "Pedido entregado" : actionLabel}
+        aria-busy={busy || undefined}
       >
-        <ActionIcon size={18} strokeWidth={2.3} />
+        {/* F3: the click answers at once; the card moves when the server confirms. */}
+        {busy ? <Spinner /> : <ActionIcon size={18} strokeWidth={2.3} />}
 
-        <span>{actionLabel}</span>
+        <span>{busy ? "Guardando…" : actionLabel}</span>
 
         {isDelivered && order.deliveredAt && (
           <span className={styles.deliveredTime}>

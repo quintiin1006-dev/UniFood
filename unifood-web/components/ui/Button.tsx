@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes } from "react";
 
+import { Spinner } from "./Spinner";
 import styles from "./ui.module.css";
 
 export type ButtonVariant = "primary" | "success" | "danger" | "secondary";
@@ -18,18 +19,28 @@ export function buttonClass(variant: ButtonVariant = "primary", touch = false) {
 export function Button({
   variant = "primary",
   touch = false,
+  loading = false,
   className,
   type = "button",
+  disabled,
+  children,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
   touch?: boolean;
+  /** Waiting for the server: spinner, aria-busy and no second click. The caller sets the text. */
+  loading?: boolean;
 }) {
   return (
     <button
       type={type}
       className={`${buttonClass(variant, touch)} ${className ?? ""}`}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
       {...props}
-    />
+    >
+      {loading && <Spinner />}
+      {children}
+    </button>
   );
 }

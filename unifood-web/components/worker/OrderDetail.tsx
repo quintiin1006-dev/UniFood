@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { AlertTriangle, Clock3, X, ShoppingBag } from "lucide-react";
 
 import type { Order } from "@/types/order";
+import { Spinner } from "@/components/ui/Spinner";
 import { clientIdentity } from "@/features/orders/utils/clientIdentity";
 import { pickupLabel } from "@/features/orders/utils/pickupTime";
 
@@ -279,8 +280,10 @@ export default function OrderDetail({
           aria-label={
             order.status === "delivered" ? "Pedido entregado" : actionLabel
           }
+          aria-busy={busy || undefined}
         >
-          <span>{actionLabel}</span>
+          {busy && <Spinner />}
+          <span>{busy ? "Guardando…" : actionLabel}</span>
         </button>
       </aside>
     </div>
