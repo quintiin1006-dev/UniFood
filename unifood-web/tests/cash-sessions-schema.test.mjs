@@ -517,3 +517,25 @@ test("028 reverse script removes the cash objects and keeps the wider audit CHEC
   // And 028 applies again after its reverse.
   await db.exec(await migration(FILE));
 });
+
+test("028 staging-check block is all true and the cleanup covers its account references", async (t) => {
+  const db = await createAuthDatabase();
+  t.after(() => db.close());
+  const script = await readFile(
+    new URL("../../scripts/supabase/staging-check.sql", import.meta.url),
+    "utf8",
+  );
+  const results = await db.exec(script);
+  const cash = results
+    .flatMap((result) => result.rows)
+    .filter(
+      (row) => typeof row.object === "string" && row.object.startsWith("028"),
+    );
+  assert.equal(cash.length, 5);
+  assert.deepEqual(
+    cash.filter((row) => !row.ok).map((row) => row.object),
+    [],
+  );
+  // No 028 reference is left uncovered by the account cleanup.
+  assert.deepEqual(results[2].rows, []);
+});
