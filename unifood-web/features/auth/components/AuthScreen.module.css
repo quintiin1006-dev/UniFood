@@ -407,6 +407,31 @@
   line-height: 1.5;
   margin: 0;
 }
+/* Catches the click a disabled submit button would otherwise swallow. */
+.submitGuard {
+  display: block;
+}
+.submitGuard > button:disabled {
+  pointer-events: none;
+}
+/* Shown inside a busy button, next to the text that says what is happening. */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-top-color: currentColor;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .spinner {
+    animation: auth-spin 0.8s linear infinite;
+  }
+}
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .success {
   padding: 11px 14px;
   border-radius: 11px;
@@ -789,7 +814,7 @@
 }
 
 /* Ola 4 · destello: «Entrando…» with a small spinner. Reduced motion keeps it still. */
-.spinner {
+.loginSpinner {
   width: 16px;
   height: 16px;
   margin-right: 8px;
@@ -807,7 +832,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .spinner {
+  .loginSpinner {
     animation: none;
     border-right-color: currentColor;
   }

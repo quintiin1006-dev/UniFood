@@ -1,11 +1,16 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/features/auth/server/session";
 import { destination, isClient } from "@/features/auth/validation";
-import { resolveSelection } from "@/features/client/domain/context";
+import {
+  allCafeterias,
+  resolveSelection,
+} from "@/features/client/domain/context";
 import { loadClientContext } from "@/features/client/server/context";
 import { loadCafeteriaMenu } from "@/features/client/server/menu";
 import CafeteriaUnavailable from "@/features/client/components/CafeteriaUnavailable";
 import ClientHome from "@/features/client/components/ClientHome";
+import ConnectionError from "@/features/client/components/ConnectionError";
+import NoCafeterias from "@/features/client/components/NoCafeterias";
 import MenuUnavailable from "@/features/client/components/MenuUnavailable";
 import SiteSelection from "@/features/client/components/SiteSelection";
 
@@ -22,9 +27,10 @@ export default async function ClientHomePage({
   const { profile } = await requireAuth();
   if (!isClient(profile)) redirect(destination(profile));
   const result = await loadClientContext();
-  if (result.status !== "ok")
-    return <MenuUnavailable title="No pudimos cargar tus cafeterías" />;
+  // Two different things: the server did not answer, or it answered with nothing.
+  if (result.status !== "ok") return <ConnectionError />;
   const { context } = result;
+  if (allCafeterias(context).length === 0) return <NoCafeterias />;
   const selection = resolveSelection(context, await searchParams);
   if (selection.view !== "home")
     return (
