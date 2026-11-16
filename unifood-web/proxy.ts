@@ -11,9 +11,27 @@ import {
   rememberCookie,
   sessionCookieOptions,
 } from "@/features/auth/server/config";
+import { CLIENT_PATH_HEADER } from "@/features/auth/validation";
+
+/**
+ * Carries the path that was asked for, so the client layout can send someone back to it after
+ * they accept the terms: a Server Component layout has no pathname of its own, and the docs
+ * point to a request header for exactly this. The headers are rebuilt from `request` on every
+ * call, after the SDK has written its cookies, so the refreshed session still travels with it.
+ */
+function nextWithPath(request: NextRequest) {
+  const headers = new Headers(request.headers);
+  // set(), never append(): whatever the browser sent under this name is replaced by the
+  // path this request actually asked for, so the header is always the server's own.
+  headers.set(
+    CLIENT_PATH_HEADER,
+    request.nextUrl.pathname + request.nextUrl.search,
+  );
+  return NextResponse.next({ request: { headers } });
+}
 
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  let response = nextWithPath(request);
   const config = authConfig();
   if (!config) return response;
   const remember = request.cookies.get(rememberCookie)?.value === "1";
@@ -37,7 +55,7 @@ export async function proxy(request: NextRequest) {
           if (options.maxAge === 0) request.cookies.delete(name);
           else request.cookies.set(name, value);
         }
-        response = NextResponse.next({ request });
+        response = nextWithPath(request);
       },
     },
   });
@@ -96,7 +114,7 @@ export async function proxy(request: NextRequest) {
         new URL(path === "/cuenta" ? "/login" : "/panel/login", request.url),
       );
     } else {
-      response = NextResponse.next({ request });
+      response = nextWithPath(request);
     }
   }
   for (const [name, { value, deleting }] of writes) {
@@ -118,6 +136,7 @@ export const config = {
     "/registro",
     "/registro/completar",
     "/recuperar-contrasena",
+    "/aceptar-terminos",
     "/worker/:path*",
     "/cuenta/:path*",
     "/admin/:path*",
