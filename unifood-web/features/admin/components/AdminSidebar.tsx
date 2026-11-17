@@ -9,7 +9,6 @@ import styles from "./Admin.module.css";
 const navigation: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin", label: "Dashboard", icon: "dashboard" },
   { href: "/admin/catalogo", label: "Catálogo", icon: "catalogo" },
-  { href: "/admin/caja", label: "Caja", icon: "efectivo" },
 ];
 
 export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {

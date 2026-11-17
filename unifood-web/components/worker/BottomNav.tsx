@@ -6,7 +6,7 @@ import modernStyles from "./BottomNav.module.css";
 import classicStyles from "./BottomNav.classic.module.css";
 
 export type WorkerModule =
-  "orders" | "calls" | "history" | "availability" | "cash" | "profile";
+  "orders" | "calls" | "history" | "availability" | "profile";
 
 interface BottomNavProps {
   /** Pedidos and Llamadas use the classic look (ola 2 · D2); the rest keep the modern one. */
@@ -35,11 +35,6 @@ const modules = [
     id: "availability" as const,
     label: "Disponibilidad",
     icon: "disponibilidad" as IconName,
-  },
-  {
-    id: "cash" as const,
-    label: "Caja",
-    icon: "efectivo" as IconName,
   },
   {
     id: "profile" as const,
