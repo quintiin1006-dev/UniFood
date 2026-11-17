@@ -201,7 +201,7 @@
 
   grid-template-columns:
     minmax(0, 1fr)
-    42px
+    calc(48px / var(--worker-zoom, 1))
     120px;
 
   align-items: center;
@@ -1195,7 +1195,7 @@
   .orderRow {
     grid-template-columns:
       minmax(0, 1fr)
-      38px
+      calc(48px / var(--worker-zoom, 1))
       95px;
   }
 

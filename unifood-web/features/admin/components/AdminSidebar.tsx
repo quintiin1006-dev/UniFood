@@ -38,7 +38,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
           >
             <Icon
               name={icon}
-              size={19}
+              size={20}
               tone={pathname === href ? "active" : "inherit"}
             />
             {label}
@@ -52,7 +52,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
           >
             <Icon
               name="perfil"
-              size={19}
+              size={20}
               tone={pathname === "/admin/perfil" ? "active" : "inherit"}
             />
             Mi perfil

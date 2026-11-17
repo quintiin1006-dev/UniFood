@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { LogOut } from "lucide-react";
 import { loginPath, type AuthEntrypoint } from "../validation";
+import { ICON_MIN_20 } from "@/components/ui/Icon";
 
 export default function LogoutButton({
   className,
@@ -47,7 +48,7 @@ export default function LogoutButton({
           cursor: "pointer",
         }}
       >
-        <LogOut size={17} />
+        <LogOut size={20} style={ICON_MIN_20} />
         {busy ? "Cerrando sesión…" : "Cerrar sesión"}
       </button>
       {error && <p role="alert">{error}</p>}

@@ -22,6 +22,7 @@ import type { Order } from "@/types/order";
 
 import modernStyles from "./CallsBoard.module.css";
 import classicStyles from "./CallsBoard.classic.module.css";
+import { ICON_MIN_20 } from "@/components/ui/Icon";
 
 interface CallsBoardProps {
   /** Pedidos and Llamadas use the classic look (ola 2 · D2); the rest keep the modern one. */
@@ -123,7 +124,7 @@ export default function CallsBoard({
 
           <header className={styles.listHeader}>
             <div className={styles.headerIcon}>
-              <Megaphone size={27} strokeWidth={1.9} />
+              <Megaphone size={27} style={ICON_MIN_20} strokeWidth={1.9} />
             </div>
 
             <h1 className={styles.title}>Llamadas</h1>
@@ -321,7 +322,11 @@ export default function CallsBoard({
                           )}
                           {item.beverageChoice && (
                             <div className={styles.beverage}>
-                              <CupSoda size={16} aria-hidden="true" />
+                              <CupSoda
+                                size={20}
+                                style={ICON_MIN_20}
+                                aria-hidden="true"
+                              />
                               <div>
                                 <span>Bebida elegida</span>
                                 <strong>{item.beverageChoice}</strong>
@@ -330,7 +335,11 @@ export default function CallsBoard({
                           )}
                           {item.note && (
                             <div className={styles.productNote}>
-                              <MessageSquareText size={15} aria-hidden="true" />
+                              <MessageSquareText
+                                size={20}
+                                style={ICON_MIN_20}
+                                aria-hidden="true"
+                              />
                               <div>
                                 <span>Indicaciones</span>
                                 <p>{item.note}</p>
@@ -351,7 +360,11 @@ export default function CallsBoard({
                   </div>
                   {selectedOrder.note && (
                     <div className={styles.orderNote}>
-                      <MessageSquareText size={18} aria-hidden="true" />
+                      <MessageSquareText
+                        size={20}
+                        style={ICON_MIN_20}
+                        aria-hidden="true"
+                      />
                       <div>
                         <strong>Observaciones</strong>
                         <p>{selectedOrder.note}</p>

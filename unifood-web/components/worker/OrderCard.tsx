@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon } from "@/components/ui/Icon";
+import { Icon, ICON_MIN_20 } from "@/components/ui/Icon";
 
 import {
   ACTION_ICONS,
@@ -71,7 +71,7 @@ export default function OrderCard({
         aria-label={`Ver pedido de ${order.student}`}
       >
         <div className={styles.userIcon}>
-          <Icon name="perfil" size={18} />
+          <Icon name="perfil" size={20} style={ICON_MIN_20} />
         </div>
 
         <div className={styles.student}>
@@ -91,7 +91,7 @@ export default function OrderCard({
       {/* Hora de recogida pedida por el cliente: solo informativa */}
       {pickup && (
         <div className={styles.pickupTime}>
-          <Icon name="reloj" size={14} />
+          <Icon name="reloj" size={20} style={ICON_MIN_20} />
 
           <span>{pickup}</span>
         </div>
@@ -124,7 +124,11 @@ export default function OrderCard({
         {busy ? (
           <Spinner />
         ) : (
-          <Icon name={ACTION_ICONS[order.status]} size={18} />
+          <Icon
+            name={ACTION_ICONS[order.status]}
+            size={20}
+            style={ICON_MIN_20}
+          />
         )}
 
         <span>{busy ? "Guardando…" : actionLabel}</span>

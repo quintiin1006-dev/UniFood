@@ -52,7 +52,7 @@ export function AdminDashboard() {
             aria-busy={loading}
             onClick={() => void refresh()}
           >
-            <RefreshCw size={16} aria-hidden="true" />
+            <RefreshCw size={20} aria-hidden="true" />
             Actualizar
           </button>
         </div>

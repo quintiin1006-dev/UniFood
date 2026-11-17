@@ -115,7 +115,7 @@ export default function ClientCart() {
         Seguir eligiendo
       </Link>
       <button type="button" className={styles.secondaryButton} onClick={clear}>
-        <Trash2 size={18} aria-hidden="true" />
+        <Trash2 size={20} aria-hidden="true" />
         Vaciar carrito
       </button>
     </section>

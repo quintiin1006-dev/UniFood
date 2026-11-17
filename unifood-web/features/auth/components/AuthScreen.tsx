@@ -693,7 +693,7 @@ export default function AuthScreen({
                             passwordRules(password)[index] ? styles.passed : ""
                           }
                         >
-                          <CheckCircle2 size={14} />
+                          <CheckCircle2 size={20} />
                           {rule}
                           <span className={styles.srOnly}>
                             {passwordRules(password)[index] ? " ✓" : ""}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon, type IconName } from "@/components/ui/Icon";
+import { Icon, type IconName, ICON_MIN_20 } from "@/components/ui/Icon";
 
 import modernStyles from "./BottomNav.module.css";
 import classicStyles from "./BottomNav.classic.module.css";
@@ -66,6 +66,7 @@ export default function BottomNav({
             <Icon
               name={module.icon}
               size={23}
+              style={ICON_MIN_20}
               tone={active ? "active" : "inherit"}
             />
 
