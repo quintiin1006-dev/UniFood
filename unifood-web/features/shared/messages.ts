@@ -20,6 +20,13 @@ export const OFFLINE_RETRYING = "Sin conexión. Reintentando…";
 
 export const SAVING = "Guardando…";
 
+/** «Mi pedido»: the client's own wording; the worker's ORDER_STATE_CHANGED speaks of the board. */
+export const CLIENT_ORDER_CHANGED =
+  "Tu pedido cambió de estado. Te mostramos cómo está ahora.";
+
+export const CLIENT_ORDERS_FORBIDDEN =
+  "No tienes permisos para ver tus pedidos.";
+
 /** The server could not be reached: network, timeout or a 5xx. Never an empty result. */
 export const CONNECTION_FAILED =
   "No pudimos conectarnos. Revisa tu conexión e inténtalo de nuevo.";

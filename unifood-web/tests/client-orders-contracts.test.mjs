@@ -155,7 +155,12 @@ test("failures use the central catalogue and tell connection from empty", () => 
   );
   assert.equal(
     errors.cancelFailure(409, "INVALID_ORDER_STATE").message,
-    messages.BACKEND_ERROR_MESSAGES.ORDER_CONCURRENT_MODIFICATION,
+    messages.CLIENT_ORDER_CHANGED,
+  );
+  // The client never reads the worker's «revisa el tablero».
+  assert.doesNotMatch(
+    errors.cancelFailure(409, "ORDER_CONCURRENT_MODIFICATION").message,
+    /tablero/,
   );
   assert.equal(errors.cancelFailure(502).connection, true);
 });

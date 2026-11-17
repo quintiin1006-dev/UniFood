@@ -117,9 +117,7 @@ export default function MyOrder() {
       )}
 
       {!loaded && !failure && <Skeleton />}
-      {failure && !order && (
-        <FailurePanel failure={failure} onRetry={refresh} />
-      )}
+      {failure && <FailurePanel failure={failure} onRetry={refresh} />}
       {loaded && !failure && order && (
         <ActiveOrder
           order={order}

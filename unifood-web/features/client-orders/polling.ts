@@ -1,3 +1,4 @@
+import type { OrderFailure } from "./errors";
 import type { ClientOrder } from "./types";
 
 export const POLL_MS = 5000;
@@ -9,7 +10,7 @@ export function nextDelay(failures: number): number {
   return Math.min(POLL_MS * 2 ** failures, MAX_BACKOFF_MS);
 }
 
-export type OrderAlert = "preparing" | "ready" | "reminder";
+export type OrderAlert = "preparing" | "ready" | "called" | "reminder";
 
 type Seen = Pick<ClientOrder, "id" | "status" | "reminderCount">;
 
@@ -22,10 +23,11 @@ export function alertFor(
   next: Seen | null,
 ): OrderAlert | null {
   if (!previous || !next || previous.id !== next.id) return null;
-  const waiting = (status: string) => status === "READY" || status === "CALLED";
   if (previous.status === "PENDING" && next.status === "PREPARING")
     return "preparing";
-  if (!waiting(previous.status) && waiting(next.status)) return "ready";
+  // The call is the notice that matters most: READY → CALLED must not be silent.
+  if (next.status === "CALLED" && previous.status !== "CALLED") return "called";
+  if (next.status === "READY" && previous.status !== "READY") return "ready";
   if (
     next.status === "CALLED" &&
     previous.status === "CALLED" &&
@@ -38,6 +40,7 @@ export function alertFor(
 export const ALERT_TEXT: Record<OrderAlert, string> = {
   preparing: "Tu pedido está en preparación.",
   ready: "Tu pedido está listo. Pasa a recogerlo.",
+  called: "Te están llamando: pasa a recoger tu pedido.",
   reminder: "Te seguimos esperando: tu pedido está listo.",
 };
 
@@ -53,7 +56,7 @@ export type PollResult =
   | { kind: "order"; order: ClientOrder; etag: string | null }
   | { kind: "none"; etag: string | null }
   | { kind: "unchanged" }
-  | { kind: "error"; fatal?: boolean };
+  | { kind: "error"; fatal?: boolean; failure?: OrderFailure };
 
 type Timers = {
   set: (callback: () => void, ms: number) => unknown;

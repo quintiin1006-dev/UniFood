@@ -128,6 +128,9 @@ test("avisos al pasar a preparación y a listo, con el título de la pestaña", 
   await expect(
     page.getByRole("heading", { name: "Te están llamando" }),
   ).toBeVisible();
+  await expect(
+    notice("Te están llamando: pasa a recoger tu pedido."),
+  ).toBeVisible();
 
   // Leaving the screen gives the tab its own title back.
   await page.getByRole("link", { name: "Mi perfil" }).click();
@@ -318,4 +321,23 @@ test("las pantallas nuevas piden sesión y solo son del cliente", async ({
     await expect(page).toHaveURL(/\/login/);
   }
   await anonymous.close();
+});
+
+test("si la sesión vence durante el seguimiento no queda la pantalla vacía", async ({
+  page,
+}) => {
+  await flow(page, { order: "PREPARING" });
+  await page.goto("/cuenta/pedido");
+  await expect(
+    page.getByRole("heading", { name: "Están preparando tu pedido" }),
+  ).toBeVisible();
+  await page.context().clearCookies();
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText("Tu sesión expiró");
+  await expect(
+    alert.getByRole("link", { name: "Iniciar sesión" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Están preparando tu pedido" }),
+  ).toHaveCount(0);
 });

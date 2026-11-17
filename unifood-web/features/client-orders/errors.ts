@@ -1,5 +1,7 @@
 import {
   BACKEND_ERROR_MESSAGES,
+  CLIENT_ORDER_CHANGED,
+  CLIENT_ORDERS_FORBIDDEN,
   CONNECTION_FAILED,
   SESSION_EXPIRED,
 } from "../shared/messages";
@@ -27,7 +29,7 @@ export function orderFailure(status: number, code?: string): OrderFailure {
     return make(
       BACKEND_ERROR_MESSAGES[code as keyof typeof BACKEND_ERROR_MESSAGES],
     );
-  if (status === 403) return make("No tienes permisos para ver tus pedidos.");
+  if (status === 403) return make(CLIENT_ORDERS_FORBIDDEN);
   if (status === 404) return make(BACKEND_ERROR_MESSAGES.ORDER_NOT_FOUND);
   return connectionFailure();
 }
@@ -36,7 +38,6 @@ export function orderFailure(status: number, code?: string): OrderFailure {
 export function cancelFailure(status: number, code?: string): OrderFailure {
   if (status === 409 && code === "ORDER_ALREADY_PREPARING")
     return make(BACKEND_ERROR_MESSAGES.ORDER_ALREADY_PREPARING);
-  if (status === 409)
-    return make(BACKEND_ERROR_MESSAGES.ORDER_CONCURRENT_MODIFICATION);
+  if (status === 409) return make(CLIENT_ORDER_CHANGED);
   return orderFailure(status, code);
 }

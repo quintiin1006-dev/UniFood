@@ -197,8 +197,9 @@ test("alerts: preparing, ready (READY or CALLED), reminders; never the first rea
   assert.equal(alertFor(order("PENDING"), order("PENDING")), null);
   assert.equal(alertFor(order("PENDING"), order("PREPARING")), "preparing");
   assert.equal(alertFor(order("PREPARING"), order("READY")), "ready");
-  assert.equal(alertFor(order("PREPARING"), order("CALLED")), "ready");
-  assert.equal(alertFor(order("READY"), order("CALLED")), null);
+  assert.equal(alertFor(order("PREPARING"), order("CALLED")), "called");
+  assert.equal(alertFor(order("READY"), order("CALLED")), "called");
+  assert.equal(alertFor(order("CALLED"), order("READY")), "ready");
   assert.equal(
     alertFor(
       order("CALLED", { reminderCount: 1 }),

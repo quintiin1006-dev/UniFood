@@ -46,8 +46,13 @@ export async function pollCurrentOrder(
     return { kind: "error" };
   }
   if (response.status === 304) return { kind: "unchanged" };
+  // Session over or no permission: retrying never helps, so the polling stops with a clear message.
   if (response.status === 401 || response.status === 403)
-    return { kind: "error", fatal: true };
+    return {
+      kind: "error",
+      fatal: true,
+      failure: orderFailure(response.status),
+    };
   if (response.status !== 200) return { kind: "error" };
   let body: unknown;
   try {

@@ -52,11 +52,15 @@ export function useCurrentOrder(onAlert: (alert: OrderAlert) => void) {
         if (!alive) return;
         if (result.kind === "error") {
           if (result.fatal) {
-            setState((s) => ({
-              ...s,
+            // The session is over: nothing of the old order may stay on screen.
+            current = null;
+            setState({
               loaded: true,
-              failure: orderFailure(401),
-            }));
+              order: null,
+              finished: null,
+              failure: result.failure ?? orderFailure(401),
+              offline: false,
+            });
             return;
           }
           if (!loaded)
