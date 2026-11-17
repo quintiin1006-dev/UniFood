@@ -217,7 +217,7 @@ function ActiveOrder({
   return (
     <>
       <article className={styles.card} aria-labelledby="order-status-title">
-        <StatusChip status={order.status} />
+        <StatusChip status={order.status} className={styles.chipStart} />
         <h2 id="order-status-title" className={styles.statusTitle}>
           {line.title}
         </h2>
@@ -315,6 +315,7 @@ function FinishedOrder({ order }: { order: ClientOrder }) {
         <StatusChip
           status={order.status}
           cancellationSource={order.cancellationSource}
+          className={styles.chipStart}
         />
         <h2
           id="finished-title"

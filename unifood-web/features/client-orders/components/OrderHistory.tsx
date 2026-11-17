@@ -157,6 +157,7 @@ function DetailDialog({
             <StatusChip
               status={order.status}
               cancellationSource={order.cancellationSource}
+              className={styles.chipStart}
             />
             <p className={styles.statusDetail}>
               <strong>{line.title}.</strong> {line.detail}

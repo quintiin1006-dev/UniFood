@@ -111,7 +111,7 @@
 /* Ola 2: floating pill tab bar. */
 .navInner {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 4px;
   width: min(100%, 520px);
   margin-inline: auto;
@@ -155,6 +155,13 @@
 .navItem:has(.cartBadge) .cartBadge {
   background: var(--color-surface);
   color: var(--color-ink);
+}
+
+/* Five tabs on a 320 px screen: a touch smaller text keeps «Historial» inside its 44 px+ cell. */
+@media (max-width: 360px) {
+  .navItem {
+    font-size: 12px;
+  }
 }
 
 .navItem:disabled {

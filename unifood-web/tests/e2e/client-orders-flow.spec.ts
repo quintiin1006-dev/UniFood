@@ -263,3 +263,59 @@ test("objetivos táctiles de al menos 44 px", async ({ page }) => {
   await expect(row).toBeVisible();
   expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 });
+
+for (const width of [320, 390]) {
+  test(`la barra tiene cinco pestañas con área táctil de 44 px a ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 700 });
+    await flow(page, { order: "PENDING" });
+    await page.goto("/cuenta/pedido");
+    const nav = page.getByRole("navigation", {
+      name: "Navegación del estudiante",
+    });
+    const tabs = nav.getByRole("link");
+    await expect(tabs).toHaveCount(5);
+    for (const name of ["Inicio", "Pedido", "Historial", "Carrito", "Perfil"])
+      await expect(nav.getByRole("link", { name })).toBeVisible();
+    for (const tab of await tabs.all()) {
+      const box = await tab.boundingBox();
+      expect(box!.width).toBeGreaterThanOrEqual(44);
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+    }
+    await expect(nav.getByRole("link", { name: "Pedido" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    // «Historial» fits its cell: nothing sticks out of the page.
+    const overflow = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+    await nav.getByRole("link", { name: "Historial" }).click();
+    await expect(page).toHaveURL(/\/cuenta\/historial$/);
+    await expect(nav.getByRole("link", { name: "Historial" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(nav.getByRole("link", { name: "Inicio" })).not.toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+}
+
+test("las pantallas nuevas piden sesión y solo son del cliente", async ({
+  browser,
+  baseURL,
+}) => {
+  const anonymous = await browser.newContext({ baseURL });
+  const page = await anonymous.newPage();
+  for (const path of ["/cuenta/pedido", "/cuenta/historial"]) {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/login/);
+  }
+  await anonymous.close();
+});
