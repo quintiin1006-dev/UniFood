@@ -49,7 +49,10 @@ try {
         'SPRING_DATASOURCE_USERNAME', 'SPRING_DATASOURCE_PASSWORD', 'SPRING_PROFILES_ACTIVE',
         'SUPABASE_STORAGE_URL', 'SUPABASE_STORAGE_SECRET_KEY', 'SUPABASE_PRODUCT_IMAGES_BUCKET',
         'PRODUCT_IMAGES_CONNECT_TIMEOUT_SECONDS', 'PRODUCT_IMAGES_OPERATION_TIMEOUT_SECONDS',
-        'PRODUCT_IMAGES_CLEANUP_ENABLED'
+        'PRODUCT_IMAGES_CLEANUP_ENABLED',
+        'VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT',
+        'PUSH_URGENT_TTL_SECONDS', 'PUSH_DEFAULT_TTL_SECONDS',
+        'PUSH_URGENT_URGENCY', 'PUSH_DEFAULT_URGENCY', 'SERVER_PORT'
     )
     $fileValues = @{}
     if (Test-Path -LiteralPath $environmentFile -PathType Leaf) {
@@ -144,7 +147,7 @@ try {
 
     # Defense in depth for child output, including JDBC URLs that may contain
     # credentials. The launcher itself never prints configuration values.
-    $redactions = @($effective.SPRING_DATASOURCE_PASSWORD, $effective.SUPABASE_STORAGE_SECRET_KEY, $effective.SUPABASE_DB_URL) |
+    $redactions = @($effective.SPRING_DATASOURCE_PASSWORD, $effective.SUPABASE_STORAGE_SECRET_KEY, $effective.SUPABASE_DB_URL, $effective.VAPID_PRIVATE_KEY) |
         Where-Object { -not [string]::IsNullOrEmpty($_) } | Sort-Object Length -Descending
     Push-Location -LiteralPath $backendDirectory
     $locationPushed = $true

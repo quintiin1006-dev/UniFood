@@ -29,6 +29,7 @@ import {
 } from "@/features/auth/validation";
 import { CURRENT_TERMS_VERSION } from "@/features/auth/legal";
 import { clientTermsState } from "@/features/auth/server/terms";
+import { revokePushOnSignOut } from "@/features/push/server/signOut";
 import {
   generateSignupPassword,
   pendingRegistration,
@@ -164,6 +165,17 @@ export async function POST(
     const password = value("password");
 
     if (action === "logout") {
+      // A shared browser must not keep receiving this account's push notices: revoke the
+      // subscription this browser registered while the session still exists (Spring verifies
+      // the token). Bounded and best effort; sign-out continues either way.
+      let accessToken: string | undefined;
+      try {
+        accessToken = (await client.auth.getSession()).data.session
+          ?.access_token;
+      } catch {
+        accessToken = undefined;
+      }
+      await revokePushOnSignOut(accessToken);
       const { error } = await client.auth.signOut({ scope: "local" });
       await clearAuthCookies(cookiesWritten);
       if (error && error.status !== 403 && error.code !== "session_not_found")

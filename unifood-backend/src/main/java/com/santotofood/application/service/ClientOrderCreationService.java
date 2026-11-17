@@ -9,7 +9,9 @@ import com.santotofood.application.port.out.ClientOrderCommandPort.LockedProduct
 import com.santotofood.application.port.out.ClientOrderCommandPort.NewItem;
 import com.santotofood.application.port.out.ClientOrderCommandPort.NewOrder;
 import com.santotofood.domain.model.BusinessDate;
+import com.santotofood.domain.model.OrderPushEvent;
 import com.santotofood.domain.model.PickupTime;
+import com.santotofood.domain.port.out.PushNotificationPort;
 import com.santotofood.domain.port.out.TimeProvider;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +26,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.TransientDataAccessException;
@@ -51,13 +54,36 @@ public class ClientOrderCreationService implements CreateOwnOrderUseCase {
   /** chk_orders_idempotency_key_format (020). */
   private static final Pattern IDEMPOTENCY_KEY = Pattern.compile("[A-Za-z0-9_-]{16,128}");
 
+  private static final org.slf4j.Logger LOG =
+      org.slf4j.LoggerFactory.getLogger(ClientOrderCreationService.class);
+
   private final ClientOrderCommandPort orders;
   private final TimeProvider clock;
   private final TransactionTemplate write;
   private final TransactionTemplate read;
+  private final PushNotificationPort push;
 
   public ClientOrderCreationService(
       ClientOrderCommandPort orders, TimeProvider clock, PlatformTransactionManager manager) {
+    this(orders, clock, manager, PushNotificationPort.NONE);
+  }
+
+  /** Spring: push is optional, so a context without the push module still builds. */
+  @Autowired
+  public ClientOrderCreationService(
+      ClientOrderCommandPort orders,
+      TimeProvider clock,
+      PlatformTransactionManager manager,
+      Optional<PushNotificationPort> push) {
+    this(orders, clock, manager, push.orElse(PushNotificationPort.NONE));
+  }
+
+  public ClientOrderCreationService(
+      ClientOrderCommandPort orders,
+      TimeProvider clock,
+      PlatformTransactionManager manager,
+      PushNotificationPort push) {
+    this.push = push;
     this.orders = orders;
     this.clock = clock;
     this.write = transaction(manager, false);
@@ -137,6 +163,13 @@ public class ClientOrderCreationService implements CreateOwnOrderUseCase {
             idempotencyKey,
             order.hash()));
     orders.insertItems(id, cafeteria.id(), items);
+    // Only a new order: an idempotent replay returned above and never notifies twice.
+    try {
+      push.publish(OrderPushEvent.of(id, OrderPushEvent.Kind.NEW_ORDER));
+    } catch (RuntimeException failure) {
+      // No push implementation can roll back or fail the order.
+      LOG.warn("Push notice NEW_ORDER not scheduled ({})", failure.getClass().getSimpleName());
+    }
     return new CreatedOrder(stored(id), true);
   }
 

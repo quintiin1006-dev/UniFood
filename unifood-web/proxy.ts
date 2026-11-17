@@ -145,5 +145,7 @@ export const config = {
     "/api/me/orders/:path*",
     "/api/me/context",
     "/api/me/menu",
+    "/api/me/push/:path*",
+    "/api/worker/push/:path*",
   ],
 };
