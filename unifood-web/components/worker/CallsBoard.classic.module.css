@@ -332,6 +332,7 @@
    táctil de 44 px reales es un pseudo-elemento invisible, así la caja no se ve grande. */
 .remindButton.remindButton {
   position: relative;
+  justify-self: center;
   width: auto;
   height: auto;
   min-width: 0;
