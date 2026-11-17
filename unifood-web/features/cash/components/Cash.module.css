@@ -458,3 +458,13 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Grid items keep min-width: auto and would grow to the closures table, pushing the page
+   sideways at 390 px; letting them shrink makes .tableScroll scroll inside the card instead. */
+.panel > *,
+.card > * {
+  min-width: 0;
+}
+.tableScroll {
+  max-width: 100%;
+}
