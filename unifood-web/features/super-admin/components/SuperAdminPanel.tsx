@@ -76,6 +76,11 @@ export function SuperAdminPanel() {
               {totals && (
                 <p className={adminStyles.intro}>{summaryText(totals)}</p>
               )}
+              <p className={adminStyles.intro}>
+                <a href="/super-admin/caja">
+                  Ver cierres de caja (solo lectura)
+                </a>
+              </p>
             </section>
             {loading && !data && (
               <div className={adminStyles.feedback} role="status">

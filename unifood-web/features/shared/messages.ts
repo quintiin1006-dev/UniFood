@@ -66,6 +66,22 @@ export type PushMessageKey = keyof typeof PUSH_MESSAGES;
 
 /* ---------- Backend ErrorCode ---------- */
 
+/** Texts of the «Caja» module that several screens share. */
+export const CASH_TEXTS = {
+  offlineClose:
+    "Sin conexión a internet. No se puede cerrar la caja sin conexión; tu conteo se conserva en esta pantalla.",
+  offlineBanner:
+    "Las cifras pueden no estar al día. No podrás abrir, registrar ni cerrar la caja hasta recuperar la conexión.",
+  offlineOpen: "Sin conexión a internet. Conéctate para abrir la caja.",
+  notInvoice:
+    "Control interno de caja. No reemplaza la factura ni el soporte contable.",
+  pendingOrders:
+    "Entrégalos o márcalos como no recogidos en Pedidos o Llamadas antes de cerrar.",
+  confirmClose:
+    "Al cerrar, la caja ya no admite cambios. Solo el administrador puede reabrirla.",
+  loading: "Cargando caja…",
+} as const;
+
 /** Mirror of the backend enum, in its order. The test compares it with ErrorCode.java. */
 export const BACKEND_ERROR_CODES = [
   "ADMIN_CATALOG_FORBIDDEN",
@@ -135,6 +151,28 @@ export const BACKEND_ERROR_CODES = [
   "REJECTION_REASON_REQUIRED",
   "REJECTION_REASON_TOO_LONG",
   "INVALID_PICKUP_TIME",
+  "CASH_FORBIDDEN",
+  "CASH_INVALID_REQUEST",
+  "CASH_INVALID_AMOUNT",
+  "CASH_REASON_REQUIRED",
+  "CASH_NOTE_REQUIRED",
+  "CASH_REOPEN_REASON_REQUIRED",
+  "CASH_SESSION_NOT_FOUND",
+  "CASH_SESSION_ALREADY_OPEN",
+  "CASH_STALE_SESSION_OPEN",
+  "CASH_SHIFT_ALREADY_USED",
+  "CASH_SESSION_CLOSED",
+  "CASH_SESSION_NOT_CLOSED",
+  "CASH_STATE_CHANGED",
+  "CASH_EXPECTED_CHANGED",
+  "CASH_PENDING_ORDERS",
+  "CASH_EXPENSE_EXCEEDS_BALANCE",
+  "CASH_ORDER_TOTAL_NOT_WHOLE",
+  "CASH_REOPEN_NOT_LATEST",
+  "CASH_TOLERANCE_CHANGED",
+  "CASH_BUSY",
+  "CASH_TEMPORARILY_UNAVAILABLE",
+  "CASH_INTERNAL_ERROR",
 ] as const;
 
 export type BackendErrorCode = (typeof BACKEND_ERROR_CODES)[number];
@@ -267,6 +305,44 @@ export const BACKEND_ERROR_MESSAGES: Record<BackendErrorCode, string> = {
   REJECTION_REASON_REQUIRED:
     "Escribe el motivo del rechazo, con al menos 3 caracteres.",
   REJECTION_REASON_TOO_LONG: `El motivo del rechazo admite hasta ${MAX_REJECTION_REASON} caracteres.`,
+  // Caja (docs/decisiones.md §14)
+  CASH_FORBIDDEN: "No tienes permisos para esta operación de caja.",
+  CASH_INVALID_REQUEST: "Revisa los datos e inténtalo de nuevo.",
+  CASH_INVALID_AMOUNT: "Escribe un monto en pesos enteros, sin decimales.",
+  CASH_REASON_REQUIRED:
+    "Escribe el motivo del movimiento, de 3 a 200 caracteres.",
+  CASH_NOTE_REQUIRED:
+    "La caja no cuadra: explica la diferencia en una nota de al menos 10 caracteres.",
+  CASH_REOPEN_REASON_REQUIRED:
+    "Escribe el motivo de la reapertura, de 10 a 300 caracteres.",
+  CASH_SESSION_NOT_FOUND: "No encontramos esa caja.",
+  CASH_SESSION_ALREADY_OPEN:
+    "Ya hay una caja abierta en esta cafetería. Ciérrala antes de continuar.",
+  CASH_STALE_SESSION_OPEN:
+    "Quedó abierta la caja de un día anterior. Ciérrala antes de abrir la de hoy; el administrador ya fue avisado.",
+  CASH_SHIFT_ALREADY_USED:
+    "La caja de este turno ya se cerró hoy. Si hace falta corregirla, pide al administrador que la reabra.",
+  CASH_SESSION_CLOSED: "Esta caja ya está cerrada y no admite cambios.",
+  CASH_SESSION_NOT_CLOSED: "Solo se puede reabrir una caja cerrada.",
+  CASH_STATE_CHANGED:
+    "La caja cambió mientras la revisabas. Revisa las cifras actuales e inténtalo de nuevo.",
+  CASH_EXPECTED_CHANGED:
+    "Hubo ventas o movimientos nuevos mientras contabas. Revisa el esperado actualizado.",
+  CASH_PENDING_ORDERS:
+    "Hay pedidos listos o llamados sin resolver. Entrégalos o márcalos como no recogidos antes de cerrar la caja.",
+  CASH_EXPENSE_EXCEEDS_BALANCE:
+    "El egreso supera el efectivo esperado en caja.",
+  CASH_ORDER_TOTAL_NOT_WHOLE:
+    "Un pedido entregado tiene centavos en su total y la caja no puede cerrarse. Avisa al administrador.",
+  CASH_REOPEN_NOT_LATEST:
+    "Solo se puede reabrir la última caja cerrada de la cafetería.",
+  CASH_TOLERANCE_CHANGED:
+    "Otra persona cambió la tolerancia. Revisa el valor actual e inténtalo de nuevo.",
+  CASH_BUSY:
+    "La caja está ocupada con otra operación. Inténtalo de nuevo en unos segundos.",
+  CASH_TEMPORARILY_UNAVAILABLE:
+    "No pudimos conectar con la caja en este momento. Inténtalo nuevamente.",
+  CASH_INTERNAL_ERROR: "No pudimos completar la operación de caja.",
 };
 
 export const isBackendErrorCode = (code: unknown): code is BackendErrorCode =>

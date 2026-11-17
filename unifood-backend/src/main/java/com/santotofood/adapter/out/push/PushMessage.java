@@ -6,8 +6,11 @@ import java.util.UUID;
 
 /**
  * The minimal, personal-data-free payload the service worker shows: title, short body, a tag per
- * order (a new notice replaces the previous one instead of stacking) and the page to open. {@code
- * topic} lets the push service replace a still-undelivered notice of the same order.
+ * order (a new notice replaces the previous one instead of stacking) and the page to open.
+ *
+ * <p>{@code topic} is kept but NOT sent: Apple answers 400 BadWebPushTopic to values that meet the
+ * RFC, so the Topic header is omitted (experiment). Replacement of the notices of one order is done
+ * by the client through {@code tag}.
  */
 public record PushMessage(
     String title, String body, String tag, String url, String topic, boolean urgent) {

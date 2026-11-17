@@ -42,6 +42,10 @@ public class OrderAuthorization {
     return authenticatedUser(authentication).map(authorization::superAdmin).orElse(false);
   }
 
+  public boolean cashOperator(Authentication authentication) {
+    return authenticatedUser(authentication).flatMap(authorization::cashOperator).isPresent();
+  }
+
   public boolean clientOrder(Authentication authentication, UUID orderId) {
     return authenticatedUser(authentication)
         .map(userId -> authorization.clientOrder(userId, orderId))

@@ -1,6 +1,7 @@
 package com.santotofood.application.service;
 
 import com.santotofood.application.exception.OrderNotFoundException;
+import com.santotofood.application.model.CashViews;
 import com.santotofood.application.port.out.AuthorizationQueryPort;
 import java.util.Optional;
 import java.util.Set;
@@ -37,6 +38,25 @@ public class OrderAuthorizationService {
         .findUserAuthorization(userId)
         .filter(user -> user.active() && user.roles().equals(Set.of("CLIENT")))
         .isPresent();
+  }
+
+  /**
+   * Cash register operator: an active WORKER or ADMIN, with that role only and exactly one
+   * cafeteria (docs/decisiones.md §14). Read fresh on every call.
+   */
+  public Optional<CashViews.Operator> cashOperator(UUID userId) {
+    return queries
+        .findUserAuthorization(userId)
+        .filter(
+            user ->
+                user.active()
+                    && (user.roles().equals(Set.of("WORKER"))
+                        || user.roles().equals(Set.of("ADMIN")))
+                    && user.cafeteriaIds().size() == 1)
+        .map(
+            user ->
+                new CashViews.Operator(
+                    userId, user.cafeteriaIds().getFirst(), user.roles().contains("ADMIN")));
   }
 
   /** Active, exclusive SUPER_ADMIN without cafeteria assignments, read fresh on every call. */
