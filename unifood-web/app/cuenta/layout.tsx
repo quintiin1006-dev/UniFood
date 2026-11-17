@@ -1,11 +1,17 @@
 import type { Viewport } from "next";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/features/auth/server/session";
-import { currentTermsAccepted } from "@/features/auth/server/terms";
-import { destination, isClient } from "@/features/auth/validation";
+import { sessionTermsState } from "@/features/auth/server/sessionTerms";
+import {
+  ACCEPT_TERMS_PATH,
+  CLIENT_PATH_HEADER,
+  clientDestination,
+  destination,
+  isClient,
+} from "@/features/auth/validation";
 import ClientShell from "@/features/client/components/ClientShell";
 import ClientCartProvider from "@/features/client/components/ClientCartProvider";
-import TermsGate from "@/features/client/components/TermsGate";
 
 export const dynamic = "force-dynamic";
 export const viewport: Viewport = {
@@ -20,13 +26,16 @@ export default async function ClientLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const { profile } = await requireAuth();
   if (!isClient(profile)) redirect(destination(profile));
-  // Before the first screen of the client: anyone who has not accepted the current terms
-  // accepts them here once, and the dialog is gone for good after that.
-  const termsAccepted = await currentTermsAccepted();
+  // Nothing of the client is rendered until the current terms are accepted: a pending or
+  // unreadable state leaves here, so no screen of the app appears behind anything.
+  const terms = await sessionTermsState();
+  if (terms !== "accepted") {
+    const asked = clientDestination((await headers()).get(CLIENT_PATH_HEADER));
+    redirect(`${ACCEPT_TERMS_PATH}?destino=${encodeURIComponent(asked)}`);
+  }
   return (
     <ClientCartProvider key={profile.id} userId={profile.id}>
       <ClientShell>{children}</ClientShell>
-      {!termsAccepted && <TermsGate />}
     </ClientCartProvider>
   );
 }

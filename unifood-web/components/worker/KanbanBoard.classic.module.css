@@ -11,8 +11,7 @@
 
   display: grid;
 
-  grid-template-columns:
-    repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 
   gap: 16px;
 
@@ -20,7 +19,6 @@
 
   padding: 4px 0;
 }
-
 
 /* =====================================================
    COLUMNA
@@ -48,21 +46,15 @@
    * Se conserva exactamente
    * el efecto transparente original.
    */
-  background:
-    rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.08);
 
-  border:
-    1px solid
-    rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 
-  box-shadow:
-    0 8px 30px
-    rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
-
 
 /* =====================================================
    HEADER DE COLUMNA
@@ -81,14 +73,10 @@
 
   padding: 0 16px;
 
-  border-bottom:
-    1px solid
-    rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 
-  background:
-    rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.04);
 }
-
 
 /* =====================================================
    ICONO + TÍTULO
@@ -103,7 +91,6 @@
   gap: 10px;
 }
 
-
 /* =====================================================
    ICONOS DE LAS COLUMNAS
    ===================================================== */
@@ -116,7 +103,6 @@
 
   color: #ffffff;
 }
-
 
 /* =====================================================
    ICONO DE ENTREGADOS
@@ -139,7 +125,6 @@
   border-radius: 50%;
 }
 
-
 /* =====================================================
    TÍTULO DE COLUMNA
    ===================================================== */
@@ -149,8 +134,7 @@
 
   overflow: hidden;
 
-  color:
-    rgba(255, 255, 255, 0.95);
+  color: rgba(255, 255, 255, 0.95);
 
   /*
    * Título de sección:
@@ -167,7 +151,6 @@
 
   text-overflow: ellipsis;
 }
-
 
 /* =====================================================
    CONTADOR
@@ -187,8 +170,7 @@
 
   color: #ffffff;
 
-  background:
-    rgba(177, 215, 255, 0.55);
+  background: rgba(177, 215, 255, 0.55);
 
   /*
    * Los contadores son badges.
@@ -200,7 +182,6 @@
 
   line-height: 1;
 }
-
 
 /* =====================================================
    CONTENIDO DE LA COLUMNA
@@ -242,19 +223,12 @@
 
   gap: 10px;
 
-  padding:
-    12px
-    10px
-    18px
-    12px;
+  padding: 12px 10px 18px 12px;
 
   scrollbar-width: thin;
 
-  scrollbar-color:
-    rgba(255, 255, 255, 0.28)
-    transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
 }
-
 
 /* =====================================================
    CARDS DENTRO DEL SCROLL
@@ -269,7 +243,6 @@
   flex-shrink: 0;
 }
 
-
 /* =====================================================
    SCROLLBAR
    ===================================================== */
@@ -283,20 +256,16 @@
 }
 
 .columnContent::-webkit-scrollbar-thumb {
-  background:
-    rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.24);
 
   border-radius: 999px;
 
-  transition:
-    background 0.2s ease;
+  transition: background 0.2s ease;
 }
 
 .columnContent::-webkit-scrollbar-thumb:hover {
-  background:
-    rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.42);
 }
-
 
 /* =====================================================
    COLUMNA VACÍA
@@ -311,8 +280,7 @@
 
   padding: 20px;
 
-  color:
-    rgba(255, 255, 255, 0.52);
+  color: rgba(255, 255, 255, 0.52);
 
   font-size: 13px;
   font-weight: 400;
@@ -321,7 +289,6 @@
 
   text-align: center;
 }
-
 
 /* =====================================================
    RESPONSIVE — PANTALLAS MEDIANAS
@@ -333,11 +300,7 @@
   }
 
   .columnContent {
-    padding:
-      10px
-      8px
-      16px
-      10px;
+    padding: 10px 8px 16px 10px;
   }
 
   .columnTitle {
@@ -345,29 +308,19 @@
   }
 }
 
-
 /* =====================================================
    RESPONSIVE — TABLET
    ===================================================== */
 
 @media (max-width: 850px) {
   .board {
-    grid-template-columns:
-      repeat(
-        2,
-        minmax(0, 1fr)
-      );
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 
-    grid-template-rows:
-      repeat(
-        2,
-        minmax(0, 1fr)
-      );
+    grid-template-rows: repeat(2, minmax(0, 1fr));
 
     gap: 12px;
   }
 }
-
 
 /* =====================================================
    RESPONSIVE — MÓVIL
@@ -377,11 +330,9 @@
   .board {
     height: auto;
 
-    grid-template-columns:
-      1fr;
+    grid-template-columns: 1fr;
 
-    grid-template-rows:
-      none;
+    grid-template-rows: none;
 
     gap: 12px;
 
@@ -432,14 +383,9 @@
   }
 
   .columnContent {
-    padding:
-      10px
-      8px
-      14px
-      10px;
+    padding: 10px 8px 14px 10px;
   }
 }
-
 
 /* =====================================================
    REDUCCIÓN DE MOVIMIENTO

@@ -427,3 +427,48 @@ test("server auth client reports precisely SDK cookie writes so admission cleanu
     { name: "unrelated", value: "keep" },
   ]);
 });
+
+test("the path header is the server's own: whatever the browser sends is overwritten", async () => {
+  const { NextRequest } = require("next/server");
+  const header = "x-unifood-path";
+  const overridden = `x-middleware-request-${header}`;
+  const route = load("proxy.ts", {
+    "@/config/server": { serverAuthConfig: () => fixtureConfig },
+    "@supabase/ssr": {
+      createServerClient: () => ({
+        // A valid session: the proxy lets the request through.
+        auth: {
+          getClaims: async () => ({ data: { claims: { sub: "user" } } }),
+        },
+      }),
+    },
+  });
+  // A forged value, on the paths a client layout reads it from.
+  for (const [url, expected] of [
+    ["https://unifood.test/cuenta", "/cuenta"],
+    ["https://unifood.test/cuenta/carrito", "/cuenta/carrito"],
+    ["https://unifood.test/cuenta/pedidos?page=2", "/cuenta/pedidos?page=2"],
+  ]) {
+    for (const forged of [
+      "/evil",
+      "https://evil.example/cuenta",
+      "/cuenta/perfil",
+      "",
+    ]) {
+      const response = await route.proxy(
+        new NextRequest(new Request(url, { headers: { [header]: forged } })),
+      );
+      assert.equal(response.headers.get(overridden), expected, forged);
+    }
+  }
+  // Nothing of the sent value survives, not even as a second value.
+  const response = await route.proxy(
+    new NextRequest(
+      new Request("https://unifood.test/cuenta", {
+        headers: { [header]: "/evil" },
+      }),
+    ),
+  );
+  assert.equal(response.headers.get(overridden), "/cuenta");
+  assert.doesNotMatch(response.headers.get(overridden), /evil/);
+});
