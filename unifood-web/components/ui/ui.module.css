@@ -344,6 +344,24 @@
   }
 }
 
+/* Ola 4 · F3: inline spinner for a button that waits for the server. Same look as the login one. */
+.spinner {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 999px;
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .notice_floating {
     animation: enter var(--motion-enter) var(--ease-soft) both;
@@ -361,5 +379,11 @@
 
   .notice_floating {
     animation: fade var(--motion-enter) linear both;
+  }
+
+  /* Still ring: the «Guardando…» text next to it carries the state. */
+  .spinner {
+    animation: none;
+    border-right-color: currentColor;
   }
 }
