@@ -124,3 +124,29 @@
     margin-bottom: max(9px, env(safe-area-inset-bottom));
   }
 }
+
+/* Ola 2 · D2: Pedidos and Llamadas keep the classic look (gradient and UniFood watermark). */
+.classicPage:global(.worker-page) {
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      rgba(35, 129, 239, 0.26),
+      transparent 40%
+    ),
+    linear-gradient(145deg, #063d82 0%, #0756a9 48%, #043d7f 100%);
+}
+
+.classicPage :global(.worker-main)::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  width: 420px;
+  height: 420px;
+  background: url("/unifood-pantalla.png") no-repeat center / contain;
+  opacity: 0.1;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}

@@ -201,3 +201,18 @@
     border-color: var(--color-brand-tint-2);
   }
 }
+
+/* Ola 2 · D5: the «+» sits in the card's bottom-right corner, beside the link. */
+.railItem {
+  position: relative;
+}
+
+.railItem > .railCard {
+  padding-bottom: 64px;
+}
+
+.railAdd {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+}

@@ -213,8 +213,11 @@ test("closed, empty, failing and missing cafeterias show fixed Spanish states", 
 }) => {
   await login(page);
   await page.goto(`/cuenta?cafeteria=${CAFETERIA_BLOQUE_B}`);
+  // While /cuenta streams, React keeps the next page in a hidden div#S:0 for a moment, so a
+  // text query is scoped to the visible content (role queries already skip hidden nodes).
+  const content = page.locator("#client-content");
   await expect(
-    page.getByText(
+    content.getByText(
       "La cafetería está cerrada por ahora. Puedes ver el menú, pero no hacer pedidos hasta que abra.",
     ),
   ).toBeVisible();
@@ -244,7 +247,7 @@ test("closed, empty, failing and missing cafeterias show fixed Spanish states", 
   ).toBeVisible();
   await page.goto(`/cuenta/menu?cafeteria=${CAFETERIA_AGUAS_CLARAS}`);
   await expect(
-    page.getByText(
+    content.getByText(
       "Aún no hay productos en el menú. Vuelve a consultar más tarde.",
     ),
   ).toBeVisible();
@@ -268,7 +271,7 @@ test("closed, empty, failing and missing cafeterias show fixed Spanish states", 
 
   await page.goto("/cuenta?cafeteria=00000000-0000-4000-8000-999999999999");
   await expect(
-    page.getByText(
+    content.getByText(
       "La cafetería que elegiste ya no está disponible. Elige otra para continuar.",
     ),
   ).toBeVisible();

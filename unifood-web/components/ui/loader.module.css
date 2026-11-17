@@ -1,0 +1,89 @@
+/* Shown only after 300 ms: opacity 0 until the delay ends, so quick loads never flash. */
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  background: var(--color-bg);
+  animation: appear 200ms var(--ease-soft) 300ms both;
+}
+
+.stage {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: grid;
+  place-items: center;
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  width: 120px;
+  height: 120px;
+}
+
+.track,
+.arc {
+  fill: none;
+  stroke-width: 6;
+}
+
+.track {
+  stroke: var(--color-brand-tint-2);
+}
+
+.arc {
+  stroke: var(--color-brand);
+  stroke-linecap: round;
+  stroke-dasharray: 90 262;
+  transform-origin: 60px 60px;
+  animation: spin 900ms linear 300ms infinite;
+}
+
+.mark {
+  width: 72px;
+  height: 72px;
+}
+
+.label {
+  margin: 0;
+  color: var(--color-slate);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arc {
+    animation: none;
+  }
+}
+
+/* Inside a fixed layout (client, admin): fills the content area and keeps the header and tabs visible. */
+.inline {
+  position: relative;
+  min-height: 60vh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  animation: appear 200ms var(--ease-soft) 300ms both;
+}

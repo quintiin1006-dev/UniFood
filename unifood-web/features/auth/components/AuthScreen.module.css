@@ -812,3 +812,28 @@
     0 5px 14px color-mix(in srgb, var(--color-brand) 14%, transparent),
     inset 0 1px 0 color-mix(in srgb, var(--color-surface) 8%, transparent);
 }
+
+/* Ola 4 · destello: «Entrando…» with a small spinner. Reduced motion keeps it still. */
+.loginSpinner {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  display: inline-block;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 999px;
+  animation: authSpin 800ms linear infinite;
+}
+
+@keyframes authSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loginSpinner {
+    animation: none;
+    border-right-color: currentColor;
+  }
+}

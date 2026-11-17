@@ -1,0 +1,81 @@
+/* Ola 2 · D5: the «+» on a product card. Circle 40 px; press sinks 3 %. */
+.add,
+.step {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: var(--color-on-color);
+  cursor: pointer;
+  transition:
+    transform var(--motion-press) var(--ease-soft),
+    background-color var(--motion-press) var(--ease-soft);
+}
+
+.add:hover,
+.step:hover {
+  background: var(--color-brand-hover);
+}
+
+.add:active,
+.step:active {
+  transform: scale(0.97);
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+}
+
+.count {
+  min-width: 28px;
+  text-align: center;
+  color: var(--color-ink);
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  animation: pop var(--motion-press) var(--ease-soft);
+}
+
+.blocked {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-neutral-chip-bg);
+  color: var(--color-neutral-chip-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@keyframes pop {
+  from {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .add,
+  .step {
+    transition: none;
+  }
+
+  .add:active,
+  .step:active {
+    transform: none;
+  }
+
+  .count {
+    animation: none;
+  }
+}

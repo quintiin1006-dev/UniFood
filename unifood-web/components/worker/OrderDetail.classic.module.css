@@ -1,0 +1,648 @@
+/* =====================================================
+   OVERLAY
+   ===================================================== */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(5, 29, 65, 0.42);
+
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  animation: overlayIn 220ms ease both;
+}
+
+/* =====================================================
+   MODAL
+   ===================================================== */
+
+.modal {
+  position: relative;
+
+  width: min(440px, 100%);
+  max-height: min(700px, 90vh);
+
+  overflow-y: auto;
+
+  padding: 27px;
+
+  /*
+   * Contenedor principal:
+   * 20–24px.
+   */
+  border-radius: 24px;
+
+  background: rgba(255, 255, 255, 0.98);
+
+  box-shadow:
+    0 30px 80px rgba(3, 31, 70, 0.3),
+    0 5px 20px rgba(3, 31, 70, 0.12);
+
+  animation: modalIn 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  scrollbar-width: thin;
+
+  scrollbar-color: #cbd9ec transparent;
+}
+
+/* =====================================================
+   SCROLLBAR DEL MODAL
+   ===================================================== */
+
+.modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal::-webkit-scrollbar-thumb {
+  background: #cbd9ec;
+
+  border-radius: 999px;
+}
+
+.modal::-webkit-scrollbar-thumb:hover {
+  background: #b4c7e0;
+}
+
+/* =====================================================
+   CERRAR
+   ===================================================== */
+
+.close {
+  position: absolute;
+
+  top: 18px;
+  right: 18px;
+
+  width: 36px;
+  height: 36px;
+
+  display: grid;
+  place-items: center;
+
+  color: #4f6482;
+
+  background: #f2f5f9;
+
+  border: 0;
+  border-radius: 50%;
+
+  cursor: pointer;
+
+  transition:
+    transform 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+.close:hover {
+  color: #183d78;
+
+  background: #e9eef6;
+
+  transform: rotate(4deg) scale(1.05);
+}
+
+.close:focus-visible {
+  outline: 3px solid rgba(8, 104, 233, 0.22);
+
+  outline-offset: 3px;
+}
+
+/* =====================================================
+   ESTUDIANTE
+   ===================================================== */
+
+.header {
+  display: flex;
+  align-items: center;
+
+  gap: 14px;
+
+  padding-right: 35px;
+}
+
+.avatar {
+  width: 52px;
+  height: 52px;
+
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  color: #0757b7;
+
+  background: #e4f0ff;
+
+  border-radius: 50%;
+
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Nombre del estudiante */
+
+.header h2 {
+  margin: 0;
+
+  /*
+   * El nombre deja de ser azul.
+   * Es información principal,
+   * por lo que usamos un neutral oscuro.
+   */
+  color: #172033;
+
+  font-size: 16px;
+  font-weight: 600;
+
+  line-height: 1.25;
+
+  letter-spacing: -0.2px;
+}
+
+/* ID del estudiante */
+
+.header p {
+  margin: 4px 0 0;
+
+  color: #6f7b8c;
+
+  font-size: 13px;
+  font-weight: 400;
+
+  line-height: 1.3;
+}
+
+/* =====================================================
+   DIVISOR
+   ===================================================== */
+
+.divider {
+  height: 1px;
+
+  margin: 20px 0;
+
+  background: #e3e8ef;
+}
+
+/* =====================================================
+   SECCIONES
+   ===================================================== */
+
+.section h3 {
+  margin: 0;
+
+  /*
+   * Los títulos principales
+   * también pasan a neutral oscuro.
+   */
+  color: #172033;
+
+  font-size: 18px;
+  font-weight: 700;
+
+  line-height: 1.25;
+
+  letter-spacing: -0.2px;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  margin-bottom: 13px;
+
+  /*
+   * El icono puede seguir siendo azul.
+   * El texto h3 tiene su propio
+   * color neutral.
+   */
+  color: #1761bd;
+}
+
+.sectionTitle h3 {
+  margin: 0;
+
+  color: #172033;
+}
+
+/* =====================================================
+   ITEMS
+   ===================================================== */
+
+.items {
+  display: flex;
+  flex-direction: column;
+
+  gap: 9px;
+}
+
+.item {
+  padding: 13px 14px;
+
+  /*
+   * Card interna:
+   * 16px.
+   */
+  border-radius: 16px;
+
+  /*
+   * Eliminamos parte del exceso
+   * de azul del fondo.
+   */
+  background: #f7f9fc;
+
+  border: 1px solid #e7ebf1;
+
+  color: #4f5d70;
+
+  font-size: 14px;
+  font-weight: 400;
+
+  line-height: 1.45;
+
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.item:hover {
+  background: #f3f6fa;
+
+  border-color: #dfe5ed;
+
+  transform: translateY(-1px);
+}
+
+/* =====================================================
+   NOMBRE + SUBTOTAL
+   ===================================================== */
+
+.itemMain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+}
+
+.itemName {
+  min-width: 0;
+}
+
+.itemName strong {
+  /*
+   * Producto:
+   * neutral oscuro en lugar de azul.
+   */
+  color: #1f2937;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  line-height: 1.4;
+}
+
+.itemSubtotal {
+  flex-shrink: 0;
+
+  /*
+   * El precio tampoco necesita
+   * ser azul.
+   */
+  color: #172033;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  line-height: 1.4;
+
+  font-variant-numeric: tabular-nums;
+}
+
+/* =====================================================
+   PRECIO UNITARIO
+   ===================================================== */
+
+.itemPrice {
+  display: block;
+
+  margin-top: 4px;
+
+  color: #7a8596;
+
+  font-size: 12.5px;
+  font-weight: 400;
+
+  line-height: 1.35;
+}
+
+/* =====================================================
+   BEBIDA / INFORMACIÓN ADICIONAL
+   ===================================================== */
+
+.itemExtra {
+  display: block;
+
+  margin-top: 7px;
+
+  color: #5f6b7a;
+
+  font-size: 13px;
+  font-weight: 400;
+
+  line-height: 1.45;
+}
+
+/* =====================================================
+   TOTAL
+   ===================================================== */
+
+.total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  margin-top: 14px;
+
+  padding: 14px;
+
+  /*
+   * Antes era un bloque azul.
+   * Ahora es una superficie neutral.
+   */
+  background: #f7f9fc;
+
+  border: 1px solid #e3e8ef;
+
+  border-radius: 16px;
+
+  color: #172033;
+}
+
+.total span {
+  color: #3f4a5a;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.total strong {
+  /*
+   * El total es importante por
+   * tamaño y peso, no porque sea azul.
+   */
+  color: #172033;
+
+  font-size: 18px;
+  font-weight: 700;
+
+  line-height: 1;
+
+  letter-spacing: -0.2px;
+
+  font-variant-numeric: tabular-nums;
+}
+
+/* =====================================================
+   OBSERVACIONES
+   ===================================================== */
+
+.note {
+  margin: 0;
+
+  color: #5f6b7a;
+
+  font-size: 14px;
+  font-weight: 400;
+
+  line-height: 1.5;
+}
+
+/* =====================================================
+   TIEMPO
+   ===================================================== */
+
+.timeInfo {
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  /*
+   * El icono puede conservar
+   * el azul como acento.
+   */
+  color: #1761bd;
+}
+
+.timeInfo div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.timeInfo span {
+  color: #7a8596;
+
+  font-size: 12px;
+  font-weight: 400;
+
+  line-height: 1.3;
+}
+
+.timeInfo strong {
+  color: #283341;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  line-height: 1.3;
+}
+
+/* =====================================================
+   ACCIÓN PRINCIPAL
+   ===================================================== */
+
+.action {
+  width: 100%;
+  min-height: 47px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 9px;
+
+  margin-top: 23px;
+
+  color: #ffffff;
+
+  /*
+   * El azul se mantiene aquí
+   * porque es la acción principal.
+   */
+  background: linear-gradient(135deg, #176fe9, #0754bd);
+
+  border: 0;
+
+  /*
+   * Botones:
+   * 10–12px.
+   */
+  border-radius: 12px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  line-height: 1.2;
+
+  box-shadow: 0 7px 17px rgba(11, 91, 206, 0.2);
+
+  cursor: pointer;
+
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+.action:hover:not(:disabled) {
+  transform: translateY(-1px);
+
+  box-shadow: 0 10px 22px rgba(11, 91, 206, 0.26);
+}
+
+.action:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.action:focus-visible {
+  outline: 3px solid rgba(8, 104, 233, 0.25);
+
+  outline-offset: 3px;
+}
+
+.action:disabled {
+  color: #718093;
+
+  background: #e5e9ef;
+
+  box-shadow: none;
+
+  cursor: default;
+}
+
+.action:disabled:focus-visible {
+  outline: none;
+}
+
+/* =====================================================
+   ANIMACIONES
+   ===================================================== */
+
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+
+    transform: translateY(15px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+
+@media (max-width: 560px) {
+  .overlay {
+    align-items: flex-end;
+
+    padding: 0;
+  }
+
+  .modal {
+    width: 100%;
+    max-height: 88vh;
+
+    padding: 23px;
+
+    border-radius: 24px 24px 0 0;
+  }
+
+  .header h2 {
+    font-size: 16px;
+  }
+
+  .header p {
+    font-size: 12px;
+  }
+
+  .section h3 {
+    font-size: 17px;
+  }
+
+  .itemMain {
+    align-items: flex-start;
+  }
+
+  .itemSubtotal {
+    font-size: 13px;
+  }
+
+  .action {
+    font-size: 13px;
+  }
+}
+
+/* =====================================================
+   ACCESIBILIDAD
+   ===================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .modal,
+  .item,
+  .close,
+  .action {
+    animation: none;
+    transition: none;
+  }
+}

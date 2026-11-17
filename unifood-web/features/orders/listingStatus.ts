@@ -62,9 +62,10 @@ const BOGOTA_CLOCK = new Intl.DateTimeFormat("es-CO", {
 export function syncStatusLabel(
   lastSyncedAt: number | null,
   failing: boolean,
-): { text: string; tone: "ok" | "warning" | "pending" } {
+): { text: string; tone: "ok" | "warning" } | null {
   if (failing) return { text: "Sin conexión. Reintentando…", tone: "warning" };
-  if (lastSyncedAt === null) return { text: "Conectando…", tone: "pending" };
+  // Before the first read the board already shows its skeleton; no «Conectando…» text.
+  if (lastSyncedAt === null) return null;
   return {
     text: `Actualizado a las ${BOGOTA_CLOCK.format(new Date(lastSyncedAt))}`,
     tone: "ok",

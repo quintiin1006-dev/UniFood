@@ -16,9 +16,12 @@ import { clientIdentity } from "@/features/orders/utils/clientIdentity";
 import { pickupLabel } from "@/features/orders/utils/pickupTime";
 import type { Order } from "@/types/order";
 
-import styles from "./OrderCard.module.css";
+import modernStyles from "./OrderCard.module.css";
+import classicStyles from "./OrderCard.classic.module.css";
 
 interface OrderCardProps {
+  /** Pedidos and Llamadas use the classic look (ola 2 · D2); the rest keep the modern one. */
+  variant?: "classic" | "modern";
   order: Order;
   onOpen: (order: Order) => void;
   onAction: (order: Order) => void;
@@ -33,6 +36,7 @@ interface OrderCardProps {
 }
 
 export default function OrderCard({
+  variant = "modern",
   order,
   onOpen,
   onAction,
@@ -42,6 +46,7 @@ export default function OrderCard({
   arrived = false,
   appeared = false,
 }: OrderCardProps) {
+  const styles = variant === "classic" ? classicStyles : modernStyles;
   const ActionIcon = ACTION_ICONS[order.status];
 
   const actionLabel = ACTION_LABELS[order.status];
@@ -126,7 +131,12 @@ export default function OrderCard({
       </button>
 
       {onReject && (
-        <RejectOrderButton order={order} busy={busy} onReject={onReject} />
+        <RejectOrderButton
+          order={order}
+          busy={busy}
+          onReject={onReject}
+          compact={variant === "classic"}
+        />
       )}
     </article>
   );
