@@ -878,15 +878,8 @@ test("cleanup checks every table that references an account", async (t) => {
   assert.deepEqual(references, [
     // 022: only a SUPER_ADMIN writes them, so the user_roles check below covers them.
     "cafeteria_billing_settings.updated_by",
-    // 028: only a WORKER or an ADMIN operates the drawer, so the user_roles check covers them.
-    "cafeteria_cash_settings.updated_by",
     "cafeteria_settings_audit.changed_by",
     "cafeteria_users.user_id",
-    "cash_movements.created_by",
-    "cash_sessions.closed_by",
-    "cash_sessions.opened_by",
-    "cash_sessions.reopened_by",
-    "cash_sessions_audit.changed_by",
     "client_code_corrections.actor_id",
     "client_code_corrections.client_id",
     "clients.user_id",

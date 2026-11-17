@@ -14,7 +14,6 @@
 /coverage
 /test-results/
 /playwright-report/
-/cash-screenshots/
 
 # next.js
 /.next/

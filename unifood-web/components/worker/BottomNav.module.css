@@ -5,7 +5,7 @@
   width: min(calc(820px / var(--worker-zoom, 1)), calc(100% - 40px));
   min-height: calc(68px / var(--worker-zoom, 1));
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 4px;
   margin: 0 auto calc(12px / var(--worker-zoom, 1));
   padding: calc(6px / var(--worker-zoom, 1));
