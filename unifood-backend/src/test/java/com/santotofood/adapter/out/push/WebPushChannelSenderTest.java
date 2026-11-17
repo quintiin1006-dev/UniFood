@@ -249,6 +249,199 @@ class WebPushChannelSenderTest {
     assertNoSecretsInLogs();
   }
 
+  @Test
+  void theReasonIsReadStrictlyFromTheRefusalBody() {
+    assertEquals(
+        "BadJwtToken", WebPushChannelSender.reasonOf(body("{\"reason\":\"BadJwtToken\"}")));
+    assertEquals(
+        "VapidPkHashMismatch",
+        WebPushChannelSender.reasonOf(body("{ \"reason\" : \"VapidPkHashMismatch\" }")));
+    assertEquals("a".repeat(40), WebPushChannelSender.reasonOf(body(json("a".repeat(40)))));
+  }
+
+  @Test
+  void noReasonWhenTheBodyIsEmptyOrAbsent() {
+    assertNull(WebPushChannelSender.reasonOf(new byte[0]));
+    assertNull(WebPushChannelSender.reasonOf(null));
+    assertNull(WebPushChannelSender.reasonOf(body("")));
+  }
+
+  @Test
+  void aReasonBeyondTheReadLimitIsNotInventedFromAPartialValue() {
+    var padded = body("x".repeat(WebPushChannelSender.MAX_REASON_BYTES - 12) + json("BadJwtToken"));
+    byte[] head = java.util.Arrays.copyOf(padded, WebPushChannelSender.MAX_REASON_BYTES);
+    assertNull(WebPushChannelSender.reasonOf(head), "the value is cut before its closing quote");
+    byte[] whole = body(json("BadJwtToken") + "x".repeat(4000));
+    assertEquals(
+        "BadJwtToken",
+        WebPushChannelSender.reasonOf(
+            java.util.Arrays.copyOf(whole, WebPushChannelSender.MAX_REASON_BYTES)));
+  }
+
+  @Test
+  void anyValueOutsideTheTokenPatternIsIgnored() {
+    for (String value :
+        List.of(
+            "Bad_Jwt", "Bad1", "a".repeat(41), "<script>", "Bad Jwt", "", "ñandú", "BadJwt\\\"x")) {
+      assertNull(WebPushChannelSender.reasonOf(body(json(value))), value);
+    }
+    assertNull(WebPushChannelSender.reasonOf(body("{\"reason\":\"BadJwt")), "not closed");
+    assertNull(WebPushChannelSender.reasonOf(body("{\"reason\":42}")), "not a string");
+  }
+
+  @Test
+  void otherBodyContentGivesNoReason() {
+    assertNull(
+        WebPushChannelSender.reasonOf(
+            body("{\"error\":\"Forbidden\",\"message\":\"" + ENDPOINT + "\"}")));
+    assertNull(WebPushChannelSender.reasonOf(body("<html>gateway</html>")));
+  }
+
+  @Test
+  void invalidUtf8NeverThrowsAndStillFindsAValidToken() {
+    byte[] raw = concat(new byte[] {(byte) 0xFF, (byte) 0xC3, 0x28}, body(json("BadJwtToken")));
+    assertEquals("BadJwtToken", WebPushChannelSender.reasonOf(raw));
+  }
+
+  @Test
+  void aRefusalKeepsTheReasonOnlyWhenTheBodyHasOne() {
+    var withReason =
+        new WebPushChannelSender(
+            keys(),
+            PushSettings.defaults(),
+            new WebPushChannelSender.Transport() {
+              @Override
+              public int send(HttpRequest request) {
+                throw new AssertionError("exchange is used");
+              }
+
+              @Override
+              public WebPushChannelSender.Reply exchange(HttpRequest request) {
+                return new WebPushChannelSender.Reply(400, body(json("VapidPkHashMismatch")));
+              }
+            });
+    assertEquals(
+        new PushChannelSender.Delivery(Result.REJECTED, 400, "VapidPkHashMismatch"),
+        withReason.deliver(recipient, message()));
+    var withoutReason = new WebPushChannelSender(keys(), PushSettings.defaults(), request -> 400);
+    assertEquals(
+        new PushChannelSender.Delivery(Result.REJECTED, 400, null),
+        withoutReason.deliver(recipient, message()));
+  }
+
+  @Test
+  void theJdkTransportReadsOnlyTheHeadOfALongRefusalBody() throws Exception {
+    var padding = "y".repeat(5000);
+    var server =
+        serve(
+            exchange -> {
+              byte[] reply = body(json("BadJwtToken") + padding);
+              exchange.sendResponseHeaders(400, reply.length);
+              exchange.getResponseBody().write(reply);
+              exchange.close();
+            });
+    try {
+      var reply = jdkExchange(server, PushSettings.defaults());
+      assertEquals(400, reply.status());
+      assertEquals(WebPushChannelSender.MAX_REASON_BYTES, reply.head().length);
+      assertEquals("BadJwtToken", WebPushChannelSender.reasonOf(reply.head()));
+    } finally {
+      server.stop(0);
+    }
+  }
+
+  @Test
+  void aSlowRefusalBodyIsAbandonedAtTheOperationTimeout() throws Exception {
+    var server =
+        serve(
+            exchange -> {
+              exchange.sendResponseHeaders(400, 100);
+              exchange.getResponseBody().flush();
+              try {
+                Thread.sleep(4000);
+              } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+              }
+              exchange.close();
+            });
+    try {
+      var started = System.nanoTime();
+      var reply = jdkExchange(server, oneSecondOperation());
+      var elapsed = Duration.ofNanos(System.nanoTime() - started);
+      assertEquals(400, reply.status(), "the status arrived before the body");
+      assertEquals(0, reply.head().length, "no partial body is kept");
+      assertTrue(
+          elapsed.compareTo(Duration.ofSeconds(3)) < 0, "bounded by the timeout: " + elapsed);
+    } finally {
+      server.stop(0);
+    }
+  }
+
+  @Test
+  void aSuccessfulResponseReadsNoBodyAtAll() throws Exception {
+    var server =
+        serve(
+            exchange -> {
+              exchange.sendResponseHeaders(201, -1);
+              exchange.close();
+            });
+    try {
+      var reply = jdkExchange(server, PushSettings.defaults());
+      assertEquals(201, reply.status());
+      assertEquals(0, reply.head().length);
+    } finally {
+      server.stop(0);
+    }
+  }
+
+  static byte[] body(String text) {
+    return text.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+  }
+
+  static String json(String reason) {
+    return "{\"reason\":\"" + reason + "\"}";
+  }
+
+  static byte[] concat(byte[] first, byte[] second) {
+    byte[] out = java.util.Arrays.copyOf(first, first.length + second.length);
+    System.arraycopy(second, 0, out, first.length, second.length);
+    return out;
+  }
+
+  static PushSettings oneSecondOperation() {
+    return new PushSettings(
+        Duration.ofMinutes(15),
+        Duration.ofHours(1),
+        "high",
+        "normal",
+        Duration.ofSeconds(5),
+        Duration.ofSeconds(1),
+        2,
+        Duration.ZERO,
+        20,
+        Duration.ofMinutes(10));
+  }
+
+  static com.sun.net.httpserver.HttpServer serve(com.sun.net.httpserver.HttpHandler handler)
+      throws IOException {
+    var server =
+        com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+    server.createContext("/push", handler);
+    server.start();
+    return server;
+  }
+
+  static WebPushChannelSender.Reply jdkExchange(
+      com.sun.net.httpserver.HttpServer server, PushSettings settings) throws Exception {
+    var request =
+        HttpRequest.newBuilder(
+                java.net.URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/push"))
+            .POST(HttpRequest.BodyPublishers.ofString("x"))
+            .timeout(Duration.ofSeconds(10))
+            .build();
+    return WebPushChannelSender.jdkTransport(settings).exchange(request);
+  }
+
   void assertNoSecretsInLogs() {
     for (var event : logs) {
       String line = event.getFormattedMessage();

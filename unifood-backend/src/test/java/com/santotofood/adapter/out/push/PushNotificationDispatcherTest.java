@@ -9,6 +9,7 @@ import com.santotofood.application.model.PushRecipient;
 import com.santotofood.application.model.PushSubscriberRole;
 import com.santotofood.application.model.PushSubscriptionRegistration;
 import com.santotofood.application.port.out.PushSubscriptionPort;
+import com.santotofood.application.service.PushEndpointPolicy;
 import com.santotofood.domain.model.OrderPushEvent;
 import com.santotofood.domain.model.OrderPushEvent.Kind;
 import java.time.Duration;
@@ -159,6 +160,45 @@ class PushNotificationDispatcherTest {
   }
 
   @Test
+  void aRefusalLogsTheApplesReasonWhenItIsAValidToken() {
+    assertEquals(
+        "HTTP 400, reason=VapidPkHashMismatch",
+        PushNotificationDispatcher.refusal(400, "VapidPkHashMismatch"));
+    assertEquals("HTTP 400", PushNotificationDispatcher.refusal(400, null));
+    assertEquals("HTTP 400", PushNotificationDispatcher.refusal(400, "Bad_Jwt"));
+    assertEquals("HTTP 400", PushNotificationDispatcher.refusal(400, "a".repeat(41)));
+    assertEquals("no HTTP response", PushNotificationDispatcher.refusal(null, "BadJwtToken"));
+  }
+
+  @Test
+  void theLoggedRefusalCarriesTheReasonAndNeverTheBody() {
+    var appender = new ListAppender<ILoggingEvent>();
+    appender.start();
+    var logger = (Logger) LoggerFactory.getLogger(PushNotificationDispatcher.class);
+    logger.addAppender(appender);
+    try {
+      recipient(UUID.randomUUID());
+      sender.results.add(PushChannelSender.Result.REJECTED);
+      sender.statuses.add(400);
+      sender.reasons.add("VapidPkHashMismatch");
+      dispatcher().publish(OrderPushEvent.of(UUID.randomUUID(), Kind.READY));
+      var warning =
+          appender.list.stream()
+              .map(ILoggingEvent::getFormattedMessage)
+              .filter(text -> text.contains("refused"))
+              .findFirst()
+              .orElseThrow();
+      assertEquals(
+          "Push notice READY refused (HTTP 400, reason=VapidPkHashMismatch) by "
+              + PushEndpointPolicy.redact(ENDPOINT),
+          warning);
+      assertFalse(warning.contains(ENDPOINT), warning);
+    } finally {
+      logger.detachAppender(appender);
+    }
+  }
+
+  @Test
   void aDatabaseFailureResolvingRecipientsNeverEscapes() {
     subscriptions.failLookup = true;
     assertDoesNotThrow(
@@ -282,6 +322,7 @@ class PushNotificationDispatcherTest {
   static final class ScriptedSender implements PushChannelSender {
     final Deque<Result> results = new ConcurrentLinkedDeque<>();
     final Deque<Integer> statuses = new ConcurrentLinkedDeque<>();
+    final Deque<String> reasons = new ConcurrentLinkedDeque<>();
     final List<PushMessage> sent = new ArrayList<>();
     int attempts;
     boolean throwNext;
@@ -305,7 +346,7 @@ class PushNotificationDispatcherTest {
 
     @Override
     public Delivery deliver(PushRecipient recipient, PushMessage message) {
-      return new Delivery(send(recipient, message), statuses.pollFirst());
+      return new Delivery(send(recipient, message), statuses.pollFirst(), reasons.pollFirst());
     }
   }
 
