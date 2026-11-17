@@ -146,6 +146,9 @@ class WebPushChannelSenderTest {
   void theStatusOfThePushServiceDecidesTheOutcome(int status, Result expected) {
     var sender = new WebPushChannelSender(keys(), PushSettings.defaults(), request -> status);
     assertEquals(expected, sender.send(recipient, message()));
+    // The dispatcher's log needs the status itself, not only the outcome.
+    assertEquals(
+        new PushChannelSender.Delivery(expected, status), sender.deliver(recipient, message()));
   }
 
   @Test
@@ -166,6 +169,7 @@ class WebPushChannelSenderTest {
               throw new IOException("connection reset");
             });
     assertEquals(Result.RETRYABLE, network.send(recipient, message()));
+    assertNull(network.deliver(recipient, message()).httpStatus(), "no response, no status");
   }
 
   @Test
