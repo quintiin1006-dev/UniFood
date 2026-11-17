@@ -1,27 +1,27 @@
 import { SESSION_CHECK_UNAVAILABLE } from "@/lib/messages";
+import { BACKEND_ERROR_MESSAGES } from "@/features/shared/messages";
 export const AVAILABILITY_MESSAGES = {
   AVAILABILITY_UNAUTHORIZED: "Inicia sesión para gestionar la disponibilidad.",
-  AVAILABILITY_FORBIDDEN:
-    "No tienes permisos para gestionar esta disponibilidad.",
+  AVAILABILITY_FORBIDDEN: BACKEND_ERROR_MESSAGES.AVAILABILITY_FORBIDDEN,
   AVAILABILITY_INVALID_REQUEST:
-    "Revisa el estado solicitado y la fecha de la pantalla.",
+    BACKEND_ERROR_MESSAGES.AVAILABILITY_INVALID_REQUEST,
   AVAILABILITY_ITEM_NOT_FOUND:
-    "El producto ya no está disponible para esta operación.",
-  AVAILABILITY_CAFETERIA_NOT_FOUND: "No se pudo resolver tu cafetería.",
-  AVAILABILITY_DAY_EXPIRED:
-    "El día de operación cambió. Actualiza la disponibilidad para continuar.",
+    BACKEND_ERROR_MESSAGES.AVAILABILITY_ITEM_NOT_FOUND,
+  AVAILABILITY_CAFETERIA_NOT_FOUND:
+    BACKEND_ERROR_MESSAGES.AVAILABILITY_CAFETERIA_NOT_FOUND,
+  AVAILABILITY_DAY_EXPIRED: BACKEND_ERROR_MESSAGES.AVAILABILITY_DAY_EXPIRED,
   AVAILABILITY_CAFETERIA_INACTIVE:
-    "La cafetería está administrativamente inactiva. Solo puedes cerrar o deshabilitar productos.",
-  AVAILABILITY_ITEM_INACTIVE:
-    "El producto está inactivo. Actualiza la disponibilidad.",
+    BACKEND_ERROR_MESSAGES.AVAILABILITY_CAFETERIA_INACTIVE,
+  AVAILABILITY_ITEM_INACTIVE: BACKEND_ERROR_MESSAGES.AVAILABILITY_ITEM_INACTIVE,
   AVAILABILITY_CONFLICT:
     "La disponibilidad cambió. Actualiza la pantalla y vuelve a intentarlo.",
   AVAILABILITY_TEMPORARILY_UNAVAILABLE:
-    "La disponibilidad no está disponible en este momento. Inténtalo nuevamente.",
+    BACKEND_ERROR_MESSAGES.AVAILABILITY_TEMPORARILY_UNAVAILABLE,
   AUTH_TEMPORARILY_UNAVAILABLE: SESSION_CHECK_UNAVAILABLE,
   AVAILABILITY_CATALOG_INVALID:
-    "El catálogo requiere una revisión administrativa.",
-  AVAILABILITY_INTERNAL_ERROR: "No pudimos gestionar la disponibilidad.",
+    BACKEND_ERROR_MESSAGES.AVAILABILITY_CATALOG_INVALID,
+  AVAILABILITY_INTERNAL_ERROR:
+    BACKEND_ERROR_MESSAGES.AVAILABILITY_INTERNAL_ERROR,
   AVAILABILITY_BAD_GATEWAY:
     "No pudimos cargar un estado válido de disponibilidad. Inténtalo nuevamente.",
 } as const;

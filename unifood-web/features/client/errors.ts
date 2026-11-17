@@ -1,3 +1,4 @@
+import { BACKEND_ERROR_MESSAGES } from "../shared/messages";
 /**
  * What the client does when POST /api/me/orders fails. Messages are fixed Spanish copy keyed
  * by the error code; the backend text never reaches the screen (docs/decisiones.md §11).
@@ -27,51 +28,49 @@ const make = (
   newKey = false,
 ): CheckoutError => ({ code, message, action, newKey });
 
-const RETRY_MESSAGE =
-  "No pudimos enviar tu pedido en este momento. Revisa tu conexión e inténtalo de nuevo; tu carrito se conserva.";
-const GONE_MESSAGE =
-  "Esta cafetería ya no está disponible. Elige otra para hacer tu pedido.";
+const RETRY_MESSAGE = BACKEND_ERROR_MESSAGES.ORDER_TEMPORARILY_UNAVAILABLE;
+const GONE_MESSAGE = BACKEND_ERROR_MESSAGES.CAFETERIA_NOT_FOUND;
 
 const byCode: Record<string, CheckoutError> = {
   CAFETERIA_CLOSED: make(
     "CAFETERIA_CLOSED",
-    "La cafetería está cerrada en este momento. Tu carrito se conserva; podrás pedir cuando abra.",
+    BACKEND_ERROR_MESSAGES.CAFETERIA_CLOSED,
     "menu",
   ),
   PRODUCT_UNAVAILABLE: make(
     "PRODUCT_UNAVAILABLE",
-    "Uno de los productos ya no está disponible. Actualiza tu carrito para continuar.",
+    BACKEND_ERROR_MESSAGES.PRODUCT_UNAVAILABLE,
     "cart",
   ),
   ACTIVE_ORDER_EXISTS: make(
     "ACTIVE_ORDER_EXISTS",
-    "Ya tienes un pedido en curso. Recógelo o cancélalo antes de hacer otro.",
+    BACKEND_ERROR_MESSAGES.ACTIVE_ORDER_EXISTS,
     "home",
   ),
   IDEMPOTENCY_KEY_CONFLICT: make(
     "IDEMPOTENCY_KEY_CONFLICT",
-    "Tu pedido cambió mientras se enviaba. Revisa el resumen y confirma de nuevo.",
+    BACKEND_ERROR_MESSAGES.IDEMPOTENCY_KEY_CONFLICT,
     "retry",
     true,
   ),
   INVALID_PICKUP_TIME: make(
     "INVALID_PICKUP_TIME",
-    "La hora de recogida ya no es válida. Elige una hora de hoy posterior a la actual o envía el pedido lo antes posible.",
+    BACKEND_ERROR_MESSAGES.INVALID_PICKUP_TIME,
     "time",
   ),
   ORDER_NOTE_TOO_LONG: make(
     "ORDER_NOTE_TOO_LONG",
-    "La nota admite hasta 200 caracteres.",
+    BACKEND_ERROR_MESSAGES.ORDER_NOTE_TOO_LONG,
     "note",
   ),
   ORDER_LIMIT_EXCEEDED: make(
     "ORDER_LIMIT_EXCEEDED",
-    "Un pedido admite hasta 10 unidades por producto y 15 en total. Ajusta tu carrito.",
+    BACKEND_ERROR_MESSAGES.ORDER_LIMIT_EXCEEDED,
     "cart",
   ),
   INVALID_ORDER_REQUEST: make(
     "INVALID_ORDER_REQUEST",
-    "No pudimos validar tu pedido. Revisa tu carrito e inténtalo de nuevo.",
+    BACKEND_ERROR_MESSAGES.INVALID_ORDER_REQUEST,
     "cart",
     true,
   ),

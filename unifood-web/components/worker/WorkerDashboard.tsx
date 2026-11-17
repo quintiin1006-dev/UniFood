@@ -53,6 +53,12 @@ export default function WorkerDashboard() {
 
   const [retrying, setRetrying] = useState(false);
 
+  // Ola 2 · D2: Pedidos and Llamadas keep the classic look; Historial, Disponibilidad and Perfil the modern one.
+  const listingVariant =
+    activeModule === "orders" || activeModule === "calls"
+      ? "classic"
+      : "modern";
+
   const onRetry = () => {
     setRetrying(true);
     void retry().finally(() => setRetrying(false));
@@ -229,6 +235,7 @@ export default function WorkerDashboard() {
           onOpenOrder={setSelectedOrder}
           onAction={onOrderAction}
           onReject={setOrderToReject}
+          variant={listingVariant}
         />
       );
     }
@@ -254,6 +261,7 @@ export default function WorkerDashboard() {
           onSearchChange={setSearch}
           onClearSearch={clearSearch}
           onSelectOrder={setSelectedOrder}
+          variant={listingVariant}
           onDeliver={onOrderAction}
           onRemind={onRemindOrder}
           onNotCollected={onNotCollectedOrder}
@@ -287,7 +295,7 @@ export default function WorkerDashboard() {
 
   return (
     <main
-      className={`worker-page ${motion.tokens}${activeModule === "availability" ? ` ${styles.availabilityPage}` : activeModule === "history" ? ` ${styles.historyPage}` : activeModule === "profile" || activeModule === "cash" ? ` ${styles.profilePage}` : ""}`}
+      className={`worker-page ${motion.tokens}${activeModule === "availability" ? ` ${styles.availabilityPage}` : activeModule === "history" ? ` ${styles.historyPage}` : activeModule === "profile" || activeModule === "cash" ? ` ${styles.profilePage}` : ""}${listingVariant === "classic" ? ` ${styles.classicPage}` : ""}`}
     >
       <Header
         activeModule={activeModule}
@@ -295,9 +303,10 @@ export default function WorkerDashboard() {
         onSearchChange={setSearch}
         syncStatus={
           listingModule
-            ? syncStatusLabel(lastSyncedAt, syncFailure !== null)
+            ? (syncStatusLabel(lastSyncedAt, syncFailure !== null) ?? undefined)
             : undefined
         }
+        variant={listingVariant}
       />
 
       <div className="worker-main">
@@ -313,7 +322,11 @@ export default function WorkerDashboard() {
           NAVEGACIÓN INFERIOR
           ===================================================== */}
 
-      <BottomNav activeModule={activeModule} onChange={handleModuleChange} />
+      <BottomNav
+        activeModule={activeModule}
+        onChange={handleModuleChange}
+        variant={listingVariant}
+      />
 
       {/* =====================================================
           DETALLE DE PEDIDO
@@ -325,6 +338,7 @@ export default function WorkerDashboard() {
           order={orders.find((order) => order.id === selectedOrder?.id) ?? null}
           onClose={() => setSelectedOrder(null)}
           onAction={onOrderAction}
+          variant={listingVariant}
         />
       )}
 

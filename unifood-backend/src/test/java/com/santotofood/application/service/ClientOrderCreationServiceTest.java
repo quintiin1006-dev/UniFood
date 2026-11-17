@@ -458,4 +458,36 @@ class ClientOrderCreationServiceTest {
     assertEquals(
         Set.of(4, 3), Set.copyOf(items.getValue().stream().map(NewItem::quantity).toList()));
   }
+
+  @Test
+  void aNewOrderNotifiesTheCafeteriaOnceAndAReplayNever() {
+    var published = new ArrayList<com.santotofood.domain.model.OrderPushEvent>();
+    var notifying = new ClientOrderCreationService(port, () -> NOW, manager, published::add);
+    var created = notifying.createOwnOrder(USER, KEY, request(null, new Line(JUICE, 1)));
+    assertEquals(
+        List.of(
+            com.santotofood.domain.model.OrderPushEvent.of(
+                created.order().id(), com.santotofood.domain.model.OrderPushEvent.Kind.NEW_ORDER)),
+        published);
+    var order = ArgumentCaptor.forClass(NewOrder.class);
+    verify(port).insertOrder(order.capture());
+    when(port.findByIdempotencyKey(CLIENT.clientId(), KEY))
+        .thenReturn(
+            Optional.of(new KeyedOrder(created.order().id(), order.getValue().requestHash())));
+    assertFalse(notifying.createOwnOrder(USER, KEY, request(null, new Line(JUICE, 1))).created());
+    assertEquals(1, published.size());
+  }
+
+  @Test
+  void aFailingPushNeverFailsTheOrder() {
+    var notifying =
+        new ClientOrderCreationService(
+            port,
+            () -> NOW,
+            manager,
+            event -> {
+              throw new IllegalStateException("push exploded");
+            });
+    assertTrue(notifying.createOwnOrder(USER, KEY, request(null, new Line(JUICE, 1))).created());
+  }
 }

@@ -1,16 +1,17 @@
 import { SESSION_CHECK_UNAVAILABLE } from "@/lib/messages";
+import { BACKEND_ERROR_MESSAGES } from "@/features/shared/messages";
 export const HISTORY_MESSAGES = {
   WORKER_HISTORY_INVALID_REQUEST:
-    "Los filtros o la página ya no son válidos. Actualiza el historial.",
+    BACKEND_ERROR_MESSAGES.WORKER_HISTORY_INVALID_REQUEST,
   WORKER_HISTORY_UNAUTHORIZED:
     "Tu sesión no está disponible. Inicia sesión para consultar el historial.",
-  WORKER_HISTORY_FORBIDDEN: "No tienes permisos para consultar este historial.",
+  WORKER_HISTORY_FORBIDDEN: BACKEND_ERROR_MESSAGES.WORKER_HISTORY_FORBIDDEN,
   WORKER_HISTORY_TEMPORARILY_UNAVAILABLE:
-    "No pudimos cargar el historial en este momento.",
+    BACKEND_ERROR_MESSAGES.WORKER_HISTORY_TEMPORARILY_UNAVAILABLE,
   WORKER_HISTORY_BAD_GATEWAY:
     "No pudimos cargar un historial válido. Inténtalo nuevamente.",
   WORKER_HISTORY_INTERNAL_ERROR:
-    "No pudimos cargar el historial en este momento.",
+    BACKEND_ERROR_MESSAGES.WORKER_HISTORY_INTERNAL_ERROR,
   AUTH_TEMPORARILY_UNAVAILABLE: SESSION_CHECK_UNAVAILABLE,
 } as const;
 export type HistoryErrorCode = keyof typeof HISTORY_MESSAGES;

@@ -55,6 +55,17 @@
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
 
+        <!--
+          Web Push (RFC 8030/8291/8292: aes128gcm and VAPID ES256) on the JDK's own crypto and
+          java.net.http.HttpClient; no compile-time transitive dependencies. MIT. 2.1.5 published
+          2025-12-31, sha1 02fa1d9e72a281c25eac128b3a7a0633cc0d1395 (docs/notificaciones-push.md).
+        -->
+        <dependency>
+            <groupId>com.zerodeplibs</groupId>
+            <artifactId>zerodep-web-push-java</artifactId>
+            <version>2.1.5</version>
+        </dependency>
+
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>

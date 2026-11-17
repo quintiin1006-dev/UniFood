@@ -3,11 +3,12 @@ import { useRef } from "react";
 import { History, RefreshCw, Search, X } from "lucide-react";
 import { useWorkerHistory } from "../useWorkerHistory";
 import { formatBusinessDate } from "../presentation";
-import { HistoryOrderCard } from "./HistoryOrderCard";
+import { HistoryOrderRow } from "./HistoryOrderRow";
 import type { HistoryRange, HistoryStatus } from "../types";
 import styles from "./WorkerHistory.module.css";
 import { Notice } from "@/components/ui/Notice";
 import { Button, buttonClass } from "@/components/ui/Button";
+import { ICON_MIN_20 } from "@/components/ui/Icon";
 
 export function WorkerHistoryPanel() {
   const state = useWorkerHistory();
@@ -47,7 +48,7 @@ export function WorkerHistoryPanel() {
             onClick={() => void state.refresh()}
             aria-label="Actualizar historial"
           >
-            <RefreshCw size={17} aria-hidden="true" />
+            <RefreshCw size={20} style={ICON_MIN_20} aria-hidden="true" />
             <span>{state.refreshing ? "Actualizando…" : "Actualizar"}</span>
           </button>
         )}
@@ -60,7 +61,7 @@ export function WorkerHistoryPanel() {
         <label htmlFor="worker-history-search" className={styles.srOnly}>
           Buscar por pedido, cliente, estado o producto
         </label>
-        <Search size={18} aria-hidden="true" />
+        <Search size={20} style={ICON_MIN_20} aria-hidden="true" />
         <input
           id="worker-history-search"
           ref={searchInput}
@@ -194,12 +195,12 @@ export function WorkerHistoryPanel() {
             </div>
           ) : (
             <div
-              className={styles.cards}
+              className={styles.list}
               aria-label="Pedidos finalizados"
               aria-busy={state.refreshing}
             >
               {state.data.orders.map((order) => (
-                <HistoryOrderCard key={order.id} order={order} />
+                <HistoryOrderRow key={order.id} order={order} />
               ))}
             </div>
           )}

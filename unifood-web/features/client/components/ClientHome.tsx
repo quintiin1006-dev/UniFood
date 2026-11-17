@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Clock3, UtensilsCrossed } from "lucide-react";
+import { ArrowRight, Clock3, UtensilsCrossed } from "lucide-react";
 import { currency } from "../domain/catalog";
 import {
   CLOSED_NOTICE,
@@ -14,6 +14,7 @@ import type { CafeteriaMenu, MenuCategoryId, MenuProduct } from "../types";
 import CafeteriaSelector from "./CafeteriaSelector";
 import { RememberCafeteria } from "./CafeteriaMemory";
 import ProductPlaceholder from "./ProductPlaceholder";
+import ProductAddButton from "./ProductAddButton";
 import styles from "./ClientCatalog.module.css";
 import menuStyles from "./ClientMenu.module.css";
 
@@ -46,7 +47,7 @@ export default function ClientHome({
       <CafeteriaSelector siteName={siteName} cafeteria={cafeteria} />
       {!cafeteria.open && (
         <p className={menuStyles.closed} role="status">
-          <Clock3 size={18} aria-hidden="true" />
+          <Clock3 size={20} aria-hidden="true" />
           {CLOSED_NOTICE}
         </p>
       )}
@@ -112,17 +113,15 @@ export default function ClientHome({
                 </div>
                 <ProductRail
                   label={category.name}
-                  cafeteriaId={cafeteria.id}
+                  menu={menu}
                   products={shown}
                 />
               </section>
             );
           })}
-          <Link
-            className={styles.secondaryButton}
-            href={menuHref(cafeteria.id)}
-          >
-            Ver el menú completo
+          <Link className={styles.menuButton} href={menuHref(cafeteria.id)}>
+            <span>Ver el menú completo</span>
+            <ArrowRight size={20} strokeWidth={2.2} aria-hidden="true" />
           </Link>
         </>
       )}
@@ -132,13 +131,14 @@ export default function ClientHome({
 
 function ProductRail({
   label,
-  cafeteriaId,
+  menu,
   products,
 }: {
   label: string;
-  cafeteriaId: string;
+  menu: CafeteriaMenu;
   products: MenuProduct[];
 }) {
+  const cafeteriaId = menu.cafeteria.id;
   return (
     <ul
       className={menuStyles.rail}
@@ -146,7 +146,7 @@ function ProductRail({
       aria-roledescription="carrusel"
     >
       {products.map((product) => (
-        <li key={product.id}>
+        <li key={product.id} className={menuStyles.railItem}>
           <Link
             className={menuStyles.railCard}
             href={productHref(cafeteriaId, product.id)}
@@ -155,6 +155,10 @@ function ProductRail({
             <strong>{product.name}</strong>
             <span>{currency.format(product.price)}</span>
           </Link>
+          {/* Sibling of the link, not inside it: its clicks never open the product. */}
+          <div className={menuStyles.railAdd}>
+            <ProductAddButton menu={menu} product={product} />
+          </div>
         </li>
       ))}
     </ul>

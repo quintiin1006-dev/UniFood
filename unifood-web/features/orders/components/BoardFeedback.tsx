@@ -9,18 +9,31 @@ import { Button } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Notice";
 
 import styles from "./BoardFeedback.module.css";
+import { ICON_MIN_20 } from "@/components/ui/Icon";
 
 /**
  * States of the worker's order listing (docs/ui-paneles.md, W1, W2, W5, L1 and L2). Static: no
  * entrance animation, so a polling refresh never makes anything move.
  */
 
+/**
+ * Board placeholder with the shape of its columns (ola 4): static blocks, no text block. It
+ * replaces the old «Cargando pedidos…» panel, so the first paint already shows where orders go.
+ */
 export function BoardLoading() {
   return (
-    <section className={styles.state}>
-      <div className={styles.panel} role="status">
-        <p className={styles.title}>Cargando pedidos…</p>
-      </div>
+    <section
+      className={styles.skeletonBoard}
+      role="status"
+      aria-label="Cargando pedidos"
+    >
+      {[0, 1, 2, 3].map((column) => (
+        <div key={column} className={styles.skeletonColumn}>
+          <span className={styles.skeletonHead} />
+          <span className={styles.skeletonCard} />
+          {column < 2 && <span className={styles.skeletonCard} />}
+        </div>
+      ))}
     </section>
   );
 }
@@ -48,7 +61,7 @@ export function BoardError({
             disabled={retrying}
             aria-busy={retrying || undefined}
           >
-            <RefreshCw size={17} aria-hidden="true" />
+            <RefreshCw size={20} style={ICON_MIN_20} aria-hidden="true" />
             <span>{retrying ? "Reintentando…" : "Reintentar"}</span>
           </button>
         )}

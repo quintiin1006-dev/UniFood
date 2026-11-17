@@ -1,23 +1,25 @@
 import { SESSION_CHECK_UNAVAILABLE } from "@/lib/messages";
 import { IMAGE_MESSAGES } from "./images";
+import { BACKEND_ERROR_MESSAGES } from "@/features/shared/messages";
 export const CATALOG_MESSAGES = {
   ...IMAGE_MESSAGES,
-  ADMIN_CATALOG_INVALID_REQUEST: "Revisa los datos del producto.",
+  ADMIN_CATALOG_INVALID_REQUEST:
+    BACKEND_ERROR_MESSAGES.ADMIN_CATALOG_INVALID_REQUEST,
   ADMIN_CATALOG_PRODUCT_NOT_FOUND:
-    "El producto no está disponible en tu catálogo.",
+    BACKEND_ERROR_MESSAGES.ADMIN_CATALOG_PRODUCT_NOT_FOUND,
   ADMIN_CATALOG_STALE_VERSION:
-    "El producto cambió. Actualiza el catálogo antes de guardar.",
+    BACKEND_ERROR_MESSAGES.ADMIN_CATALOG_STALE_VERSION,
   ADMIN_CATALOG_DUPLICATE_NAME:
-    "Ya existe un producto con ese nombre en tu cafetería.",
+    BACKEND_ERROR_MESSAGES.ADMIN_CATALOG_DUPLICATE_NAME,
   ADMIN_CATALOG_CAFETERIA_INACTIVE:
-    "La cafetería está inactiva y todavía no está visible para los clientes. El catálogo se podrá editar cuando el equipo de UniFood la active.",
+    BACKEND_ERROR_MESSAGES.ADMIN_CATALOG_CAFETERIA_INACTIVE,
   ADMIN_CATALOG_UNAUTHORIZED:
     "Tu sesión no está disponible. Inicia sesión para consultar el catálogo.",
-  ADMIN_CATALOG_FORBIDDEN: "No tienes permisos para consultar este catálogo.",
+  ADMIN_CATALOG_FORBIDDEN: BACKEND_ERROR_MESSAGES.ADMIN_CATALOG_FORBIDDEN,
   ADMIN_CATALOG_TEMPORARILY_UNAVAILABLE:
-    "No pudimos cargar tu catálogo en este momento. Inténtalo nuevamente.",
+    BACKEND_ERROR_MESSAGES.ADMIN_CATALOG_TEMPORARILY_UNAVAILABLE,
   ADMIN_CATALOG_INTERNAL_ERROR:
-    "No pudimos cargar tu catálogo. Inténtalo nuevamente.",
+    BACKEND_ERROR_MESSAGES.ADMIN_CATALOG_INTERNAL_ERROR,
   ADMIN_CATALOG_BAD_GATEWAY:
     "No pudimos cargar un catálogo válido. Inténtalo nuevamente.",
   AUTH_TEMPORARILY_UNAVAILABLE: SESSION_CHECK_UNAVAILABLE,

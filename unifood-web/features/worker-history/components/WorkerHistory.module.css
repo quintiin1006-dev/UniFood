@@ -395,3 +395,124 @@
 .message {
   margin: 16px 0;
 }
+
+/* ---- Ola 2 · D3: one large container, a row per finished order, expandable (accordion). ---- */
+.list {
+  margin-top: 16px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.row {
+  border-bottom: 1px solid var(--color-line);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.rowHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 18px;
+}
+
+.rowIdentity {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.rowName {
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-ink);
+  font-size: 16px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowIdentity span {
+  color: var(--color-text-soft);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rowAside {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* The compact chip: one line, short text. Remove the class to hide the state here. */
+.compactChip {
+  font-size: 12px;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-press) var(--ease-soft),
+    transform var(--motion-press) var(--ease-soft);
+}
+
+.toggle:hover {
+  background: var(--color-brand-tint);
+}
+
+.toggle:active {
+  transform: scale(0.97);
+}
+
+.chevron {
+  transition: transform var(--motion-base) var(--ease-soft);
+}
+
+.row[data-open] .chevron {
+  transform: rotate(180deg);
+}
+
+.detail {
+  display: grid;
+  gap: 10px;
+  padding: 4px 18px 18px;
+  border-top: 1px solid var(--color-line);
+  background: var(--color-bg);
+}
+
+.detailStatus {
+  margin: 12px 0 0;
+  color: var(--color-slate);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle,
+  .chevron {
+    transition: none;
+  }
+
+  .toggle:active {
+    transform: none;
+  }
+}

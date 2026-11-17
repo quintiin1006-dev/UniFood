@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Figtree } from "next/font/google";
 import "./tokens.css";
 import "./globals.css";
@@ -14,6 +14,16 @@ const figtree = Figtree({
 export const metadata: Metadata = {
   title: "UniFood",
   description: "Tu comida, sin filas.",
+  // Installed on iPhone, the app runs standalone: the only way iOS 16.4+ delivers Web Push.
+  appleWebApp: { capable: true, title: "UniFood", statusBarStyle: "default" },
+  icons: {
+    icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0B5FFF",
 };
 
 export default function RootLayout({

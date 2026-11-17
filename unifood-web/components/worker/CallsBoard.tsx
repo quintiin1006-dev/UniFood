@@ -20,9 +20,14 @@ import {
 import type { CalledOrderAction } from "@/features/orders/calledOrderActions";
 import type { Order } from "@/types/order";
 
-import styles from "./CallsBoard.module.css";
+import modernStyles from "./CallsBoard.module.css";
+import classicStyles from "./CallsBoard.classic.module.css";
+import { ICON_MIN_20 } from "@/components/ui/Icon";
+import { ICON_MIN_16 } from "@/components/ui/Icon";
 
 interface CallsBoardProps {
+  /** Pedidos and Llamadas use the classic look (ola 2 · D2); the rest keep the modern one. */
+  variant?: "classic" | "modern";
   orders: Order[];
   busyOrderIds: string[];
   busyActions: Record<string, CalledOrderAction>;
@@ -72,6 +77,7 @@ function formatCurrency(value: number): string {
    ========================================================= */
 
 export default function CallsBoard({
+  variant = "modern",
   orders,
   busyOrderIds,
   busyActions,
@@ -84,6 +90,7 @@ export default function CallsBoard({
   onRemind,
   onNotCollected,
 }: CallsBoardProps) {
+  const styles = variant === "classic" ? classicStyles : modernStyles;
   const totalUnits =
     selectedOrder?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
 
@@ -118,7 +125,7 @@ export default function CallsBoard({
 
           <header className={styles.listHeader}>
             <div className={styles.headerIcon}>
-              <Megaphone size={27} strokeWidth={1.9} />
+              <Megaphone size={27} style={ICON_MIN_20} strokeWidth={1.9} />
             </div>
 
             <h1 className={styles.title}>Llamadas</h1>
@@ -272,7 +279,8 @@ export default function CallsBoard({
                   )}
                   {selectedOrder.status === "called" && (
                     <span className={styles.calledBadge}>
-                      <Check size={13} aria-hidden="true" /> Avisado
+                      <Check size={13} style={ICON_MIN_16} aria-hidden="true" />{" "}
+                      Avisado
                     </span>
                   )}
                 </div>
@@ -316,7 +324,11 @@ export default function CallsBoard({
                           )}
                           {item.beverageChoice && (
                             <div className={styles.beverage}>
-                              <CupSoda size={16} aria-hidden="true" />
+                              <CupSoda
+                                size={20}
+                                style={ICON_MIN_20}
+                                aria-hidden="true"
+                              />
                               <div>
                                 <span>Bebida elegida</span>
                                 <strong>{item.beverageChoice}</strong>
@@ -325,7 +337,11 @@ export default function CallsBoard({
                           )}
                           {item.note && (
                             <div className={styles.productNote}>
-                              <MessageSquareText size={15} aria-hidden="true" />
+                              <MessageSquareText
+                                size={20}
+                                style={ICON_MIN_20}
+                                aria-hidden="true"
+                              />
                               <div>
                                 <span>Indicaciones</span>
                                 <p>{item.note}</p>
@@ -346,7 +362,11 @@ export default function CallsBoard({
                   </div>
                   {selectedOrder.note && (
                     <div className={styles.orderNote}>
-                      <MessageSquareText size={18} aria-hidden="true" />
+                      <MessageSquareText
+                        size={20}
+                        style={ICON_MIN_20}
+                        aria-hidden="true"
+                      />
                       <div>
                         <strong>Observaciones</strong>
                         <p>{selectedOrder.note}</p>
@@ -378,7 +398,12 @@ export default function CallsBoard({
                   aria-busy={busyOrderIds.includes(selectedOrder.id)}
                   onClick={() => onDeliver(selectedOrder)}
                 >
-                  <Check size={19} strokeWidth={2.5} aria-hidden="true" />
+                  <Check
+                    size={19}
+                    style={ICON_MIN_16}
+                    strokeWidth={2.5}
+                    aria-hidden="true"
+                  />
                   <span>
                     {busyActions[selectedOrder.id] === undefined &&
                     busyOrderIds.includes(selectedOrder.id)

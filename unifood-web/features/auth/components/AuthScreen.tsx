@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -24,6 +25,11 @@ import {
 } from "../validation";
 import Brand, { Waves } from "./Brand";
 import { Field } from "./AuthField";
+import AcceptTermsForm, {
+  TERMS_DESCRIPTION,
+  TERMS_TITLE,
+  type InitialTermsState,
+} from "./AcceptTermsForm";
 import { PanelAuthHero } from "./PanelAuthHero";
 import { useAuthHydration } from "../useAuthHydration";
 import styles from "./AuthScreen.module.css";
@@ -98,6 +104,7 @@ const t = {
   reset: "Restablecer contraseña",
   resetDone: "Tu contraseña se actualizó. Ya puedes iniciar sesión.",
   wait: "Un momento…",
+  entering: "Entrando…",
   back: "Volver",
   show: "Mostrar contraseña",
   hide: "Ocultar contraseña",
@@ -148,6 +155,11 @@ export default function AuthScreen({
       : "",
   );
   const [unverified, setUnverified] = useState(false);
+  // Set only when the server says this client has to accept the terms before going on.
+  const [termsStep, setTermsStep] = useState<{
+    destination: string;
+    state: InitialTermsState;
+  } | null>(null);
   const [confirmingLogin, setConfirmingLogin] = useState(false);
   const [resendAt, setResendAt] = useState(0);
   const [countdown, setCountdown] = useState(0);
@@ -254,8 +266,12 @@ export default function AuthScreen({
     setError("");
     setNotice("");
   }
+  // Client navigation: the login form keeps its «Entrando…» state until the destination is ready,
+  // and no full-page reload flashes a blank screen (ola 4 · destello).
+  const router = useRouter();
   function navigate(path: string) {
-    window.location.assign(path);
+    router.prefetch(path);
+    router.replace(path);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -270,7 +286,11 @@ export default function AuthScreen({
       if (isLogin) {
         setUnverified(false);
         const data = await request("login", { email, password, remember });
-        navigate(data.redirect);
+        // A client who still owes the current terms accepts them here, in this same card,
+        // and only then moves on. No client screen is rendered in between.
+        if (data.terms === "pending" || data.terms === "unavailable")
+          setTermsStep({ destination: data.redirect, state: data.terms });
+        else navigate(data.redirect);
       } else if (isOtp) {
         failedOnCode = true;
         if (code.length !== OTP_LENGTH) throw new Error(t.invalidCode);
@@ -282,7 +302,9 @@ export default function AuthScreen({
         });
         // Signup and a recovery left before step 2 continue on the server's redirect.
         failedOnCode = false;
-        if (data.redirect) navigate(data.redirect);
+        if (data.terms === "pending" || data.terms === "unavailable")
+          setTermsStep({ destination: data.redirect, state: data.terms });
+        else if (data.redirect) navigate(data.redirect);
         else {
           setPassword("");
           setConfirm("");
@@ -374,7 +396,9 @@ export default function AuthScreen({
     setCode(normalizeOtp(value));
   }
 
-  const title = isLogin ? (
+  const title = termsStep ? (
+    TERMS_TITLE
+  ) : isLogin ? (
     entrypoint === "panel" ? (
       t.panelTitle
     ) : (
@@ -407,7 +431,9 @@ export default function AuthScreen({
       <em>{t.institutional}</em>
     </>
   );
-  const description = isLogin ? (
+  const description = termsStep ? (
+    TERMS_DESCRIPTION
+  ) : isLogin ? (
     entrypoint === "panel" ? (
       t.panelNote
     ) : (
@@ -426,7 +452,9 @@ export default function AuthScreen({
     t.emailNote
   );
   const buttonText = busy
-    ? t.wait
+    ? isLogin
+      ? t.entering
+      : t.wait
     : isLogin
       ? t.login
       : isOtp
@@ -483,278 +511,295 @@ export default function AuthScreen({
             {title}
           </h1>
           <p className={styles.description}>{description}</p>
-          {/* Firefox must not restore disabled attributes before hydration. */}
-          <form
-            ref={formRef}
-            method="post"
-            autoComplete="off"
-            onSubmit={submit}
-            className={`${styles.form} ${isLogin ? styles.loginForm : ""}`}
-            aria-busy={busy}
-          >
-            <div className={styles.fields}>
-              {isLogin && (
-                <>
-                  <Field
-                    icon={<Mail size={21} />}
-                    label={t.identifier}
-                    name="username"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    autoComplete="username"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    required
-                    maxLength={254}
-                    disabled={!hydrated || busy}
-                  />
-                  <Field
-                    icon={<LockKeyhole size={21} />}
-                    label={t.password}
-                    password
-                    name="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    autoComplete="current-password"
-                    required
-                    maxLength={128}
-                    disabled={!hydrated || busy}
-                  />
-                </>
-              )}
-              {(isRegisterEmail || (isRecovery && step === 0)) && (
-                <Field
-                  icon={<Mail size={21} />}
-                  label={`usuario@${usernameDomain}`}
-                  aria-label={t.institutional}
-                  type="email"
-                  name="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  autoComplete="email"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  required
-                  maxLength={254}
-                  disabled={!hydrated || busy}
-                />
-              )}
-              {isPassword && (
-                <>
-                  <Field
-                    icon={<LockKeyhole size={21} />}
-                    label={t.password}
-                    password
-                    name="new-password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    autoComplete="new-password"
-                    required
-                    minLength={8}
-                    maxLength={128}
-                    disabled={!hydrated || busy}
-                    aria-describedby="password-rules"
-                  />
-                  <Field
-                    icon={<LockKeyhole size={21} />}
-                    label={t.confirm}
-                    password
-                    name="confirm-password"
-                    value={confirm}
-                    onChange={(event) => setConfirm(event.target.value)}
-                    autoComplete="new-password"
-                    required
-                    minLength={8}
-                    maxLength={128}
-                    disabled={!hydrated || busy}
-                  />
-                </>
-              )}
-              {isOtp && (
-                <div className={styles.otp}>
-                  <label htmlFor="otp-code" className={styles.srOnly}>
-                    {t.code}
-                  </label>
-                  {/* One field: iOS and Android autofill the whole code into it. */}
-                  <input
-                    ref={codeRef}
-                    id="otp-code"
-                    name="one-time-code"
-                    type="text"
-                    value={code}
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    pattern={`[0-9]{${OTP_LENGTH}}`}
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    required
-                    aria-invalid={error ? true : undefined}
-                    aria-describedby={error ? "auth-error" : undefined}
-                    disabled={!hydrated}
-                    // Read-only while sending keeps the keyboard open on mobile.
-                    readOnly={busy}
-                    onChange={(event) => updateCode(event.target.value)}
-                    onPaste={(event) => {
-                      event.preventDefault();
-                      updateCode(event.clipboardData.getData("text"));
-                    }}
-                  />
+          {termsStep ? (
+            <AcceptTermsForm
+              destination={termsStep.destination}
+              initialState={termsStep.state}
+              entrypoint={entrypoint}
+            />
+          ) : (
+            <>
+              {/* Firefox must not restore disabled attributes before hydration. */}
+              <form
+                ref={formRef}
+                method="post"
+                autoComplete="off"
+                onSubmit={submit}
+                className={`${styles.form} ${isLogin ? styles.loginForm : ""}`}
+                aria-busy={busy}
+              >
+                <div className={styles.fields}>
+                  {isLogin && (
+                    <>
+                      <Field
+                        icon={<Mail size={21} />}
+                        label={t.identifier}
+                        name="username"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        autoComplete="username"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        required
+                        maxLength={254}
+                        disabled={!hydrated || busy}
+                      />
+                      <Field
+                        icon={<LockKeyhole size={21} />}
+                        label={t.password}
+                        password
+                        name="password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        autoComplete="current-password"
+                        required
+                        maxLength={128}
+                        disabled={!hydrated || busy}
+                      />
+                    </>
+                  )}
+                  {(isRegisterEmail || (isRecovery && step === 0)) && (
+                    <Field
+                      icon={<Mail size={21} />}
+                      label={`usuario@${usernameDomain}`}
+                      aria-label={t.institutional}
+                      type="email"
+                      name="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      autoComplete="email"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      required
+                      maxLength={254}
+                      disabled={!hydrated || busy}
+                    />
+                  )}
+                  {isPassword && (
+                    <>
+                      <Field
+                        icon={<LockKeyhole size={21} />}
+                        label={t.password}
+                        password
+                        name="new-password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        autoComplete="new-password"
+                        required
+                        minLength={8}
+                        maxLength={128}
+                        disabled={!hydrated || busy}
+                        aria-describedby="password-rules"
+                      />
+                      <Field
+                        icon={<LockKeyhole size={21} />}
+                        label={t.confirm}
+                        password
+                        name="confirm-password"
+                        value={confirm}
+                        onChange={(event) => setConfirm(event.target.value)}
+                        autoComplete="new-password"
+                        required
+                        minLength={8}
+                        maxLength={128}
+                        disabled={!hydrated || busy}
+                      />
+                    </>
+                  )}
+                  {isOtp && (
+                    <div className={styles.otp}>
+                      <label htmlFor="otp-code" className={styles.srOnly}>
+                        {t.code}
+                      </label>
+                      {/* One field: iOS and Android autofill the whole code into it. */}
+                      <input
+                        ref={codeRef}
+                        id="otp-code"
+                        name="one-time-code"
+                        type="text"
+                        value={code}
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        pattern={`[0-9]{${OTP_LENGTH}}`}
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        required
+                        aria-invalid={error ? true : undefined}
+                        aria-describedby={error ? "auth-error" : undefined}
+                        disabled={!hydrated}
+                        // Read-only while sending keeps the keyboard open on mobile.
+                        readOnly={busy}
+                        onChange={(event) => updateCode(event.target.value)}
+                        onPaste={(event) => {
+                          event.preventDefault();
+                          updateCode(event.clipboardData.getData("text"));
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            {isLogin && (
-              <div className={styles.options}>
-                <label className={styles.remember}>
-                  <input
-                    type="checkbox"
-                    checked={remember}
-                    onChange={(event) => setRemember(event.target.checked)}
-                    disabled={!hydrated || busy}
-                  />
-                  {t.remember}
-                </label>
-                <Link
-                  className={styles.link}
-                  href={
-                    entrypoint === "panel"
-                      ? "/panel/recuperar"
-                      : "/recuperar-contrasena?entrypoint=client"
-                  }
-                >
-                  {t.forgot}
-                </Link>
-              </div>
-            )}
-            {isRegisterEmail && (
-              <p className={styles.note} aria-live="polite">
-                <Info
-                  size={20}
-                  style={{
-                    fill: "var(--color-brand)",
-                    stroke: "var(--color-on-color)",
-                  }}
-                />
-                {domain.state === "checking"
-                  ? t.checking
-                  : domain.state === "allowed"
-                    ? domain.clientType === "STUDENT"
-                      ? t.studentAccount
-                      : t.staffAccount
-                    : domain.state === "denied"
-                      ? t.denied
-                      : t.onlyInstitutional}
-              </p>
-            )}
-            {isPassword && (
-              <div id="password-rules" className={styles.requirements}>
-                <p>{t.include}</p>
-                <ul>
-                  {t.rules.map((rule, index) => (
-                    <li
-                      key={rule}
-                      className={
-                        passwordRules(password)[index] ? styles.passed : ""
+                {isLogin && (
+                  <div className={styles.options}>
+                    <label className={styles.remember}>
+                      <input
+                        type="checkbox"
+                        checked={remember}
+                        onChange={(event) => setRemember(event.target.checked)}
+                        disabled={!hydrated || busy}
+                      />
+                      {t.remember}
+                    </label>
+                    <Link
+                      className={styles.link}
+                      href={
+                        entrypoint === "panel"
+                          ? "/panel/recuperar"
+                          : "/recuperar-contrasena?entrypoint=client"
                       }
                     >
-                      <CheckCircle2 size={14} />
-                      {rule}
-                      <span className={styles.srOnly}>
-                        {passwordRules(password)[index] ? " ✓" : ""}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {isOtp && (
-              <p className={styles.resend}>
-                {t.validity}
-                <br />
-                {t.notReceived}
-                <br />
-                <button
-                  className={styles.link}
-                  type="button"
-                  disabled={
-                    !hydrated || busy || countdown > 0 || resends >= MAX_RESENDS
-                  }
-                  onClick={() => resend()}
-                >
-                  {t.resend}
-                  {countdown > 0 &&
-                    ` (${String(Math.floor(countdown / 60)).padStart(2, "0")}:${String(countdown % 60).padStart(2, "0")})`}
-                </button>
-                {resends >= MAX_RESENDS && (
-                  <>
-                    <br />
-                    {t.resendLimit}
-                  </>
+                      {t.forgot}
+                    </Link>
+                  </div>
                 )}
-              </p>
-            )}
-            {error && (
-              <p
-                id="auth-error"
-                className={styles.error}
-                role="alert"
-                aria-live="assertive"
-              >
-                {error}
-              </p>
-            )}
-            {unverified && isLogin && (
-              <button
-                className={styles.link}
-                type="button"
-                disabled={!hydrated || busy}
-                onClick={() => resend(true)}
-              >
-                {t.verifyLink}
-              </button>
-            )}
-            {notice && (
-              <p className={styles.success} role="status">
-                {notice}
-              </p>
-            )}
-            <button
-              className={`${styles.primary} ${!isLogin ? (isPassword ? styles.passwordContinue : styles.continue) : ""}`}
-              type="submit"
-              disabled={!hydrated || busy}
-            >
-              {buttonText}
-              {!busy && <ArrowRight size={21} />}
-            </button>
-          </form>
-          {isLogin && entrypoint === "client" ? (
-            <>
-              <div className={styles.divider}>{t.or}</div>
-              <div className={styles.register}>
-                {t.noAccount}
-                <Link href="/registro" className={styles.link}>
-                  {t.register}
-                </Link>
-              </div>
-            </>
-          ) : (
-            mode === "register" &&
-            entrypoint === "client" && (
-              <ol className={styles.progress} aria-label={t.progress}>
-                {t.steps.map((label, index) => (
-                  <li
-                    key={label}
-                    aria-current={index === step ? "step" : undefined}
-                    className={index < step ? styles.complete : ""}
+                {isRegisterEmail && (
+                  <p className={styles.note} aria-live="polite">
+                    <Info
+                      size={20}
+                      style={{
+                        fill: "var(--color-brand)",
+                        stroke: "var(--color-on-color)",
+                      }}
+                    />
+                    {domain.state === "checking"
+                      ? t.checking
+                      : domain.state === "allowed"
+                        ? domain.clientType === "STUDENT"
+                          ? t.studentAccount
+                          : t.staffAccount
+                        : domain.state === "denied"
+                          ? t.denied
+                          : t.onlyInstitutional}
+                  </p>
+                )}
+                {isPassword && (
+                  <div id="password-rules" className={styles.requirements}>
+                    <p>{t.include}</p>
+                    <ul>
+                      {t.rules.map((rule, index) => (
+                        <li
+                          key={rule}
+                          className={
+                            passwordRules(password)[index] ? styles.passed : ""
+                          }
+                        >
+                          <CheckCircle2 size={20} />
+                          {rule}
+                          <span className={styles.srOnly}>
+                            {passwordRules(password)[index] ? " ✓" : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {isOtp && (
+                  <p className={styles.resend}>
+                    {t.validity}
+                    <br />
+                    {t.notReceived}
+                    <br />
+                    <button
+                      className={styles.link}
+                      type="button"
+                      disabled={
+                        !hydrated ||
+                        busy ||
+                        countdown > 0 ||
+                        resends >= MAX_RESENDS
+                      }
+                      onClick={() => resend()}
+                    >
+                      {t.resend}
+                      {countdown > 0 &&
+                        ` (${String(Math.floor(countdown / 60)).padStart(2, "0")}:${String(countdown % 60).padStart(2, "0")})`}
+                    </button>
+                    {resends >= MAX_RESENDS && (
+                      <>
+                        <br />
+                        {t.resendLimit}
+                      </>
+                    )}
+                  </p>
+                )}
+                {error && (
+                  <p
+                    id="auth-error"
+                    className={styles.error}
+                    role="alert"
+                    aria-live="assertive"
                   >
-                    <span className={styles.dot} />
-                    <span className={styles.srOnly}>
-                      {index + 1}. {label}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            )
+                    {error}
+                  </p>
+                )}
+                {unverified && isLogin && (
+                  <button
+                    className={styles.link}
+                    type="button"
+                    disabled={!hydrated || busy}
+                    onClick={() => resend(true)}
+                  >
+                    {t.verifyLink}
+                  </button>
+                )}
+                {notice && (
+                  <p className={styles.success} role="status">
+                    {notice}
+                  </p>
+                )}
+                <button
+                  className={`${styles.primary} ${!isLogin ? (isPassword ? styles.passwordContinue : styles.continue) : ""}`}
+                  type="submit"
+                  disabled={!hydrated || busy}
+                  aria-busy={busy || undefined}
+                >
+                  {busy && isLogin ? (
+                    <span className={styles.loginSpinner} aria-hidden="true" />
+                  ) : null}
+                  {buttonText}
+                  {!busy && <ArrowRight size={21} />}
+                </button>
+              </form>
+              {isLogin && entrypoint === "client" ? (
+                <>
+                  <div className={styles.divider}>{t.or}</div>
+                  <div className={styles.register}>
+                    {t.noAccount}
+                    <Link href="/registro" className={styles.link}>
+                      {t.register}
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                mode === "register" &&
+                entrypoint === "client" && (
+                  <ol className={styles.progress} aria-label={t.progress}>
+                    {t.steps.map((label, index) => (
+                      <li
+                        key={label}
+                        aria-current={index === step ? "step" : undefined}
+                        className={index < step ? styles.complete : ""}
+                      >
+                        <span className={styles.dot} />
+                        <span className={styles.srOnly}>
+                          {index + 1}. {label}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                )
+              )}
+            </>
           )}
         </div>
         <Waves />

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1254 1254" role="img" aria-label="UniFood">
+  <defs>
+    <linearGradient id="uf-bg" x1="0.15" y1="0.05" x2="0.85" y2="0.95">
+      <stop offset="0" stop-color="#63d6ff"/>
+      <stop offset="0.45" stop-color="#0b8cff"/>
+      <stop offset="0.75" stop-color="#0b5fff"/>
+      <stop offset="1" stop-color="#0a2a8a"/>
+    </linearGradient>
+    <linearGradient id="uf-mark" x1="0.2" y1="0.1" x2="0.8" y2="0.9">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#d9e8ff"/>
+    </linearGradient>
+  </defs>
+  <rect x="180" y="172" width="894" height="906" rx="210" fill="url(#uf-bg)"/>
+  <path fill="url(#uf-mark)" d="M362 420Q362 362 420 362H506V650Q506 770 626 770Q747 770 747 650V362H832Q890 362 890 420V680Q890 910 626 910Q362 910 362 680Z"/>
+  <rect x="542" y="370" width="36" height="286" rx="18" fill="#ffffff"/>
+  <rect x="607" y="370" width="36" height="286" rx="18" fill="#ffffff"/>
+  <rect x="676" y="370" width="36" height="286" rx="18" fill="#ffffff"/>
+</svg>

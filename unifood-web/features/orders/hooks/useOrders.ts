@@ -16,6 +16,7 @@ import {
   transitionAnnouncement,
   type ListingFailure,
 } from "@/features/orders/listingStatus";
+import { advanceOrder as projectAdvance } from "@/lib/orderWorkflow";
 import type { Order } from "@/types/order";
 
 export function useOrders(enabled = true) {
@@ -205,6 +206,14 @@ export function useOrders(enabled = true) {
       pending.current.add(order.id);
       ++revision.current;
       setBusyOrderIds([...pending.current]);
+      // F3 · optimistic: the card moves to its next column at once and keeps «Guardando…» until
+      // the server confirms. Polling is paused while the order is pending, so nothing overwrites it.
+      const projected = projectAdvance(current);
+      replaceOrders(
+        latestOrders.current.map((item) =>
+          item.id === current.id ? projected : item,
+        ),
+      );
       try {
         const updated = await advanceOrder(current);
         replaceOrders(
@@ -214,6 +223,12 @@ export function useOrders(enabled = true) {
         );
         return updated;
       } catch (cause) {
+        // The server said no: the card goes back to where it was, with the reason in the alert.
+        replaceOrders(
+          latestOrders.current.map((item) =>
+            item.id === current.id ? current : item,
+          ),
+        );
         const apiError = cause as Error & { code?: unknown };
         const message =
           cause instanceof Error

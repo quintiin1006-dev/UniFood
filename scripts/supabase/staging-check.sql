@@ -52,6 +52,9 @@ WITH account_fks AS (
       'orders.rejected_by',
       -- 022: only a SUPER_ADMIN changes billing and visibility; the cleanup skips them too.
       'cafeteria_billing_settings.updated_by', 'cafeteria_settings_audit.changed_by',
+      -- 027: only an active CLIENT or WORKER registers a device, so the clients and user_roles
+      -- checks of the cleanup cover it; the row is ON DELETE CASCADE as well.
+      'push_subscriptions.user_id',
       -- 028: only a WORKER or an ADMIN operates the drawer; the cleanup skips accounts with a role.
       'cafeteria_cash_settings.updated_by', 'cash_sessions.opened_by', 'cash_sessions.closed_by',
       'cash_sessions.reopened_by', 'cash_movements.created_by', 'cash_sessions_audit.changed_by')
@@ -130,6 +133,8 @@ WHERE c.contype = 'f'
     'orders.rejected_by',
     -- 022: only a SUPER_ADMIN changes billing and visibility; the cleanup skips them too.
     'cafeteria_billing_settings.updated_by', 'cafeteria_settings_audit.changed_by',
+    -- 027: only an active CLIENT or WORKER registers a device; ON DELETE CASCADE as well.
+    'push_subscriptions.user_id',
     -- 028: only a WORKER or an ADMIN operates the drawer; the cleanup skips accounts with a role.
     'cafeteria_cash_settings.updated_by', 'cash_sessions.opened_by', 'cash_sessions.closed_by',
     'cash_sessions.reopened_by', 'cash_movements.created_by', 'cash_sessions_audit.changed_by')

@@ -1,0 +1,1289 @@
+/* =========================================================
+   CONTENEDOR
+   ========================================================= */
+
+.container {
+  flex: 1;
+
+  min-height: 0;
+
+  width: 100%;
+
+  padding: 18px 24px;
+
+  background: transparent;
+
+  color: #ffffff;
+}
+
+/* =========================================================
+   LAYOUT
+   ========================================================= */
+
+.content {
+  height: 100%;
+
+  min-height: 0;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.25fr)
+    minmax(380px, 1fr);
+
+  gap: 22px;
+}
+
+/* =========================================================
+   PANEL DE LLAMADAS
+   ========================================================= */
+
+.listPanel {
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  /*
+   * Contenedor principal.
+   */
+  border-radius: 23px;
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+
+  /*
+   * Se mantiene el efecto
+   * transparente original.
+   */
+  background: rgba(35, 110, 190, 0.38);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 28px rgba(0, 35, 85, 0.12);
+
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* =========================================================
+   HEADER DE LLAMADAS
+   ========================================================= */
+
+.listHeader {
+  height: 76px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 13px;
+
+  padding: 11px 18px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+
+  background: rgba(40, 125, 210, 0.28);
+}
+
+.headerIcon {
+  width: 50px;
+  height: 50px;
+
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 15px;
+
+  color: #ffffff;
+
+  background: rgba(255, 255, 255, 0.09);
+
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.title {
+  flex: 1;
+
+  margin: 0;
+
+  color: #ffffff;
+
+  font-size: 20px;
+  font-weight: 700;
+
+  line-height: 1.1;
+
+  letter-spacing: -0.02em;
+}
+
+.counter {
+  width: 44px;
+  height: 44px;
+
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 999px;
+
+  color: #ffffff;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  background: rgba(255, 255, 255, 0.25);
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* =========================================================
+   LISTA
+   ========================================================= */
+
+.list {
+  flex: 1;
+
+  min-height: 0;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  padding: 10px;
+
+  scrollbar-width: thin;
+
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+
+  overscroll-behavior: contain;
+}
+
+.list::-webkit-scrollbar,
+.productsScroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.list::-webkit-scrollbar-track,
+.productsScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.list::-webkit-scrollbar-thumb,
+.productsScroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* =========================================================
+   ESTADO VACÍO
+   ========================================================= */
+
+.empty {
+  height: 100%;
+
+  min-height: 100px;
+}
+
+/* =========================================================
+   TARJETAS
+   ========================================================= */
+
+.orderRow {
+  min-height: 78px;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    calc(48px / var(--worker-zoom, 1))
+    120px;
+
+  align-items: center;
+
+  gap: 8px;
+
+  margin-bottom: 8px;
+
+  padding: 7px 9px;
+
+  border-radius: 16px;
+
+  background: rgba(255, 255, 255, 0.95);
+
+  border: 1px solid rgba(255, 255, 255, 0.65);
+
+  box-shadow: 0 4px 12px rgba(0, 35, 85, 0.08);
+
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.orderRow:last-child {
+  margin-bottom: 0;
+}
+
+.orderRow:hover {
+  transform: translateY(-1px);
+
+  box-shadow: 0 7px 18px rgba(0, 35, 85, 0.12);
+}
+
+.orderRow.selected {
+  border-color: #8ec4ff;
+
+  box-shadow:
+    inset 3px 0 0 #0870ed,
+    0 7px 20px rgba(0, 65, 140, 0.13);
+}
+
+/* =========================================================
+   ESTUDIANTE
+   ========================================================= */
+
+.studentButton {
+  min-width: 0;
+
+  height: 60px;
+
+  display: grid;
+
+  grid-template-columns:
+    45px
+    minmax(0, 1fr);
+
+  align-items: center;
+
+  gap: 11px;
+
+  padding: 3px 7px;
+
+  border: 0;
+
+  background: transparent;
+
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.avatar {
+  width: 45px;
+  height: 45px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 50%;
+
+  color: #0870ed;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  background: linear-gradient(145deg, #e9f4ff, #d8eaff);
+}
+
+.studentInfo {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.studentInfo strong {
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+
+  color: #172033;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  line-height: 1.25;
+}
+
+.studentInfo span {
+  color: #6f7b8c;
+
+  font-size: 13px;
+  font-weight: 400;
+
+  line-height: 1.3;
+}
+
+/* =========================================================
+   AVISAR
+   ========================================================= */
+
+.remindButton {
+  width: 38px;
+  height: 38px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 11px;
+
+  border: 1px solid #d5e3f2;
+
+  background: #ffffff;
+
+  color: #0870ed;
+
+  cursor: pointer;
+}
+
+.remindButton:hover {
+  background: #edf5ff;
+}
+
+/* =========================================================
+   VER PEDIDO
+   ========================================================= */
+
+.viewButton {
+  width: 120px;
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  border: 0;
+
+  border-radius: 11px;
+
+  background: linear-gradient(135deg, #0878ff, #0767df);
+
+  color: #ffffff;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  box-shadow: 0 6px 14px rgba(0, 103, 225, 0.18);
+}
+
+.viewButton:hover {
+  transform: translateY(-1px);
+}
+
+.viewButton span:last-child {
+  font-size: 15px;
+}
+
+/* =========================================================
+   PANEL DE DETALLE
+   ========================================================= */
+
+.detailPanel {
+  min-width: 0;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  border: 1px solid #e1e6ed;
+
+  border-radius: 23px;
+
+  background: #ffffff;
+
+  /*
+   * Todo el contenido principal
+   * parte ahora de un neutral oscuro,
+   * no de azul.
+   */
+  color: #172033;
+
+  box-shadow: 0 12px 32px rgba(0, 35, 85, 0.14);
+}
+
+.detail {
+  flex: 1;
+
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================================================
+   HEADER DEL DETALLE
+   ========================================================= */
+
+.detailHeader {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  padding: 20px;
+
+  border-bottom: 1px solid #e3e8ef;
+}
+
+.detailHeading {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+}
+
+.headingIcon,
+.detailIcon {
+  width: 44px;
+  height: 44px;
+
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 14px;
+
+  color: #0864ce;
+
+  background: #eaf3ff;
+}
+
+.detailHeader small {
+  display: block;
+
+  margin-bottom: 4px;
+
+  /*
+   * Metadata neutral.
+   */
+  color: #7a8596;
+
+  font-size: 12px;
+  font-weight: 400;
+
+  line-height: 1.2;
+
+  letter-spacing: 0.05em;
+}
+
+.detailHeader h2 {
+  margin: 0;
+
+  color: #172033;
+
+  font-size: 20px;
+  font-weight: 700;
+
+  line-height: 1.25;
+
+  letter-spacing: -0.02em;
+}
+
+.closeButton {
+  width: 36px;
+  height: 36px;
+
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  border: 1px solid #dae0e8;
+
+  border-radius: 11px;
+
+  color: #687487;
+
+  background: #ffffff;
+
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  background: #f3f6fa;
+
+  color: #172033;
+}
+
+/* =========================================================
+   CUERPO DEL DETALLE
+   ========================================================= */
+
+.detailBody {
+  flex: 1;
+
+  min-height: 100px;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  scrollbar-width: thin;
+
+  scrollbar-color: #b8cce2 transparent;
+
+  overscroll-behavior: contain;
+}
+
+/* =========================================================
+   INFORMACIÓN DEL ESTUDIANTE
+   ========================================================= */
+
+.studentDetail {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+
+  gap: 12px;
+
+  margin: 18px 20px 0;
+
+  padding: 15px;
+
+  /*
+   * Antes azul claro.
+   * Ahora superficie neutral.
+   */
+  border: 1px solid #e3e8ef;
+
+  border-radius: 16px;
+
+  background: #f7f9fc;
+}
+
+.detailAvatar {
+  width: 44px;
+  height: 44px;
+
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 50%;
+
+  /*
+   * El avatar sí conserva
+   * el azul como acento visual.
+   */
+  background: #e5f0ff;
+
+  color: #075fc6;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.detailStudentInfo {
+  flex: 1;
+
+  min-width: 120px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+
+  overflow-wrap: anywhere;
+}
+
+.detailStudentInfo small {
+  color: #7a8596;
+
+  font-size: 12px;
+  font-weight: 400;
+
+  line-height: 1.2;
+
+  letter-spacing: 0.05em;
+}
+
+.detailStudentInfo strong {
+  color: #172033;
+
+  font-size: 16px;
+  font-weight: 600;
+
+  line-height: 1.4;
+}
+
+.detailStudentInfo span {
+  color: #6f7b8c;
+
+  font-size: 13px;
+  font-weight: 400;
+}
+
+/* =========================================================
+   BADGE AVISADO
+   ========================================================= */
+
+.calledBadge {
+  display: inline-flex;
+  align-items: center;
+
+  gap: 4px;
+
+  padding: 6px 9px;
+
+  border: 1px solid #b9e5d3;
+
+  border-radius: 999px;
+
+  background: #e6f7ef;
+
+  color: #176244;
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   PRODUCTOS
+   ========================================================= */
+
+.productsSection {
+  padding: 22px 20px;
+}
+
+.productsHeader {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 8px;
+
+  margin-bottom: 13px;
+}
+
+.productsHeader h3 {
+  margin: 0;
+
+  color: #172033;
+
+  font-size: 18px;
+  font-weight: 700;
+
+  line-height: 1.25;
+}
+
+.productsHeader > span {
+  padding: 5px 9px;
+
+  border-radius: 999px;
+
+  background: #f0f2f5;
+
+  color: #596273;
+
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.products {
+  display: flex;
+  flex-direction: column;
+
+  gap: 12px;
+}
+
+/* =========================================================
+   PRODUCTO
+   ========================================================= */
+
+.product {
+  display: grid;
+
+  grid-template-columns:
+    46px
+    minmax(0, 1fr);
+
+  align-items: start;
+
+  gap: 12px;
+
+  padding: 16px;
+
+  border: 1px solid #e2e7ed;
+
+  border-radius: 16px;
+
+  background: #ffffff;
+
+  box-shadow: 0 2px 5px rgba(20, 41, 87, 0.02);
+}
+
+/* =========================================================
+   CANTIDAD
+   ========================================================= */
+
+.quantity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: 1px;
+
+  padding: 8px 3px;
+
+  border-radius: 10px;
+
+  /*
+   * Menos azul.
+   */
+  background: #f2f4f7;
+
+  color: #283341;
+
+  overflow-wrap: anywhere;
+}
+
+.quantity strong {
+  font-size: 20px;
+  font-weight: 700;
+
+  line-height: 1.2;
+}
+
+.quantity span {
+  color: #7a8596;
+
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* =========================================================
+   INFORMACIÓN DEL PRODUCTO
+   ========================================================= */
+
+.productInfo {
+  min-width: 0;
+
+  overflow-wrap: anywhere;
+}
+
+.productInfo h4 {
+  margin: 0;
+
+  color: #172033;
+
+  font-size: 16px;
+  font-weight: 600;
+
+  line-height: 1.45;
+}
+
+.unitPrice {
+  margin: 4px 0 0;
+
+  color: #7a8596;
+
+  font-size: 13px;
+  font-weight: 400;
+}
+
+/* =========================================================
+   BEBIDA / NOTAS
+   ========================================================= */
+
+.beverage,
+.productNote,
+.orderNote {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 8px;
+
+  margin-top: 12px;
+
+  padding: 10px;
+
+  border-radius: 10px;
+
+  font-size: 14px;
+  font-weight: 400;
+
+  line-height: 1.5;
+}
+
+/* Bebida: neutral */
+
+.beverage {
+  background: #f7f9fc;
+
+  color: #4f5d70;
+
+  border: 1px solid #e5e9ef;
+}
+
+.beverage svg,
+.productNote svg,
+.orderNote svg {
+  flex-shrink: 0;
+
+  margin-top: 2px;
+}
+
+.beverage span,
+.productNote span {
+  display: block;
+
+  margin-bottom: 2px;
+
+  color: #7a8596;
+
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.beverage strong {
+  color: #283341;
+
+  font-weight: 500;
+}
+
+/* Indicaciones: amarillo semántico */
+
+.productNote,
+.orderNote {
+  background: #fff7e8;
+
+  color: #785019;
+
+  border: 1px solid #f4e3bd;
+}
+
+.productNote p,
+.orderNote p {
+  margin: 0;
+
+  white-space: pre-wrap;
+
+  overflow-wrap: anywhere;
+}
+
+.orderNote {
+  margin-top: 16px;
+
+  padding: 13px;
+}
+
+.orderNote strong {
+  display: block;
+
+  margin-bottom: 4px;
+
+  font-weight: 600;
+}
+
+/* =========================================================
+   PRECIO DEL PRODUCTO
+   ========================================================= */
+
+.productPrice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+
+  gap: 5px 12px;
+
+  margin-top: 13px;
+
+  padding-top: 10px;
+
+  border-top: 1px solid #e8ebef;
+
+  font-variant-numeric: tabular-nums;
+}
+
+.productPrice span {
+  color: #7a8596;
+
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.productPrice strong {
+  color: #172033;
+
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.emptyProducts {
+  color: #6f7b8c;
+
+  font-size: 14px;
+  font-weight: 400;
+
+  line-height: 1.6;
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.detailFooter {
+  flex-shrink: 0;
+
+  padding: 18px 20px;
+
+  border-top: 1px solid #e1e6ed;
+
+  /*
+   * Neutralizamos también
+   * el fondo del footer.
+   */
+  background: #fafbfc;
+}
+
+/* =========================================================
+   TOTAL
+   ========================================================= */
+
+.total {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 8px 12px;
+
+  margin-bottom: 16px;
+}
+
+.total > span {
+  color: #3f4a5a;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.total small {
+  display: block;
+
+  margin-top: 4px;
+
+  color: #7a8596;
+
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.total > strong {
+  color: #172033;
+
+  font-size: 26px;
+  font-weight: 700;
+
+  letter-spacing: -0.03em;
+
+  font-variant-numeric: tabular-nums;
+
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   ENTREGAR
+   ========================================================= */
+
+.deliverButton {
+  width: 100%;
+
+  min-height: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  padding: 12px;
+
+  border: 0;
+
+  border-radius: 12px;
+
+  /*
+   * El azul queda reservado
+   * para la acción principal.
+   */
+  background: #086be3;
+
+  color: #ffffff;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  box-shadow: 0 4px 12px rgba(8, 107, 227, 0.15);
+}
+
+.deliverButton:hover:not(:disabled) {
+  background: #075bc1;
+}
+
+.deliverButton:disabled {
+  opacity: 0.55;
+
+  cursor: not-allowed;
+
+  box-shadow: none;
+}
+
+/* =========================================================
+   SIN SELECCIÓN
+   ========================================================= */
+
+.noSelection {
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 32px;
+
+  text-align: center;
+
+  /*
+   * Fondo mucho más neutral.
+   */
+  background: linear-gradient(160deg, #ffffff, #f7f9fc);
+}
+
+.detailIcon {
+  width: 72px;
+  height: 72px;
+
+  margin-bottom: 20px;
+
+  border: 1px solid #e0e7ef;
+
+  border-radius: 22px;
+}
+
+.noSelection h2 {
+  margin: 0 0 10px;
+
+  color: #172033;
+
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.noSelection p {
+  max-width: 270px;
+
+  margin: 0;
+
+  color: #6f7b8c;
+
+  font-size: 14px;
+  font-weight: 400;
+
+  line-height: 1.7;
+}
+
+/* =========================================================
+   ACCESIBILIDAD
+   ========================================================= */
+
+.container button:focus-visible {
+  outline: 3px solid #0870ed;
+
+  outline-offset: 3px;
+}
+
+/* =========================================================
+   RESPONSIVE — 1100px
+   ========================================================= */
+
+@media (max-width: 1100px) {
+  .content {
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(360px, 1fr);
+
+    gap: 16px;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE — 900px
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .content {
+    height: auto;
+
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .listPanel {
+    min-height: 280px;
+
+    max-height: 420px;
+  }
+
+  .detailPanel {
+    min-height: 460px;
+  }
+
+  .detailBody {
+    flex: auto;
+
+    max-height: 560px;
+  }
+}
+
+/* =========================================================
+   RESPONSIVE — 600px
+   ========================================================= */
+
+@media (max-width: 600px) {
+  .container {
+    padding: 10px;
+  }
+
+  .content {
+    gap: 12px;
+  }
+
+  .listHeader {
+    height: 68px;
+  }
+
+  .headerIcon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+
+  .counter {
+    width: 40px;
+    height: 40px;
+  }
+
+  .orderRow {
+    grid-template-columns:
+      minmax(0, 1fr)
+      calc(48px / var(--worker-zoom, 1))
+      95px;
+  }
+
+  .viewButton {
+    width: 95px;
+
+    font-size: 12px;
+  }
+
+  .detailHeader,
+  .detailFooter {
+    padding: 16px;
+  }
+
+  .detailHeader h2 {
+    font-size: 18px;
+  }
+
+  .headingIcon {
+    display: none;
+  }
+
+  .studentDetail {
+    margin: 16px 14px 0;
+  }
+
+  .productsSection {
+    padding: 20px 14px;
+  }
+
+  .product {
+    grid-template-columns:
+      40px
+      minmax(0, 1fr);
+
+    gap: 10px;
+
+    padding: 12px;
+  }
+
+  .productInfo h4 {
+    font-size: 15px;
+  }
+
+  .total > strong {
+    font-size: 23px;
+  }
+}
+/* ---- Keys added after the classic baseline (ola 2 · D2), with the classic palette ---- */
+.emptyText {
+  margin: 0;
+  padding: 32px 16px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* D1: pickup time next to the client's name in the detail. */
+.pickupBadge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eaf2ff;
+  color: #174a8c;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The reminder hint («Avisos completos», «En 3 min») sits under the bell: rows grow to fit it. */
+.orderRow {
+  min-height: 84px;
+}
+
+.remindButton {
+  height: auto;
+  min-height: 38px;
+}

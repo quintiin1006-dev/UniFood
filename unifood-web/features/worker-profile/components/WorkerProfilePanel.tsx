@@ -5,6 +5,8 @@ import { inactiveCafeteriaMessage, workerRoleLabel } from "../presentation";
 import styles from "./WorkerProfile.module.css";
 import { Notice } from "@/components/ui/Notice";
 import { Button, buttonClass } from "@/components/ui/Button";
+import { ICON_MIN_20 } from "@/components/ui/Icon";
+import { PushToggle } from "@/features/push/components/PushControls";
 
 export function WorkerProfilePanel() {
   const { data, loading, error, retry } = useWorkerProfile();
@@ -50,7 +52,7 @@ export function WorkerProfilePanel() {
             <dl className={styles.account}>
               <div>
                 <dt>
-                  <Mail size={15} aria-hidden="true" />
+                  <Mail size={20} style={ICON_MIN_20} aria-hidden="true" />
                   Correo
                 </dt>
                 <dd>{data.email}</dd>
@@ -83,6 +85,7 @@ export function WorkerProfilePanel() {
               </Notice>
             )}
           </div>
+          <PushToggle role="worker" />
         </article>
       )}
     </section>

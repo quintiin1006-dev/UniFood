@@ -10,6 +10,7 @@ import {
 } from "@/features/orders/calledOrderActions";
 import type { Order } from "@/types/order";
 import styles from "./CalledOrderActions.module.css";
+import { ICON_MIN_20 } from "@/components/ui/Icon";
 
 /** How long the "Confirmar no recogido" step waits for the second click. */
 export const NOT_COLLECTED_CONFIRM_MS = 5000;
@@ -70,7 +71,7 @@ export function RemindButton({
         if (!blocked) onRemind(order);
       }}
     >
-      <Bell size={18} strokeWidth={2} aria-hidden="true" />
+      <Bell size={20} style={ICON_MIN_20} strokeWidth={2} aria-hidden="true" />
       <span className={styles.count} aria-hidden="true">
         {sending ? "…" : `${reminderCount(order)}/${MAX_REMINDERS}`}
       </span>
@@ -150,7 +151,12 @@ export function NotCollectedButton({
         onConfirm(order);
       }}
     >
-      <UserX size={18} strokeWidth={2.2} aria-hidden="true" />
+      <UserX
+        size={20}
+        style={ICON_MIN_20}
+        strokeWidth={2.2}
+        aria-hidden="true"
+      />
       <span aria-live="polite">{label}</span>
     </button>
   );

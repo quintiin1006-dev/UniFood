@@ -9,6 +9,7 @@ import {
   UserRound,
 } from "lucide-react";
 import LogoutButton from "@/features/auth/components/LogoutButton";
+import { PushToggle } from "@/features/push/components/PushControls";
 import type { ClientDetails } from "../types";
 import styles from "./ClientProfile.module.css";
 
@@ -65,6 +66,7 @@ export default function ClientProfile({
           </dd>
         </div>
       </dl>
+      <PushToggle role="client" />
       <div className={styles.actions}>
         <Link className={styles.action} href="/cuenta/perfil/contrasena">
           <LockKeyhole size={23} aria-hidden="true" />

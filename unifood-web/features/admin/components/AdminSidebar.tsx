@@ -3,13 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, UserRound, Utensils, Wallet } from "lucide-react";
+import { Icon, type IconName } from "@/components/ui/Icon";
 import styles from "./Admin.module.css";
 
-const navigation = [
-  { href: "/admin", label: "Dashboard", Icon: LayoutDashboard },
-  { href: "/admin/catalogo", label: "Catálogo", Icon: Utensils },
-  { href: "/admin/caja", label: "Caja", Icon: Wallet },
+const navigation: { href: string; label: string; icon: IconName }[] = [
+  { href: "/admin", label: "Dashboard", icon: "dashboard" },
+  { href: "/admin/catalogo", label: "Catálogo", icon: "catalogo" },
+  { href: "/admin/caja", label: "Caja", icon: "efectivo" },
 ];
 
 export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -30,14 +30,18 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
         </div>
       </div>
       <nav aria-label="Administración">
-        {navigation.map(({ href, label, Icon }) => (
+        {navigation.map(({ href, label, icon }) => (
           <Link
             key={href}
             href={href}
             aria-current={pathname === href ? "page" : undefined}
             onClick={onNavigate}
           >
-            <Icon size={19} strokeWidth={1.7} aria-hidden="true" />
+            <Icon
+              name={icon}
+              size={20}
+              tone={pathname === href ? "active" : "inherit"}
+            />
             {label}
           </Link>
         ))}
@@ -47,7 +51,11 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
             aria-current={pathname === "/admin/perfil" ? "page" : undefined}
             onClick={onNavigate}
           >
-            <UserRound size={19} strokeWidth={1.7} aria-hidden="true" />
+            <Icon
+              name="perfil"
+              size={20}
+              tone={pathname === "/admin/perfil" ? "active" : "inherit"}
+            />
             Mi perfil
           </Link>
         </div>

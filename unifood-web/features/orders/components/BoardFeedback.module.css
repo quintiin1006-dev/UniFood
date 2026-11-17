@@ -95,3 +95,37 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* Board skeleton: static shapes of the four columns. */
+.skeletonBoard {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: calc(16px / var(--worker-zoom, 1));
+  padding: calc(4px / var(--worker-zoom, 1)) 0;
+}
+
+.skeletonColumn {
+  display: grid;
+  align-content: start;
+  gap: calc(12px / var(--worker-zoom, 1));
+  padding: calc(12px / var(--worker-zoom, 1));
+  border-radius: calc(20px / var(--worker-zoom, 1));
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.skeletonHead,
+.skeletonCard {
+  display: block;
+  border-radius: calc(16px / var(--worker-zoom, 1));
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.skeletonHead {
+  height: calc(56px / var(--worker-zoom, 1));
+}
+
+.skeletonCard {
+  height: calc(132px / var(--worker-zoom, 1));
+}

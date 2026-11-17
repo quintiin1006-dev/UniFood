@@ -48,6 +48,19 @@ test.beforeEach(async ({ page }) => {
   await configure(page, { reset: true });
 });
 
+/**
+ * Opens every collapsed history row (ola 2 · D3): motives, items and totals live in the detail.
+ * Each click removes that row from the collapsed set, so the first collapsed toggle is clicked
+ * until none is left.
+ */
+async function expandAllRows(page: Page) {
+  const collapsed = panel(page).locator(
+    'article button[aria-expanded="false"]',
+  );
+  for (let guard = 0; guard < 200 && (await collapsed.count()) > 0; guard++)
+    await collapsed.first().click();
+}
+
 test("monthly paging and temporal filters retain snapshots without exposing other months or metrics", async ({
   page,
 }) => {
@@ -219,6 +232,7 @@ test("WORKER history shows only ordered terminal snapshots and survives reload/r
   await login(page);
   await enter(page);
   await loaded(page);
+  await expandAllRows(page);
   for (const label of [
     "Entregado",
     "No recogido",
@@ -227,9 +241,12 @@ test("WORKER history shows only ordered terminal snapshots and survives reload/r
     "Especial histórico",
   ])
     await expect(
-      panel(page).getByLabel("Pedidos finalizados").getByText(label),
+      panel(page)
+        .getByLabel("Pedidos finalizados")
+        .getByText(label, { exact: !label.startsWith("Rechazado") }),
     ).toBeVisible();
-  await expect(panel(page).getByRole("heading", { level: 3 })).toHaveText([
+  // Rows are ordered by the backend; each row shows its reference under the client name (D3).
+  await expect(panel(page).getByRole("article")).toContainText([
     "Pedido · A91C6F2D",
     "Pedido · B72D5A10",
     "Pedido · C83E6B21",
@@ -252,8 +269,10 @@ test("WORKER history shows only ordered terminal snapshots and survives reload/r
   await panel(page)
     .getByRole("button", { name: "Actualizar historial" })
     .click();
-  await expect(panel(page).getByText(/19\.000,50/)).toBeVisible();
-  await expect(panel(page).getByText(/15\.000,50/)).toBeVisible();
+  // Pesos without decimals (I6): a snapshot with cents rounds half up (docs/ui-paneles.md).
+  await expandAllRows(page);
+  await expect(panel(page).getByText("$19.001", { exact: true })).toBeVisible();
+  await expect(panel(page).getByText("$15.001", { exact: true })).toBeVisible();
   await configure(page, { reset: true });
   await page.getByRole("button", { name: "Pedidos", exact: true }).click();
   await expect(panel(page)).toHaveCount(0);
@@ -500,6 +519,7 @@ for (const width of [390, 768, 1366]) {
       const bounds = await button.boundingBox();
       expect(bounds!.height).toBeGreaterThanOrEqual(44);
     }
+    await expandAllRows(page);
     const first = panel(page).getByRole("article").first();
     await expect(first.getByText(/19\.000/)).toBeVisible();
     await expect(first.getByRole("heading", { level: 3 })).toBeVisible();

@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Info } from "lucide-react";
 import styles from "./AdminDashboard.module.css";
+import { ICON_MIN_16 } from "@/components/ui/Icon";
 
 /** Native disclosure: click, touch, Enter/Space and Escape; never hover-only. */
 export function DashboardInfo({
@@ -23,7 +24,7 @@ export function DashboardInfo({
       }}
     >
       <summary aria-label={label} title={label}>
-        <Info size={15} aria-hidden="true" />
+        <Info size={15} style={ICON_MIN_16} aria-hidden="true" />
       </summary>
       <div className={styles.infoPopover}>{children}</div>
     </details>

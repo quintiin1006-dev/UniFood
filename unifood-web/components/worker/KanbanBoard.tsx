@@ -1,20 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Clock3,
-  ChefHat,
-  ShoppingBag,
-  Check,
-  type LucideIcon,
-} from "lucide-react";
+import { Icon, type IconName } from "@/components/ui/Icon";
 
 import { NEW_ORDER_BADGE_MS } from "@/features/orders/listingStatus";
 import type { Order } from "@/types/order";
 import OrderCard from "./OrderCard";
-import styles from "./KanbanBoard.module.css";
+import modernStyles from "./KanbanBoard.module.css";
+import classicStyles from "./KanbanBoard.classic.module.css";
 
 interface KanbanBoardProps {
+  /** Pedidos and Llamadas use the classic look (ola 2 · D2); the rest keep the modern one. */
+  variant?: "classic" | "modern";
   orders: Order[];
   busyOrderIds: string[];
   /** When each order first appeared after the first read (W11). */
@@ -29,7 +26,7 @@ interface Column {
   id: string;
   title: string;
   statuses: Order["status"][];
-  icon: LucideIcon;
+  icon: IconName;
 }
 
 const columns: Column[] = [
@@ -37,29 +34,30 @@ const columns: Column[] = [
     id: "pending",
     title: "Pendientes",
     statuses: ["pending"],
-    icon: Clock3,
+    icon: "reloj",
   },
   {
     id: "preparing",
     title: "En preparación",
     statuses: ["preparing"],
-    icon: ChefHat,
+    icon: "cocina",
   },
   {
     id: "ready",
     title: "Listos para entregar",
     statuses: ["ready", "called"],
-    icon: ShoppingBag,
+    icon: "bolsa",
   },
   {
     id: "delivered",
     title: "Entregados",
     statuses: ["delivered"],
-    icon: Check,
+    icon: "check",
   },
 ];
 
 export default function KanbanBoard({
+  variant = "modern",
   orders,
   busyOrderIds,
   newOrderIds = {},
@@ -68,6 +66,7 @@ export default function KanbanBoard({
   onAction,
   onReject,
 }: KanbanBoardProps) {
+  const styles = variant === "classic" ? classicStyles : modernStyles;
   // W9: an order animates only when it changed column while the board was on screen. On mount
   // (opening the module) there is no previous state, so nothing moves; a polling refresh that
   // changes nothing keeps the same set. Derived state, updated during render.
@@ -125,8 +124,6 @@ export default function KanbanBoard({
               )
             : columnOrders;
 
-        const ColumnIcon = column.icon;
-
         return (
           <article
             key={column.id}
@@ -135,9 +132,9 @@ export default function KanbanBoard({
           >
             <header className={styles.columnHeader}>
               <div className={styles.columnHeading}>
-                <ColumnIcon
+                <Icon
+                  name={column.icon}
                   size={column.id === "delivered" ? 30 : 38}
-                  strokeWidth={column.id === "delivered" ? 2.8 : 2.1}
                   className={
                     column.id === "delivered"
                       ? styles.deliveredIcon
@@ -157,6 +154,7 @@ export default function KanbanBoard({
               ) : (
                 visibleOrders.map((order) => (
                   <OrderCard
+                    variant={variant}
                     key={order.id}
                     order={order}
                     busy={busyOrderIds.includes(order.id)}

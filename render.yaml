@@ -1,0 +1,52 @@
+# Blueprint de Render para el backend de STAGING. Sin valores reales: todo lo que identifica un
+# proyecto Supabase o es secreto va con `sync: false` y se introduce en el dashboard de Render.
+# Validar en "Blueprint preview" antes de aplicar. Guía: docs/despliegue-staging.md
+services:
+  - type: web
+    name: unifood-backend-staging
+    runtime: docker
+    region: oregon
+    # Plan Free TEMPORAL para pruebas: se duerme tras 15 min sin tráfico.
+    # Para el ensayo, la demo y el piloto hay que subir a un plan de pago (Starter o Standard).
+    # Detalles y límites en docs/despliegue-staging.md §2.3.
+    plan: free
+    numInstances: 1
+    repo: https://github.com/quintiin1006-dev/UniFood
+    branch: develop
+    autoDeploy: true
+    dockerContext: ./unifood-backend
+    dockerfilePath: ./unifood-backend/Dockerfile
+    healthCheckPath: /actuator/health
+    envVars:
+      # Perfil y guarda de proyecto (StagingProjectGuard): el arranque se niega si la base no
+      # pertenece a UNIFOOD_EXPECTED_PROJECT_REF.
+      - key: SPRING_PROFILES_ACTIVE
+        value: staging
+      - key: UNIFOOD_EXPECTED_PROJECT_REF
+        sync: false
+      # Base de datos: pooler de Supabase staging (IPv4). Secretas.
+      - key: SUPABASE_DB_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      # Auth: issuer del proyecto staging (JWT validados por Spring). Debe ser del proyecto
+      # pzzkmkvnucueejthpqvl; la guarda rechaza cualquier otro.
+      - key: SUPABASE_AUTH_ISSUER
+        sync: false
+      # Storage de imágenes de producto. En staging DEBE apuntar a pzzkmkvnucueejthpqvl
+      # (https://pzzkmkvnucueejthpqvl.supabase.co/storage/v1); la guarda rechaza otro proyecto.
+      # Dejar URL y secreto vacíos desactiva las subidas (503).
+      - key: SUPABASE_STORAGE_URL
+        sync: false
+      - key: SUPABASE_STORAGE_SECRET_KEY
+        sync: false
+      - key: SUPABASE_PRODUCT_IMAGES_BUCKET
+        value: product-images
+      - key: PRODUCT_IMAGES_CONNECT_TIMEOUT_SECONDS
+        value: "5"
+      - key: PRODUCT_IMAGES_OPERATION_TIMEOUT_SECONDS
+        value: "20"
+      - key: PRODUCT_IMAGES_CLEANUP_ENABLED
+        value: "false"

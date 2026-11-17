@@ -6,7 +6,7 @@ import { DashboardPeriodLabel } from "./DashboardPeriodLabel";
 import { DashboardPeriodFilter } from "./DashboardPeriodFilter";
 import { DashboardSummary } from "./DashboardSummary";
 import { OrdersTrend } from "./OrdersTrend";
-import { NotCollectedProducts } from "./NotCollectedProducts";
+import { DashboardDetail } from "./DashboardDetail";
 import { DeliveredProductsRanking } from "./DeliveredProductsRanking";
 import { DashboardCoverage } from "./DashboardCoverage";
 import { DashboardLoading } from "./DashboardLoading";
@@ -52,7 +52,7 @@ export function AdminDashboard() {
             aria-busy={loading}
             onClick={() => void refresh()}
           >
-            <RefreshCw size={16} aria-hidden="true" />
+            <RefreshCw size={20} aria-hidden="true" />
             Actualizar
           </button>
         </div>
@@ -99,11 +99,13 @@ export function AdminDashboard() {
         <div className={styles.results}>
           <DashboardSummary summary={data.summary} />
           <OrdersTrend trend={data.trend} />
-          <NotCollectedProducts
-            ranking={data.notCollectedProducts}
+          <div className={styles.cardsRow}>
+            <DeliveredProductsRanking ranking={data.topDeliveredProducts} />
+          </div>
+          <DashboardDetail
             summary={data.summary}
+            ranking={data.notCollectedProducts}
           />
-          <DeliveredProductsRanking ranking={data.topDeliveredProducts} />
           <DashboardCoverage coverage={data.coverage} />
         </div>
       )}

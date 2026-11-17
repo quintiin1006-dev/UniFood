@@ -11,6 +11,7 @@ import { CategoryCarousel } from "./CategoryCarousel";
 import styles from "./Availability.module.css";
 import { Notice } from "@/components/ui/Notice";
 import { Button } from "@/components/ui/Button";
+import { ICON_MIN_20 } from "@/components/ui/Icon";
 
 export function AvailabilityPanel() {
   const state = useAvailability();
@@ -39,7 +40,7 @@ export function AvailabilityPanel() {
               void state.refresh();
             }}
           >
-            <RefreshCw size={18} aria-hidden="true" />
+            <RefreshCw size={20} style={ICON_MIN_20} aria-hidden="true" />
             <span>{state.refreshing ? "Actualizando…" : "Actualizar"}</span>
           </button>
         )}
@@ -104,7 +105,11 @@ export function AvailabilityPanel() {
               </p>
               {!state.data.cafeteria.active && (
                 <p id="availability-inactive" className={styles.warning}>
-                  <CircleAlert size={18} aria-hidden="true" />
+                  <CircleAlert
+                    size={20}
+                    style={ICON_MIN_20}
+                    aria-hidden="true"
+                  />
                   <span>
                     La cafetería está administrativamente inactiva. Puedes
                     cerrar y deshabilitar productos; no abrir ni habilitar.

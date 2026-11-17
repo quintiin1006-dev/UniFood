@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, CircleAlert } from "lucide-react";
+import { Icon } from "@/components/ui/Icon";
 import LogoutButton from "@/features/auth/components/LogoutButton";
 import adminStyles from "@/features/admin/components/Admin.module.css";
 import {
@@ -53,7 +53,7 @@ export function SuperAdminPanel() {
         <header className={adminStyles.header}>
           <div className={adminStyles.context}>
             <span className={adminStyles.contextIcon} aria-hidden="true">
-              <Building2 size={23} strokeWidth={1.7} />
+              <Icon name="universidades" size={23} />
             </span>
             <div>
               <strong>Administración global</strong>
@@ -89,7 +89,7 @@ export function SuperAdminPanel() {
             )}
             {error && (
               <div className={adminStyles.feedback} role="alert">
-                <CircleAlert size={23} aria-hidden="true" />
+                <Icon name="error" size={23} />
                 <p>{error.message}</p>
                 {error.status === 401 ? (
                   <a href="/panel/login">Iniciar sesión</a>
