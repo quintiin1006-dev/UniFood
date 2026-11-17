@@ -95,6 +95,7 @@
 /* The visible dot is small; the 44 px button around it is the touch target. */
 .dot {
   position: relative;
+  margin-inline: -5px;
   display: grid;
   place-items: center;
   width: 44px;
