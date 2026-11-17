@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -317,11 +318,11 @@ class WebPushChannelSenderTest {
 
               @Override
               public WebPushChannelSender.Reply exchange(HttpRequest request) {
-                return new WebPushChannelSender.Reply(400, body(json("VapidPkHashMismatch")));
+                return new WebPushChannelSender.Reply(400, body(json("BadJwtToken")));
               }
             });
     assertEquals(
-        new PushChannelSender.Delivery(Result.REJECTED, 400, "VapidPkHashMismatch"),
+        new PushChannelSender.Delivery(Result.REJECTED, 400, "BadJwtToken"),
         withReason.deliver(recipient, message()));
     var withoutReason = new WebPushChannelSender(keys(), PushSettings.defaults(), request -> 400);
     assertEquals(
@@ -392,6 +393,93 @@ class WebPushChannelSenderTest {
     } finally {
       server.stop(0);
     }
+  }
+
+  @Test
+  void aVapidKeyMismatchIsGoneAndAnyOtherRefusalIsStillRejected() {
+    assertEquals(
+        new PushChannelSender.Delivery(Result.GONE, 400, "VapidPkHashMismatch"),
+        deliverWith(400, json("VapidPkHashMismatch")));
+    assertEquals(Result.REJECTED, deliverWith(400, json("BadWebPushTopic")).result());
+    assertEquals(Result.REJECTED, deliverWith(400, json("BadJwtToken")).result());
+    assertEquals(Result.REJECTED, deliverWith(400, "").result(), "400 without reason");
+    assertEquals(
+        Result.REJECTED,
+        deliverWith(403, json("VapidPkHashMismatch")).result(),
+        "the reason counts only on a 400");
+  }
+
+  @Test
+  void theDispatcherRevokesOnlyAVapidKeyMismatchAndLogsItWithoutTheEndpoint() {
+    var mismatch = publishAgainst(400, json("VapidPkHashMismatch"));
+    assertEquals(List.of(recipient.subscriptionId()), mismatch.subscriptions().gone);
+    assertEquals(1, mismatch.calls(), "a revocation is never retried");
+    assertTrue(
+        logs.stream()
+            .map(ILoggingEvent::getFormattedMessage)
+            .anyMatch(text -> text.contains("is gone; revoked")),
+        "an informative line, as for a 410");
+    assertNoSecretsInLogs();
+
+    for (String refusal : List.of(json("BadWebPushTopic"), json("BadJwtToken"), "")) {
+      var other = publishAgainst(400, refusal);
+      assertTrue(other.subscriptions().gone.isEmpty(), refusal);
+      assertEquals(1, other.calls(), "refused, not retried");
+    }
+  }
+
+  record Outcome(PushNotificationDispatcherTest.FakeSubscriptions subscriptions, int calls) {}
+
+  /** Publishes one notice through the real sender, against a push service that answers this. */
+  Outcome publishAgainst(int status, String responseBody) {
+    var subscriptions = new PushNotificationDispatcherTest.FakeSubscriptions();
+    subscriptions.recipients.add(recipient);
+    var calls = new AtomicInteger();
+    var sender =
+        new WebPushChannelSender(
+            keys(),
+            PushSettings.defaults(),
+            new WebPushChannelSender.Transport() {
+              @Override
+              public int send(HttpRequest request) {
+                throw new AssertionError("exchange is used");
+              }
+
+              @Override
+              public WebPushChannelSender.Reply exchange(HttpRequest request) {
+                calls.incrementAndGet();
+                return new WebPushChannelSender.Reply(status, body(responseBody));
+              }
+            });
+    var dispatcher =
+        new PushNotificationDispatcher(
+            subscriptions,
+            List.of(sender),
+            Runnable::run,
+            PushSettings.defaults(),
+            () -> Instant.parse("2026-11-20T17:00:00Z"),
+            duration -> {});
+    dispatcher.publish(OrderPushEvent.of(UUID.randomUUID(), Kind.READY));
+    return new Outcome(subscriptions, calls.get());
+  }
+
+  PushChannelSender.Delivery deliverWith(int status, String responseBody) {
+    var sender =
+        new WebPushChannelSender(
+            keys(),
+            PushSettings.defaults(),
+            new WebPushChannelSender.Transport() {
+              @Override
+              public int send(HttpRequest request) {
+                throw new AssertionError("exchange is used");
+              }
+
+              @Override
+              public WebPushChannelSender.Reply exchange(HttpRequest request) {
+                return new WebPushChannelSender.Reply(status, body(responseBody));
+              }
+            });
+    return sender.deliver(recipient, message());
   }
 
   static byte[] body(String text) {

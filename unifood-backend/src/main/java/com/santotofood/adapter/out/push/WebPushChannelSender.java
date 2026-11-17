@@ -36,6 +36,9 @@ public final class WebPushChannelSender implements PushChannelSender {
   static final int MAX_REASON_BYTES = 512;
 
   /** The reason Apple returns as {"reason":"BadJwtToken"}: letters only, 1 to 40 of them. */
+  /** Apple's reason for a subscription whose VAPID key differs from ours. */
+  static final String VAPID_KEY_MISMATCH = "VapidPkHashMismatch";
+
   private static final Pattern REASON = Pattern.compile("\"reason\"\\s*:\\s*\"([A-Za-z]{1,40})\"");
 
   /** The HTTP exchange, replaceable in tests by a simulated push service. */
@@ -126,7 +129,8 @@ public final class WebPushChannelSender implements PushChannelSender {
     }
     try {
       var reply = transport.exchange(request);
-      return new Delivery(classify(reply.status()), reply.status(), reasonOf(reply.head()));
+      var reason = reasonOf(reply.head());
+      return new Delivery(classify(reply.status(), reason), reply.status(), reason);
     } catch (HttpTimeoutException timeout) {
       return new Delivery(Result.RETRYABLE, null);
     } catch (IOException network) {
@@ -143,9 +147,14 @@ public final class WebPushChannelSender implements PushChannelSender {
     }
   }
 
-  static Result classify(int status) {
+  /**
+   * 400 with reason VapidPkHashMismatch means the subscription was created with another VAPID key:
+   * it can never be delivered with ours again, so it counts as gone. Any other 400 is a refusal.
+   */
+  static Result classify(int status, String reason) {
     if (status >= 200 && status < 300) return Result.DELIVERED;
     if (status == 404 || status == 410) return Result.GONE;
+    if (status == 400 && VAPID_KEY_MISMATCH.equals(reason)) return Result.GONE;
     if (status == 429 || status >= 500) return Result.RETRYABLE;
     return Result.REJECTED;
   }
