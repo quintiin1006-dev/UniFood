@@ -2,6 +2,9 @@ package com.santotofood.adapter.out.push;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.santotofood.application.model.PushRecipient;
 import com.santotofood.application.model.PushSubscriberRole;
 import com.santotofood.application.model.PushSubscriptionRegistration;
@@ -19,6 +22,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -118,6 +122,40 @@ class PushNotificationDispatcherTest {
         () -> dispatcher().publish(OrderPushEvent.of(UUID.randomUUID(), Kind.READY)));
     assertEquals(2, sender.attempts);
     assertTrue(subscriptions.gone.isEmpty());
+  }
+
+  @Test
+  void aRefusalLogsTheHttpStatusButNeverTheEndpointKeysOrBody() {
+    var appender = new ListAppender<ILoggingEvent>();
+    appender.start();
+    var logger = (Logger) LoggerFactory.getLogger(PushNotificationDispatcher.class);
+    logger.addAppender(appender);
+    try {
+      recipient(UUID.randomUUID());
+      sender.results.add(PushChannelSender.Result.REJECTED);
+      sender.statuses.add(403);
+      dispatcher().publish(OrderPushEvent.of(UUID.randomUUID(), Kind.READY));
+      var warning =
+          appender.list.stream()
+              .map(ILoggingEvent::getFormattedMessage)
+              .filter(text -> text.contains("refused"))
+              .findFirst()
+              .orElseThrow();
+      assertTrue(warning.contains("refused (HTTP 403)"), warning);
+      assertFalse(warning.contains(ENDPOINT), warning);
+      for (String secret : List.of("p256dh", "auth", "¡Tu pedido está listo!"))
+        assertFalse(warning.contains(secret), warning);
+      assertEquals(1, sender.attempts, "a refusal is still never retried");
+      assertTrue(subscriptions.gone.isEmpty(), "and never revoked");
+    } finally {
+      logger.detachAppender(appender);
+    }
+  }
+
+  @Test
+  void aRefusalWithoutAnHttpResponseSaysSo() {
+    assertEquals("HTTP 403", PushNotificationDispatcher.refusal(403));
+    assertEquals("no HTTP response", PushNotificationDispatcher.refusal(null));
   }
 
   @Test
@@ -243,6 +281,7 @@ class PushNotificationDispatcherTest {
 
   static final class ScriptedSender implements PushChannelSender {
     final Deque<Result> results = new ConcurrentLinkedDeque<>();
+    final Deque<Integer> statuses = new ConcurrentLinkedDeque<>();
     final List<PushMessage> sent = new ArrayList<>();
     int attempts;
     boolean throwNext;
@@ -262,6 +301,11 @@ class PushNotificationDispatcherTest {
       sent.add(message);
       var next = results.pollFirst();
       return next == null ? Result.DELIVERED : next;
+    }
+
+    @Override
+    public Delivery deliver(PushRecipient recipient, PushMessage message) {
+      return new Delivery(send(recipient, message), statuses.pollFirst());
     }
   }
 
