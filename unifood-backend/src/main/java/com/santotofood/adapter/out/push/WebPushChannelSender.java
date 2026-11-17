@@ -51,7 +51,13 @@ public final class WebPushChannelSender implements PushChannelSender {
 
   @Override
   public Result send(PushRecipient recipient, PushMessage message) {
-    if (!PushEndpointPolicy.allowedEndpoint(recipient.endpoint())) return Result.REJECTED;
+    return deliver(recipient, message).result();
+  }
+
+  @Override
+  public Delivery deliver(PushRecipient recipient, PushMessage message) {
+    if (!PushEndpointPolicy.allowedEndpoint(recipient.endpoint()))
+      return new Delivery(Result.REJECTED, null);
     final HttpRequest request;
     try {
       var subscription = new PushSubscription();
@@ -81,24 +87,24 @@ public final class WebPushChannelSender implements PushChannelSender {
           "Web Push message not built for {} ({})",
           PushEndpointPolicy.redact(recipient.endpoint()),
           invalid.getClass().getSimpleName());
-      return Result.REJECTED;
+      return new Delivery(Result.REJECTED, null);
     }
     try {
       int status = transport.send(request);
-      return classify(status);
+      return new Delivery(classify(status), status);
     } catch (HttpTimeoutException timeout) {
-      return Result.RETRYABLE;
+      return new Delivery(Result.RETRYABLE, null);
     } catch (IOException network) {
-      return Result.RETRYABLE;
+      return new Delivery(Result.RETRYABLE, null);
     } catch (InterruptedException interrupted) {
       Thread.currentThread().interrupt();
-      return Result.RETRYABLE;
+      return new Delivery(Result.RETRYABLE, null);
     } catch (RuntimeException unexpected) {
       LOG.warn(
           "Web Push delivery failed for {} ({})",
           PushEndpointPolicy.redact(recipient.endpoint()),
           unexpected.getClass().getSimpleName());
-      return Result.REJECTED;
+      return new Delivery(Result.REJECTED, null);
     }
   }
 
