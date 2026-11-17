@@ -1,5 +1,6 @@
 import { ORDER_STATE_CHANGED, SESSION_EXPIRED } from "@/lib/messages";
 import type { Order } from "@/types/order";
+import { BACKEND_ERROR_MESSAGES } from "@/features/shared/messages";
 
 /** Same rules as `Order.remindStudent` and `Order.markNotCollected` in Spring, which decides. */
 export const MAX_REMINDERS = 3;
@@ -57,11 +58,11 @@ export function calledOrderActionMessage(
 ): string {
   switch (code) {
     case "REMINDER_TOO_EARLY":
-      return "Aún no puedes volver a avisar. Espera 5 minutos desde el último aviso.";
+      return BACKEND_ERROR_MESSAGES.REMINDER_TOO_EARLY;
     case "REMINDER_LIMIT_REACHED":
-      return "Ya enviaste los 3 avisos a este pedido. Puedes marcarlo como no recogido.";
+      return BACKEND_ERROR_MESSAGES.REMINDER_LIMIT_REACHED;
     case "NOT_COLLECTED_REQUIREMENTS_NOT_MET":
-      return "Para marcarlo como no recogido primero debes enviar los 3 avisos.";
+      return BACKEND_ERROR_MESSAGES.NOT_COLLECTED_REQUIREMENTS_NOT_MET;
     case "INVALID_ORDER_STATE":
     case "ORDER_CONCURRENT_MODIFICATION":
       return STATE_CHANGED;

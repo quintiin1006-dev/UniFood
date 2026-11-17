@@ -5,12 +5,12 @@ import {
   isAuthServiceUnavailable,
   temporaryAuthResponse,
 } from "@/features/auth/server/failures";
+import { BACKEND_ERROR_MESSAGES } from "@/features/shared/messages";
 
 const conflicts: Record<string, string> = {
-  ORDER_ALREADY_PREPARING:
-    "La orden ya está en preparación y no puede cancelarse.",
+  ORDER_ALREADY_PREPARING: BACKEND_ERROR_MESSAGES.ORDER_ALREADY_PREPARING,
   ORDER_CONCURRENT_MODIFICATION:
-    "La orden cambió mientras intentábamos cancelarla. Actualiza e inténtalo de nuevo.",
+    "Tu pedido cambió mientras intentábamos cancelarlo. Actualiza e inténtalo de nuevo.",
 };
 
 const errors: Record<number, { code: string; message: string }> = {

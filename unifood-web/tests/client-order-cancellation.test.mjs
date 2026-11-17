@@ -181,11 +181,11 @@ test("upstream errors keep public statuses but discard bodies and sensitive head
 for (const [code, message] of [
   [
     "ORDER_ALREADY_PREPARING",
-    "La orden ya está en preparación y no puede cancelarse.",
+    "Tu pedido ya está en preparación y no puede cancelarse.",
   ],
   [
     "ORDER_CONCURRENT_MODIFICATION",
-    "La orden cambió mientras intentábamos cancelarla. Actualiza e inténtalo de nuevo.",
+    "Tu pedido cambió mientras intentábamos cancelarlo. Actualiza e inténtalo de nuevo.",
   ],
 ])
   test(`${code} keeps its structured conflict and translates a safe actionable message`, async () => {

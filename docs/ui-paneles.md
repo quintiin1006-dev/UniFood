@@ -538,29 +538,29 @@ que no estaban en su lista se marcan como tales.
 
 ### Paleta de marca oficial (D1)
 
-| Token | Valor | Uso |
-| --- | --- | --- |
-| `--color-brand` / `-hover` | `#0B5FFF` / `#0A4FD6` | Acción principal, enlaces, foco |
-| `--color-brand-navy` | `#0B2D6B` | **Solo titulares de marca**; el texto de cuerpo sigue en `ink` |
-| `--color-brand-celeste` | `#3BA7FF` | Acento sobre navy o como relleno; **no como texto sobre blanco** |
-| `--color-brand-tint` | `#EAF4FF` | Hielo: avisos, nav activa, resaltes |
-| `--color-brand-tint-2` | `#D6E8FF` | Borde suave del tinte (decisión propia: el dueño no fijó este valor) |
+| Token                      | Valor                 | Uso                                                                  |
+| -------------------------- | --------------------- | -------------------------------------------------------------------- |
+| `--color-brand` / `-hover` | `#0B5FFF` / `#0A4FD6` | Acción principal, enlaces, foco                                      |
+| `--color-brand-navy`       | `#0B2D6B`             | **Solo titulares de marca**; el texto de cuerpo sigue en `ink`       |
+| `--color-brand-celeste`    | `#3BA7FF`             | Acento sobre navy o como relleno; **no como texto sobre blanco**     |
+| `--color-brand-tint`       | `#EAF4FF`             | Hielo: avisos, nav activa, resaltes                                  |
+| `--color-brand-tint-2`     | `#D6E8FF`             | Borde suave del tinte (decisión propia: el dueño no fijó este valor) |
 
 Rojo y verde apagados se mantienen. Contraste AA calculado (WCAG 2.x):
 
-| Pareja | Contraste |
-| --- | --- |
-| ink / surface, ink / bg | 17,85 : 1 · 16,65 : 1 (AAA) |
-| text-soft / surface, text-soft / bg | 4,97 : 1 · 4,64 : 1 (AA) |
-| slate / surface, slate / brand-tint | 7,87 : 1 · 7,08 : 1 (AAA) |
-| brand / surface, brand / bg | 5,13 : 1 · 4,78 : 1 (AA) |
-| white / brand, white / brand-hover | 5,13 : 1 · 6,77 : 1 (AA) |
-| brand-hover / brand-tint | 6,09 : 1 (AA) |
-| navy / surface, navy / brand-tint | 13,11 : 1 · 11,79 : 1 (AAA) |
-| success-ink / success-bg, danger-ink / danger-bg | 6,67 : 1 · 6,67 : 1 (AA) |
-| danger / surface, white / success | 5,29 : 1 · 5,00 : 1 (AA) |
-| **celeste / surface** | **2,57 : 1 — no es texto** (solo acento o relleno) |
-| **text-soft / brand-tint** | **4,47 : 1 — usar `slate` sobre el tinte** |
+| Pareja                                           | Contraste                                          |
+| ------------------------------------------------ | -------------------------------------------------- |
+| ink / surface, ink / bg                          | 17,85 : 1 · 16,65 : 1 (AAA)                        |
+| text-soft / surface, text-soft / bg              | 4,97 : 1 · 4,64 : 1 (AA)                           |
+| slate / surface, slate / brand-tint              | 7,87 : 1 · 7,08 : 1 (AAA)                          |
+| brand / surface, brand / bg                      | 5,13 : 1 · 4,78 : 1 (AA)                           |
+| white / brand, white / brand-hover               | 5,13 : 1 · 6,77 : 1 (AA)                           |
+| brand-hover / brand-tint                         | 6,09 : 1 (AA)                                      |
+| navy / surface, navy / brand-tint                | 13,11 : 1 · 11,79 : 1 (AAA)                        |
+| success-ink / success-bg, danger-ink / danger-bg | 6,67 : 1 · 6,67 : 1 (AA)                           |
+| danger / surface, white / success                | 5,29 : 1 · 5,00 : 1 (AA)                           |
+| **celeste / surface**                            | **2,57 : 1 — no es texto** (solo acento o relleno) |
+| **text-soft / brand-tint**                       | **4,47 : 1 — usar `slate` sobre el tinte**         |
 
 ### Excepción deliberada: Pedidos y Llamadas (D2)
 
@@ -612,8 +612,9 @@ historial no las trae (ver «Pendientes de endpoint»).
 - Loader: el ícono de UniFood (`public/unifood-mark.svg`, dibujado a partir del PNG con el degradado
   de marca) con un anillo que gira. Es invisible los primeros 300 ms; con movimiento reducido el
   anillo queda quieto.
-- Entre rutas de cuenta y de admin, el encabezado y la barra se mantienen y el contenido muestra un
-  esqueleto (también con el retardo de 300 ms).
+- Entre rutas de cuenta y de admin, el encabezado y la barra se mantienen y el contenido muestra el
+  loader en línea (también con el retardo de 300 ms). Ola 4 cambió el esqueleto genérico por el
+  loader de marca; ver «Ola 4».
 - **View Transitions**: no se usa. El React instalado (19.2.8) no exporta `ViewTransition`; la guía de
   Next lo presenta como API de React de uso experimental.
 
@@ -622,13 +623,13 @@ historial no las trae (ver «Pendientes de endpoint»).
 Medidos con Playwright sobre Edge, desde el clic hasta que aparece el contenido. 5 muestras por
 cambio; mediana entre paréntesis.
 
-| Cambio | Muestras (ms) | Mediana |
-| --- | --- | --- |
-| Pedidos → Llamadas | 117, 54, 78, 54, 71 | **71 ms** |
-| Llamadas → Historial | 119, 56, 45, 42, 53 | **53 ms** |
-| Historial → Pedidos | 92, 483, 57, 68, 68 | **68 ms** (483 ms es la primera carga) |
-| Inicio → Carrito | 145, 89, 96, 83, 88 | **89 ms** |
-| Carrito → Inicio | 89, 90, 89, 75, 93 | **89 ms** |
+| Cambio               | Muestras (ms)       | Mediana                                |
+| -------------------- | ------------------- | -------------------------------------- |
+| Pedidos → Llamadas   | 117, 54, 78, 54, 71 | **71 ms**                              |
+| Llamadas → Historial | 119, 56, 45, 42, 53 | **53 ms**                              |
+| Historial → Pedidos  | 92, 483, 57, 68, 68 | **68 ms** (483 ms es la primera carga) |
+| Inicio → Carrito     | 145, 89, 96, 83, 88 | **89 ms**                              |
+| Carrito → Inicio     | 89, 90, 89, 75, 93  | **89 ms**                              |
 
 Incluyen el coste del propio clic de Playwright. No son mediciones con usuarios reales.
 
@@ -657,3 +658,54 @@ cafeterías con datos reales ni la de sede sin cafeterías en escritorio con int
 - `tests/worker-history-ui.test.mjs` y `tests/admin-dashboard-ui.test.mjs`: estructura nueva.
 - `tests/client-product-add.test.mjs` (nueva): estados del «+».
 - `tests/ui-loader.test.mjs` (nueva): retardo de 300 ms y SVG.
+
+## Ola 4: feedback del sistema e íconos propios (15 nov 2026)
+
+Mapa completo de estados y mensajes por pantalla: `docs/catalogo-feedback.md`.
+
+### Carga y transiciones
+
+- **Login:** nunca muestra loader. El botón pasa a «Entrando…» con spinner y el formulario permanece
+  hasta llegar al destino (`router.replace` con `prefetch`). Se eliminó `app/loading.tsx`, que
+  mostraba un loader raíz entre el login y el panel.
+- **Cambio de ruta en cliente (`/cuenta`) y admin:** `UniFoodLoader` en línea, invisible los primeros
+  300 ms; cabecera, pestañas y barra lateral siguen visibles.
+- **Primera carga de datos:** esqueletos con la forma del contenido. El tablero del worker muestra 4
+  columnas de esqueleto y su encabezado no dice nada hasta la primera lectura (ya no «Conectando…»).
+- **Acciones:** spinner compartido (`components/ui/Spinner`, prop `loading` de `Button`) con texto de
+  progreso: «Entrando…», «Enviando pedido…», «Guardando…». Con movimiento reducido el anillo queda
+  quieto.
+- **UI optimista:** avanzar un pedido en el worker mueve la tarjeta de inmediato con «Guardando…»; si
+  el servidor rechaza, vuelve a su columna y el aviso explica el motivo. La disponibilidad ya era
+  optimista. Crear pedido y aceptar términos no son optimistas: muestran progreso.
+
+### Íconos propios (`components/ui/Icon.tsx`)
+
+- `<Icon name="…" />`: 13 glifos del dueño (propuesta 2, 7-nov-2026) y 28 dibujados en el mismo
+  estilo (24×24, trazo 1.8, round, `currentColor`). `tienda` reutiliza el glifo de `cafeterias`.
+- **Tamaño mínimo: 20 px** para cualquier ícono de la app (`size` de `<Icon>`, por defecto 24).
+- **Excepción: 16 px solo para íconos simples:** `cerrar`, `check`, `mas`, `menos`, `flecha-derecha`,
+  `flecha-izquierda`, `chevron-derecha`, `chevron-izquierda`, `chevron-abajo` e `info`. Cualquier otro
+  ícono por debajo de 20 px incumple esta regla.
+- `tone`: `inherit` (por defecto), `inactive` (texto suave) y `active` (marca con relleno al 14 %).
+  Decorativo con `aria-hidden`; con `label`, `role="img"` y `aria-label`.
+- `<IconTile name="…" />`: tarjeta de módulo de 48 px, radio 14, degradado 150deg celeste → marca
+  (45 %) → marino y glifo blanco con trazo 1.9.
+- Ya reemplazan a lucide en la navegación de los cuatro roles, el encabezado y el tablero del worker,
+  la tarjeta de pedido y los encabezados de admin y super admin.
+
+### Catálogo de mensajes (`features/shared/messages.ts`)
+
+- Eventos de UI compartidos y un mensaje por cada `ErrorCode` del backend (61). Los mapas por
+  pantalla (`features/*/errors.ts`) toman sus textos de aquí; `lib/messages.ts` los reexporta.
+- `tests/messages-catalog.test.mjs` lee `ErrorCode.java` y falla si falta un mensaje, si sobra un
+  código o si un texto se repite fuera del catálogo.
+
+### Página de revisión `/dev/feedback`
+
+- Muestra juntos los botones en cada estado, los avisos, el banner sin conexión, los errores del
+  tablero, los esqueletos, el loader, los estados vacíos, el diálogo de confirmación, el set de
+  íconos y la tabla de mensajes por `ErrorCode`, con sus textos reales.
+- Solo para desarrollo: en `next dev` se abre en `http://localhost:3000/dev/feedback`. En producción
+  (`NODE_ENV=production`) llama a `notFound()` y responde 404; no tiene enlaces desde la app y no se
+  indexa. Pruebas: `tests/dev-feedback.test.mjs` y `tests/e2e/dev-feedback.spec.ts`.
