@@ -254,6 +254,12 @@ export const ICON_MIN_20: CSSProperties = {
   height: "calc(20px / var(--worker-zoom, 1))",
 };
 
+/** 16 real pixels, for the simple icons (cerrar, check, más, menos, flechas, chevrones, info). */
+export const ICON_MIN_16: CSSProperties = {
+  width: "calc(16px / var(--worker-zoom, 1))",
+  height: "calc(16px / var(--worker-zoom, 1))",
+};
+
 /**
  * One icon of the set. Decorative by default (aria-hidden); with `label` it is announced, for a
  * button whose only content is the icon. `tone`: inherit the text colour, the soft inactive

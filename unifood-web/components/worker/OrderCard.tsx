@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon, ICON_MIN_20 } from "@/components/ui/Icon";
+import { Icon, ICON_MIN_20, ICON_MIN_16 } from "@/components/ui/Icon";
 
 import {
   ACTION_ICONS,
@@ -85,7 +85,12 @@ export default function OrderCard({
 
         <div className={styles.time}>{formatRelativeTime(order.createdAt)}</div>
 
-        <Icon name="flecha-derecha" size={21} className={styles.arrow} />
+        <Icon
+          name="flecha-derecha"
+          size={21}
+          style={ICON_MIN_16}
+          className={styles.arrow}
+        />
       </button>
 
       {/* Hora de recogida pedida por el cliente: solo informativa */}

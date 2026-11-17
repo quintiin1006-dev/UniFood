@@ -23,6 +23,7 @@ import type { Order } from "@/types/order";
 import modernStyles from "./CallsBoard.module.css";
 import classicStyles from "./CallsBoard.classic.module.css";
 import { ICON_MIN_20 } from "@/components/ui/Icon";
+import { ICON_MIN_16 } from "@/components/ui/Icon";
 
 interface CallsBoardProps {
   /** Pedidos and Llamadas use the classic look (ola 2 · D2); the rest keep the modern one. */
@@ -278,7 +279,8 @@ export default function CallsBoard({
                   )}
                   {selectedOrder.status === "called" && (
                     <span className={styles.calledBadge}>
-                      <Check size={13} aria-hidden="true" /> Avisado
+                      <Check size={13} style={ICON_MIN_16} aria-hidden="true" />{" "}
+                      Avisado
                     </span>
                   )}
                 </div>
@@ -396,7 +398,12 @@ export default function CallsBoard({
                   aria-busy={busyOrderIds.includes(selectedOrder.id)}
                   onClick={() => onDeliver(selectedOrder)}
                 >
-                  <Check size={19} strokeWidth={2.5} aria-hidden="true" />
+                  <Check
+                    size={19}
+                    style={ICON_MIN_16}
+                    strokeWidth={2.5}
+                    aria-hidden="true"
+                  />
                   <span>
                     {busyActions[selectedOrder.id] === undefined &&
                     busyOrderIds.includes(selectedOrder.id)
