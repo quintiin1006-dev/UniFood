@@ -332,8 +332,8 @@ test("si la sesión vence durante el seguimiento no queda la pantalla vacía", a
     page.getByRole("heading", { name: "Están preparando tu pedido" }),
   ).toBeVisible();
   await page.context().clearCookies();
-  const alert = page.getByRole("alert");
-  await expect(alert).toContainText("Tu sesión expiró");
+  const alert = page.getByRole("alert").filter({ hasText: "Tu sesión expiró" });
+  await expect(alert).toBeVisible();
   await expect(
     alert.getByRole("link", { name: "Iniciar sesión" }),
   ).toBeVisible();
