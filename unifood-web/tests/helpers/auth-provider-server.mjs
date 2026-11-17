@@ -19,6 +19,9 @@ import {
 import { createClientOrderFixture } from "./client-order-fixture.mjs";
 
 const createClientOrder = createClientOrderFixture(clientMenuResponse);
+// Ports are configurable so a spec with its own ports (cash.spec.ts) can run beside others.
+const PROVIDER_PORT = Number(process.env.AUTH_PROVIDER_PORT ?? 3101);
+const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? 3100);
 
 const fixtures = Object.entries({
   client: ["CLIENT"],
@@ -278,9 +281,9 @@ createServer(async (request, response) => {
     const origin = request.headers.origin;
     if (
       [
-        "http://localhost:3100",
-        "http://127.0.0.1:3100",
-        "http://[::1]:3100",
+        `http://localhost:${WEB_PORT}`,
+        `http://127.0.0.1:${WEB_PORT}`,
+        `http://[::1]:${WEB_PORT}`,
       ].includes(origin)
     ) {
       response.setHeader("Access-Control-Allow-Origin", origin);
@@ -297,7 +300,7 @@ createServer(async (request, response) => {
       response.writeHead(204);
       return response.end();
     }
-    const url = new URL(request.url, "http://127.0.0.1:3101");
+    const url = new URL(request.url, `http://127.0.0.1:${PROVIDER_PORT}`);
     if (url.pathname === "/__test/panel-recovery") {
       let input = {};
       if (request.method === "POST") {
@@ -1486,4 +1489,4 @@ createServer(async (request, response) => {
   } catch {
     return json(response, 500, { message: "Fixture error" });
   }
-}).listen(3101, "127.0.0.1");
+}).listen(PROVIDER_PORT, "127.0.0.1");
