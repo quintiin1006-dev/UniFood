@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -149,7 +150,7 @@ public final class PushNotificationDispatcher implements PushNotificationPort {
           LOG.warn(
               "Push notice {} refused ({}) by {}",
               event.kind(),
-              refusal(delivery.httpStatus()),
+              refusal(delivery.httpStatus(), delivery.reason()),
               target);
           return;
         }
@@ -173,6 +174,18 @@ public final class PushNotificationDispatcher implements PushNotificationPort {
 
   /** «HTTP 403», or «no HTTP response» when the refusal happened before or without one. */
   static String refusal(Integer httpStatus) {
-    return httpStatus == null ? "no HTTP response" : "HTTP " + httpStatus;
+    return refusal(httpStatus, null);
   }
+
+  /**
+   * «HTTP 400, reason=VapidPkHashMismatch» when the push service gave a valid reason token, else
+   * the same text as {@link #refusal(Integer)}. The token is checked again here: only letters.
+   */
+  static String refusal(Integer httpStatus, String reason) {
+    if (httpStatus == null) return "no HTTP response";
+    if (reason == null || !REASON_TOKEN.matcher(reason).matches()) return "HTTP " + httpStatus;
+    return "HTTP " + httpStatus + ", reason=" + reason;
+  }
+
+  private static final Pattern REASON_TOKEN = Pattern.compile("[A-Za-z]{1,40}");
 }
