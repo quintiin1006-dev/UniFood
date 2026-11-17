@@ -10,20 +10,13 @@ test("confirming an order shows the spinner while «Enviando pedido…»", () =>
     "features/client/components/ClientCheckout.tsx",
     "utf8",
   );
-  assert.match(source, /import \{ Spinner \} from "@\/components\/ui\/Spinner"/);
-  assert.match(source, /aria-busy=\{pending \|\| undefined\}\s*>\s*\{pending && <Spinner \/>\}/);
+  assert.match(
+    source,
+    /import \{ Spinner \} from "@\/components\/ui\/Spinner"/,
+  );
+  assert.match(
+    source,
+    /aria-busy=\{pending \|\| undefined\}\s*>\s*\{pending && <Spinner \/>\}/,
+  );
   assert.match(source, /"Enviando pedido…"/);
-});
-
-test("accepting the terms shows the spinner while «Un momento…»", () => {
-  const source = fs.readFileSync(
-    "features/client/components/TermsGate.tsx",
-    "utf8",
-  );
-  assert.match(source, /aria-busy=\{busy \|\| undefined\}\s*>\s*\{busy && <Spinner \/>\}/);
-  const css = fs.readFileSync(
-    "features/client/components/TermsGate.module.css",
-    "utf8",
-  );
-  assert.match(css, /\.primary \{\s*display: inline-flex;[^}]*gap: 8px;/);
 });

@@ -1,9 +1,6 @@
 import type { IconName } from "@/components/ui/Icon";
 
-import type {
-  Order,
-  OrderStatus,
-} from "@/types/order";
+import type { Order, OrderStatus } from "@/types/order";
 
 export const ORDER_FLOW: readonly OrderStatus[] = [
   "pending",
@@ -13,127 +10,76 @@ export const ORDER_FLOW: readonly OrderStatus[] = [
   "delivered",
 ];
 
-export const ACTION_LABELS: Record<
-  OrderStatus,
-  string
-> = {
+export const ACTION_LABELS: Record<OrderStatus, string> = {
   not_collected: "Pedido no recogido",
-  pending:
-    "Pasar a preparación",
+  pending: "Pasar a preparación",
 
-  preparing:
-    "Marcar como listo",
+  preparing: "Marcar como listo",
 
-  ready:
-    "Llamar a recoger",
+  ready: "Llamar a recoger",
 
-  called:
-    "Marcar como entregado",
+  called: "Marcar como entregado",
 
-  delivered:
-    "Pedido entregado",
+  delivered: "Pedido entregado",
 
-  cancelled:
-    "Pedido cancelado",
+  cancelled: "Pedido cancelado",
 };
 
-export const ACTION_ICONS: Record<
-  OrderStatus,
-  IconName
-> = {
+export const ACTION_ICONS: Record<OrderStatus, IconName> = {
   not_collected: "exito",
-  pending:
-    "cocina",
+  pending: "cocina",
 
-  preparing:
-    "exito",
+  preparing: "exito",
 
-  ready:
-    "llamadas",
+  ready: "llamadas",
 
-  called:
-    "exito",
+  called: "exito",
 
-  delivered:
-    "exito",
+  delivered: "exito",
 
-  cancelled:
-    "exito",
+  cancelled: "exito",
 };
 
-export function getNextStatus(
-  status: OrderStatus
-): OrderStatus | null {
-  const index =
-    ORDER_FLOW.indexOf(status);
+export function getNextStatus(status: OrderStatus): OrderStatus | null {
+  const index = ORDER_FLOW.indexOf(status);
 
-  if (
-    index < 0 ||
-    index >=
-      ORDER_FLOW.length - 1
-  ) {
+  if (index < 0 || index >= ORDER_FLOW.length - 1) {
     return null;
   }
 
   return ORDER_FLOW[index + 1];
 }
 
-export function canAdvanceOrder(
-  order: Order
-): boolean {
-  return (
-    getNextStatus(
-      order.status
-    ) !== null
-  );
+export function canAdvanceOrder(order: Order): boolean {
+  return getNextStatus(order.status) !== null;
 }
 
 export function getColumnStatuses(
-  columnStatus: OrderStatus
+  columnStatus: OrderStatus,
 ): readonly OrderStatus[] {
-  if (
-    columnStatus === "ready"
-  ) {
-    return [
-      "ready",
-      "called",
-    ];
+  if (columnStatus === "ready") {
+    return ["ready", "called"];
   }
 
   return [columnStatus];
 }
 
-export function advanceOrder(
-  order: Order
-): Order {
-  const nextStatus =
-    getNextStatus(
-      order.status
-    );
+export function advanceOrder(order: Order): Order {
+  const nextStatus = getNextStatus(order.status);
 
   if (!nextStatus) {
     return order;
   }
 
-  const now =
-    new Date().toISOString();
+  const now = new Date().toISOString();
 
   return {
     ...order,
 
-    status:
-      nextStatus,
+    status: nextStatus,
 
-    calledAt:
-      nextStatus ===
-      "called"
-        ? now
-        : order.calledAt,
+    calledAt: nextStatus === "called" ? now : order.calledAt,
 
-    deliveredAt:
-      nextStatus ===
-      "delivered"
-        ? now
-        : order.deliveredAt,
+    deliveredAt: nextStatus === "delivered" ? now : order.deliveredAt,
   };
 }

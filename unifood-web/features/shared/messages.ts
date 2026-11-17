@@ -20,6 +20,10 @@ export const OFFLINE_RETRYING = "Sin conexión. Reintentando…";
 
 export const SAVING = "Guardando…";
 
+/** The server could not be reached: network, timeout or a 5xx. Never an empty result. */
+export const CONNECTION_FAILED =
+  "No pudimos conectarnos. Revisa tu conexión e inténtalo de nuevo.";
+
 /* ---------- Backend ErrorCode ---------- */
 
 /** Mirror of the backend enum, in its order. The test compares it with ErrorCode.java. */

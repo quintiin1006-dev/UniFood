@@ -20,6 +20,8 @@ const uiMocks = {
     AdminComingSoon: () => createElement("div", {}, "Administracion Dashboard"),
   },
   "next/navigation": { redirect },
+  // The client layout reads the asked-for path from the proxy header.
+  "next/headers": { headers: async () => new Headers() },
   "next/link": {
     default: ({ children, ...props }) => createElement("a", props, children),
   },
@@ -75,11 +77,8 @@ const uiMocks = {
   "@/features/client/components/ClientCartProvider": {
     default: ({ children }) => createElement("div", {}, children),
   },
-  "@/features/client/components/TermsGate": {
-    default: () => null,
-  },
-  "@/features/auth/server/terms": {
-    currentTermsAccepted: async () => true,
+  "@/features/auth/server/sessionTerms": {
+    sessionTermsState: async () => "accepted",
   },
   "@/features/client/components/ClientCart": {
     default: () => createElement("div", {}, "Student cart"),

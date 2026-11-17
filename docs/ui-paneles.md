@@ -538,29 +538,29 @@ que no estaban en su lista se marcan como tales.
 
 ### Paleta de marca oficial (D1)
 
-| Token | Valor | Uso |
-| --- | --- | --- |
-| `--color-brand` / `-hover` | `#0B5FFF` / `#0A4FD6` | Acción principal, enlaces, foco |
-| `--color-brand-navy` | `#0B2D6B` | **Solo titulares de marca**; el texto de cuerpo sigue en `ink` |
-| `--color-brand-celeste` | `#3BA7FF` | Acento sobre navy o como relleno; **no como texto sobre blanco** |
-| `--color-brand-tint` | `#EAF4FF` | Hielo: avisos, nav activa, resaltes |
-| `--color-brand-tint-2` | `#D6E8FF` | Borde suave del tinte (decisión propia: el dueño no fijó este valor) |
+| Token                      | Valor                 | Uso                                                                  |
+| -------------------------- | --------------------- | -------------------------------------------------------------------- |
+| `--color-brand` / `-hover` | `#0B5FFF` / `#0A4FD6` | Acción principal, enlaces, foco                                      |
+| `--color-brand-navy`       | `#0B2D6B`             | **Solo titulares de marca**; el texto de cuerpo sigue en `ink`       |
+| `--color-brand-celeste`    | `#3BA7FF`             | Acento sobre navy o como relleno; **no como texto sobre blanco**     |
+| `--color-brand-tint`       | `#EAF4FF`             | Hielo: avisos, nav activa, resaltes                                  |
+| `--color-brand-tint-2`     | `#D6E8FF`             | Borde suave del tinte (decisión propia: el dueño no fijó este valor) |
 
 Rojo y verde apagados se mantienen. Contraste AA calculado (WCAG 2.x):
 
-| Pareja | Contraste |
-| --- | --- |
-| ink / surface, ink / bg | 17,85 : 1 · 16,65 : 1 (AAA) |
-| text-soft / surface, text-soft / bg | 4,97 : 1 · 4,64 : 1 (AA) |
-| slate / surface, slate / brand-tint | 7,87 : 1 · 7,08 : 1 (AAA) |
-| brand / surface, brand / bg | 5,13 : 1 · 4,78 : 1 (AA) |
-| white / brand, white / brand-hover | 5,13 : 1 · 6,77 : 1 (AA) |
-| brand-hover / brand-tint | 6,09 : 1 (AA) |
-| navy / surface, navy / brand-tint | 13,11 : 1 · 11,79 : 1 (AAA) |
-| success-ink / success-bg, danger-ink / danger-bg | 6,67 : 1 · 6,67 : 1 (AA) |
-| danger / surface, white / success | 5,29 : 1 · 5,00 : 1 (AA) |
-| **celeste / surface** | **2,57 : 1 — no es texto** (solo acento o relleno) |
-| **text-soft / brand-tint** | **4,47 : 1 — usar `slate` sobre el tinte** |
+| Pareja                                           | Contraste                                          |
+| ------------------------------------------------ | -------------------------------------------------- |
+| ink / surface, ink / bg                          | 17,85 : 1 · 16,65 : 1 (AAA)                        |
+| text-soft / surface, text-soft / bg              | 4,97 : 1 · 4,64 : 1 (AA)                           |
+| slate / surface, slate / brand-tint              | 7,87 : 1 · 7,08 : 1 (AAA)                          |
+| brand / surface, brand / bg                      | 5,13 : 1 · 4,78 : 1 (AA)                           |
+| white / brand, white / brand-hover               | 5,13 : 1 · 6,77 : 1 (AA)                           |
+| brand-hover / brand-tint                         | 6,09 : 1 (AA)                                      |
+| navy / surface, navy / brand-tint                | 13,11 : 1 · 11,79 : 1 (AAA)                        |
+| success-ink / success-bg, danger-ink / danger-bg | 6,67 : 1 · 6,67 : 1 (AA)                           |
+| danger / surface, white / success                | 5,29 : 1 · 5,00 : 1 (AA)                           |
+| **celeste / surface**                            | **2,57 : 1 — no es texto** (solo acento o relleno) |
+| **text-soft / brand-tint**                       | **4,47 : 1 — usar `slate` sobre el tinte**         |
 
 ### Excepción deliberada: Pedidos y Llamadas (D2)
 
@@ -623,13 +623,13 @@ historial no las trae (ver «Pendientes de endpoint»).
 Medidos con Playwright sobre Edge, desde el clic hasta que aparece el contenido. 5 muestras por
 cambio; mediana entre paréntesis.
 
-| Cambio | Muestras (ms) | Mediana |
-| --- | --- | --- |
-| Pedidos → Llamadas | 117, 54, 78, 54, 71 | **71 ms** |
-| Llamadas → Historial | 119, 56, 45, 42, 53 | **53 ms** |
-| Historial → Pedidos | 92, 483, 57, 68, 68 | **68 ms** (483 ms es la primera carga) |
-| Inicio → Carrito | 145, 89, 96, 83, 88 | **89 ms** |
-| Carrito → Inicio | 89, 90, 89, 75, 93 | **89 ms** |
+| Cambio               | Muestras (ms)       | Mediana                                |
+| -------------------- | ------------------- | -------------------------------------- |
+| Pedidos → Llamadas   | 117, 54, 78, 54, 71 | **71 ms**                              |
+| Llamadas → Historial | 119, 56, 45, 42, 53 | **53 ms**                              |
+| Historial → Pedidos  | 92, 483, 57, 68, 68 | **68 ms** (483 ms es la primera carga) |
+| Inicio → Carrito     | 145, 89, 96, 83, 88 | **89 ms**                              |
+| Carrito → Inicio     | 89, 90, 89, 75, 93  | **89 ms**                              |
 
 Incluyen el coste del propio clic de Playwright. No son mediciones con usuarios reales.
 
@@ -683,6 +683,10 @@ Mapa completo de estados y mensajes por pantalla: `docs/catalogo-feedback.md`.
 
 - `<Icon name="…" />`: 13 glifos del dueño (propuesta 2, 7-nov-2026) y 28 dibujados en el mismo
   estilo (24×24, trazo 1.8, round, `currentColor`). `tienda` reutiliza el glifo de `cafeterias`.
+- **Tamaño mínimo: 20 px** para cualquier ícono de la app (`size` de `<Icon>`, por defecto 24).
+- **Excepción: 16 px solo para íconos simples:** `cerrar`, `check`, `mas`, `menos`, `flecha-derecha`,
+  `flecha-izquierda`, `chevron-derecha`, `chevron-izquierda`, `chevron-abajo` e `info`. Cualquier otro
+  ícono por debajo de 20 px incumple esta regla.
 - `tone`: `inherit` (por defecto), `inactive` (texto suave) y `active` (marca con relleno al 14 %).
   Decorativo con `aria-hidden`; con `label`, `role="img"` y `aria-label`.
 - `<IconTile name="…" />`: tarjeta de módulo de 48 px, radio 14, degradado 150deg celeste → marca

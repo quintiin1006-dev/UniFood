@@ -34,6 +34,29 @@ export function normalizeOtp(value: string) {
 /** Step 2 of the two-step registration (migration 018). */
 export const REGISTRATION_COMPLETE_PATH = "/registro/completar";
 
+/** Where a client accepts the current terms before reaching any client screen. */
+export const ACCEPT_TERMS_PATH = "/aceptar-terminos";
+
+/**
+ * Request header the proxy sets with the path that was asked for. A Server Component layout
+ * has no pathname of its own, so this is how it knows where to send someone back to.
+ */
+export const CLIENT_PATH_HEADER = "x-unifood-path";
+
+/**
+ * The client path to come back to after accepting, from whatever the URL carried. Anything
+ * that is not a path of this app under /cuenta becomes the home, so the parameter can never
+ * send someone to another site.
+ */
+export function clientDestination(raw: string | null | undefined) {
+  return typeof raw === "string" &&
+    /^\/cuenta(?:[/?]|$)/.test(raw) &&
+    !raw.includes("\\") &&
+    !raw.includes("//")
+    ? raw
+    : "/cuenta";
+}
+
 /**
  * Mirrors registration_domain_rule() in migration 018: no "+", spaces or stray dots.
  * The database stays the authority; this only rejects early and identically.
