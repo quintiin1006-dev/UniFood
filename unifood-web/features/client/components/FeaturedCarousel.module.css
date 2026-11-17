@@ -77,8 +77,8 @@
 .arrow {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--color-control-border, #d6e3f3);
   border-radius: 50%;
   background: var(--color-surface, #ffffff);
@@ -92,12 +92,13 @@
   gap: 2px;
 }
 
-/* The visible dot is small; the button around it keeps a comfortable target. */
+/* The visible dot is small; the 44 px button around it is the touch target. */
 .dot {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 44px;
+  height: 44px;
   border: 0;
   background: none;
   cursor: pointer;
@@ -117,7 +118,7 @@
 }
 
 .pause {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--color-control-border, #d6e3f3);
   border-radius: 999px;
