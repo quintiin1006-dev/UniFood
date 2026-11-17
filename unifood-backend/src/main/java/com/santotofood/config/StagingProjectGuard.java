@@ -26,10 +26,14 @@ public final class StagingProjectGuard {
   private static final String DB_URL = "SUPABASE_DB_URL";
   private static final String DATASOURCE_URL = "SPRING_DATASOURCE_URL";
   private static final String DATASOURCE_USERNAME = "SPRING_DATASOURCE_USERNAME";
+  private static final String AUTH_ISSUER = "SUPABASE_AUTH_ISSUER";
+  private static final String STORAGE_URL = "SUPABASE_STORAGE_URL";
   private static final String JDBC_PREFIX = "jdbc:postgresql://";
 
   // Direct connection: db.<ref>.supabase.co
   private static final Pattern DIRECT_HOST = Pattern.compile("db\\.([a-z0-9]+)\\.supabase\\.co");
+  // Project API host of any Supabase URL (Auth issuer, Storage): <ref>.supabase.co
+  private static final Pattern SUPABASE_HOST = Pattern.compile("([a-z0-9]+)\\.supabase\\.co");
   // Pooler connection: the username carries the project reference, postgres.<ref>
   private static final Pattern POOLER_USER = Pattern.compile("postgres\\.([a-z0-9]+)");
 
@@ -64,6 +68,32 @@ public final class StagingProjectGuard {
         throw refuse(
             "la base de datos no pertenece al proyecto esperado (" + EXPECTED_PROJECT_REF + ").");
       }
+    }
+    // Other Supabase URLs the backend calls. A blank value is not a connection to another
+    // project: Storage is then disabled, and Spring refuses to start without an issuer.
+    for (String variable : List.of(AUTH_ISSUER, STORAGE_URL)) {
+      String url = blankToNull(environment.get(variable));
+      if (url != null) {
+        requireProject(variable, url, expected);
+      }
+    }
+  }
+
+  private static void requireProject(String variable, String url, String expected) {
+    URI uri;
+    try {
+      uri = new URI(url.trim());
+    } catch (URISyntaxException e) {
+      throw refuse(variable + " no es una URL válida.");
+    }
+    String host = uri.getHost();
+    Matcher project = SUPABASE_HOST.matcher(host == null ? "" : host);
+    if (!project.matches()) {
+      // Custom domains are unknown to the guard, so they are refused rather than trusted.
+      throw refuse(variable + " debe apuntar a <ref>.supabase.co.");
+    }
+    if (!project.group(1).equals(expected)) {
+      throw refuse(variable + " no pertenece al proyecto esperado (" + EXPECTED_PROJECT_REF + ").");
     }
   }
 
