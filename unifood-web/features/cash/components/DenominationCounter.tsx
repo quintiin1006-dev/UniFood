@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Plus } from "lucide-react";
+import { Icon, ICON_MIN_20 } from "@/components/ui/Icon";
 import { BILLS, COINS, MAX_QUANTITY } from "../types";
 import { denominationLabel, formatPesos } from "../presentation";
 import {
@@ -56,7 +56,7 @@ export function DenominationCounter({
                 aria-label={`Quitar uno de ${label}`}
                 disabled={disabled || !draft[denomination]}
               >
-                <Minus size={20} aria-hidden="true" />
+                <Icon name="menos" size={20} style={ICON_MIN_20} />
               </button>
               <input
                 id={inputId}
@@ -76,7 +76,7 @@ export function DenominationCounter({
                 aria-label={`Agregar uno de ${label}`}
                 disabled={disabled}
               >
-                <Plus size={20} aria-hidden="true" />
+                <Icon name="mas" size={20} style={ICON_MIN_20} />
               </button>
             </div>
             <output

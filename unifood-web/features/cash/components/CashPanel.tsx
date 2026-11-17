@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { Icon, ICON_MIN_20 } from "@/components/ui/Icon";
+import { CASH_TEXTS } from "@/features/shared/messages";
 import { Button } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Notice";
 import { useCash } from "../useCash";
@@ -54,7 +55,7 @@ export function CashPanel() {
             disabled={cash.refreshing}
             aria-label="Actualizar caja"
           >
-            <RefreshCw size={17} aria-hidden="true" />
+            <Icon name="recargar" size={20} style={ICON_MIN_20} />
             <span>{cash.refreshing ? "Actualizando…" : "Actualizar"}</span>
           </button>
         )}
@@ -62,14 +63,13 @@ export function CashPanel() {
 
       {!online && (
         <Notice tone="error" title="Sin conexión">
-          Las cifras pueden no estar al día. No podrás abrir, registrar ni
-          cerrar la caja hasta recuperar la conexión.
+          {CASH_TEXTS.offlineBanner}
         </Notice>
       )}
 
       {loading && !current && (
         <p className={styles.loading} role="status">
-          Cargando caja…
+          {CASH_TEXTS.loading}
         </p>
       )}
 

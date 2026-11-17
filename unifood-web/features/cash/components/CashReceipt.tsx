@@ -1,6 +1,7 @@
 "use client";
 
-import { Printer } from "lucide-react";
+import { Icon, ICON_MIN_20 } from "@/components/ui/Icon";
+import { CASH_TEXTS } from "@/features/shared/messages";
 import { Button } from "@/components/ui/Button";
 import {
   OUTCOME_LABELS,
@@ -129,12 +130,11 @@ export function CashReceipt({
           ? ` · Cerró ${s.closedByName}, ${formatCashDateTime(s.closedAt)}`
           : ""}
       </p>
-      <p className={styles.receiptMeta}>
-        Control interno de caja. No reemplaza la factura ni el soporte contable.
-      </p>
+      <p className={styles.receiptMeta}>{CASH_TEXTS.notInvoice}</p>
       <div className={`${styles.actions} ${styles.noPrint}`}>
         <Button variant="secondary" touch onClick={() => window.print()}>
-          <Printer size={18} aria-hidden="true" /> Imprimir o guardar PDF
+          <Icon name="imprimir" size={20} style={ICON_MIN_20} /> Imprimir o
+          guardar PDF
         </Button>
         {onDone && (
           <Button touch onClick={onDone}>

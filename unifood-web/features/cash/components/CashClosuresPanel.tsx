@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { Download, RefreshCw } from "lucide-react";
+import { Icon } from "@/components/ui/Icon";
 import { Button, buttonClass } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Notice";
 import { cashApi } from "../api";
@@ -61,7 +61,7 @@ export function CashClosuresPanel({
           onClick={() => void state.reload()}
           disabled={state.loading}
         >
-          <RefreshCw size={17} aria-hidden="true" />
+          <Icon name="recargar" size={20} />
           <span>{state.loading ? "Actualizando…" : "Actualizar"}</span>
         </button>
       </div>
@@ -108,7 +108,7 @@ export function CashClosuresPanel({
           download
           aria-label="Exportar los cierres del rango a CSV para Excel"
         >
-          <Download size={18} aria-hidden="true" /> Exportar CSV
+          <Icon name="descargar" size={20} /> Exportar CSV
         </a>
         {invalidRange && (
           <p className={styles.fieldError} role="alert">

@@ -27,6 +27,7 @@ import type {
   CashSession,
 } from "../types";
 import { DenominationCounter } from "./DenominationCounter";
+import { CASH_TEXTS } from "@/features/shared/messages";
 import styles from "./Cash.module.css";
 
 /**
@@ -176,10 +177,7 @@ export function CloseWizard({
 
       {step !== "count" && pending.length > 0 && (
         <Notice tone="error" title="Pedidos sin resolver">
-          <p>
-            Entrégalos o márcalos como no recogidos en Pedidos o Llamadas antes
-            de cerrar.
-          </p>
+          <p>{CASH_TEXTS.pendingOrders}</p>
           <ul className={styles.pendingList}>
             {pending.map((order) => (
               <li key={order.id}>
@@ -223,20 +221,14 @@ export function CloseWizard({
 
       {step === "confirm" && (
         <Notice tone="info" title="Esta acción no se puede deshacer">
-          Al cerrar, la caja ya no admite cambios. Solo el administrador puede
-          reabrirla.
+          {CASH_TEXTS.confirmClose}
         </Notice>
       )}
 
       {problem && problem.code !== "CASH_PENDING_ORDERS" && (
         <Notice tone="error">{problem.message}</Notice>
       )}
-      {!online && (
-        <Notice tone="error">
-          Sin conexión a internet. No se puede cerrar la caja sin conexión; tu
-          conteo se conserva en esta pantalla.
-        </Notice>
-      )}
+      {!online && <Notice tone="error">{CASH_TEXTS.offlineClose}</Notice>}
 
       <div className={styles.actions}>
         <Button variant="secondary" touch onClick={back} disabled={busy}>

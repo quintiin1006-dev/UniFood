@@ -8,6 +8,7 @@ import { SHIFT_LABELS, formatPesos, suggestedShift } from "../presentation";
 import { countTotal, emptyCount } from "../state";
 import type { CashCurrent, CashProblem, CashShift } from "../types";
 import { DenominationCounter } from "./DenominationCounter";
+import { CASH_TEXTS } from "@/features/shared/messages";
 import styles from "./Cash.module.css";
 
 /** «Abrir caja»: the shift and the opening float, counted by denomination. */
@@ -67,11 +68,7 @@ export function OpenCashForm({
         totalLabel="Fondo inicial"
       />
       {problem && <Notice tone="error">{problem.message}</Notice>}
-      {!online && (
-        <Notice tone="error">
-          Sin conexión a internet. Conéctate para abrir la caja.
-        </Notice>
-      )}
+      {!online && <Notice tone="error">{CASH_TEXTS.offlineOpen}</Notice>}
       <Button
         touch
         className={styles.primaryAction}
