@@ -111,7 +111,6 @@ public final class WebPushChannelSender implements PushChannelSender {
               .pushMessage(message.json())
               .ttl(ttl.toSeconds(), TimeUnit.SECONDS)
               .urgency(urgency(urgency))
-              .topic(message.topic())
               .build(keys.pair())
               .toRequestBuilder()
               .timeout(settings.operationTimeout())

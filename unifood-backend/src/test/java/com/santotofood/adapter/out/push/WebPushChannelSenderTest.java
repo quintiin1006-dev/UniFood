@@ -78,7 +78,7 @@ class WebPushChannelSenderTest {
     assertEquals(ENDPOINT, request.uri().toString());
     assertEquals("900", request.headers().firstValue("TTL").orElseThrow());
     assertEquals("high", request.headers().firstValue("Urgency").orElseThrow());
-    assertEquals(message.topic(), request.headers().firstValue("Topic").orElseThrow());
+    assertTrue(request.headers().firstValue("Topic").isEmpty(), "the Topic header is not sent");
     assertEquals("aes128gcm", request.headers().firstValue("Content-Encoding").orElseThrow());
     assertTrue(request.headers().firstValue("Authorization").orElseThrow().startsWith("vapid t="));
     assertTrue(request.timeout().isPresent());
