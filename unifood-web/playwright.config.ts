@@ -4,6 +4,8 @@ const externalBaseURL = process.env.PLAYWRIGHT_BASE_URL;
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  // cash.spec.ts needs its own servers and ports: playwright.cash.config.ts.
+  testIgnore: "cash.spec.ts",
   fullyParallel: false,
   workers: 1,
   updateSnapshots: "none",

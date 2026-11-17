@@ -13,5 +13,7 @@ SELECT a.setting,
 FROM public.cafeteria_settings_audit a
 LEFT JOIN auth.users au ON au.id = a.changed_by
 WHERE a.cafeteria_id = ?
+  -- 028 also audits CASH_TOLERANCE here; this history shows only visibility and billing.
+  AND a.setting IN ('VISIBILITY', 'BILLING')
 ORDER BY a.changed_at DESC, a.id DESC
 LIMIT ?

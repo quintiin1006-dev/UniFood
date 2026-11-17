@@ -54,7 +54,10 @@ WITH account_fks AS (
       'cafeteria_billing_settings.updated_by', 'cafeteria_settings_audit.changed_by',
       -- 027: only an active CLIENT or WORKER registers a device, so the clients and user_roles
       -- checks of the cleanup cover it; the row is ON DELETE CASCADE as well.
-      'push_subscriptions.user_id')
+      'push_subscriptions.user_id',
+      -- 028: only a WORKER or an ADMIN operates the drawer; the cleanup skips accounts with a role.
+      'cafeteria_cash_settings.updated_by', 'cash_sessions.opened_by', 'cash_sessions.closed_by',
+      'cash_sessions.reopened_by', 'cash_movements.created_by', 'cash_sessions_audit.changed_by')
 ), checks(object, ok) AS (VALUES
   ('every account foreign key is covered by the cleanup', NOT EXISTS (SELECT 1 FROM uncovered_fks)),
   ('browser roles cannot write account columns', CASE WHEN to_regclass('public.pending_registrations') IS NULL THEN false
@@ -131,7 +134,10 @@ WHERE c.contype = 'f'
     -- 022: only a SUPER_ADMIN changes billing and visibility; the cleanup skips them too.
     'cafeteria_billing_settings.updated_by', 'cafeteria_settings_audit.changed_by',
     -- 027: only an active CLIENT or WORKER registers a device; ON DELETE CASCADE as well.
-    'push_subscriptions.user_id')
+    'push_subscriptions.user_id',
+    -- 028: only a WORKER or an ADMIN operates the drawer; the cleanup skips accounts with a role.
+    'cafeteria_cash_settings.updated_by', 'cash_sessions.opened_by', 'cash_sessions.closed_by',
+    'cash_sessions.reopened_by', 'cash_movements.created_by', 'cash_sessions_audit.changed_by')
 ORDER BY 1;
 
 -- Read-only: objects of migration 022 (visibility and billing). Every row must say true.
@@ -157,6 +163,43 @@ WITH checks(object, ok) AS (VALUES
     ELSE NOT EXISTS (
       SELECT 1 FROM unnest(ARRAY['anon', 'authenticated']) r,
         unnest(ARRAY['public.cafeteria_billing_settings', 'public.cafeteria_settings_audit']) t
+      WHERE has_table_privilege(r, t, 'SELECT') OR has_table_privilege(r, t, 'INSERT')
+         OR has_table_privilege(r, t, 'UPDATE') OR has_table_privilege(r, t, 'DELETE')
+         OR has_any_column_privilege(r, t, 'SELECT')) END)
+)
+SELECT object, ok FROM checks ORDER BY object;
+
+-- Read-only: objects of migration 028 (cash register). Every row must say true.
+-- Catalog lookups and dynamic counts only, so it also runs before 028 and reports false.
+WITH checks(object, ok) AS (VALUES
+  ('028 cash tables', (SELECT count(*) = 5 FROM unnest(ARRAY[
+    'public.cafeteria_cash_settings', 'public.cash_sessions', 'public.cash_movements',
+    'public.cash_count_lines', 'public.cash_sessions_audit']) t WHERE to_regclass(t) IS NOT NULL)),
+  ('028 one open drawer per cafeteria', to_regclass('public.uq_cash_session_one_open') IS NOT NULL),
+  ('028 guard and audit triggers enabled', (
+    SELECT count(*) = 15 FROM pg_catalog.pg_trigger
+    WHERE NOT tgisinternal AND tgenabled <> 'D' AND tgname IN (
+      'trg_cafeterias_cash_settings_row', 'trg_cafeteria_cash_tolerance_audit',
+      'trg_cafeteria_cash_settings_no_delete', 'trg_cafeteria_cash_settings_no_truncate',
+      'trg_cash_session_guard', 'trg_cash_session_audit', 'trg_cash_session_no_delete',
+      'trg_cash_session_no_truncate', 'trg_cash_movement_guard', 'trg_cash_movement_audit',
+      'trg_cash_movement_no_truncate', 'trg_cash_count_line_guard',
+      'trg_cash_count_line_no_truncate', 'trg_cash_sessions_audit_immutable',
+      'trg_cash_sessions_audit_no_truncate'))),
+  ('028 every cafeteria has its cash settings row', CASE
+    WHEN to_regclass('public.cafeteria_cash_settings') IS NULL THEN false
+    ELSE (xpath('/row/n/text()', query_to_xml(
+      $q$SELECT NOT EXISTS (SELECT 1 FROM public.cafeterias c
+         WHERE NOT EXISTS (SELECT 1 FROM public.cafeteria_cash_settings s
+                           WHERE s.cafeteria_id = c.id)) AS n$q$,
+      false, true, '')))[1]::text::boolean END),
+  ('028 cash tables closed to browser roles', CASE
+    WHEN to_regclass('public.cash_sessions_audit') IS NULL THEN false
+    ELSE NOT EXISTS (
+      SELECT 1 FROM unnest(ARRAY['anon', 'authenticated']) r,
+        unnest(ARRAY['public.cafeteria_cash_settings', 'public.cash_sessions',
+                     'public.cash_movements', 'public.cash_count_lines',
+                     'public.cash_sessions_audit']) t
       WHERE has_table_privilege(r, t, 'SELECT') OR has_table_privilege(r, t, 'INSERT')
          OR has_table_privilege(r, t, 'UPDATE') OR has_table_privilege(r, t, 'DELETE')
          OR has_any_column_privilege(r, t, 'SELECT')) END)

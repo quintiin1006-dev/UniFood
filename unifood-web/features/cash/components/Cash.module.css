@@ -1,0 +1,474 @@
+/* Caja (docs/decisiones.md §14). Tablet first: targets of 44 px or more, large tabular
+   figures and the numeric keypad. Only design tokens; no new colors. */
+
+.panel {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 6px 24px;
+  color: var(--color-ink);
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.heading h2 {
+  margin: 0;
+  font-size: clamp(24px, 3vw, 30px);
+  font-weight: 750;
+  letter-spacing: -0.7px;
+}
+.refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-brand);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.panel button:focus-visible,
+.panel input:focus-visible,
+.panel textarea:focus-visible,
+.panel label:focus-within {
+  outline: var(--focus-ring-width, 2px) solid var(--color-brand);
+  outline-offset: var(--focus-ring-offset, 2px);
+}
+.loading {
+  margin: 0;
+  color: var(--color-slate);
+}
+.help {
+  margin: 4px 0 0;
+  color: var(--color-slate);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.card {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+}
+.cardTitle {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: -0.4px;
+}
+.stepLabel {
+  margin: 0;
+  color: var(--color-brand);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* ---------------------------------------------------------------- shift and kind toggles */
+.shifts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.shifts legend,
+.denominations legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-slate);
+}
+.shift {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  border: 1.5px solid var(--color-control-border);
+  border-radius: var(--radius-control);
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+.shift input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.shiftActive {
+  border-color: var(--color-brand);
+  background: var(--color-brand-tint);
+  color: var(--color-brand-hover);
+}
+
+/* ---------------------------------------------------------------- counter */
+.counter {
+  display: grid;
+  gap: 16px;
+}
+.denominations {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.denominationRow {
+  display: grid;
+  grid-template-columns: minmax(84px, 1fr) auto minmax(96px, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+.denominationLabel {
+  font-size: 18px;
+  font-weight: 700;
+}
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.stepButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--color-control-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: var(--color-brand);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.stepButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.quantity,
+.amountInput {
+  min-height: 48px;
+  border: 1.5px solid var(--color-control-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.quantity {
+  width: 72px;
+}
+.amountInput {
+  width: 100%;
+  font-size: 26px;
+}
+.subtotal {
+  justify-self: end;
+  color: var(--color-slate);
+  font-size: 16px;
+}
+.countTotal {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-brand-tint);
+}
+.countTotal span {
+  font-weight: 700;
+}
+.countTotal strong {
+  font-size: clamp(28px, 5vw, 36px);
+  letter-spacing: -0.6px;
+}
+
+/* ---------------------------------------------------------------- summary and compare */
+.summary,
+.compare,
+.receiptRows {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+.summary > div,
+.compare > div,
+.receiptRows > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-line);
+}
+.summary dt,
+.compare dt,
+.receiptRows dt {
+  color: var(--color-slate);
+  font-size: 16px;
+}
+.summary dd,
+.compare dd,
+.receiptRows dd {
+  margin: 0;
+  display: grid;
+  justify-items: end;
+  font-size: 22px;
+  font-weight: 700;
+}
+.summary small {
+  color: var(--color-slate);
+  font-size: 13px;
+  font-weight: 500;
+}
+.expected,
+.differenceRow {
+  border-bottom: 0 !important;
+}
+.expected dd,
+.differenceRow dd {
+  font-size: clamp(30px, 6vw, 40px);
+  letter-spacing: -0.8px;
+}
+.outcome {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.balanced dd {
+  color: var(--color-success-ink);
+}
+.tolerated dd {
+  color: var(--color-brand-hover);
+}
+.outside dd {
+  color: var(--color-danger-ink);
+}
+
+/* ---------------------------------------------------------------- forms */
+.field {
+  display: grid;
+  gap: 6px;
+}
+.field label {
+  font-size: 15px;
+  font-weight: 700;
+}
+.textarea {
+  min-height: 88px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--color-control-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 16px;
+  resize: vertical;
+}
+.fieldError {
+  margin: 0;
+  color: var(--color-danger-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.actions > * {
+  flex: 1 1 200px;
+}
+.primaryAction {
+  width: 100%;
+}
+.pendingList {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+.movements {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.movements li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-line);
+  font-size: 15px;
+}
+
+/* ---------------------------------------------------------------- receipt */
+.receiptHeader {
+  display: grid;
+  gap: 4px;
+}
+.receiptDifference dd {
+  font-size: 20px;
+}
+.receiptNote,
+.receiptMeta {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.receiptMeta {
+  color: var(--color-slate);
+}
+.receiptTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.receiptTable caption {
+  margin-bottom: 6px;
+  text-align: left;
+  font-weight: 700;
+}
+.receiptTable th,
+.receiptTable td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--color-line);
+  text-align: left;
+}
+.receiptTable td:last-child,
+.receiptTable th:last-child {
+  text-align: right;
+}
+
+@media (max-width: 520px) {
+  .denominationRow {
+    grid-template-columns: 1fr auto;
+  }
+  .subtotal {
+    grid-column: 1 / -1;
+    justify-self: end;
+    margin-top: -4px;
+  }
+}
+
+/* Only the receipt prints, in black on white. */
+@media print {
+  :global(body *) {
+    visibility: hidden;
+  }
+  .receipt,
+  .receipt * {
+    visibility: visible;
+  }
+  .receipt {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    border: 0;
+    box-shadow: none;
+    color: #000;
+    background: #fff;
+  }
+  .noPrint {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel * {
+    transition: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------- admin closures */
+.filters {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  align-items: end;
+}
+.dateInput {
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 1.5px solid var(--color-control-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 16px;
+}
+.tableScroll {
+  overflow-x: auto;
+}
+.closures {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.closures th,
+.closures td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--color-line);
+  text-align: left;
+  white-space: nowrap;
+}
+.closures th {
+  color: var(--color-slate);
+  font-size: 13px;
+  font-weight: 700;
+}
+.closures small {
+  color: inherit;
+  font-size: 12px;
+}
+.rowOutside td {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-ink);
+  font-weight: 650;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Grid items keep min-width: auto and would grow to the closures table, pushing the page
+   sideways at 390 px; letting them shrink makes .tableScroll scroll inside the card instead. */
+.panel > *,
+.card > * {
+  min-width: 0;
+}
+.tableScroll {
+  max-width: 100%;
+  /* Contains the absolutely positioned screen-reader texts of the table (the «Acciones»
+     header sits in the last column): without it they escape the scroll box and widen the
+     whole page at 390 px. */
+  position: relative;
+}
