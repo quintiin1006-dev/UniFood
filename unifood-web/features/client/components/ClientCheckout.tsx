@@ -5,6 +5,7 @@ import Link from "next/link";
 import { TERMS_PATH } from "@/features/auth/legal";
 import { ArrowLeft, Banknote, Clock3, ShoppingBag } from "lucide-react";
 import { Notice } from "@/components/ui/Notice";
+import { Spinner } from "@/components/ui/Spinner";
 import type { CafeteriaMenu, ClientCart } from "../types";
 import { placeOrder } from "../api/placeOrder";
 import { currency } from "../domain/catalog";
@@ -322,7 +323,9 @@ function CheckoutForm({
           type="submit"
           className={shared.primaryButton}
           disabled={pending || !!cartIssue || !!pickupError}
+          aria-busy={pending || undefined}
         >
+          {pending && <Spinner />}
           {pending
             ? "Enviando pedido…"
             : problem?.action === "retry"
