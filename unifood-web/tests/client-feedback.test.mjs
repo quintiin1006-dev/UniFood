@@ -10,7 +10,13 @@ test("confirming an order shows the spinner while «Enviando pedido…»", () =>
     "features/client/components/ClientCheckout.tsx",
     "utf8",
   );
-  assert.match(source, /import \{ Spinner \} from "@\/components\/ui\/Spinner"/);
-  assert.match(source, /aria-busy=\{pending \|\| undefined\}\s*>\s*\{pending && <Spinner \/>\}/);
+  assert.match(
+    source,
+    /import \{ Spinner \} from "@\/components\/ui\/Spinner"/,
+  );
+  assert.match(
+    source,
+    /aria-busy=\{pending \|\| undefined\}\s*>\s*\{pending && <Spinner \/>\}/,
+  );
   assert.match(source, /"Enviando pedido…"/);
 });
