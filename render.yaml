@@ -6,9 +6,10 @@ services:
     name: unifood-backend-staging
     runtime: docker
     region: oregon
-    # Mínimo recomendado: el plan gratuito se duerme tras inactividad y tarda en responder.
-    # Ver tamaño de instancia en docs/despliegue-staging.md.
-    plan: starter
+    # Plan Free TEMPORAL para pruebas: se duerme tras 15 min sin tráfico.
+    # Para el ensayo, la demo y el piloto hay que subir a un plan de pago (Starter o Standard).
+    # Detalles y límites en docs/despliegue-staging.md §2.3.
+    plan: free
     numInstances: 1
     repo: https://github.com/quintiin1006-dev/UniFood
     branch: develop
