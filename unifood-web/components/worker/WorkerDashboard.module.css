@@ -128,7 +128,11 @@
 /* Ola 2 · D2: Pedidos and Llamadas keep the classic look (gradient and UniFood watermark). */
 .classicPage:global(.worker-page) {
   background:
-    radial-gradient(circle at 50% 45%, rgba(35, 129, 239, 0.26), transparent 40%),
+    radial-gradient(
+      circle at 50% 45%,
+      rgba(35, 129, 239, 0.26),
+      transparent 40%
+    ),
     linear-gradient(145deg, #063d82 0%, #0756a9 48%, #043d7f 100%);
 }
 

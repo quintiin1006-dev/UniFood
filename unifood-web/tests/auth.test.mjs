@@ -156,6 +156,9 @@ function fixture(rpc) {
     othersError: null,
     completeError: null,
     signupData: {},
+    // client_terms_accepted(): the current version, accepted unless a test says otherwise.
+    termsAccepted: true,
+    termsError: null,
   };
   const result = async (name, input) => {
     if (["login", "verify"].includes(name) && !state.providerError) {
@@ -200,6 +203,10 @@ function fixture(rpc) {
             ? { allowed: true, clientType: state.clientType }
             : { allowed: false },
         };
+      if (name === "client_terms_accepted")
+        return state.termsError
+          ? { data: null, error: state.termsError }
+          : { data: state.termsAccepted };
       if (name === "pending_registration")
         return state.pendingError
           ? { data: null, error: state.pendingError }
@@ -1193,6 +1200,54 @@ test("registration API uses PostgreSQL domain validation and preserves each reci
     assert.equal(
       (await post("register", { email: `maria@${domain}` })).status,
       400,
+    );
+  }
+});
+
+test("a client who owes the current terms is answered with the step, never sent on", async () => {
+  // Pending acceptance: the redirect still travels, but the screen shows the step first.
+  const pending = fixture();
+  pending.state.termsAccepted = false;
+  const answer = await (
+    await pending.post("login", { email: "maria", password: "UnaClave8" })
+  ).json();
+  assert.deepEqual(answer, { redirect: "/cuenta", terms: "pending" });
+
+  // A read that fails is not "accepted": fail closed, with the retry on the screen.
+  const broken = fixture();
+  broken.state.termsError = { message: "PRIVATE_TERMS_DETAIL" };
+  assert.deepEqual(
+    await (
+      await broken.post("login", { email: "maria", password: "UnaClave8" })
+    ).json(),
+    { redirect: "/cuenta", terms: "unavailable" },
+  );
+
+  // Accepted: nothing extra in the answer.
+  const done = fixture();
+  assert.deepEqual(
+    await (
+      await done.post("login", { email: "maria", password: "UnaClave8" })
+    ).json(),
+    { redirect: "/cuenta" },
+  );
+
+  // Panels never carry the step, whatever the client terms say.
+  for (const roles of [["WORKER"], ["ADMIN"], ["SUPER_ADMIN"]]) {
+    const panel = fixture();
+    panel.state.termsAccepted = false;
+    panel.state.profile = { active: true, roles };
+    const body = await (
+      await panel.post("login", {
+        email: "maria",
+        password: "UnaClave8",
+        entrypoint: "panel",
+      })
+    ).json();
+    assert.equal(body.terms, undefined, roles[0]);
+    assert.ok(
+      !panel.calls.some(([name]) => name === "client_terms_accepted"),
+      roles[0],
     );
   }
 });

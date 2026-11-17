@@ -33,7 +33,9 @@ const components = Object.fromEntries(
     "ClientHome",
     "ClientMenu",
     "ClientProduct",
+    "ConnectionError",
     "MenuUnavailable",
+    "NoCafeterias",
     "SiteSelection",
   ].map((name) => [
     `@/features/client/components/${name}`,
@@ -132,8 +134,44 @@ test("Inicio states: closed and empty menus render; failures are fixed messages"
   assert.equal(retry.props.title, undefined);
   const noContext = pages({ contextResult: { status: "error" } });
   const contextError = await render(noContext.home);
-  assert.equal(name(contextError), "MenuUnavailable");
-  assert.equal(contextError.props.title, "No pudimos cargar tus cafeterías");
+  assert.equal(name(contextError), "ConnectionError");
+});
+
+test("Inicio separates a server it could not reach from having no cafeteria", async () => {
+  // Network, timeout or 5xx: say so and let them retry.
+  const unreachable = await render(
+    pages({ contextResult: { status: "error" } }).home,
+  );
+  assert.equal(name(unreachable), "ConnectionError");
+
+  // The context answered, and it simply has nothing: an empty state, with no retry.
+  const empty = contextDomain.toClientContext({
+    ...fixtures.clientContext,
+    sites: [],
+  });
+  const none = await render(
+    pages({ contextResult: { status: "ok", context: empty } }).home,
+  );
+  assert.equal(name(none), "NoCafeterias");
+
+  // Sites that exist but hold no cafeteria are just as empty.
+  const emptySites = contextDomain.toClientContext({
+    ...fixtures.clientContext,
+    sites: [
+      { id: fixtures.SITE_PRINCIPAL, name: "Sede Principal", cafeterias: [] },
+    ],
+  });
+  assert.equal(
+    name(
+      await render(
+        pages({ contextResult: { status: "ok", context: emptySites } }).home,
+      ),
+    ),
+    "NoCafeterias",
+  );
+
+  // With a cafeteria, neither of the two appears.
+  assert.equal(name(await render(pages().home)), "SiteSelection");
 });
 
 test("Menú validates the cafeteria and the category slug", async () => {

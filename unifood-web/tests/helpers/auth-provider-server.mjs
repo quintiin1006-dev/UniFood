@@ -88,6 +88,8 @@ const refreshTokens = new Map();
 const failures = new Map();
 // Profile id -> whether the client accepted the current terms. Absent means accepted.
 const termsAccepted = new Map();
+// Profile ids whose terms state cannot be read, however many times it is asked.
+const termsUnreadable = new Set();
 const profileAudit = { directBusinessReads: 0, backendProfileReads: 0 };
 // SUPER_ADMIN fixture: one visible cafeteria with its ADMIN, one hidden without one.
 const superAdminState = {};
@@ -461,6 +463,9 @@ createServer(async (request, response) => {
         target = fixtures.find((entry) => entry.email === config.email);
       if (!target) return json(response, 400, {});
       termsAccepted.set(target.id, config.accepted === true);
+      // "failing" makes the read of the state break, to exercise the fail-closed path.
+      if (config.failing === true) termsUnreadable.add(target.id);
+      else termsUnreadable.delete(target.id);
       return json(response, 200, {});
     }
     if (url.pathname === "/__test/availability") {
@@ -718,8 +723,11 @@ createServer(async (request, response) => {
         return json(response, 503, { message: "PRIVATE_LOGOUT_DETAIL" });
       return json(response, 200, {});
     }
-    if (url.pathname === "/rest/v1/rpc/client_terms_accepted")
+    if (url.pathname === "/rest/v1/rpc/client_terms_accepted") {
+      if (termsUnreadable.has(profile.id))
+        return json(response, 500, { message: "PRIVATE_TERMS_READ_DETAIL" });
       return json(response, 200, termsAccepted.get(profile.id) ?? true);
+    }
     if (url.pathname === "/rest/v1/rpc/accept_client_terms") {
       termsAccepted.set(profile.id, true);
       response.writeHead(204);
