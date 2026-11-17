@@ -467,4 +467,8 @@
 }
 .tableScroll {
   max-width: 100%;
+  /* Contains the absolutely positioned screen-reader texts of the table (the «Acciones»
+     header sits in the last column): without it they escape the scroll box and widen the
+     whole page at 390 px. */
+  position: relative;
 }
