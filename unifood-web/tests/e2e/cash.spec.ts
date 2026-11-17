@@ -209,8 +209,15 @@ test("WORKER opens the drawer, records movements and is warned of sales without 
   await expect(cash(page).getByText("$60.000")).toBeVisible();
   await shot(page, "01-caja-abierta");
 
-  // Keyboard focus is visible on the drawer's actions.
-  await cash(page).getByRole("button", { name: "Cerrar caja" }).focus();
+  // Keyboard focus is visible on the drawer's actions: reach «Cerrar caja» with Tab, as a
+  // keyboard user would (programmatic focus after a click does not show :focus-visible).
+  await cash(page)
+    .getByRole("button", { name: "Registrar movimiento" })
+    .focus();
+  await page.keyboard.press("Tab");
+  await expect(
+    cash(page).getByRole("button", { name: "Cerrar caja" }),
+  ).toBeFocused();
   const outline = await page.evaluate(() => {
     const style = getComputedStyle(document.activeElement as Element);
     return `${style.outlineStyle} ${style.outlineWidth}`;
