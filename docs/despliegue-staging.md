@@ -65,9 +65,10 @@ No hay comandos de Render separados: la imagen Docker define ambos.
 
 ### 2.3 Plan e instancia
 
-- **El plan gratuito se duerme** tras unos 15 minutos sin tráfico. La primera petición tarda más de un minuto mientras arranca el JVM, y el cierre diario y las notificaciones push no se ejecutan mientras está dormido. **No es válido para probar con teléfonos reales.**
-- **Plan recomendado:** de pago (_Starter_) para evitar el sueño. Revisar el precio actual en la página de precios de Render; no está verificado aquí.
-- **Memoria:** el JVM usa como máximo el 70 % del límite del contenedor (`MaxRAMPercentage=70`), GC serial y salida ante `OutOfMemoryError` para que Render lo reinicie. Con 512 MB el margen es estrecho (heap, metaspace y hilos de Spring Boot y Hikari). Si aparecen reinicios por memoria en los logs, subir a una instancia con 2 GB.
+- **Plan actual: Free, de forma temporal, para pruebas.** `render.yaml` y el servicio `unifood-backend-staging` usan `plan: free` para no generar cargos durante las pruebas.
+- **El plan Free se duerme** tras 15 minutos sin tráfico y tarda cerca de un minuto en despertar. Mientras duerme, el cierre diario y las notificaciones push no se ejecutan. **No es válido para pruebas con teléfonos reales ni para la demostración.**
+- **Recomendación para el ensayo, la demo y el piloto:** subir a un plan de pago antes de cada uno (ensayo el 22 de noviembre, demo el 28 de noviembre y piloto). Revisar el precio y la memoria de cada plan en la página de Render; no están verificados aquí. Al cambiar de plan en el panel, actualizar también `plan:` en `render.yaml` para que el próximo sync no lo revierta.
+- **Memoria:** el JVM usa como máximo el 70 % del límite del contenedor (`MaxRAMPercentage=70`), GC serial y salida ante `OutOfMemoryError` para que Render lo reinicie. Con 512 MB el margen es estrecho (heap, metaspace y hilos de Spring Boot y Hikari). Si el servicio se queda sin memoria al arrancar, los logs de Render lo mostrarán. Entonces hay dos opciones: limitar la memoria de Java con `-Xmx` en el `ENTRYPOINT` del `Dockerfile` (cambio de código, en PR aparte), o subir de plan.
 - **Instancias:** una sola. El cierre diario y el reparto de trabajos no están pensados para varias réplicas a la vez.
 
 ### 2.4 Cómo se valida el backend al arrancar
@@ -224,7 +225,7 @@ Ejecutar en orden tras cada despliegue:
 | La imagen Docker no se ha construido en esta preparación                                                | El primer build real será el de Render. La CI actual solo ejecuta tests y Spotless del backend.                                                                                                                                            |
 | Región `pdx1` de Vercel                                                                                 | Confirmar en _Settings → Functions_ que la opción está disponible en el plan.                                                                                                                                                              |
 | Dominio `*.vercel.app` y dominio propio                                                                 | Cambiar de dominio cierra las sesiones y obliga a actualizar Site URL y Redirect URLs.                                                                                                                                                     |
-| Plan gratuito de Render                                                                                 | No usar para pruebas con teléfonos (sueño de 15 min).                                                                                                                                                                                      |
+| Plan gratuito de Render                                                                                 | Free es temporal y solo para pruebas: se duerme tras 15 min (ver §2.3). Subir de plan antes del ensayo (22 nov), la demo (28 nov) y el piloto.                                                                                             |
 
 ## 12. Lo que este PR no hace
 
