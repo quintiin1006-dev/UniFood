@@ -30,10 +30,13 @@ services:
         sync: false
       - key: SPRING_DATASOURCE_PASSWORD
         sync: false
-      # Auth: issuer del proyecto staging (JWT validados por Spring).
+      # Auth: issuer del proyecto staging (JWT validados por Spring). Debe ser del proyecto
+      # pzzkmkvnucueejthpqvl; la guarda rechaza cualquier otro.
       - key: SUPABASE_AUTH_ISSUER
         sync: false
-      # Storage de imágenes de producto. Dejar URL y secreto vacíos desactiva las subidas (503).
+      # Storage de imágenes de producto. En staging DEBE apuntar a pzzkmkvnucueejthpqvl
+      # (https://pzzkmkvnucueejthpqvl.supabase.co/storage/v1); la guarda rechaza otro proyecto.
+      # Dejar URL y secreto vacíos desactiva las subidas (503).
       - key: SUPABASE_STORAGE_URL
         sync: false
       - key: SUPABASE_STORAGE_SECRET_KEY

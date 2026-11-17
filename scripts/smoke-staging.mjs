@@ -14,7 +14,9 @@ const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 const REDIRECT_CODES = new Set([301, 302, 303, 307, 308]);
 
 function usage(message) {
-  console.error(`Uso: node scripts/smoke-staging.mjs <URL_WEB> [URL_BACKEND]\n${message}`);
+  console.error(
+    `Uso: node scripts/smoke-staging.mjs <URL_WEB> [URL_BACKEND]\n${message}`,
+  );
   process.exit(2);
 }
 
@@ -27,8 +29,10 @@ function parseBaseUrl(name, raw) {
     usage(`${name} no es una URL válida.`);
   }
   const secure = url.protocol === "https:";
-  const loopbackHttp = url.protocol === "http:" && LOCAL_HOSTS.has(url.hostname);
-  if (!secure && !loopbackHttp) usage(`${name} debe usar HTTPS (HTTP solo en localhost).`);
+  const loopbackHttp =
+    url.protocol === "http:" && LOCAL_HOSTS.has(url.hostname);
+  if (!secure && !loopbackHttp)
+    usage(`${name} debe usar HTTPS (HTTP solo en localhost).`);
   if (url.username || url.password || url.search || url.hash) {
     usage(`${name} no debe incluir credenciales, query ni fragmento.`);
   }
@@ -47,7 +51,9 @@ async function request(url) {
 
 function describeError(error) {
   // Solo el tipo de error: los mensajes de red pueden contener la URL completa.
-  return error?.name === "TimeoutError" ? "tiempo de espera agotado" : "error de red";
+  return error?.name === "TimeoutError"
+    ? "tiempo de espera agotado"
+    : "error de red";
 }
 
 async function check(label, run) {
@@ -87,7 +93,10 @@ async function main() {
           status = null;
         }
         const ok = response.status === 200 && status === "UP";
-        return { ok, detail: `HTTP ${response.status}, status ${status ?? "desconocido"}` };
+        return {
+          ok,
+          detail: `HTTP ${response.status}, status ${status ?? "desconocido"}`,
+        };
       }),
     );
   } else {
@@ -103,13 +112,24 @@ async function main() {
   checks.push(
     check("web responde en /", async () => {
       const response = await request(`${web}/`);
-      return { ok: response.status >= 200 && response.status < 300, detail: `HTTP ${response.status}` };
+      return {
+        ok: response.status >= 200 && response.status < 300,
+        detail: `HTTP ${response.status}`,
+      };
     }),
     check("/worker exige login", async () => {
-      return expectRedirectTo(await request(`${web}/worker`), web, "/panel/login");
+      return expectRedirectTo(
+        await request(`${web}/worker`),
+        web,
+        "/panel/login",
+      );
     }),
     check("/admin exige login", async () => {
-      return expectRedirectTo(await request(`${web}/admin`), web, "/panel/login");
+      return expectRedirectTo(
+        await request(`${web}/admin`),
+        web,
+        "/panel/login",
+      );
     }),
     check("/cuenta exige login", async () => {
       return expectRedirectTo(await request(`${web}/cuenta`), web, "/login");
@@ -135,7 +155,9 @@ async function main() {
     }
   }
   const passed = results.length - failures - skipped;
-  console.log(`\nResultado: ${passed} OK, ${failures} FALLO, ${skipped} OMITIDO`);
+  console.log(
+    `\nResultado: ${passed} OK, ${failures} FALLO, ${skipped} OMITIDO`,
+  );
   process.exit(failures > 0 ? 1 : 0);
 }
 
