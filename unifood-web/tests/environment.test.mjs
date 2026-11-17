@@ -183,3 +183,100 @@ test("orders BFF rejects missing API_URL before forwarding even when NEXT_PUBLIC
     /API_URL is required/,
   );
 });
+
+// Staging guard (web). Fake references only: real project references never enter the repository.
+const expectedRef = "stgrefabcdefghijklmn";
+const otherRef = "prdrefzyxwvutsrqponm";
+const guardedKey = "sb_publishable_test_configuration_only";
+const guarded = (supabaseUrl, expected = expectedRef) => ({
+  NODE_ENV: "production",
+  API_URL: "https://backend.test",
+  SUPABASE_URL: supabaseUrl,
+  SUPABASE_PUBLISHABLE_KEY: guardedKey,
+  UNIFOOD_EXPECTED_PROJECT_REF: expected,
+});
+
+test("staging guard accepts the expected project host, with or without trailing slash", () => {
+  assert.doesNotThrow(() =>
+    config.validateEnvironment(guarded(`https://${expectedRef}.supabase.co`)),
+  );
+  assert.doesNotThrow(() =>
+    config.validateEnvironment(guarded(`https://${expectedRef}.supabase.co/`)),
+  );
+  assert.equal(
+    config.readAuthConfig(guarded(`https://${expectedRef}.supabase.co/`)).url,
+    `https://${expectedRef}.supabase.co`,
+  );
+});
+
+test("staging guard rejects another project reference and names only references", () => {
+  const error = (() => {
+    try {
+      config.validateEnvironment(guarded(`https://${otherRef}.supabase.co`));
+    } catch (caught) {
+      return caught;
+    }
+    return null;
+  })();
+  assert.ok(error, "another project must be refused");
+  assert.match(error.message, new RegExp(otherRef));
+  assert.match(error.message, new RegExp(expectedRef));
+  assert.doesNotMatch(error.message, new RegExp(guardedKey));
+});
+
+test("staging guard rejects variants of the expected host", () => {
+  const variants = [
+    `https://${expectedRef.toUpperCase()}.supabase.co`,
+    `https://${expectedRef}.supabase.co:443`,
+    `https://${expectedRef}.supabase.co/auth/v1`,
+    `https://${expectedRef}.supabase.co/?x=1`,
+    `https://${expectedRef}.supabase.co.evil.test`,
+    `https://${expectedRef}.example.test`,
+    `https://evil.test/${expectedRef}.supabase.co`,
+    `https://user@${expectedRef}.supabase.co`,
+    `http://${expectedRef}.supabase.co`,
+    `https://${expectedRef}.supabase.co#frag`,
+  ];
+  for (const url of variants) {
+    assert.throws(
+      () => config.validateEnvironment(guarded(url)),
+      /SUPABASE_URL/,
+      `must reject ${url}`,
+    );
+  }
+});
+
+test("staging guard rejects a malformed URL and a malformed expected reference", () => {
+  assert.throws(
+    () => config.validateEnvironment(guarded("not a url")),
+    /SUPABASE_URL must be an absolute HTTP\(S\) URL/,
+  );
+  assert.throws(
+    () =>
+      config.validateEnvironment(
+        guarded(`https://${expectedRef}.supabase.co`, "UPPERCASE"),
+      ),
+    /UNIFOOD_EXPECTED_PROJECT_REF must be a 20-character/,
+  );
+  assert.throws(
+    () =>
+      config.validateEnvironment(
+        guarded(`https://${expectedRef}.supabase.co`, "short"),
+      ),
+    /UNIFOOD_EXPECTED_PROJECT_REF must be a 20-character/,
+  );
+});
+
+test("without UNIFOOD_EXPECTED_PROJECT_REF, or with it blank, nothing changes", () => {
+  const unset = guarded(`https://${otherRef}.supabase.co`);
+  delete unset.UNIFOOD_EXPECTED_PROJECT_REF;
+  assert.doesNotThrow(() => config.validateEnvironment(unset));
+  const blank = guarded(`https://${otherRef}.supabase.co`, "   ");
+  assert.doesNotThrow(() => config.validateEnvironment(blank));
+  assert.doesNotThrow(() =>
+    config.validateEnvironment({
+      ...deployment,
+      SUPABASE_URL: "https://auth.test",
+    }),
+  );
+});
