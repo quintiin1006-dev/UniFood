@@ -1,0 +1,33 @@
+/* UniFood icon set: colours only from tokens. */
+.icon {
+  flex: none;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.inactive {
+  color: var(--color-text-soft);
+}
+
+/* Active: brand stroke and a 14 % brand fill. */
+.active {
+  color: var(--color-brand);
+  fill: color-mix(in srgb, var(--color-brand) 14%, transparent);
+}
+
+/* Module tile: 48 px, radius 14, gradient 150deg celeste → brand (45 %) → navy, white glyph. */
+.tile {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--color-on-color);
+  background: linear-gradient(
+    150deg,
+    var(--color-brand-celeste) 0%,
+    var(--color-brand) 45%,
+    var(--color-brand-navy) 100%
+  );
+}

@@ -1,13 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Clock3,
-  ChefHat,
-  ShoppingBag,
-  Check,
-  type LucideIcon,
-} from "lucide-react";
+import { Icon, type IconName } from "@/components/ui/Icon";
 
 import { NEW_ORDER_BADGE_MS } from "@/features/orders/listingStatus";
 import type { Order } from "@/types/order";
@@ -32,7 +26,7 @@ interface Column {
   id: string;
   title: string;
   statuses: Order["status"][];
-  icon: LucideIcon;
+  icon: IconName;
 }
 
 const columns: Column[] = [
@@ -40,25 +34,25 @@ const columns: Column[] = [
     id: "pending",
     title: "Pendientes",
     statuses: ["pending"],
-    icon: Clock3,
+    icon: "reloj",
   },
   {
     id: "preparing",
     title: "En preparación",
     statuses: ["preparing"],
-    icon: ChefHat,
+    icon: "cocina",
   },
   {
     id: "ready",
     title: "Listos para entregar",
     statuses: ["ready", "called"],
-    icon: ShoppingBag,
+    icon: "bolsa",
   },
   {
     id: "delivered",
     title: "Entregados",
     statuses: ["delivered"],
-    icon: Check,
+    icon: "check",
   },
 ];
 
@@ -130,8 +124,6 @@ export default function KanbanBoard({
               )
             : columnOrders;
 
-        const ColumnIcon = column.icon;
-
         return (
           <article
             key={column.id}
@@ -140,9 +132,9 @@ export default function KanbanBoard({
           >
             <header className={styles.columnHeader}>
               <div className={styles.columnHeading}>
-                <ColumnIcon
+                <Icon
+                  name={column.icon}
                   size={column.id === "delivered" ? 30 : 38}
-                  strokeWidth={column.id === "delivered" ? 2.8 : 2.1}
                   className={
                     column.id === "delivered"
                       ? styles.deliveredIcon

@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, History, Megaphone, Package, UserRound } from "lucide-react";
+import { Icon, type IconName } from "@/components/ui/Icon";
 
 import modernStyles from "./BottomNav.module.css";
 import classicStyles from "./BottomNav.classic.module.css";
@@ -19,27 +19,27 @@ const modules = [
   {
     id: "orders" as const,
     label: "Pedidos",
-    icon: FileText,
+    icon: "pedidos" as IconName,
   },
   {
     id: "calls" as const,
     label: "Llamadas",
-    icon: Megaphone,
+    icon: "llamadas" as IconName,
   },
   {
     id: "history" as const,
     label: "Historial",
-    icon: History,
+    icon: "historial" as IconName,
   },
   {
     id: "availability" as const,
     label: "Disponibilidad",
-    icon: Package,
+    icon: "disponibilidad" as IconName,
   },
   {
     id: "profile" as const,
     label: "Mi perfil",
-    icon: UserRound,
+    icon: "perfil" as IconName,
   },
 ];
 
@@ -52,8 +52,6 @@ export default function BottomNav({
   return (
     <nav className={styles.nav} aria-label="Navegación principal">
       {modules.map((module) => {
-        const Icon = module.icon;
-
         const active = activeModule === module.id;
 
         return (
@@ -65,7 +63,11 @@ export default function BottomNav({
             aria-current={active ? "page" : undefined}
             aria-label={module.label}
           >
-            <Icon size={23} strokeWidth={active ? 2.5 : 2} aria-hidden="true" />
+            <Icon
+              name={module.icon}
+              size={23}
+              tone={active ? "active" : "inherit"}
+            />
 
             <span>{module.label}</span>
           </button>
