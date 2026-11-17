@@ -51,7 +51,10 @@ WITH account_fks AS (
       -- 021: whoever rejects is a WORKER, and the cleanup skips accounts with a role.
       'orders.rejected_by',
       -- 022: only a SUPER_ADMIN changes billing and visibility; the cleanup skips them too.
-      'cafeteria_billing_settings.updated_by', 'cafeteria_settings_audit.changed_by')
+      'cafeteria_billing_settings.updated_by', 'cafeteria_settings_audit.changed_by',
+      -- 027: only an active CLIENT or WORKER registers a device, so the clients and user_roles
+      -- checks of the cleanup cover it; the row is ON DELETE CASCADE as well.
+      'push_subscriptions.user_id')
 ), checks(object, ok) AS (VALUES
   ('every account foreign key is covered by the cleanup', NOT EXISTS (SELECT 1 FROM uncovered_fks)),
   ('browser roles cannot write account columns', CASE WHEN to_regclass('public.pending_registrations') IS NULL THEN false
@@ -126,7 +129,9 @@ WHERE c.contype = 'f'
     -- 021: whoever rejects is a WORKER, and the cleanup skips accounts with a role.
     'orders.rejected_by',
     -- 022: only a SUPER_ADMIN changes billing and visibility; the cleanup skips them too.
-    'cafeteria_billing_settings.updated_by', 'cafeteria_settings_audit.changed_by')
+    'cafeteria_billing_settings.updated_by', 'cafeteria_settings_audit.changed_by',
+    -- 027: only an active CLIENT or WORKER registers a device; ON DELETE CASCADE as well.
+    'push_subscriptions.user_id')
 ORDER BY 1;
 
 -- Read-only: objects of migration 022 (visibility and billing). Every row must say true.

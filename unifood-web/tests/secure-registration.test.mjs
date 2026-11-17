@@ -889,6 +889,9 @@ test("cleanup checks every table that references an account", async (t) => {
     // 021: whoever rejects is a WORKER, so the user_roles check below covers it.
     "orders.rejected_by",
     "pending_registrations.user_id",
+    // 027: only an active CLIENT or WORKER registers a device, so the clients and user_roles
+    // checks below cover it; the row is ON DELETE CASCADE as well.
+    "push_subscriptions.user_id",
     "user_roles.user_id",
   ]);
   const source = (
