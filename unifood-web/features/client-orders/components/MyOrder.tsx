@@ -56,7 +56,8 @@ export default function MyOrder() {
     const previous = document.title;
     document.title = title;
     return () => {
-      document.title = previous;
+      // Only if nobody else (the next page) has already set its own title.
+      if (document.title === title) document.title = previous;
     };
   }, [status]);
 
