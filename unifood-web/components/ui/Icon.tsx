@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import styles from "./icon.module.css";
 
@@ -259,6 +259,22 @@ export const OWNER_ICON_NAMES = Object.keys(OWNER) as IconName[];
 export const DRAWN_ICON_NAMES = Object.keys(DRAWN) as IconName[];
 
 /**
+ * 20 real pixels in any context. The worker board is drawn at 0.7 (`transform: scale(.7)` in
+ * globals.css), so an attribute of 20 would show as 14 px there; the variable is absent elsewhere
+ * and the fallback 1 keeps 20 px.
+ */
+export const ICON_MIN_20: CSSProperties = {
+  width: "calc(20px / var(--worker-zoom, 1))",
+  height: "calc(20px / var(--worker-zoom, 1))",
+};
+
+/** 16 real pixels, for the simple icons (cerrar, check, más, menos, flechas, chevrones, info). */
+export const ICON_MIN_16: CSSProperties = {
+  width: "calc(16px / var(--worker-zoom, 1))",
+  height: "calc(16px / var(--worker-zoom, 1))",
+};
+
+/**
  * One icon of the set. Decorative by default (aria-hidden); with `label` it is announced, for a
  * button whose only content is the icon. `tone`: inherit the text colour, the soft inactive
  * colour, or active (brand stroke with a 14 % brand fill).
@@ -270,6 +286,7 @@ export function Icon({
   tone = "inherit",
   strokeWidth = 1.8,
   className,
+  style,
 }: {
   name: IconName;
   size?: number;
@@ -277,6 +294,7 @@ export function Icon({
   tone?: "inherit" | "inactive" | "active";
   strokeWidth?: number;
   className?: string;
+  style?: CSSProperties;
 }) {
   return (
     <svg
@@ -290,6 +308,7 @@ export function Icon({
       strokeLinecap="round"
       strokeLinejoin="round"
       focusable="false"
+      style={style}
       {...(label
         ? { role: "img", "aria-label": label }
         : { "aria-hidden": true })}

@@ -8,6 +8,7 @@ import {
   formatHistoryDate,
 } from "../presentation";
 import styles from "./WorkerHistory.module.css";
+import { ICON_MIN_20 } from "@/components/ui/Icon";
 
 const icons = { DELIVERED: Check, NOT_COLLECTED: Clock3, CANCELLED: X };
 export function HistoryOrderCard({ order }: { order: HistoryOrder }) {
@@ -30,7 +31,7 @@ export function HistoryOrderCard({ order }: { order: HistoryOrder }) {
         cancellationSource={order.cancellationSource}
         className={styles.badge}
       >
-        <Icon size={14} aria-hidden="true" />
+        <Icon size={20} style={ICON_MIN_20} aria-hidden="true" />
         <span>{historyStatusText(order)}</span>
       </StatusChip>
       <p className={styles.clientName}>

@@ -11,7 +11,7 @@ export function DashboardPeriodLabel({ period }: { period: DashboardPeriod }) {
       role="group"
       aria-label="Período consultado"
     >
-      <CalendarDays size={16} aria-hidden="true" />
+      <CalendarDays size={20} aria-hidden="true" />
       <span aria-label={periodLabel(period)}>{compactPeriodLabel(period)}</span>
       {period.partial && (
         <span

@@ -47,7 +47,7 @@ export default function ClientHome({
       <CafeteriaSelector siteName={siteName} cafeteria={cafeteria} />
       {!cafeteria.open && (
         <p className={menuStyles.closed} role="status">
-          <Clock3 size={18} aria-hidden="true" />
+          <Clock3 size={20} aria-hidden="true" />
           {CLOSED_NOTICE}
         </p>
       )}
