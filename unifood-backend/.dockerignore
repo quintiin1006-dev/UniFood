@@ -1,0 +1,11 @@
+# Excluye lo local y los secretos del contexto de build.
+target
+**/target
+.env
+.env.*
+!.env.example
+.git
+docs
+supabase
+*.md
+HELP.md

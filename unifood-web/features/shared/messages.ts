@@ -24,6 +24,41 @@ export const SAVING = "Guardando…";
 export const CONNECTION_FAILED =
   "No pudimos conectarnos. Revisa tu conexión e inténtalo de nuevo.";
 
+/* ---------- Push notifications (docs/notificaciones-push.md) ---------- */
+
+// The in-app notice stays the primary channel: whenever push is not available, the text says so.
+const IN_APP_STAYS = "Seguirás viendo los avisos dentro de UniFood.";
+const PUSH_DISABLED_TEXT = `Los avisos al teléfono no están disponibles por ahora. ${IN_APP_STAYS}`;
+const PUSH_RATE_LIMITED_TEXT =
+  "Hiciste demasiados cambios en los avisos. Espera un minuto e inténtalo de nuevo.";
+
+export const PUSH_MESSAGES = {
+  cardTitle: "Activar avisos de tu pedido",
+  cardBody:
+    "Te avisamos en el teléfono cuando tu pedido esté listo, aunque cierres UniFood.",
+  enable: "Activar avisos",
+  enabling: "Activando…",
+  later: "Ahora no",
+  toggleLabel: "Avisos en el teléfono",
+  toggleHintClient: "Te avisamos cuando tu pedido cambie de estado.",
+  toggleHintWorker: "Te avisamos cuando llegue un pedido nuevo.",
+  enabled: "Avisos activados en este dispositivo.",
+  disabled: "Avisos desactivados en este dispositivo.",
+  unsupported: `Este navegador no permite avisos en el teléfono. ${IN_APP_STAYS}`,
+  disabledOnServer: PUSH_DISABLED_TEXT,
+  deniedTitle: "Los avisos están bloqueados",
+  deniedBody:
+    "Permite las notificaciones de UniFood en los ajustes del navegador o del teléfono y vuelve a intentarlo.",
+  iosInstallTitle: "Agrega UniFood a tu pantalla de inicio",
+  iosInstallSteps:
+    "En Safari, toca Compartir y luego «Agregar a pantalla de inicio». Abre UniFood desde ese ícono para activar los avisos.",
+  iosTooOld: `Tu iPhone necesita iOS 16.4 o superior para recibir avisos. ${IN_APP_STAYS}`,
+  failed: "No pudimos activar los avisos. Inténtalo de nuevo.",
+  rateLimited: PUSH_RATE_LIMITED_TEXT,
+} as const;
+
+export type PushMessageKey = keyof typeof PUSH_MESSAGES;
+
 /* ---------- Backend ErrorCode ---------- */
 
 /** Mirror of the backend enum, in its order. The test compares it with ErrorCode.java. */
@@ -64,6 +99,12 @@ export const BACKEND_ERROR_CODES = [
   "AVAILABILITY_CATALOG_INVALID",
   "AVAILABILITY_TEMPORARILY_UNAVAILABLE",
   "AVAILABILITY_INTERNAL_ERROR",
+  "PUSH_FORBIDDEN",
+  "PUSH_SUBSCRIPTION_INVALID",
+  "PUSH_RATE_LIMITED",
+  "PUSH_DISABLED",
+  "PUSH_TEMPORARILY_UNAVAILABLE",
+  "PUSH_INTERNAL_ERROR",
   "CLIENT_PROFILE_NOT_FOUND",
   "CLIENT_PROFILE_TEMPORARILY_UNAVAILABLE",
   "CAFETERIA_NOT_FOUND",
@@ -168,6 +209,15 @@ export const BACKEND_ERROR_MESSAGES: Record<BackendErrorCode, string> = {
   AVAILABILITY_TEMPORARILY_UNAVAILABLE:
     "La disponibilidad no está disponible en este momento. Inténtalo nuevamente.",
   AVAILABILITY_INTERNAL_ERROR: "No pudimos gestionar la disponibilidad.",
+  // Avisos al teléfono (push)
+  PUSH_FORBIDDEN: "No puedes activar avisos desde esta cuenta.",
+  PUSH_SUBSCRIPTION_INVALID:
+    "Este navegador entregó una suscripción de avisos no válida.",
+  PUSH_RATE_LIMITED: PUSH_RATE_LIMITED_TEXT,
+  PUSH_DISABLED: PUSH_DISABLED_TEXT,
+  PUSH_TEMPORARILY_UNAVAILABLE:
+    "No pudimos guardar tus avisos en este momento. Inténtalo nuevamente.",
+  PUSH_INTERNAL_ERROR: "No pudimos guardar tus avisos. Inténtalo nuevamente.",
   // Cliente · perfil y catálogo (F5: new, they had no message in the front)
   CLIENT_PROFILE_NOT_FOUND:
     "No encontramos tu perfil. Cierra sesión y vuelve a entrar; si sigue igual, escríbenos.",

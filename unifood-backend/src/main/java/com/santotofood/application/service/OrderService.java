@@ -16,8 +16,10 @@ import com.santotofood.domain.exception.OrderConflictException;
 import com.santotofood.domain.model.BusinessDate;
 import com.santotofood.domain.model.Order;
 import com.santotofood.domain.model.OrderItem;
+import com.santotofood.domain.model.OrderPushEvent;
 import com.santotofood.domain.port.out.OrderItemRepository;
 import com.santotofood.domain.port.out.OrderRepository;
+import com.santotofood.domain.port.out.PushNotificationPort;
 import com.santotofood.domain.port.out.TimeProvider;
 import com.santotofood.shared.error.ErrorCode;
 import java.time.Instant;
@@ -25,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,17 +43,40 @@ public class OrderService
         RejectOrderUseCase,
         GetOrdersByCafeteriaUseCase {
 
+  private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(OrderService.class);
+
   private final OrderRepository orderRepository;
   private final OrderItemRepository orderItemRepository;
   private final TimeProvider timeProvider;
+  private final PushNotificationPort push;
 
   public OrderService(
       OrderRepository orderRepository,
       OrderItemRepository orderItemRepository,
       TimeProvider timeProvider) {
+    this(orderRepository, orderItemRepository, timeProvider, PushNotificationPort.NONE);
+  }
+
+  /** Spring: push is optional, so a context without the push module still builds. */
+  @Autowired
+  public OrderService(
+      OrderRepository orderRepository,
+      OrderItemRepository orderItemRepository,
+      TimeProvider timeProvider,
+      java.util.Optional<PushNotificationPort> push) {
+    this(
+        orderRepository, orderItemRepository, timeProvider, push.orElse(PushNotificationPort.NONE));
+  }
+
+  public OrderService(
+      OrderRepository orderRepository,
+      OrderItemRepository orderItemRepository,
+      TimeProvider timeProvider,
+      PushNotificationPort push) {
     this.orderRepository = orderRepository;
     this.orderItemRepository = orderItemRepository;
     this.timeProvider = timeProvider;
+    this.push = push;
   }
 
   @Override
@@ -85,6 +111,7 @@ public class OrderService
     }
 
     Order savedOrder = orderRepository.save(order);
+    publishStatus(savedOrder);
 
     return loadOrderItems(savedOrder);
   }
@@ -100,6 +127,7 @@ public class OrderService
     order.markReady(now);
 
     Order savedOrder = orderRepository.save(order);
+    publishStatus(savedOrder);
 
     return loadOrderItems(savedOrder);
   }
@@ -115,6 +143,7 @@ public class OrderService
     order.callStudent(now);
 
     Order savedOrder = orderRepository.save(order);
+    publishStatus(savedOrder);
 
     return loadOrderItems(savedOrder);
   }
@@ -130,6 +159,11 @@ public class OrderService
     order.remindStudent(now);
 
     Order savedOrder = orderRepository.save(order);
+    // One push per reminder number: a retried request never repeats the same reminder.
+    notify(
+        () ->
+            new OrderPushEvent(
+                savedOrder.getId(), OrderPushEvent.Kind.REMINDER, savedOrder.getReminderCount()));
 
     return loadOrderItems(savedOrder);
   }
@@ -160,6 +194,7 @@ public class OrderService
     order.markNotCollected(now);
 
     Order savedOrder = orderRepository.save(order);
+    publishStatus(savedOrder);
 
     return loadOrderItems(savedOrder);
   }
@@ -170,7 +205,9 @@ public class OrderService
     // The row lock serializes it with the client's cancellation and the worker's transitions.
     Order order = findOrder(orderId);
     if (!order.rejectByWorker(workerId, reason, timeProvider.now())) return loadOrderItems(order);
-    return loadOrderItems(orderRepository.save(order));
+    Order saved = orderRepository.save(order);
+    notify(() -> OrderPushEvent.of(saved.getId(), OrderPushEvent.Kind.REJECTED));
+    return loadOrderItems(saved);
   }
 
   @Override
@@ -210,6 +247,24 @@ public class OrderService
     orders.forEach(order -> order.setItems(itemsByOrderId.getOrDefault(order.getId(), List.of())));
 
     return new OperationalOrders(date, orders);
+  }
+
+  /**
+   * Queued for after the commit by the port; a rollback sends nothing. The client's own
+   * cancellation and the daily close never push (docs/notificaciones-push.md).
+   */
+  private void publishStatus(Order saved) {
+    notify(() -> OrderPushEvent.forStatus(saved).orElse(null));
+  }
+
+  /** Defense in depth: no push failure can roll back, fail or delay the transition. */
+  private void notify(java.util.function.Supplier<OrderPushEvent> event) {
+    try {
+      var computed = event.get();
+      if (computed != null) push.publish(computed);
+    } catch (RuntimeException failure) {
+      LOG.warn("Push notice not scheduled ({})", failure.getClass().getSimpleName());
+    }
   }
 
   private Order loadOrderItems(Order order) {

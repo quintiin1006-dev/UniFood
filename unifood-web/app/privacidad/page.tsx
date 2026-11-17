@@ -42,6 +42,14 @@ export default function PrivacyPage() {
         </li>
         <li>La fecha en que aceptaste este tratamiento.</li>
         <li>Tus pedidos en las cafeterías de tu sede.</li>
+        {/* PENDIENTE DE REVISIÓN LEGAL: notificaciones push (docs/notificaciones-push.md). */}
+        <li>
+          Si activas los avisos en el teléfono, el identificador que tu
+          navegador asigna a ese dispositivo para recibirlos y el tipo de
+          navegador. Solo los usamos para avisarte del estado de tu pedido, sin
+          incluir datos personales en el aviso, y los desactivamos cuando apagas
+          los avisos o cierras sesión. (Pendiente de revisión legal.)
+        </li>
       </ul>
       <h2>Para qué los usamos</h2>
       <p>

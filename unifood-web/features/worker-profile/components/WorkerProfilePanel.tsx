@@ -6,6 +6,7 @@ import styles from "./WorkerProfile.module.css";
 import { Notice } from "@/components/ui/Notice";
 import { Button, buttonClass } from "@/components/ui/Button";
 import { ICON_MIN_20 } from "@/components/ui/Icon";
+import { PushToggle } from "@/features/push/components/PushControls";
 
 export function WorkerProfilePanel() {
   const { data, loading, error, retry } = useWorkerProfile();
@@ -84,6 +85,7 @@ export function WorkerProfilePanel() {
               </Notice>
             )}
           </div>
+          <PushToggle role="worker" />
         </article>
       )}
     </section>
