@@ -186,3 +186,11 @@
 .dialog .title {
   padding-right: 48px;
 }
+
+/* D2 classic board: the reject outline stays below the classic primary button. */
+.compact {
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  font-size: 13px;
+}

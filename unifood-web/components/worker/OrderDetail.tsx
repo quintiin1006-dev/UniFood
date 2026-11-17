@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { AlertTriangle, Clock3, X, ShoppingBag } from "lucide-react";
 
 import type { Order } from "@/types/order";
+import { Spinner } from "@/components/ui/Spinner";
 import { clientIdentity } from "@/features/orders/utils/clientIdentity";
 import { pickupLabel } from "@/features/orders/utils/pickupTime";
 
@@ -12,9 +13,12 @@ import { formatRelativeTime } from "@/lib/orderTime";
 
 import { ACTION_LABELS, canAdvanceOrder } from "@/lib/orderWorkflow";
 
-import styles from "./OrderDetail.module.css";
+import modernStyles from "./OrderDetail.module.css";
+import classicStyles from "./OrderDetail.classic.module.css";
 
 interface OrderDetailProps {
+  /** Pedidos and Llamadas use the classic look (ola 2 · D2); the rest keep the modern one. */
+  variant?: "classic" | "modern";
   order: Order | null;
   busy?: boolean;
   onClose: () => void;
@@ -31,11 +35,13 @@ const FOCUSABLE_SELECTOR = [
 ].join(", ");
 
 export default function OrderDetail({
+  variant = "modern",
   order,
   busy = false,
   onClose,
   onAction,
 }: OrderDetailProps) {
+  const styles = variant === "classic" ? classicStyles : modernStyles;
   const modalRef = useRef<HTMLDivElement>(null);
 
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -274,8 +280,10 @@ export default function OrderDetail({
           aria-label={
             order.status === "delivered" ? "Pedido entregado" : actionLabel
           }
+          aria-busy={busy || undefined}
         >
-          <span>{actionLabel}</span>
+          {busy && <Spinner />}
+          <span>{busy ? "Guardando…" : actionLabel}</span>
         </button>
       </aside>
     </div>

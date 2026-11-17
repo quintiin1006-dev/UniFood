@@ -2,9 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { loadTs } from "./helpers/load-ts.mjs";
+import { availabilityLoader } from "./helpers/load-availability.mjs";
 
-const { PUSH_MESSAGES } = loadTs("lib/messages.ts");
+const { PUSH_MESSAGES } = availabilityLoader()("features/shared/messages.ts");
 
 function sources(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

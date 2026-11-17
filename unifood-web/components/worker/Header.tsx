@@ -4,13 +4,16 @@ import { useEffect, useRef, useState } from "react";
 
 import Image from "next/image";
 
-import { Search, X } from "lucide-react";
+import { Icon } from "@/components/ui/Icon";
 
-import styles from "./Header.module.css";
+import modernStyles from "./Header.module.css";
+import classicStyles from "./Header.classic.module.css";
 import LogoutButton from "@/features/auth/components/LogoutButton";
 import type { WorkerModule } from "./BottomNav";
 
 interface HeaderProps {
+  /** Pedidos and Llamadas use the classic look (ola 2 · D2); the rest keep the modern one. */
+  variant?: "classic" | "modern";
   activeModule?: WorkerModule;
   search: string;
   onSearchChange: (value: string) => void;
@@ -21,11 +24,13 @@ interface HeaderProps {
 const searchInputId = "worker-search-input";
 
 export default function Header({
+  variant = "modern",
   activeModule = "orders",
   search,
   onSearchChange,
   syncStatus,
 }: HeaderProps) {
+  const styles = variant === "classic" ? classicStyles : modernStyles;
   const titles: Record<WorkerModule, string> = {
     orders: "Gestión de pedidos",
     calls: "Llamadas",
@@ -85,7 +90,7 @@ export default function Header({
               aria-expanded={mobileSearchOpen}
               aria-controls={searchInputId}
             >
-              <Search size={19} strokeWidth={2.2} />
+              <Icon name="busqueda" size={19} />
             </button>
 
             <input
@@ -110,7 +115,7 @@ export default function Header({
                 onClick={() => setMobileSearchOpen(false)}
                 aria-label="Cerrar búsqueda"
               >
-                <X size={18} strokeWidth={2.4} />
+                <Icon name="cerrar" size={18} />
               </button>
             )}
           </div>

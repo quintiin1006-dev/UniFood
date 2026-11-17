@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, Store } from "lucide-react";
+import { Icon } from "@/components/ui/Icon";
 import LogoutButton from "@/features/auth/components/LogoutButton";
 import { useAdminProfile } from "@/features/admin-profile/context";
 import styles from "./Admin.module.css";
@@ -23,11 +23,11 @@ export function AdminHeader({
         aria-expanded={menuOpen}
         aria-controls="admin-drawer"
       >
-        <Menu size={23} aria-hidden="true" />
+        <Icon name="menu" size={23} />
       </button>
       <div className={styles.context}>
         <span className={styles.contextIcon} aria-hidden="true">
-          <Store size={23} strokeWidth={1.7} />
+          <Icon name="cafeterias" size={23} />
         </span>
         <div>
           <strong>

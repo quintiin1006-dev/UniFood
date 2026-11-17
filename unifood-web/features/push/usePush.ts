@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PUSH_MESSAGES, type PushMessageKey } from "@/lib/messages";
+import { type PushMessageKey } from "@/features/shared/messages";
 import {
   fetchPublicKey,
   PushRequestError,
@@ -165,5 +165,3 @@ export function usePush(role: PushRole): PushView {
 
   return { availability, subscribed, busy, message, enable, disable };
 }
-
-export { PUSH_MESSAGES };

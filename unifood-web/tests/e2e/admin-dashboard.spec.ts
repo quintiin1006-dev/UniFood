@@ -48,6 +48,19 @@ async function ready(page: Page) {
     }),
   ).toBeVisible();
 }
+/**
+ * Opens «Ver más detalle» (ola 2 · D4), where the rate, uncollected units and uncollected products
+ * now live. Opening is idempotent: a test that already opened it is not toggled closed.
+ */
+async function openMoreDetail(page: Page) {
+  const toggle = view(page)
+    .locator("summary", { hasText: /^Ver más detalle$/ })
+    .first();
+  const isOpen = await toggle.evaluate(
+    (node) => (node.parentElement as HTMLDetailsElement).open,
+  );
+  if (!isOpen) await toggle.click();
+}
 test.beforeEach(async ({ page }) => {
   await configure(page, { reset: true });
   await page.request.post(provider + "/__test/admin-profile", {
@@ -69,6 +82,7 @@ test("dashboard integrates the ADMIN shell, exact metrics, accessible trend and 
     page.getByRole("banner").getByText("Cafetería Principal", { exact: true }),
   ).toBeVisible();
   const dashboard = view(page);
+  await openMoreDetail(page);
   for (const title of [
     "Pedidos por día",
     "Productos no recogidos",
@@ -215,12 +229,18 @@ test("every displayed metric, daily row and ranking matches the received BFF sna
     ],
   ])
     await expect(
-      summary
-        .getByText(label, { exact: true })
-        .locator("xpath=ancestor::div[1]")
-        .locator("dd"),
+      label === "Valor de pedidos registrados"
+        ? view(page)
+            .getByText(label, { exact: true })
+            .locator("xpath=ancestor::p[1]")
+            .locator("strong")
+        : view(page)
+            .getByText(label, { exact: true })
+            .locator("xpath=ancestor::div[1]")
+            .locator("dd"),
     ).toHaveText(value);
 
+  await openMoreDetail(page);
   const notCollected = view(page).getByRole("region", {
     name: "Productos no recogidos",
     exact: true,
@@ -316,6 +336,7 @@ test("incomplete rankings retain header values and unknown units are never zero"
   await configure(page, { scenario: "incomplete" });
   await login(page);
   await ready(page);
+  await openMoreDetail(page);
   const section = view(page).getByRole("region", {
     name: "Productos no recogidos",
     exact: true,
@@ -351,10 +372,11 @@ for (const width of [390, 768, 1440])
       name: "Resumen del período",
       exact: true,
     });
+    // Summary: three large counts (D4). Rate and units are in «Ver más detalle».
     await expect(
       summary.locator("dl").first().getByRole("definition"),
-    ).toHaveCount(5);
-    await expect(summary.getByRole("definition")).toHaveCount(6);
+    ).toHaveCount(3);
+    await expect(summary.getByRole("definition")).toHaveCount(3);
     for (const text of [
       "Pedidos no recogidos",
       "Unidades no recogidas",
@@ -372,11 +394,12 @@ for (const width of [390, 768, 1440])
     const order = await dashboard.evaluate((el) =>
       [...el.querySelectorAll("h2")].map((h) => h.textContent),
     );
+    // D4 order: summary, chart, top products, then the detail (uncollected) and coverage.
     expect(order).toEqual([
       "Resumen del período",
       "Pedidos por día",
-      "Productos no recogidos",
       "Productos más entregados",
+      "Productos no recogidos",
       "Información sobre los datos",
     ]);
     expect(
@@ -409,6 +432,7 @@ for (const width of [390, 768, 1440])
     ).toBe(true);
     await page.keyboard.press("Escape");
     await expect(moneyInfo).toBeFocused();
+    await openMoreDetail(page);
     const uncollected = dashboard.getByRole("region", {
       name: "Productos no recogidos",
       exact: true,
@@ -592,6 +616,7 @@ for (const width of [390, 768, 1440])
       path: join(directory, `${width}-dashboard.png`),
       fullPage: true,
     });
+    await openMoreDetail(page);
     await view(page)
       .getByRole("region", { name: "Productos no recogidos", exact: true })
       .scrollIntoViewIfNeeded();
@@ -865,6 +890,10 @@ for (const width of [390, 768, 1440])
           ),
         )
         .toBe(true);
+      // The login is now a client navigation (ola 4 · F2), so the last gesture was the pointer
+      // click on «Iniciar sesión». A key press puts the browser in keyboard modality, where
+      // :focus-visible applies, so the ring is measured as a keyboard user sees it.
+      await page.keyboard.press("Shift");
       await current.focus();
       await expect(current).toBeFocused();
       const focus = await current.evaluate((element) => {
@@ -962,6 +991,7 @@ test("period and rate details and chart values are accessible with keyboard and 
   await page.keyboard.press("Escape");
   await expect(period.getByText(/Importes en COP/)).not.toBeVisible();
   await expect(info).toBeFocused();
+  await openMoreDetail(page);
   const rateInfo = view(page).getByLabel("Cómo se calcula la tasa", {
     exact: true,
   });
@@ -1126,8 +1156,8 @@ for (const width of [390, 768, 1440])
     });
     // Ola 2: sober solid ink sidebar instead of the former blue gradient.
     expect(surface.background).toBe("none");
-    expect(surface.backgroundColor).toBe("rgb(15, 23, 42)");
-    expect(surface.textColor).toBe("rgb(255, 255, 255)");
+    expect(surface.backgroundColor).toBe("rgb(255, 255, 255)");
+    expect(surface.textColor).toBe("rgb(11, 45, 107)");
     expect(surface.aligned).toBe(true);
     expect(surface.overflow).toBe(false);
     if (width === 1440) expect(surface.width).toBe(272);

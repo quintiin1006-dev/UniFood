@@ -5,9 +5,8 @@ import path from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { availabilityLoader } from "./helpers/load-availability.mjs";
-import { loadTs } from "./helpers/load-ts.mjs";
 
-const { PUSH_MESSAGES } = loadTs("lib/messages.ts");
+const { PUSH_MESSAGES } = availabilityLoader()("features/shared/messages.ts");
 
 function components() {
   const load = availabilityLoader({
@@ -158,4 +157,22 @@ test("the card lives in the checkout confirmation and the switches in Perfil and
     ),
     /<PushToggle role="worker" \/>/,
   );
+});
+
+test("push uses the UniFood icon set at 20 px or more, never a generic library", () => {
+  const source = fs.readFileSync(
+    "features/push/components/PushControls.tsx",
+    "utf8",
+  );
+  assert.doesNotMatch(source, /lucide-react|react-icons/);
+  assert.match(source, /@\/components\/ui\/Icon/);
+  const sizes = [...source.matchAll(/<Icon[^>]*size=\{(\d+)\}/g)].map((m) =>
+    Number(m[1]),
+  );
+  assert.ok(sizes.length >= 3);
+  assert.ok(
+    sizes.every((size) => size >= 20),
+    String(sizes),
+  );
+  assert.match(toggle({}), /<svg[^>]*aria-hidden="true"/);
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Clock, UserRound } from "lucide-react";
+import { Icon } from "@/components/ui/Icon";
 
 import {
   ACTION_ICONS,
@@ -10,15 +10,19 @@ import {
 
 import { formatClockTime, formatRelativeTime } from "@/lib/orderTime";
 
+import { Spinner } from "@/components/ui/Spinner";
 import { OrderNote } from "@/features/orders/components/OrderNote";
 import { RejectOrderButton } from "@/features/orders/components/RejectOrderDialog";
 import { clientIdentity } from "@/features/orders/utils/clientIdentity";
 import { pickupLabel } from "@/features/orders/utils/pickupTime";
 import type { Order } from "@/types/order";
 
-import styles from "./OrderCard.module.css";
+import modernStyles from "./OrderCard.module.css";
+import classicStyles from "./OrderCard.classic.module.css";
 
 interface OrderCardProps {
+  /** Pedidos and Llamadas use the classic look (ola 2 · D2); the rest keep the modern one. */
+  variant?: "classic" | "modern";
   order: Order;
   onOpen: (order: Order) => void;
   onAction: (order: Order) => void;
@@ -33,6 +37,7 @@ interface OrderCardProps {
 }
 
 export default function OrderCard({
+  variant = "modern",
   order,
   onOpen,
   onAction,
@@ -42,7 +47,7 @@ export default function OrderCard({
   arrived = false,
   appeared = false,
 }: OrderCardProps) {
-  const ActionIcon = ACTION_ICONS[order.status];
+  const styles = variant === "classic" ? classicStyles : modernStyles;
 
   const actionLabel = ACTION_LABELS[order.status];
 
@@ -66,7 +71,7 @@ export default function OrderCard({
         aria-label={`Ver pedido de ${order.student}`}
       >
         <div className={styles.userIcon}>
-          <UserRound size={18} strokeWidth={2.3} />
+          <Icon name="perfil" size={18} />
         </div>
 
         <div className={styles.student}>
@@ -80,13 +85,13 @@ export default function OrderCard({
 
         <div className={styles.time}>{formatRelativeTime(order.createdAt)}</div>
 
-        <ArrowRight size={21} strokeWidth={2.2} className={styles.arrow} />
+        <Icon name="flecha-derecha" size={21} className={styles.arrow} />
       </button>
 
       {/* Hora de recogida pedida por el cliente: solo informativa */}
       {pickup && (
         <div className={styles.pickupTime}>
-          <Clock size={14} strokeWidth={2.3} aria-hidden="true" />
+          <Icon name="reloj" size={14} />
 
           <span>{pickup}</span>
         </div>
@@ -113,10 +118,16 @@ export default function OrderCard({
         onClick={() => onAction(order)}
         disabled={busy || !canAdvanceOrder(order)}
         aria-label={isDelivered ? "Pedido entregado" : actionLabel}
+        aria-busy={busy || undefined}
       >
-        <ActionIcon size={18} strokeWidth={2.3} />
+        {/* F3: the click answers at once; the card moves when the server confirms. */}
+        {busy ? (
+          <Spinner />
+        ) : (
+          <Icon name={ACTION_ICONS[order.status]} size={18} />
+        )}
 
-        <span>{actionLabel}</span>
+        <span>{busy ? "Guardando…" : actionLabel}</span>
 
         {isDelivered && order.deliveredAt && (
           <span className={styles.deliveredTime}>
@@ -126,7 +137,12 @@ export default function OrderCard({
       </button>
 
       {onReject && (
-        <RejectOrderButton order={order} busy={busy} onReject={onReject} />
+        <RejectOrderButton
+          order={order}
+          busy={busy}
+          onReject={onReject}
+          compact={variant === "classic"}
+        />
       )}
     </article>
   );

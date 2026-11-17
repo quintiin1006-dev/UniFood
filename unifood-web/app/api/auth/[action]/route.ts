@@ -9,11 +9,13 @@ import {
   rememberCookie,
   sessionCookieOptions,
 } from "@/features/auth/server/config";
+import type { AuthProfile } from "@/features/auth/validation";
 import {
   DEFAULT_USERNAME_DOMAIN,
   REGISTRATION_COMPLETE_PATH,
   destination,
   hasValidBusinessRole,
+  isClient,
   canUseEntrypoint,
   parseEntrypoint,
   loginPath,
@@ -26,6 +28,7 @@ import {
   validRegistrationEmail,
 } from "@/features/auth/validation";
 import { CURRENT_TERMS_VERSION } from "@/features/auth/legal";
+import { clientTermsState } from "@/features/auth/server/terms";
 import { revokePushOnSignOut } from "@/features/push/server/signOut";
 import {
   generateSignupPassword,
@@ -370,6 +373,13 @@ export async function POST(
         remember ? "1" : "0",
         sessionCookieOptions(!!remember),
       );
+    }
+    // A client who has not accepted the current terms does not move on: the screen that
+    // asked for the password shows the acceptance step instead (fail closed on a bad read).
+    if (entrypoint === "client" && isClient(profile as AuthProfile)) {
+      const terms = await clientTermsState(client);
+      if (terms !== "accepted")
+        return json({ redirect: destination(profile), terms });
     }
     return json({ redirect: destination(profile) });
   } catch (error) {

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, BellOff } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
 import { Notice } from "@/components/ui/Notice";
-import { PUSH_MESSAGES } from "@/lib/messages";
+import { PUSH_MESSAGES } from "@/features/shared/messages";
 import type { PushRole } from "../state";
 import { usePush, type PushView } from "../usePush";
 import styles from "./PushControls.module.css";
@@ -68,9 +68,9 @@ export function PushToggleView({
     <section className={styles.toggle} aria-labelledby={`push-${role}-title`}>
       <div className={styles.row}>
         {view.subscribed ? (
-          <Bell size={23} aria-hidden="true" />
+          <Icon name="avisos" size={24} />
         ) : (
-          <BellOff size={23} aria-hidden="true" />
+          <Icon name="avisos-apagados" size={24} tone="inactive" />
         )}
         <div className={styles.text}>
           <h2 id={`push-${role}-title`}>{PUSH_MESSAGES.toggleLabel}</h2>
@@ -118,7 +118,7 @@ export function PushPromptCardView({ view }: { view: PushView }) {
     return null;
   return (
     <section className={styles.card} aria-labelledby="push-card-title">
-      <Bell size={28} aria-hidden="true" className={styles.cardIcon} />
+      <Icon name="avisos" size={28} className={styles.cardIcon} />
       <h2 id="push-card-title">{PUSH_MESSAGES.cardTitle}</h2>
       <p>{PUSH_MESSAGES.cardBody}</p>
       {view.availability === "denied" ? (

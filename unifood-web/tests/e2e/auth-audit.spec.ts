@@ -430,7 +430,7 @@ test("CLIENT concurrency 409 keeps its actionable sanitized contract through the
     const body = await response.json();
     expect(body.code).toBe("ORDER_CONCURRENT_MODIFICATION");
     expect(body.message).toBe(
-      "La orden cambió mientras intentábamos cancelarla. Actualiza e inténtalo de nuevo.",
+      "Tu pedido cambió mientras intentábamos cancelarlo. Actualiza e inténtalo de nuevo.",
     );
     expect(JSON.stringify(body)).not.toContain("PRIVATE");
     expect(body.version).toBeUndefined();

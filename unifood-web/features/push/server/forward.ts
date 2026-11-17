@@ -19,25 +19,12 @@ import {
   parseUnsubscribeBody,
 } from "../contracts";
 import { PUSH_SUBSCRIPTION_COOKIE } from "./signOut";
+import { PUSH_ERROR_MESSAGES, type PushErrorCode } from "../errors";
 import type { PushRole } from "../state";
 
 const MAX_BODY_BYTES = 4096;
 const TIMEOUT_MS = 10000;
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 180;
-
-const MESSAGES: Record<string, string> = {
-  FORBIDDEN: "No puedes activar avisos desde esta cuenta.",
-  UNAUTHORIZED: "Inicia sesión para continuar.",
-  PUSH_SUBSCRIPTION_INVALID:
-    "Este navegador entregó una suscripción de avisos no válida.",
-  PUSH_RATE_LIMITED:
-    "Hiciste demasiados cambios en los avisos. Espera un minuto e inténtalo de nuevo.",
-  PUSH_DISABLED:
-    "Los avisos al teléfono no están disponibles por ahora. Seguirás viendo los avisos en la app.",
-  PUSH_TEMPORARILY_UNAVAILABLE:
-    "No pudimos guardar tus avisos en este momento. Inténtalo nuevamente.",
-  PUSH_UNAVAILABLE: "No pudimos guardar tus avisos.",
-};
 
 const ROUTES: Record<
   PushRole,
@@ -51,11 +38,11 @@ const ROUTES: Record<
   worker: { base: "/api/worker/push", admits: isWorker },
 };
 
-function fail(status: number, code: string, retryAfter?: string) {
+function fail(status: number, code: PushErrorCode, retryAfter?: string) {
   const headers: Record<string, string> = { "Cache-Control": "no-store" };
   if (retryAfter) headers["Retry-After"] = retryAfter;
   return Response.json(
-    { status, code, message: MESSAGES[code] ?? MESSAGES.PUSH_UNAVAILABLE },
+    { status, code, message: PUSH_ERROR_MESSAGES[code] },
     { status, headers },
   );
 }

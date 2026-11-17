@@ -58,10 +58,8 @@ test("listing errors get a fixed message and the right next step by status", () 
 
 test("the header status tells the last successful read instead of a fixed «En línea»", () => {
   const { syncStatusLabel } = status();
-  assert.deepEqual(syncStatusLabel(null, false), {
-    text: "Conectando…",
-    tone: "pending",
-  });
+  // First load: the skeleton speaks for the board, the header stays silent.
+  assert.equal(syncStatusLabel(null, false), null);
   // 17:43 UTC is 12:43 in Bogotá.
   assert.deepEqual(syncStatusLabel(Date.parse("2026-11-20T17:43:10Z"), false), {
     text: "Actualizado a las 12:43",
