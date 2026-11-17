@@ -112,10 +112,11 @@ async function main() {
   checks.push(
     check("web responde en /", async () => {
       const response = await request(`${web}/`);
-      return {
-        ok: response.status >= 200 && response.status < 300,
-        detail: `HTTP ${response.status}`,
-      };
+      // app/page.tsx redirige siempre a /login: un 2xx o ese redirect son respuesta sana.
+      if (response.status >= 200 && response.status < 300) {
+        return { ok: true, detail: `HTTP ${response.status}` };
+      }
+      return expectRedirectTo(response, web, "/login");
     }),
     check("/worker exige login", async () => {
       return expectRedirectTo(
@@ -158,7 +159,8 @@ async function main() {
   console.log(
     `\nResultado: ${passed} OK, ${failures} FALLO, ${skipped} OMITIDO`,
   );
-  process.exit(failures > 0 ? 1 : 0);
+  // No process.exit() here: on Windows it can abort while fetch keep-alive sockets are closing.
+  process.exitCode = failures > 0 ? 1 : 0;
 }
 
 await main();
