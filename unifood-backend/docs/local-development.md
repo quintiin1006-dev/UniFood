@@ -89,7 +89,7 @@ El archivo no puede cambiar PATH, opciones de Maven ni agentes de Java.
 El ejemplo contiene los valores no secretos solicitados:
 
 ```dotenv
-SUPABASE_STORAGE_URL=https://qcdxkmowlbptgbgjuywc.supabase.co/storage/v1
+SUPABASE_STORAGE_URL=https://<ref-de-staging>.supabase.co/storage/v1
 SUPABASE_PRODUCT_IMAGES_BUCKET=product-images
 PRODUCT_IMAGES_CONNECT_TIMEOUT_SECONDS=5
 PRODUCT_IMAGES_OPERATION_TIMEOUT_SECONDS=20
