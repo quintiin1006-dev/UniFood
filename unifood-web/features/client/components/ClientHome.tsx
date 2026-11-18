@@ -11,6 +11,8 @@ import {
   productHref,
 } from "../domain/menu";
 import type { CafeteriaMenu, MenuCategoryId, MenuProduct } from "../types";
+import { featuredProducts } from "../domain/featured";
+import FeaturedCarousel from "./FeaturedCarousel";
 import CafeteriaSelector from "./CafeteriaSelector";
 import { RememberCafeteria } from "./CafeteriaMemory";
 import ProductPlaceholder from "./ProductPlaceholder";
@@ -44,6 +46,10 @@ export default function ClientHome({
         </h1>
         <p>¿Qué te gustaría comer hoy?</p>
       </div>
+      <FeaturedCarousel
+        products={featuredProducts(menu)}
+        cafeteriaId={cafeteria.id}
+      />
       <CafeteriaSelector siteName={siteName} cafeteria={cafeteria} />
       {!cafeteria.open && (
         <p className={menuStyles.closed} role="status">

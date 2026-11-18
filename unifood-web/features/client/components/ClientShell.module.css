@@ -74,6 +74,12 @@
   left: -20%;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .profileLink {
   display: grid;
   place-items: center;

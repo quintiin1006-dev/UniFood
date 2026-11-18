@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { UserRound } from "lucide-react";
+import PushBell from "@/features/push/components/PushBell";
 import ClientBottomNav from "./ClientBottomNav";
 import styles from "./ClientShell.module.css";
 
@@ -32,13 +33,16 @@ export default function ClientShell({
               Uni<span className={styles.brandAccent}>Food</span>
             </span>
           </Link>
-          <Link
-            href="/cuenta/perfil"
-            className={styles.profileLink}
-            aria-label="Mi perfil"
-          >
-            <UserRound size={21} aria-hidden="true" />
-          </Link>
+          <div className={styles.headerActions}>
+            <PushBell />
+            <Link
+              href="/cuenta/perfil"
+              className={styles.profileLink}
+              aria-label="Mi perfil"
+            >
+              <UserRound size={21} aria-hidden="true" />
+            </Link>
+          </div>
         </div>
       </header>
       <main id="client-content" tabIndex={-1} className={styles.main}>
