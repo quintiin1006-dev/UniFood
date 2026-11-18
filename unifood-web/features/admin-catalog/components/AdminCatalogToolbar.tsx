@@ -23,7 +23,7 @@ export function AdminCatalogToolbar({
       <label className={styles.search}>
         <span>Buscar productos</span>
         <span className={styles.searchInput}>
-          <Search size={18} aria-hidden="true" />
+          <Search size={20} aria-hidden="true" />
           <input
             type="search"
             placeholder="Buscar productos..."

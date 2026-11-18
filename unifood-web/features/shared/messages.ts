@@ -62,6 +62,11 @@ export const PUSH_MESSAGES = {
   iosTooOld: `Tu iPhone necesita iOS 16.4 o superior para recibir avisos. ${IN_APP_STAYS}`,
   failed: "No pudimos activar los avisos. Inténtalo de nuevo.",
   rateLimited: PUSH_RATE_LIMITED_TEXT,
+  bellLabelOn: "Avisos activados. Abrir opciones.",
+  bellLabelOff: "Avisos desactivados. Abrir opciones.",
+  bellStatusOn: "Recibes avisos en este dispositivo.",
+  bellStatusOff: "No recibes avisos en este dispositivo.",
+  bellDisable: "Desactivar avisos",
 } as const;
 
 export type PushMessageKey = keyof typeof PUSH_MESSAGES;

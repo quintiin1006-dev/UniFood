@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,13 +130,13 @@ public final class PushNotificationDispatcher implements PushNotificationPort {
     String target = PushEndpointPolicy.redact(recipient.endpoint());
     Duration wait = settings.retryBackoff();
     for (int attempt = 0; ; attempt++) {
-      PushChannelSender.Result result;
+      PushChannelSender.Delivery delivery;
       try {
-        result = sender.send(recipient, message);
+        delivery = sender.deliver(recipient, message);
       } catch (RuntimeException failure) {
-        result = PushChannelSender.Result.REJECTED;
+        delivery = new PushChannelSender.Delivery(PushChannelSender.Result.REJECTED, null);
       }
-      switch (result) {
+      switch (delivery.result()) {
         case DELIVERED -> {
           return;
         }
@@ -145,7 +146,12 @@ public final class PushNotificationDispatcher implements PushNotificationPort {
           return;
         }
         case REJECTED -> {
-          LOG.warn("Push notice {} refused by {}", event.kind(), target);
+          // Only the HTTP status and the redacted endpoint: never keys, auth or the body.
+          LOG.warn(
+              "Push notice {} refused ({}) by {}",
+              event.kind(),
+              refusal(delivery.httpStatus(), delivery.reason()),
+              target);
           return;
         }
         case RETRYABLE -> {
@@ -165,4 +171,21 @@ public final class PushNotificationDispatcher implements PushNotificationPort {
       }
     }
   }
+
+  /** «HTTP 403», or «no HTTP response» when the refusal happened before or without one. */
+  static String refusal(Integer httpStatus) {
+    return refusal(httpStatus, null);
+  }
+
+  /**
+   * «HTTP 400, reason=VapidPkHashMismatch» when the push service gave a valid reason token, else
+   * the same text as {@link #refusal(Integer)}. The token is checked again here: only letters.
+   */
+  static String refusal(Integer httpStatus, String reason) {
+    if (httpStatus == null) return "no HTTP response";
+    if (reason == null || !REASON_TOKEN.matcher(reason).matches()) return "HTTP " + httpStatus;
+    return "HTTP " + httpStatus + ", reason=" + reason;
+  }
+
+  private static final Pattern REASON_TOKEN = Pattern.compile("[A-Za-z]{1,40}");
 }

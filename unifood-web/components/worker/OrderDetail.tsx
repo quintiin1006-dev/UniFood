@@ -15,6 +15,7 @@ import { ACTION_LABELS, canAdvanceOrder } from "@/lib/orderWorkflow";
 
 import modernStyles from "./OrderDetail.module.css";
 import classicStyles from "./OrderDetail.classic.module.css";
+import { ICON_MIN_20 } from "@/components/ui/Icon";
 
 interface OrderDetailProps {
   /** Pedidos and Llamadas use the classic look (ola 2 · D2); the rest keep the modern one. */
@@ -171,7 +172,7 @@ export default function OrderDetail({
         {/* Detalles del pedido */}
         <section className={styles.section}>
           <div className={styles.sectionTitle}>
-            <ShoppingBag size={17} />
+            <ShoppingBag size={20} style={ICON_MIN_20} />
 
             <h3>Detalles del pedido</h3>
           </div>
@@ -235,7 +236,7 @@ export default function OrderDetail({
 
             <section className={styles.section}>
               <div className={styles.sectionTitle}>
-                <AlertTriangle size={17} />
+                <AlertTriangle size={20} style={ICON_MIN_20} />
 
                 <h3>Observaciones</h3>
               </div>
@@ -249,7 +250,7 @@ export default function OrderDetail({
 
         {/* Tiempo */}
         <section className={styles.timeInfo}>
-          <Clock3 size={18} aria-hidden="true" />
+          <Clock3 size={20} style={ICON_MIN_20} aria-hidden="true" />
 
           <div>
             <span>Tiempo de pedido</span>
@@ -260,7 +261,7 @@ export default function OrderDetail({
 
         {pickup && (
           <section className={styles.timeInfo}>
-            <Clock3 size={18} aria-hidden="true" />
+            <Clock3 size={20} style={ICON_MIN_20} aria-hidden="true" />
 
             <div>
               <span>Hora de recogida</span>

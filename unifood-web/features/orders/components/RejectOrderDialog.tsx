@@ -9,6 +9,7 @@ import {
 } from "@/features/orders/rejectionReason";
 import type { Order } from "@/types/order";
 import styles from "./RejectOrderDialog.module.css";
+import { ICON_MIN_20 } from "@/components/ui/Icon";
 
 export function RejectOrderButton({
   order,
@@ -31,7 +32,12 @@ export function RejectOrderButton({
       onClick={() => onReject(order)}
       aria-label={`Rechazar pedido de ${order.student}`}
     >
-      <XCircle size={16} strokeWidth={2.2} aria-hidden="true" />
+      <XCircle
+        size={20}
+        style={ICON_MIN_20}
+        strokeWidth={2.2}
+        aria-hidden="true"
+      />
       <span>Rechazar</span>
     </button>
   );

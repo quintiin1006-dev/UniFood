@@ -19,8 +19,25 @@ public interface PushChannelSender {
     REJECTED
   }
 
+  /**
+   * The outcome plus the push service's HTTP status when there was a response; null when none
+   * arrived (timeout, network, a message that could not be built or a refused endpoint). The reason
+   * is the short token Apple sends on a 4xx (e.g. "BadJwtToken"), or null when none was read. Only
+   * these two values are exposed: never the endpoint, keys or the rest of the body.
+   */
+  record Delivery(Result result, Integer httpStatus, String reason) {
+    public Delivery(Result result, Integer httpStatus) {
+      this(result, httpStatus, null);
+    }
+  }
+
   String channel();
 
   /** Never throws for a delivery problem; returns the outcome instead. */
   Result send(PushRecipient recipient, PushMessage message);
+
+  /** Same as {@link #send}, with the HTTP status when the channel knows it. */
+  default Delivery deliver(PushRecipient recipient, PushMessage message) {
+    return new Delivery(send(recipient, message), null);
+  }
 }

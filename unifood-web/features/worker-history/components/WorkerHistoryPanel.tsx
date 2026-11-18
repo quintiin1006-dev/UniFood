@@ -8,6 +8,7 @@ import type { HistoryRange, HistoryStatus } from "../types";
 import styles from "./WorkerHistory.module.css";
 import { Notice } from "@/components/ui/Notice";
 import { Button, buttonClass } from "@/components/ui/Button";
+import { ICON_MIN_20 } from "@/components/ui/Icon";
 
 export function WorkerHistoryPanel() {
   const state = useWorkerHistory();
@@ -47,7 +48,7 @@ export function WorkerHistoryPanel() {
             onClick={() => void state.refresh()}
             aria-label="Actualizar historial"
           >
-            <RefreshCw size={17} aria-hidden="true" />
+            <RefreshCw size={20} style={ICON_MIN_20} aria-hidden="true" />
             <span>{state.refreshing ? "Actualizando…" : "Actualizar"}</span>
           </button>
         )}
@@ -60,7 +61,7 @@ export function WorkerHistoryPanel() {
         <label htmlFor="worker-history-search" className={styles.srOnly}>
           Buscar por pedido, cliente, estado o producto
         </label>
-        <Search size={18} aria-hidden="true" />
+        <Search size={20} style={ICON_MIN_20} aria-hidden="true" />
         <input
           id="worker-history-search"
           ref={searchInput}

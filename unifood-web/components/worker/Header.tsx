@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import Image from "next/image";
 
-import { Icon } from "@/components/ui/Icon";
+import { Icon, ICON_MIN_20 } from "@/components/ui/Icon";
 
 import modernStyles from "./Header.module.css";
 import classicStyles from "./Header.classic.module.css";
@@ -90,7 +90,7 @@ export default function Header({
               aria-expanded={mobileSearchOpen}
               aria-controls={searchInputId}
             >
-              <Icon name="busqueda" size={19} />
+              <Icon name="busqueda" size={20} style={ICON_MIN_20} />
             </button>
 
             <input

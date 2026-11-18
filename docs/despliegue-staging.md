@@ -6,14 +6,14 @@ Este documento no contiene valores reales. Cada valor se introduce en el panel d
 
 ## 0. Antes de empezar: estado del repositorio y bloqueos
 
-| Tema                               | Estado en `develop`                                                                                                                                                                                    | Consecuencia                                                                                                                                                                                                                                        |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Despliegue de backend y web        | Blueprint de Render (`render.yaml`) y `vercel.json` fusionados (#145).                                                                                                                                 | Staging se configura siguiendo esta guía, sin cambios de código.                                                                                                                                                                                    |
-| **Notificaciones push**            | **Fusionadas** (#139): backend (`PushSubscriptionController`, `PushNotificationDispatcher`, `VapidKeys`), rutas BFF `/api/me/push/*` y `/api/worker/push/*`, y migración `027_push_subscriptions.sql`. | Para probar push en staging falta: comprobar si la migración 027 ya está aplicada en el proyecto staging (si no, aplicarla a mano, con OK), generar las claves VAPID (§6) y cargarlas en Render. Sin ellas el backend responde `503 PUSH_DISABLED`. |
-| **PWA (manifest, service worker)** | Presentes: `app/manifest.ts` y `public/sw.js`, registrado por `features/push/usePush.ts`.                                                                                                              | La instalación en Android e iPhone se verifica en el teléfono (§9). En iOS, las notificaciones solo funcionan desde la app instalada en pantalla de inicio.                                                                                         |
-| Variables de push (`VAPID_*`)      | Leídas por el backend de `develop` (`.env.example`, `VapidKeys`).                                                                                                                                      | Son obligatorias para push; ver §4.1 y §6.                                                                                                                                                                                                          |
+| Tema                               | Estado en `develop`                                                                                                                                                                                    | Consecuencia                                                                                                                                                                                                                                      |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Despliegue de backend y web        | Blueprint de Render (`render.yaml`) y `vercel.json` fusionados (#145).                                                                                                                                 | Staging se configura siguiendo esta guía, sin cambios de código.                                                                                                                                                                                  |
+| **Notificaciones push**            | **Fusionadas** (#139): backend (`PushSubscriptionController`, `PushNotificationDispatcher`, `VapidKeys`), rutas BFF `/api/me/push/*` y `/api/worker/push/*`, y migración `027_push_subscriptions.sql`. | La migración 027 (`push_subscriptions`) ya está aplicada en el proyecto staging, con su checksum registrado en `schema_migrations`. Falta generar las claves VAPID (§6) y cargarlas en Render. Sin ellas el backend responde `503 PUSH_DISABLED`. |
+| **PWA (manifest, service worker)** | Presentes: `app/manifest.ts` y `public/sw.js`, registrado por `features/push/usePush.ts`.                                                                                                              | La instalación en Android e iPhone se verifica en el teléfono (§9). En iOS, las notificaciones solo funcionan desde la app instalada en pantalla de inicio.                                                                                       |
+| Variables de push (`VAPID_*`)      | Leídas por el backend de `develop` (`.env.example`, `VapidKeys`).                                                                                                                                      | Son obligatorias para push; ver §4.1 y §6.                                                                                                                                                                                                        |
 
-Antes de la prueba de push: comprobar o aplicar la migración 027 en el proyecto **staging**, generar las claves VAPID (§6) y cargarlas en Render. La prueba se hace con la app instalada en el teléfono y con un plan de pago de Render (§2.3), porque el plan Free se duerme y no es fiable para push.
+Antes de la prueba de push: la migración 027 ya está aplicada en el proyecto **staging** (checksum registrado en `schema_migrations`). Falta generar las claves VAPID (§6) y cargarlas en Render. La prueba se hace con la app instalada en el teléfono y con un plan de pago de Render (§2.3), porque el plan Free se duerme y no es fiable para push.
 
 ## 1. Arquitectura
 
@@ -81,7 +81,7 @@ No hay comandos de Render separados: la imagen Docker define ambos.
 - Un dominio propio o cualquier host que no sea `<ref>.supabase.co` se rechaza: la guarda no puede verificarlo.
 - Si alguna no coincide, el proceso sale con `UniFood: el perfil staging no arranca: ...` en los logs. Ningún valor se imprime.
 - Estas reglas se prueban en `StagingProjectGuardTest` (20 casos, CI y local). No se prueba levantando el servicio con otro proyecto.
-- La web (`SUPABASE_URL`, en Vercel) no pasa por esta guarda: se revisa a mano (sección 4.2).
+- La web aplica la misma comprobación en `config/environment.ts` cuando `UNIFOOD_EXPECTED_PROJECT_REF` está definida en Vercel (sección 4.2).
 
 ## 3. Web en Vercel
 
@@ -127,16 +127,19 @@ No usar `SERVER_PORT` en Render (el backend lee `PORT`). `SPRING_DATASOURCE_URL`
 
 ### 4.2 Web (Vercel, proyecto `unifood-web`)
 
-| Variable                   | Qué es                                                                                                         | De dónde sale                                                   | Secreta                                                  | Servicio |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------- | -------- |
-| `API_URL`                  | URL pública HTTPS del backend, sin barra final. El BFF la usa en el servidor. **Nunca `NEXT_PUBLIC_API_URL`.** | URL del servicio en Render (`https://<servicio>.onrender.com`). | No (server-only)                                         | Vercel   |
-| `SUPABASE_URL`             | URL del proyecto Supabase staging.                                                                             | Supabase staging → _API_: `https://<ref>.supabase.co`.          | No                                                       | Vercel   |
-| `SUPABASE_PUBLISHABLE_KEY` | Clave **publicable** (`sb_publishable_…` o JWT anon). **Nunca la clave secreta ni `service_role`.**            | Supabase staging → _API keys_.                                  | No (pública, pero server-only por decisión del proyecto) | Vercel   |
-| `AUTH_USERNAME_DOMAIN`     | Dominio institucional para usuarios cortos.                                                                    | `ustavillavo.edu.co`.                                           | No                                                       | Vercel   |
+| Variable                       | Qué es                                                                                                                                                       | De dónde sale                                                                           | Secreta                                                  | Servicio |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | -------------------------------------------------------- | -------- |
+| `API_URL`                      | URL pública HTTPS del backend, sin barra final. El BFF la usa en el servidor. **Nunca `NEXT_PUBLIC_API_URL`.**                                               | URL del servicio en Render (`https://<servicio>.onrender.com`).                         | No (server-only)                                         | Vercel   |
+| `SUPABASE_URL`                 | URL del proyecto Supabase staging.                                                                                                                           | Supabase staging → _API_: `https://<ref>.supabase.co`.                                  | No                                                       | Vercel   |
+| `SUPABASE_PUBLISHABLE_KEY`     | Clave **publicable** (`sb_publishable_…` o JWT anon). **Nunca la clave secreta ni `service_role`.**                                                          | Supabase staging → _API keys_.                                                          | No (pública, pero server-only por decisión del proyecto) | Vercel   |
+| `AUTH_USERNAME_DOMAIN`         | Dominio institucional para usuarios cortos.                                                                                                                  | `ustavillavo.edu.co`.                                                                   | No                                                       | Vercel   |
+| `UNIFOOD_EXPECTED_PROJECT_REF` | Referencia del proyecto Supabase staging. Activa la comprobación de proyecto de la web: si `SUPABASE_URL` no es ese proyecto, el build y el arranque fallan. | Supabase staging → _Project Settings → General_ (Reference ID): `pzzkmkvnucueejthpqvl`. | No                                                       | Vercel   |
 
 `API_URL`, `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` son obligatorias al construir y al arrancar; `next build` falla si faltan (`config/environment.ts`). No hay variables `NEXT_PUBLIC_*`.
 
-**Revisión manual obligatoria:** la web no tiene guarda de proyecto. Comprobar en el panel de Vercel que `SUPABASE_URL` es `https://pzzkmkvnucueejthpqvl.supabase.co`. Si apuntara a otro proyecto, el login fallaría de forma cerrada (el backend rechaza el JWT del issuer de staging), pero conviene detectarlo antes.
+La web no lleva variables VAPID: solo van en Render. La web obtiene la clave pública del backend a través del BFF (`/api/me/push/public-key` y `/api/worker/push/public-key`).
+
+**Comprobación de proyecto:** con `UNIFOOD_EXPECTED_PROJECT_REF=pzzkmkvnucueejthpqvl` definida en Vercel, la web rechaza el build y el arranque si `SUPABASE_URL` no es exactamente `https://pzzkmkvnucueejthpqvl.supabase.co` (sin puerto, ruta, mayúsculas ni otro dominio). La comprobación solo se aplica si la variable está definida, así que en Vercel debe estar definida para el entorno de staging.
 
 ### 4.3 Sin variable: Supabase y Resend
 
@@ -191,6 +194,13 @@ Verificado leyendo el código (no hay cambios necesarios):
 - **Rollback de la web:** Vercel → proyecto → _Deployments_ → elegir el despliegue anterior → _Promote to Production_ (o _Instant Rollback_ si aparece en el panel).
 - **Rollback del código:** revertir el commit en `develop` con un PR. Es el camino que deja trazabilidad; los rollbacks de panel son de emergencia.
 - **Límite:** revertir un despliegue **no deshace migraciones SQL**. Las migraciones de `unifood-backend/supabase/` se aplican a mano, con su propio plan de reversión.
+
+### Caja: retirada, no borrada
+
+- La caja (cierres por turno, movimientos, arqueo) se retiró del código con #155 y se quitó del esquema con `029_remove_cash_sessions.sql`.
+- **028 y 029 existen en el historial.** 028 ya está aplicada en staging con su checksum registrado: **no se edita, no se borra y no se reutiliza su número**. 029 deja el esquema sin caja.
+- **Para reincorporar caja:** revertir #155 y crear una migración **nueva** (número libre, por ejemplo 030 o posterior) que recree el esquema. No reutilizar 028 ni 029.
+- **Proyecto real (enero):** al aplicar migraciones al proyecto real hay que aplicar **028 y luego 029**, en ese orden. Si solo se aplica 028, la caja queda creada en el proyecto real.
 
 ## 9. Checklist de verificación
 
