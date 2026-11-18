@@ -76,6 +76,7 @@ export function toClientOrder(raw: unknown): ClientOrder | null {
     total: order.total,
     note: text(order.note) ? order.note : null,
     createdAt: order.createdAt,
+    deliveredAt: instant(order.deliveredAt) ? order.deliveredAt : null,
     items,
     cafeteria: { id: cafeteria.id, name: cafeteria.name },
     cancellationSource: source ?? null,

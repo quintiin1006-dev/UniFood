@@ -937,9 +937,14 @@ crearon los endpoints que faltaban.
   Recibido (PENDING), Preparando (PREPARING), Listo (READY), Llamado (CALLED) y Entregado
   (DELIVERED). La etapa actual se marca con `aria-current="step"`, con color, ícono y texto; las
   demás dicen «Etapa n de 5». CANCELLED y NOT_COLLECTED no son etapas: van al historial con su
-  estado. Con READY o CALLED aparece «Tu pedido está listo, pasa a recogerlo» con el código en
-  grande, sin depender de push. El tablero muestra el pedido activo sin tiempo estimado ni número
-  de turno.
+  estado. Con READY o CALLED aparece «Tu pedido está listo, pasa a recogerlo» con el nombre del
+  estudiante en grande, sin depender de push. La tarjeta muestra el nombre del perfil de sesión y
+  el pedido sin tiempo estimado ni número de turno. Un pedido entregado queda en el tablero solo
+  el día de la entrega (hora de Colombia); otro día, el tablero está vacío y el pedido solo está
+  en el historial.
+- **Pendiente:** el worker identifica al estudiante por nombre y código institucional (7 dígitos).
+  El cliente todavía no recibe el código institucional: ni `/api/me/profile` ni el pedido lo
+  devuelven. Mostrarlo exige un cambio de contrato en el backend, sin aprobar.
 - **Cancelar solo en PENDING**, con confirmación. Un 409 muestra el mensaje del catálogo «Tu
   pedido ya no se puede cancelar» y vuelve a leer el estado.
 - **Abajo, historial** de pedidos terminados (entregados, cancelados, no recogidos), el más

@@ -17,6 +17,7 @@ import {
 } from "../../shared/messages";
 import type { OrderFailure } from "../errors";
 import { statusLine } from "../presentation";
+import { isDeliveredToday } from "../stages";
 import { ALERT_TEXT, tabTitle, type OrderAlert } from "../polling";
 import { armChime, playChime, readMuted, writeMuted } from "../sound";
 import type { ClientOrder } from "../types";
@@ -26,7 +27,17 @@ import OrderHistory from "./OrderHistory";
 import styles from "./ClientOrders.module.css";
 
 /** «Mi pedido»: the active order on a stage board, and the ended orders below it. */
-export default function MyOrder() {
+export default function MyOrder({
+  studentName,
+}: {
+  studentName: string | null;
+}) {
+  // The clock is read in an effect and refreshed each minute: a delivery belongs to its day.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
   const [alert, setAlert] = useState<OrderAlert | null>(null);
@@ -47,10 +58,13 @@ export default function MyOrder() {
   }, []);
   const { loaded, order, finished, failure, offline, refresh } =
     useCurrentOrder(onAlert);
-  // A delivered order leaves «active» but its last stage is still shown once; cancelled and not
-  // collected ones are not stages, so they go straight to the history.
+  // A delivery of today leaves «active» but stays on the board at its last stage. Any other
+  // ended order is in the history; cancelled and not collected ones are not stages at all.
   const boardOrder =
-    order ?? (finished?.status === "DELIVERED" ? finished : null);
+    order ?? (finished && isDeliveredToday(finished, now) ? finished : null);
+  // Rejected, cancelled or not collected: one status line until the next order.
+  const endedOrder =
+    finished && finished.status !== "DELIVERED" ? finished : null;
 
   const toggleSound = () => {
     const next = !muted;
@@ -132,6 +146,7 @@ export default function MyOrder() {
       {loaded && !failure && boardOrder && (
         <OrderBoard
           order={boardOrder}
+          studentName={studentName}
           focusTitle={!order}
           onCancelled={() => {
             setCancelled(true);
@@ -140,10 +155,10 @@ export default function MyOrder() {
           onChanged={refresh}
         />
       )}
-      {loaded && !failure && !boardOrder && finished && (
-        <EndedOrder order={finished} />
+      {loaded && !failure && !boardOrder && endedOrder && (
+        <EndedOrder order={endedOrder} />
       )}
-      {loaded && !failure && !boardOrder && !finished && (
+      {loaded && !failure && !boardOrder && !endedOrder && (
         <section className={styles.card} aria-label="Tablero de tu pedido">
           <EmptyState
             icon={<Icon name="mi-pedido" size={28} />}

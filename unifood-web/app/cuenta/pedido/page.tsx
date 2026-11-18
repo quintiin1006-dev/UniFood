@@ -9,5 +9,5 @@ export const dynamic = "force-dynamic";
 export default async function MyOrderPage() {
   const { profile } = await requireAuth();
   if (!isClient(profile)) redirect(destination(profile));
-  return <MyOrder />;
+  return <MyOrder studentName={profile.fullName?.trim() || null} />;
 }

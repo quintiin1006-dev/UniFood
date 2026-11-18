@@ -83,9 +83,34 @@ test("the pickup notice is only for READY and CALLED", () => {
   assert.equal(stages.isPickupReady("CALLED"), true);
 });
 
-test("the pickup code is four upper-case characters of the order id and is stable", () => {
-  assert.equal(stages.pickupCodeOf(ORDER_ID), "AB12");
-  assert.match(stages.pickupCodeOf(ORDER_ID), /^[0-9A-F]{4}$/);
+test("a delivery stays on the board only on the day it happened, in Colombia time", () => {
+  // 2026-11-17 10:00 in Bogotá (UTC-5).
+  const now = new Date("2026-11-17T15:00:00.000Z");
+  const at = (deliveredAt, status = "DELIVERED") => ({ status, deliveredAt });
+  assert.equal(
+    stages.isDeliveredToday(at("2026-11-17T20:30:00.000Z"), now),
+    true,
+  );
+  // 23:30 on the 16th in Bogotá is already the 17th in UTC: not today.
+  assert.equal(
+    stages.isDeliveredToday(at("2026-11-17T04:30:00.000Z"), now),
+    false,
+  );
+  // Midnight in Colombia is 05:00 UTC.
+  assert.equal(
+    stages.isDeliveredToday(at("2026-11-18T04:59:00.000Z"), now),
+    true,
+  );
+  assert.equal(
+    stages.isDeliveredToday(at("2026-11-18T05:00:00.000Z"), now),
+    false,
+  );
+  assert.equal(stages.isDeliveredToday(at(null), now), false);
+  assert.equal(
+    stages.isDeliveredToday(at("2026-11-17T20:30:00.000Z", "CANCELLED"), now),
+    false,
+  );
+  assert.equal(stages.isDeliveredToday(at("no es una fecha"), now), false);
 });
 
 test("the ended orders get an icon that is not only a colour", () => {
@@ -96,9 +121,10 @@ test("the ended orders get an icon that is not only a colour", () => {
 
 // ---------- Board: what the student sees ----------
 
-const board = (status, extra) =>
+const board = (status, extra, studentName = "Ana María Pérez") =>
   html("features/client-orders/components/OrderBoard.tsx", dialogMock, {
     order: order(status, extra),
+    studentName,
     onCancelled() {},
     onChanged() {},
   });
@@ -133,18 +159,24 @@ test("the card names the order, the cafeteria and the products, without estimate
   assert.match(markup, /Cafetería de prueba/);
   assert.match(markup, /2× Almuerzo corriente · 1× Jugo de mango/);
   assert.match(markup, /Total/);
-  assert.match(markup, /AB12/);
-  assert.doesNotMatch(markup, /estimad|turno/i);
+  assert.match(markup, /Ana María Pérez/);
+  assert.doesNotMatch(markup, /Código|estimad|turno/i);
 });
 
 test("«Tu pedido está listo, pasa a recogerlo» appears with the code for READY and CALLED only", () => {
   for (const status of ["READY", "CALLED"]) {
     const markup = board(status);
     assert.match(markup, /Tu pedido está listo, pasa a recogerlo/, status);
-    assert.match(markup, /<strong>AB12<\/strong>/, status);
+    assert.match(markup, /Ana María Pérez/, status);
   }
   for (const status of ["PENDING", "PREPARING", "DELIVERED"])
     assert.doesNotMatch(board(status), /pasa a recogerlo/, status);
+});
+
+test("without a name on the profile the card shows no empty name line", () => {
+  const markup = board("PENDING", {}, null);
+  assert.doesNotMatch(markup, /Nombre/);
+  assert.match(markup, /Cafetería de prueba/);
 });
 
 test("«Cancelar pedido» is rendered only while the order is PENDING", () => {
@@ -328,10 +360,24 @@ test("the card keeps the student's note and the reminder to pay cash at the coun
 test("a delivered order just ended stays on the board as its last stage; a cancelled one does not", () => {
   const delivered = html(
     "features/client-orders/components/MyOrder.tsx",
-    myOrderMocks({ order: null, finished: order("DELIVERED") }),
+    myOrderMocks({
+      order: null,
+      finished: order("DELIVERED", { deliveredAt: new Date().toISOString() }),
+    }),
   );
   assert.match(delivered, /Etapa 5 de 5, etapa actual/);
   assert.match(delivered, /Pedido entregado/);
+  // A delivery from another day is not on the board: the board is empty, the order is in history.
+  const yesterday = html(
+    "features/client-orders/components/MyOrder.tsx",
+    myOrderMocks({
+      order: null,
+      finished: order("DELIVERED", { deliveredAt: "2026-11-16T12:00:00.000Z" }),
+    }),
+  );
+  assert.doesNotMatch(yesterday, /aria-current="step"/);
+  assert.doesNotMatch(yesterday, /Pedido entregado/);
+  assert.match(yesterday, /No tienes un pedido activo/);
   const cancelled = html(
     "features/client-orders/components/MyOrder.tsx",
     myOrderMocks({

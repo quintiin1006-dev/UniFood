@@ -13,7 +13,7 @@ import {
   CANCEL_KEEP,
   CLIENT_ORDER_CANCEL,
   CLIENT_ORDER_CASH_NOTE,
-  CLIENT_ORDER_CODE_LABEL,
+  CLIENT_ORDER_NAME_LABEL,
   CLIENT_ORDER_NOTE_LABEL,
   CLIENT_ORDER_PICKUP_LABEL,
   CLIENT_ORDER_READY_TITLE,
@@ -35,7 +35,6 @@ import {
   isPickupReady,
   ORDER_STAGE_COUNT,
   ORDER_STAGE_ICONS,
-  pickupCodeOf,
   stageIndexOf,
 } from "../stages";
 import type { ClientOrder } from "../types";
@@ -44,11 +43,14 @@ import styles from "./ClientOrders.module.css";
 /** The active order: the stage board, the pickup notice, the summary and the cancel action. */
 export default function OrderBoard({
   order,
+  studentName,
   onCancelled,
   onChanged,
   focusTitle = false,
 }: {
   order: ClientOrder;
+  /** The name on the student profile: the counter matches the order with it. */
+  studentName: string | null;
   onCancelled: () => void;
   onChanged: () => void;
   /** A delivered order just ended: its last stage takes the focus once, for screen readers. */
@@ -63,7 +65,6 @@ export default function OrderBoard({
   const line = statusLine(order);
   const current = stageIndexOf(order.status);
   const ready = isPickupReady(order.status);
-  const code = pickupCodeOf(order.id);
 
   return (
     <>
@@ -109,10 +110,12 @@ export default function OrderBoard({
         {ready && (
           <div className={styles.readyNotice}>
             <p className={styles.readyTitle}>{CLIENT_ORDER_READY_TITLE}</p>
-            <p className={styles.readyCode}>
-              <span>{CLIENT_ORDER_CODE_LABEL}</span>
-              <strong>{code}</strong>
-            </p>
+            {studentName && (
+              <p className={styles.readyCode}>
+                <span>{CLIENT_ORDER_NAME_LABEL}</span>
+                <strong className={styles.readyName}>{studentName}</strong>
+              </p>
+            )}
           </div>
         )}
       </section>
@@ -121,9 +124,10 @@ export default function OrderBoard({
         <h3 className={styles.orderName}>
           Pedido del {formatOrderDate(order.createdAt)}
         </h3>
-        {!ready && (
-          <p className={styles.orderCode}>
-            <span>{CLIENT_ORDER_CODE_LABEL}</span> <strong>{code}</strong>
+        {studentName && (
+          <p className={styles.studentLine}>
+            <span>{CLIENT_ORDER_NAME_LABEL}</span>{" "}
+            <strong>{studentName}</strong>
           </p>
         )}
         <p className={styles.place}>{order.cafeteria.name}</p>

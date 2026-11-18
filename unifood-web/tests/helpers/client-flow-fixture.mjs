@@ -90,6 +90,10 @@ export function createClientFlowFixture() {
         own.order = {
           ...own.order,
           ...(config.status ? { status: config.status } : {}),
+          // A delivery made now belongs to today: it stays on the board (Colombia day rule).
+          ...(config.status === "DELIVERED"
+            ? { deliveredAt: new Date().toISOString() }
+            : {}),
           ...(config.fields ?? {}),
         };
       // A finished order is no longer "current" but stays readable by its id.

@@ -49,7 +49,8 @@ export const STAGE_DONE = "completada";
 export const ORDER_STAGES_LABEL = "Etapas de tu pedido";
 
 export const CLIENT_ORDER_TITLE = "Mi pedido";
-export const CLIENT_ORDER_CODE_LABEL = "Código de recogida";
+/** The name the worker reads at the counter, shown from the session profile. */
+export const CLIENT_ORDER_NAME_LABEL = "Nombre";
 export const CLIENT_ORDER_READY_TITLE =
   "Tu pedido está listo, pasa a recogerlo";
 export const CLIENT_ORDER_CANCEL = "Cancelar pedido";

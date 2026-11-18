@@ -21,6 +21,8 @@ export type ClientOrder = {
   total: string;
   note: string | null;
   createdAt: string;
+  /** When the cafeteria marked it delivered; null until then. */
+  deliveredAt: string | null;
   items: OrderLine[];
   cafeteria: { id: string; name: string };
   cancellationSource: "CLIENT" | "WORKER" | "SYSTEM" | null;

@@ -42,10 +42,23 @@ export function historyIconOf(status: OrderStatus): IconName {
   return "cerrar";
 }
 
+const BOGOTA_DAY = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/Bogota",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 /**
- * The short code the client reads at the counter: the last four characters of the order id.
- * A stand-in until the backend issues a pickup code (see the PR notes).
+ * A delivered order stays on the board only on the day it was delivered (Colombia time). A
+ * delivery from another day is in the history alone.
  */
-export function pickupCodeOf(orderId: string): string {
-  return orderId.replace(/-/g, "").slice(-4).toUpperCase();
+export function isDeliveredToday(
+  order: { status: OrderStatus; deliveredAt: string | null },
+  now: Date,
+): boolean {
+  if (order.status !== "DELIVERED" || !order.deliveredAt) return false;
+  const delivered = new Date(order.deliveredAt);
+  if (Number.isNaN(delivered.getTime())) return false;
+  return BOGOTA_DAY.format(delivered) === BOGOTA_DAY.format(now);
 }

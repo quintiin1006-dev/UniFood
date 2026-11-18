@@ -194,6 +194,23 @@
   font-size: 17px;
   line-height: 1.3;
 }
+.studentLine {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.studentLine strong {
+  color: var(--color-ink);
+  font-size: 16px;
+  font-weight: 700;
+}
+.readyName {
+  font-size: 26px;
+  letter-spacing: 0;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
 .orderCode {
   display: flex;
   flex-wrap: wrap;
