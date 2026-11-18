@@ -237,21 +237,6 @@ const DRAWN = {
       <path d="M4.4 4.4 19.6 19.6" />
     </>
   ),
-  // Down arrow into a tray: export a file (CSV of cash closures).
-  descargar: (
-    <>
-      <path d="M12 4.4v10.4M7.6 10.6 12 15l4.4-4.4" />
-      <path d="M4.8 15.8v2.6a1.6 1.6 0 0 0 1.6 1.6h11.2a1.6 1.6 0 0 0 1.6-1.6v-2.6" />
-    </>
-  ),
-  // Printer: print or save as PDF (cash receipt).
-  imprimir: (
-    <>
-      <path d="M7.4 9V4.6h9.2V9" />
-      <rect x="4" y="9" width="16" height="7.4" rx="1.6" />
-      <path d="M7.4 14.2h9.2v5.2H7.4z" />
-    </>
-  ),
   // Take-away bag: «Listos para entregar».
   bolsa: (
     <>
