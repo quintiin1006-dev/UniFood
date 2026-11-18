@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import type { CafeteriaMenu, CartLine, MenuProduct } from "../types";
 import { currency } from "../domain/catalog";
-import { maxQuantity, orderBlocker } from "../domain/cart";
+import { CLOSED_MESSAGE, maxQuantity } from "../domain/cart";
+import { CART_LINE_UNAVAILABLE } from "../../shared/messages";
 import { productHref } from "../domain/menu";
 import { useClientCart } from "./ClientCartProvider";
 import ProductPlaceholder from "./ProductPlaceholder";
@@ -26,9 +27,14 @@ export default function CartLineItem({
   const [revealed, setRevealed] = useState(false);
   const gesture = useRef<{ x: number; y: number } | null>(null);
   const name = product?.name ?? "Producto que ya no está en el menú";
-  const blocker = product
-    ? orderBlocker(menu, product)
-    : "Ya no está en el menú. Retíralo para continuar.";
+  // A line says why it cannot continue, in the catalogue wording; removing it is always allowed.
+  const blocker = !product
+    ? "Ya no está en el menú. Retíralo para continuar."
+    : !menu.cafeteria.open
+      ? CLOSED_MESSAGE
+      : !product.available
+        ? CART_LINE_UNAVAILABLE
+        : null;
   const canIncrease =
     !blocker && line.quantity < maxQuantity(cart, line.productId);
   return (
