@@ -65,72 +65,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.arrow {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--color-control-border, #d6e3f3);
-  border-radius: 50%;
-  background: var(--color-surface, #ffffff);
-  color: var(--color-brand-navy);
-  cursor: pointer;
-}
-
-.dots {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
 /* The visible dot is small; the 44 px button around it is the touch target. */
-.dot {
-  position: relative;
-  margin-inline: -7px;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
-
-.dot::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--color-brand-tint-2);
-}
-
-.dot[aria-current="true"]::before {
-  width: 22px;
-  background: var(--color-brand);
-}
-
-.pause {
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--color-control-border, #d6e3f3);
-  border-radius: 999px;
-  background: var(--color-surface, #ffffff);
-  color: var(--color-brand-navy);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .track {
     transition: none;

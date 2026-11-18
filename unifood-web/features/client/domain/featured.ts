@@ -1,7 +1,7 @@
 import type { CafeteriaMenu, MenuProduct } from "../types";
 import { menuProducts } from "./menu";
 
-/** Time each slide stays on screen before the carousel moves on (ola 4). */
+/** Time each slide stays on screen before the carousel moves on. */
 export const ROTATE_MS = 5000;
 
 /**
@@ -25,33 +25,27 @@ export function prevIndex(index: number, count: number) {
   return count > 0 ? (index - 1 + count) % count : 0;
 }
 
-export type CarouselPauses = {
-  /** Mouse over the carousel. */
-  hover: boolean;
-  /** Keyboard or any focus inside the carousel. */
-  focus: boolean;
-  /** A finger or the mouse is pressed on it (swipe in progress). */
-  touch: boolean;
-  /** The user pressed the pause button. */
-  user: boolean;
-};
-
-export function isPaused(pauses: CarouselPauses) {
-  return pauses.hover || pauses.focus || pauses.touch || pauses.user;
-}
-
 /**
- * Automatic rotation runs only with two or more slides, when the user has not asked for less motion
- * and nothing is pausing it. With reduced motion the carousel stays still and the controls move it.
+ * The carousel moves on by itself every ROTATE_MS when there are two or more products and the user
+ * has not asked for reduced motion. It cannot be paused.
  */
 export function canRotate({
   count,
   reducedMotion,
-  paused,
 }: {
   count: number;
   reducedMotion: boolean;
-  paused: boolean;
 }) {
-  return count >= 2 && !reducedMotion && !paused;
+  return count >= 2 && !reducedMotion;
+}
+
+/**
+ * What the carousel shows. With reduced motion nothing moves: only the first product stays on
+ * screen, fixed.
+ */
+export function carouselSlides(
+  products: MenuProduct[],
+  reducedMotion: boolean,
+): MenuProduct[] {
+  return reducedMotion ? products.slice(0, 1) : products;
 }

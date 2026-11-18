@@ -5,7 +5,8 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { availabilityLoader } from "./helpers/load-availability.mjs";
 
-// Ola 4 · portada del inicio del cliente: índice, pausa y movimiento reducido.
+// Portada del inicio del cliente: avanza sola cada 5 s, no se detiene, y con movimiento reducido
+// se queda en el primer producto.
 
 const domain = () => availabilityLoader()("features/client/domain/featured.ts");
 const product = (id, available = true, name = `Producto ${id}`) => ({
@@ -49,33 +50,32 @@ test("the index wraps around in both directions and is safe with no slides", () 
   assert.equal(prevIndex(0, 0), 0);
 });
 
-test("rotation needs two slides, no reduced motion and no pause", () => {
+test("the carousel moves every 5 seconds with two or more products, unless reduced motion", () => {
   const { canRotate, ROTATE_MS } = domain();
   assert.equal(ROTATE_MS, 5000);
-  assert.equal(
-    canRotate({ count: 1, reducedMotion: false, paused: false }),
-    false,
-  );
-  assert.equal(
-    canRotate({ count: 3, reducedMotion: true, paused: false }),
-    false,
-  );
-  assert.equal(
-    canRotate({ count: 3, reducedMotion: false, paused: true }),
-    false,
-  );
-  assert.equal(
-    canRotate({ count: 3, reducedMotion: false, paused: false }),
-    true,
-  );
+  assert.equal(canRotate({ count: 1, reducedMotion: false }), false);
+  assert.equal(canRotate({ count: 0, reducedMotion: false }), false);
+  assert.equal(canRotate({ count: 3, reducedMotion: true }), false);
+  assert.equal(canRotate({ count: 3, reducedMotion: false }), true);
 });
 
-test("any of hover, focus, touch or the pause button pauses the carousel", () => {
+test("with reduced motion only the first product stays on screen; otherwise all of them", () => {
+  const { carouselSlides } = domain();
+  const list = [product("a"), product("b"), product("c")];
+  assert.deepEqual(
+    carouselSlides(list, true).map((p) => p.id),
+    ["a"],
+  );
+  assert.deepEqual(
+    carouselSlides(list, false).map((p) => p.id),
+    ["a", "b", "c"],
+  );
+  assert.deepEqual(carouselSlides([], true), []);
+});
+
+test("the carousel has no pause logic left", () => {
   const { isPaused } = domain();
-  const none = { hover: false, focus: false, touch: false, user: false };
-  assert.equal(isPaused(none), false);
-  for (const key of ["hover", "focus", "touch", "user"])
-    assert.equal(isPaused({ ...none, [key]: true }), true, key);
+  assert.equal(isPaused, undefined);
 });
 
 function render(products) {
@@ -92,23 +92,32 @@ test("no available product means no section at all", () => {
   assert.equal(render([]), "");
 });
 
-test("one product is one card with no controls and no rotation", () => {
+test("one product is one card with no rotation", () => {
   const html = render([product("a", true, "Arepa")]);
   assert.match(html, /aria-roledescription="carrusel"/);
   assert.match(html, /Arepa/);
-  assert.doesNotMatch(html, /Pausar carrusel/);
-  assert.doesNotMatch(html, /Producto siguiente/);
+  assert.equal(
+    (html.match(/aria-roledescription="diapositiva"/g) || []).length,
+    1,
+  );
 });
 
-test("several products get arrows, dots and a pause button, and the rest of the slides are inert", () => {
+test("several products render every slide, and only the current one is reachable", () => {
   const html = render([product("a"), product("b"), product("c")]);
-  assert.match(html, /aria-label="Producto anterior"/);
-  assert.match(html, /aria-label="Producto siguiente"/);
-  assert.match(html, /aria-label="Ver Producto b"/);
-  assert.match(html, /Pausar carrusel/);
-  assert.match(html, /aria-current="true"/);
+  assert.equal(
+    (html.match(/aria-roledescription="diapositiva"/g) || []).length,
+    3,
+  );
   // Only the current slide is reachable: the other two are inert.
   assert.equal((html.match(/inert=""/g) || []).length, 2);
+});
+
+test("the carousel shows no arrows, dots or pause button", () => {
+  const html = render([product("a"), product("b"), product("c")]);
+  assert.doesNotMatch(html, /Pausar carrusel|Reanudar carrusel/);
+  assert.doesNotMatch(html, /Producto anterior|Producto siguiente/);
+  assert.doesNotMatch(html, /aria-label="Ver /);
+  assert.doesNotMatch(html, /aria-current=/);
 });
 
 test("auto changes are not announced and the slide is labelled with its position", () => {
