@@ -297,8 +297,9 @@ se versiona.
 1. Registro en dos pasos con OTP (§3) e inicio de sesión. El dominio del correo determina
    la universidad; el cliente no la elige.
 2. Elegir sede y luego cafetería entre las ACTIVAS de esa sede.
-3. Pantalla principal con módulos Inicio, Mi pedido, Historial y Perfil: barra inferior en
-   celular, sidebar en escritorio y carrito como botón flotante o dentro de Inicio.
+3. Pantalla principal con módulos Inicio, Pedido, Carrito y Perfil: barra inferior en
+   celular (cuatro pestañas), sidebar en escritorio y carrito como botón flotante o dentro de
+   Inicio. «Pedido» reúne el pedido activo y su historial (ver §12).
 
 - Modelo multi-sede y multi-cafetería desde ya.
 - Si solo hay una opción de sede o de cafetería, se salta ese paso, con selector visible
@@ -928,6 +929,24 @@ de cliente se hizo en ramas nuevas **desde `develop`**, no desde la rama de Jona
 `feature/client-real-menu` (#101) y `jon/client-checkout` (#105); ninguna contiene
 `feature/client-orders`. Se retiraron stock y horarios fijos, se usa una nota por pedido y se
 crearon los endpoints que faltaban.
+
+**Decisión del dueño, 2026-11-17: «Pedido» e «Historial» son un solo módulo.** Vive en
+`/cuenta/pedido` y no en dos pantallas:
+
+- **Arriba, tablero de etapas.** Cinco etapas del flujo normal, en orden y con nombre corto:
+  Recibido (PENDING), Preparando (PREPARING), Listo (READY), Llamado (CALLED) y Entregado
+  (DELIVERED). La etapa actual se marca con `aria-current="step"`, con color, ícono y texto; las
+  demás dicen «Etapa n de 5». CANCELLED y NOT_COLLECTED no son etapas: van al historial con su
+  estado. Con READY o CALLED aparece «Tu pedido está listo, pasa a recogerlo» con el código en
+  grande, sin depender de push. El tablero muestra el pedido activo sin tiempo estimado ni número
+  de turno.
+- **Cancelar solo en PENDING**, con confirmación. Un 409 muestra el mensaje del catálogo «Tu
+  pedido ya no se puede cancelar» y vuelve a leer el estado.
+- **Abajo, historial** de pedidos terminados (entregados, cancelados, no recogidos), el más
+  reciente primero, con «Cargar más». Sin «repetir pedido». Al terminar un pedido, la lista se
+  actualiza sin mostrar carga.
+- **`/cuenta/historial` redirige a `/cuenta/pedido`** para no romper enlaces ni pruebas.
+- Sondeo cada 5 s solo con la pestaña visible, con espera creciente si falla.
 
 ## 13. Línea de corte
 

@@ -1,6 +1,7 @@
 import {
   BACKEND_ERROR_MESSAGES,
   CLIENT_ORDER_CHANGED,
+  CLIENT_ORDER_NOT_CANCELLABLE,
   CLIENT_ORDERS_FORBIDDEN,
   CONNECTION_FAILED,
   SESSION_EXPIRED,
@@ -37,7 +38,7 @@ export function orderFailure(status: number, code?: string): OrderFailure {
 /** Cancel: the 409 codes of §11 map to the catalogue; anything unknown is a retry, not a guess. */
 export function cancelFailure(status: number, code?: string): OrderFailure {
   if (status === 409 && code === "ORDER_ALREADY_PREPARING")
-    return make(BACKEND_ERROR_MESSAGES.ORDER_ALREADY_PREPARING);
+    return make(CLIENT_ORDER_NOT_CANCELLABLE);
   if (status === 409) return make(CLIENT_ORDER_CHANGED);
   return orderFailure(status, code);
 }

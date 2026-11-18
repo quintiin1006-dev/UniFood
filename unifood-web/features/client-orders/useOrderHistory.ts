@@ -63,6 +63,12 @@ export function useOrderHistory() {
     } else loadMore();
   }, [orders.length, loadMore, run]);
 
+  /** Reads the first page again without the loading state: a finished order shows up in place. */
+  const reload = useCallback(() => {
+    setFailure(null);
+    void run(null);
+  }, [run]);
+
   return {
     orders,
     phase,
@@ -71,5 +77,6 @@ export function useOrderHistory() {
     failure,
     loadMore,
     retry,
+    reload,
   };
 }

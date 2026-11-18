@@ -68,9 +68,7 @@ test("pedido → seguimiento → cancelar", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "Cancelar pedido" }),
   ).toHaveCount(0);
-  await expect(
-    page.getByRole("link", { name: "Hacer otro pedido" }),
-  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ver el menú" })).toBeVisible();
 });
 
 test("el cancelar desaparece y el error es claro cuando ya está en preparación", async ({
@@ -84,7 +82,7 @@ test("el cancelar desaparece y el error es claro cuando ya está en preparación
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "Sí, cancelar pedido" }).click();
   await expect(dialog.getByRole("alert")).toContainText(
-    "ya está en preparación",
+    "ya no se puede cancelar",
   );
   await dialog.getByRole("button", { name: "Cerrar" }).click();
   await expect(
@@ -223,7 +221,7 @@ test("historial: más de una página, «Cargar más» y detalle de solo lectura"
   page,
 }) => {
   await flow(page, { order: null, historyCount: 25 });
-  await page.goto("/cuenta/historial");
+  await page.goto("/cuenta/pedido");
   const rows = page.getByRole("button", { name: /Cafetería Central/ });
   await expect(rows).toHaveCount(20);
   await page.getByRole("button", { name: "Cargar más" }).click();
@@ -244,9 +242,14 @@ test("historial: más de una página, «Cargar más» y detalle de solo lectura"
 
 test("historial vacío", async ({ page }) => {
   await flow(page, { order: null, historyCount: 0 });
-  await page.goto("/cuenta/historial");
-  await expect(page.getByText("Aún no tienes pedidos")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Ver el menú" })).toBeVisible();
+  await page.goto("/cuenta/pedido");
+  await expect(
+    page.getByText("Aún no tienes pedidos anteriores"),
+  ).toBeVisible();
+  await expect(page.getByText("No tienes un pedido activo")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Ver el menú" }).first(),
+  ).toBeVisible();
 });
 
 test("objetivos táctiles de al menos 44 px", async ({ page }) => {
@@ -261,14 +264,14 @@ test("objetivos táctiles de al menos 44 px", async ({ page }) => {
     const box = await target.boundingBox();
     expect(box!.height).toBeGreaterThanOrEqual(44);
   }
-  await page.goto("/cuenta/historial");
+  await page.goto("/cuenta/pedido");
   const row = page.getByRole("button", { name: /Cafetería Central/ }).first();
   await expect(row).toBeVisible();
   expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 });
 
 for (const width of [320, 390]) {
-  test(`la barra tiene cinco pestañas con área táctil de 44 px a ${width}px`, async ({
+  test(`la barra tiene cuatro pestañas con área táctil de 44 px a ${width}px`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 700 });
@@ -278,8 +281,8 @@ for (const width of [320, 390]) {
       name: "Navegación del estudiante",
     });
     const tabs = nav.getByRole("link");
-    await expect(tabs).toHaveCount(5);
-    for (const name of ["Inicio", "Pedido", "Historial", "Carrito", "Perfil"])
+    await expect(tabs).toHaveCount(4);
+    for (const name of ["Inicio", "Pedido", "Carrito", "Perfil"])
       await expect(nav.getByRole("link", { name })).toBeVisible();
     for (const tab of await tabs.all()) {
       const box = await tab.boundingBox();
@@ -290,19 +293,14 @@ for (const width of [320, 390]) {
       "aria-current",
       "page",
     );
-    // «Historial» fits its cell: nothing sticks out of the page.
+    // Four cells: nothing sticks out of the page.
     const overflow = await page.evaluate(
       () =>
         document.documentElement.scrollWidth -
         document.documentElement.clientWidth,
     );
     expect(overflow).toBeLessThanOrEqual(0);
-    await nav.getByRole("link", { name: "Historial" }).click();
-    await expect(page).toHaveURL(/\/cuenta\/historial$/);
-    await expect(nav.getByRole("link", { name: "Historial" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    await expect(nav.getByRole("link", { name: "Historial" })).toHaveCount(0);
     await expect(nav.getByRole("link", { name: "Inicio" })).not.toHaveAttribute(
       "aria-current",
       "page",

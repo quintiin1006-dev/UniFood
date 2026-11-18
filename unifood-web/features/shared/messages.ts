@@ -31,6 +31,54 @@ export const CLIENT_ORDERS_FORBIDDEN =
 export const CONNECTION_FAILED =
   "No pudimos conectarnos. Revisa tu conexión e inténtalo de nuevo.";
 
+/* ---------- Cliente · Pedido e historial (un solo módulo, /cuenta/pedido) ---------- */
+
+/** The five stages of the normal flow (PENDING → DELIVERED), short enough for a 360 px row. */
+export const ORDER_STAGE_LABELS = [
+  "Recibido",
+  "Preparando",
+  "Listo",
+  "Llamado",
+  "Entregado",
+] as const;
+
+export const stageCounter = (position: number, total: number) =>
+  `Etapa ${position} de ${total}`;
+export const STAGE_CURRENT = "etapa actual";
+export const STAGE_DONE = "completada";
+export const ORDER_STAGES_LABEL = "Etapas de tu pedido";
+
+export const CLIENT_ORDER_TITLE = "Mi pedido";
+export const CLIENT_ORDER_CODE_LABEL = "Código de recogida";
+export const CLIENT_ORDER_READY_TITLE =
+  "Tu pedido está listo, pasa a recogerlo";
+export const CLIENT_ORDER_CANCEL = "Cancelar pedido";
+export const CLIENT_ORDER_CANCELLED_NOTICE = "Pedido cancelado.";
+export const CLIENT_ORDER_NOT_CANCELLABLE =
+  "Tu pedido ya no se puede cancelar.";
+export const CLIENT_ORDER_NOTE_LABEL = "Tu nota";
+export const CLIENT_ORDER_PICKUP_LABEL = "Recogida";
+export const CLIENT_ORDER_CASH_NOTE =
+  "Pagas en efectivo en caja; la cafetería confirma el total final.";
+export const CLIENT_ORDER_EMPTY_TITLE = "No tienes un pedido activo";
+export const CLIENT_ORDER_EMPTY_BODY =
+  "Cuando envíes un pedido podrás seguirlo aquí.";
+export const CLIENT_ORDER_GO_MENU = "Ver el menú";
+
+export const CANCEL_DIALOG_TITLE = "¿Cancelar tu pedido?";
+export const CANCEL_DIALOG_BODY =
+  "Solo puedes cancelarlo mientras esté pendiente. Esta acción no se puede deshacer.";
+export const CANCEL_KEEP = "Mantener pedido";
+export const CANCEL_CONFIRM = "Sí, cancelar pedido";
+export const CANCEL_CONFIRMING = "Cancelando…";
+
+export const HISTORY_TITLE = "Historial";
+export const HISTORY_EMPTY_TITLE = "Aún no tienes pedidos anteriores";
+export const HISTORY_EMPTY_BODY =
+  "Tus pedidos entregados, cancelados o no recogidos aparecerán aquí.";
+export const HISTORY_LOAD_MORE = "Cargar más";
+export const HISTORY_LOADING_MORE = "Cargando…";
+
 /* ---------- Push notifications (docs/notificaciones-push.md) ---------- */
 
 // The in-app notice stays the primary channel: whenever push is not available, the text says so.

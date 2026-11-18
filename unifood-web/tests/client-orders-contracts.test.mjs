@@ -149,9 +149,10 @@ test("failures use the central catalogue and tell connection from empty", () => 
     errors.orderFailure(404, "ORDER_NOT_FOUND").message,
     messages.BACKEND_ERROR_MESSAGES.ORDER_NOT_FOUND,
   );
+  // «Ya no se puede cancelar» is the client's wording of ORDER_ALREADY_PREPARING.
   assert.equal(
     errors.cancelFailure(409, "ORDER_ALREADY_PREPARING").message,
-    messages.BACKEND_ERROR_MESSAGES.ORDER_ALREADY_PREPARING,
+    messages.CLIENT_ORDER_NOT_CANCELLABLE,
   );
   assert.equal(
     errors.cancelFailure(409, "INVALID_ORDER_STATE").message,

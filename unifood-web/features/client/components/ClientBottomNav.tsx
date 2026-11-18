@@ -11,11 +11,9 @@ export default function ClientBottomNav() {
   const pathname = usePathname();
   const profileActive = pathname.startsWith("/cuenta/perfil");
   const orderActive = pathname.startsWith("/cuenta/pedido");
-  const historyActive = pathname.startsWith("/cuenta/historial");
   const cartActive =
     pathname === "/cuenta/carrito" || pathname.startsWith("/cuenta/carrito/");
-  const homeActive =
-    !profileActive && !cartActive && !orderActive && !historyActive;
+  const homeActive = !profileActive && !cartActive && !orderActive;
   const { count, cart } = useClientCart();
   const query = useSearchParams();
   // The server validates this id against the context; an unknown one returns to the selection.
@@ -47,18 +45,6 @@ export default function ClientBottomNav() {
             tone={orderActive ? "active" : "inherit"}
           />
           <span>Pedido</span>
-        </Link>
-        <Link
-          href="/cuenta/historial"
-          className={styles.navItem}
-          aria-current={historyActive ? "page" : undefined}
-        >
-          <Icon
-            name="historial"
-            size={22}
-            tone={historyActive ? "active" : "inherit"}
-          />
-          <span>Historial</span>
         </Link>
         <Link
           href="/cuenta/carrito"

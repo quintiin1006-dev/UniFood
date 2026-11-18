@@ -7,18 +7,25 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
 import { Notice } from "@/components/ui/Notice";
 import { StatusChip } from "@/components/ui/StatusChip";
-import ClientDialog from "@/features/client/components/ClientDialog";
-import { OFFLINE_RETRYING } from "../../shared/messages";
-import { cancelOrder } from "../api";
+import {
+  CLIENT_ORDER_CANCELLED_NOTICE,
+  CLIENT_ORDER_EMPTY_BODY,
+  CLIENT_ORDER_EMPTY_TITLE,
+  CLIENT_ORDER_GO_MENU,
+  CLIENT_ORDER_TITLE,
+  OFFLINE_RETRYING,
+} from "../../shared/messages";
 import type { OrderFailure } from "../errors";
+import { statusLine } from "../presentation";
 import { ALERT_TEXT, tabTitle, type OrderAlert } from "../polling";
-import { STEPS, statusLine, stepOf } from "../presentation";
 import { armChime, playChime, readMuted, writeMuted } from "../sound";
 import type { ClientOrder } from "../types";
 import { useCurrentOrder } from "../useCurrentOrder";
-import OrderSummary from "./OrderSummary";
+import OrderBoard from "./OrderBoard";
+import OrderHistory from "./OrderHistory";
 import styles from "./ClientOrders.module.css";
 
+/** «Mi pedido»: the active order on a stage board, and the ended orders below it. */
 export default function MyOrder() {
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
@@ -40,6 +47,10 @@ export default function MyOrder() {
   }, []);
   const { loaded, order, finished, failure, offline, refresh } =
     useCurrentOrder(onAlert);
+  // A delivered order leaves «active» but its last stage is still shown once; cancelled and not
+  // collected ones are not stages, so they go straight to the history.
+  const boardOrder =
+    order ?? (finished?.status === "DELIVERED" ? finished : null);
 
   const toggleSound = () => {
     const next = !muted;
@@ -73,7 +84,7 @@ export default function MyOrder() {
   return (
     <section className={styles.page} aria-labelledby="my-order-title">
       <div className={styles.heading}>
-        <h1 id="my-order-title">Mi pedido</h1>
+        <h1 id="my-order-title">{CLIENT_ORDER_TITLE}</h1>
         <button
           type="button"
           role="switch"
@@ -106,7 +117,7 @@ export default function MyOrder() {
           </Notice>
         )}
         {cancelled && !alert && (
-          <Notice tone="success">Pedido cancelado.</Notice>
+          <Notice tone="success">{CLIENT_ORDER_CANCELLED_NOTICE}</Notice>
         )}
       </div>
 
@@ -118,9 +129,10 @@ export default function MyOrder() {
 
       {!loaded && !failure && <Skeleton />}
       {failure && <FailurePanel failure={failure} onRetry={refresh} />}
-      {loaded && !failure && order && (
-        <ActiveOrder
-          order={order}
+      {loaded && !failure && boardOrder && (
+        <OrderBoard
+          order={boardOrder}
+          focusTitle={!order}
           onCancelled={() => {
             setCancelled(true);
             refresh();
@@ -128,22 +140,59 @@ export default function MyOrder() {
           onChanged={refresh}
         />
       )}
-      {loaded && !failure && !order && finished && (
-        <FinishedOrder order={finished} />
+      {loaded && !failure && !boardOrder && finished && (
+        <EndedOrder order={finished} />
       )}
-      {loaded && !failure && !order && !finished && (
-        <EmptyState
-          icon={<Icon name="mi-pedido" size={28} />}
-          title="No tienes un pedido activo"
-          action={
-            <Link href="/cuenta" className={buttonClass("primary")}>
-              Ver el menú
-            </Link>
-          }
-        >
-          Cuando envíes un pedido podrás seguirlo aquí.
-        </EmptyState>
+      {loaded && !failure && !boardOrder && !finished && (
+        <section className={styles.card} aria-label="Tablero de tu pedido">
+          <EmptyState
+            icon={<Icon name="mi-pedido" size={28} />}
+            title={CLIENT_ORDER_EMPTY_TITLE}
+            action={
+              <Link href="/cuenta" className={buttonClass("primary")}>
+                {CLIENT_ORDER_GO_MENU}
+              </Link>
+            }
+          >
+            {CLIENT_ORDER_EMPTY_BODY}
+          </EmptyState>
+        </section>
       )}
+
+      <OrderHistory refreshKey={finished?.id ?? null} />
+    </section>
+  );
+}
+
+/**
+ * How an order that ended without being delivered (rejected, cancelled, not collected) finished.
+ * It is not a stage of the board: one status line, with its reason, until the next order.
+ */
+function EndedOrder({ order }: { order: ClientOrder }) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => heading.current?.focus(), []);
+  const line = statusLine(order);
+  return (
+    <section className={styles.card} aria-labelledby="ended-order-title">
+      <StatusChip
+        status={order.status}
+        cancellationSource={order.cancellationSource}
+        className={styles.chipStart}
+      />
+      <h2
+        id="ended-order-title"
+        ref={heading}
+        tabIndex={-1}
+        className={styles.statusTitle}
+      >
+        {line.title}
+      </h2>
+      <p className={styles.statusDetail}>{line.detail}</p>
+      <div className={styles.actions}>
+        <Link href="/cuenta" className={buttonClass("primary")}>
+          {CLIENT_ORDER_GO_MENU}
+        </Link>
+      </div>
     </section>
   );
 }
@@ -179,163 +228,5 @@ function FailurePanel({
         <Button onClick={onRetry}>Reintentar</Button>
       )}
     </div>
-  );
-}
-
-function Progress({ order }: { order: ClientOrder }) {
-  const current = stepOf(order.status);
-  const index = STEPS.findIndex((step) => step.id === current);
-  return (
-    <ol className={styles.steps} aria-label="Progreso del pedido">
-      {STEPS.map((step, position) => (
-        <li
-          key={step.id}
-          data-done={position < index || undefined}
-          aria-current={position === index ? "step" : undefined}
-        >
-          <span className={styles.stepDot} aria-hidden="true" />
-          {step.label}
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function ActiveOrder({
-  order,
-  onCancelled,
-  onChanged,
-}: {
-  order: ClientOrder;
-  onCancelled: () => void;
-  onChanged: () => void;
-}) {
-  const [confirming, setConfirming] = useState(false);
-  const line = statusLine(order);
-  return (
-    <>
-      <article className={styles.card} aria-labelledby="order-status-title">
-        <StatusChip status={order.status} className={styles.chipStart} />
-        <h2 id="order-status-title" className={styles.statusTitle}>
-          {line.title}
-        </h2>
-        <p className={styles.statusDetail}>{line.detail}</p>
-        <Progress order={order} />
-      </article>
-      <article className={styles.card}>
-        <OrderSummary order={order} />
-        {order.status === "PENDING" && (
-          <Button
-            variant="danger"
-            className={styles.cancelButton}
-            onClick={() => setConfirming(true)}
-          >
-            Cancelar pedido
-          </Button>
-        )}
-      </article>
-      {confirming && (
-        <CancelDialog
-          orderId={order.id}
-          onClose={() => setConfirming(false)}
-          onDone={() => {
-            setConfirming(false);
-            onCancelled();
-          }}
-          onStale={onChanged}
-        />
-      )}
-    </>
-  );
-}
-
-function CancelDialog({
-  orderId,
-  onClose,
-  onDone,
-  onStale,
-}: {
-  orderId: string;
-  onClose: () => void;
-  onDone: () => void;
-  onStale: () => void;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState<OrderFailure | null>(null);
-  const confirm = async () => {
-    setBusy(true);
-    setFailure(null);
-    const outcome = await cancelOrder(orderId);
-    if (outcome.ok) {
-      onDone();
-      return;
-    }
-    setBusy(false);
-    setFailure(outcome.failure);
-    // The order moved under the client (preparing, rejected…): show its real state behind.
-    onStale();
-  };
-  return (
-    <ClientDialog
-      title="¿Cancelar tu pedido?"
-      onClose={busy ? () => undefined : onClose}
-    >
-      <p>
-        Solo puedes cancelarlo mientras esté pendiente. Esta acción no se puede
-        deshacer.
-      </p>
-      {failure && (
-        <Notice tone="error" className={styles.dialogError}>
-          {failure.message}
-        </Notice>
-      )}
-      <div className={styles.dialogActions}>
-        <Button variant="secondary" onClick={onClose} disabled={busy} autoFocus>
-          {failure ? "Cerrar" : "Mantener pedido"}
-        </Button>
-        {!failure?.login && (
-          <Button variant="danger" loading={busy} onClick={confirm}>
-            {busy ? "Cancelando…" : "Sí, cancelar pedido"}
-          </Button>
-        )}
-      </div>
-    </ClientDialog>
-  );
-}
-
-function FinishedOrder({ order }: { order: ClientOrder }) {
-  const heading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => heading.current?.focus(), []);
-  const line = statusLine(order);
-  return (
-    <>
-      <article className={styles.card} aria-labelledby="finished-title">
-        <StatusChip
-          status={order.status}
-          cancellationSource={order.cancellationSource}
-          className={styles.chipStart}
-        />
-        <h2
-          id="finished-title"
-          ref={heading}
-          tabIndex={-1}
-          className={styles.statusTitle}
-        >
-          {line.title}
-        </h2>
-        <p className={styles.statusDetail}>{line.detail}</p>
-        <div className={styles.actions}>
-          <Link href="/cuenta" className={buttonClass("primary")}>
-            Hacer otro pedido
-          </Link>
-          <Link href="/cuenta/historial" className={buttonClass("secondary")}>
-            Ver historial
-          </Link>
-        </div>
-      </article>
-      <article className={styles.card}>
-        <OrderSummary order={order} />
-      </article>
-    </>
   );
 }
