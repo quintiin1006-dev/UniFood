@@ -195,6 +195,13 @@ Verificado leyendo el código (no hay cambios necesarios):
 - **Rollback del código:** revertir el commit en `develop` con un PR. Es el camino que deja trazabilidad; los rollbacks de panel son de emergencia.
 - **Límite:** revertir un despliegue **no deshace migraciones SQL**. Las migraciones de `unifood-backend/supabase/` se aplican a mano, con su propio plan de reversión.
 
+### Caja: retirada, no borrada
+
+- La caja (cierres por turno, movimientos, arqueo) se retiró del código con #155 y se quitó del esquema con `029_remove_cash_sessions.sql`.
+- **028 y 029 existen en el historial.** 028 ya está aplicada en staging con su checksum registrado: **no se edita, no se borra y no se reutiliza su número**. 029 deja el esquema sin caja.
+- **Para reincorporar caja:** revertir #155 y crear una migración **nueva** (número libre, por ejemplo 030 o posterior) que recree el esquema. No reutilizar 028 ni 029.
+- **Proyecto real (enero):** al aplicar migraciones al proyecto real hay que aplicar **028 y luego 029**, en ese orden. Si solo se aplica 028, la caja queda creada en el proyecto real.
+
 ## 9. Checklist de verificación
 
 Ejecutar en orden tras cada despliegue:
