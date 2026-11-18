@@ -20,9 +20,65 @@ export const OFFLINE_RETRYING = "Sin conexión. Reintentando…";
 
 export const SAVING = "Guardando…";
 
+/** «Mi pedido»: the client's own wording; the worker's ORDER_STATE_CHANGED speaks of the board. */
+export const CLIENT_ORDER_CHANGED =
+  "Tu pedido cambió de estado. Te mostramos cómo está ahora.";
+
+export const CLIENT_ORDERS_FORBIDDEN =
+  "No tienes permisos para ver tus pedidos.";
+
 /** The server could not be reached: network, timeout or a 5xx. Never an empty result. */
 export const CONNECTION_FAILED =
   "No pudimos conectarnos. Revisa tu conexión e inténtalo de nuevo.";
+
+/* ---------- Cliente · Pedido e historial (un solo módulo, /cuenta/pedido) ---------- */
+
+/** The five stages of the normal flow (PENDING → DELIVERED), short enough for a 360 px row. */
+export const ORDER_STAGE_LABELS = [
+  "Recibido",
+  "Preparando",
+  "Listo",
+  "Llamado",
+  "Entregado",
+] as const;
+
+export const stageCounter = (position: number, total: number) =>
+  `Etapa ${position} de ${total}`;
+export const STAGE_CURRENT = "etapa actual";
+export const STAGE_DONE = "completada";
+export const ORDER_STAGES_LABEL = "Etapas de tu pedido";
+
+export const CLIENT_ORDER_TITLE = "Mi pedido";
+/** The name the worker reads at the counter, shown from the session profile. */
+export const CLIENT_ORDER_NAME_LABEL = "Nombre";
+export const CLIENT_ORDER_READY_TITLE =
+  "Tu pedido está listo, pasa a recogerlo";
+export const CLIENT_ORDER_CANCEL = "Cancelar pedido";
+export const CLIENT_ORDER_CANCELLED_NOTICE = "Pedido cancelado.";
+export const CLIENT_ORDER_NOT_CANCELLABLE =
+  "Tu pedido ya no se puede cancelar.";
+export const CLIENT_ORDER_NOTE_LABEL = "Tu nota";
+export const CLIENT_ORDER_PICKUP_LABEL = "Recogida";
+export const CLIENT_ORDER_CASH_NOTE =
+  "Pagas en efectivo en caja; la cafetería confirma el total final.";
+export const CLIENT_ORDER_EMPTY_TITLE = "No tienes un pedido activo";
+export const CLIENT_ORDER_EMPTY_BODY =
+  "Cuando envíes un pedido podrás seguirlo aquí.";
+export const CLIENT_ORDER_GO_MENU = "Ver el menú";
+
+export const CANCEL_DIALOG_TITLE = "¿Cancelar tu pedido?";
+export const CANCEL_DIALOG_BODY =
+  "Solo puedes cancelarlo mientras esté pendiente. Esta acción no se puede deshacer.";
+export const CANCEL_KEEP = "Mantener pedido";
+export const CANCEL_CONFIRM = "Sí, cancelar pedido";
+export const CANCEL_CONFIRMING = "Cancelando…";
+
+export const HISTORY_TITLE = "Historial";
+export const HISTORY_EMPTY_TITLE = "Aún no tienes pedidos anteriores";
+export const HISTORY_EMPTY_BODY =
+  "Tus pedidos entregados, cancelados o no recogidos aparecerán aquí.";
+export const HISTORY_LOAD_MORE = "Cargar más";
+export const HISTORY_LOADING_MORE = "Cargando…";
 
 /* ---------- Push notifications (docs/notificaciones-push.md) ---------- */
 

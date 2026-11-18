@@ -1,0 +1,454 @@
+.page {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.heading h1 {
+  margin: 0;
+  font-size: clamp(27px, 7vw, 35px);
+  line-height: 1.2;
+  letter-spacing: -0.8px;
+}
+
+/* Sound switch: a real switch, 44 px tall, visible focus ring. */
+.soundSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-soft);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.switchTrack {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--color-line);
+  transition: background 160ms ease;
+}
+.switchThumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-ink) 30%, transparent);
+  transition: transform 160ms ease;
+}
+.soundSwitch[aria-checked="true"] .switchTrack {
+  background: var(--color-brand);
+}
+.soundSwitch[aria-checked="true"] .switchThumb {
+  transform: translateX(18px);
+}
+.soundSwitch:focus-visible,
+.dismiss:focus-visible,
+.historyRow:focus-visible {
+  outline: 3px solid var(--color-brand);
+  outline-offset: 3px;
+}
+
+.liveRegion:empty {
+  display: none;
+}
+.dismiss {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--color-brand-tint);
+  color: var(--color-brand-hover);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.offline {
+  margin: 0;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+  letter-spacing: -0.3px;
+}
+.historySection {
+  display: grid;
+  gap: 12px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-line);
+}
+
+/* The stage board: five cells on one row, from 360 px up, with no horizontal scroll. */
+.stages {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.stage {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  min-height: 72px;
+  padding: 8px 2px;
+  border-radius: 14px;
+  background: var(--color-bg);
+  color: var(--color-text-soft);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+}
+.stage[data-state="done"] {
+  background: var(--color-brand-tint);
+  color: var(--color-brand-hover);
+}
+.stage[data-state="current"] {
+  background: var(--color-brand);
+  color: var(--color-on-color);
+  font-weight: 700;
+}
+.stageIcon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-surface);
+}
+.stage[data-state="current"] .stageIcon {
+  color: var(--color-brand);
+}
+.stageLabel {
+  /* Each label is one word: at 360 px it fits a 60 px cell at 10 px, never a broken word. */
+  max-width: 100%;
+  font-size: 10px;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.readyNotice {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--color-brand-navy);
+  color: var(--color-on-color);
+}
+.readyTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.readyCode {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+.readyCode span {
+  font-size: 14px;
+  font-weight: 600;
+}
+.readyCode strong {
+  font-size: 48px;
+  line-height: 1;
+  letter-spacing: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.orderName {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.3;
+}
+.studentLine {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.studentLine strong {
+  color: var(--color-ink);
+  font-size: 16px;
+  font-weight: 700;
+}
+.readyName {
+  font-size: 26px;
+  letter-spacing: 0;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.orderCode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: 14px;
+}
+.orderCode strong {
+  color: var(--color-ink);
+  font-size: 18px;
+  letter-spacing: 2px;
+}
+.productsLine {
+  margin: 0;
+  color: var(--color-slate);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.note {
+  margin: 0;
+  color: var(--color-slate);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.note span {
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: 22px;
+  background: var(--color-surface);
+}
+.chipStart {
+  justify-self: start;
+}
+.statusTitle {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.25;
+  letter-spacing: -0.4px;
+}
+.statusTitle:focus-visible {
+  outline: 3px solid var(--color-brand);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+.statusDetail {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.summary {
+  display: grid;
+  gap: 12px;
+}
+.place {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: 14px;
+  font-weight: 600;
+}
+.lines {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 15px;
+}
+.lines li span:last-child {
+  flex-shrink: 0;
+  color: var(--color-text-soft);
+}
+.facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--color-line);
+}
+.facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+.facts dt {
+  color: var(--color-text-soft);
+}
+.facts dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+.total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line);
+}
+.total strong {
+  font-size: 22px;
+}
+.cash {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.cancelButton {
+  width: 100%;
+}
+.actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+}
+.failure {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 28px 18px;
+  border-block: 1px solid var(--color-brand-tint-2);
+  text-align: center;
+}
+.failure h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+.dialogActions {
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+}
+.dialogError {
+  margin-top: 14px;
+}
+.detail {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.historyList {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.historyRow {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  min-height: 44px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: 20px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rowTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.rowDate {
+  color: var(--color-text-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+.rowPlace {
+  font-weight: 700;
+}
+.rowSummary {
+  color: var(--color-text-soft);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.rowTotal {
+  font-size: 14px;
+}
+.more {
+  width: 100%;
+}
+
+.skeletonGroup {
+  display: grid;
+  gap: 12px;
+}
+.skeleton {
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: 22px;
+  background: linear-gradient(
+    135deg,
+    var(--color-surface),
+    var(--color-brand-tint)
+  );
+}
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton {
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .switchTrack,
+  .switchThumb {
+    transition: none;
+  }
+}

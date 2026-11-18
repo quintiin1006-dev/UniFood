@@ -7,6 +7,7 @@ import { loadClientContext } from "@/features/client/server/context";
 import { loadCafeteriaMenu } from "@/features/client/server/menu";
 import CafeteriaUnavailable from "@/features/client/components/CafeteriaUnavailable";
 import ClientProduct from "@/features/client/components/ClientProduct";
+import ConnectionError from "@/features/client/components/ConnectionError";
 import MenuUnavailable from "@/features/client/components/MenuUnavailable";
 
 export const metadata = { title: "Detalle del producto | UniFood" };
@@ -23,8 +24,7 @@ export default async function ClientProductPage({
   if (!isClient(profile)) redirect(destination(profile));
   const query = await searchParams;
   const result = await loadClientContext();
-  if (result.status !== "ok")
-    return <MenuUnavailable title="No pudimos cargar tus cafeterías" />;
+  if (result.status !== "ok") return <ConnectionError />;
   const chosen = findCafeteria(result.context, query.cafeteria);
   if (!chosen)
     redirect(

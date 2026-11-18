@@ -10,8 +10,10 @@ import styles from "./ClientShell.module.css";
 export default function ClientBottomNav() {
   const pathname = usePathname();
   const profileActive = pathname.startsWith("/cuenta/perfil");
+  const orderActive = pathname.startsWith("/cuenta/pedido");
   const cartActive =
     pathname === "/cuenta/carrito" || pathname.startsWith("/cuenta/carrito/");
+  const homeActive = !profileActive && !cartActive && !orderActive;
   const { count, cart } = useClientCart();
   const query = useSearchParams();
   // The server validates this id against the context; an unknown one returns to the selection.
@@ -23,24 +25,27 @@ export default function ClientBottomNav() {
         <Link
           href={cafeteriaId ? cafeteriaHref(cafeteriaId) : "/cuenta"}
           className={styles.navItem}
-          aria-current={!profileActive && !cartActive ? "page" : undefined}
+          aria-current={homeActive ? "page" : undefined}
         >
           <Icon
             name="inicio"
             size={22}
-            tone={!profileActive && !cartActive ? "active" : "inherit"}
+            tone={homeActive ? "active" : "inherit"}
           />
           <span>Inicio</span>
         </Link>
-        <button
-          type="button"
+        <Link
+          href="/cuenta/pedido"
           className={styles.navItem}
-          disabled
-          aria-label="Pedidos, próximamente"
+          aria-current={orderActive ? "page" : undefined}
         >
-          <Icon name="mi-pedido" size={22} />
-          <span>Pedidos</span>
-        </button>
+          <Icon
+            name="mi-pedido"
+            size={22}
+            tone={orderActive ? "active" : "inherit"}
+          />
+          <span>Pedido</span>
+        </Link>
         <Link
           href="/cuenta/carrito"
           className={styles.navItem}

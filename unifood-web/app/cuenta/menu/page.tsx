@@ -7,6 +7,7 @@ import { loadClientContext } from "@/features/client/server/context";
 import { loadCafeteriaMenu } from "@/features/client/server/menu";
 import CafeteriaUnavailable from "@/features/client/components/CafeteriaUnavailable";
 import ClientMenu from "@/features/client/components/ClientMenu";
+import ConnectionError from "@/features/client/components/ConnectionError";
 import MenuUnavailable from "@/features/client/components/MenuUnavailable";
 
 export const metadata = { title: "Menú | UniFood" };
@@ -21,8 +22,7 @@ export default async function ClientMenuPage({
   if (!isClient(profile)) redirect(destination(profile));
   const query = await searchParams;
   const result = await loadClientContext();
-  if (result.status !== "ok")
-    return <MenuUnavailable title="No pudimos cargar tus cafeterías" />;
+  if (result.status !== "ok") return <ConnectionError />;
   // The cafeteria is validated against the context on every request (§4).
   const chosen = findCafeteria(result.context, query.cafeteria);
   if (!chosen)

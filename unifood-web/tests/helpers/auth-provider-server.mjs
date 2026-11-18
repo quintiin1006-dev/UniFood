@@ -17,11 +17,14 @@ import {
   singleCafeteriaContext,
 } from "../fixtures/client-menu.ts";
 import { createClientOrderFixture } from "./client-order-fixture.mjs";
+import { createClientFlowFixture } from "./client-flow-fixture.mjs";
 
 const createClientOrder = createClientOrderFixture(clientMenuResponse);
+const clientFlow = createClientFlowFixture();
 
 const fixtures = Object.entries({
   client: ["CLIENT"],
+  clientflow: ["CLIENT"],
   clientlong: ["CLIENT"],
   worker: ["WORKER"],
   unverifiedworker: ["WORKER"],
@@ -453,6 +456,16 @@ createServer(async (request, response) => {
       if (!target) return json(response, 400, {});
       if (config.reset) operationalStates.delete(target.id);
       if (config.data) operationalStates.set(target.id, config.data);
+      return json(response, 200, {});
+    }
+    // Order state of the "clientflow" user for the «Mi pedido» and history tests.
+    if (url.pathname === "/__test/client-flow" && request.method === "POST") {
+      let raw = "";
+      for await (const chunk of request) raw += chunk;
+      const config = JSON.parse(raw),
+        target = fixtures.find((entry) => entry.email === config.email);
+      if (!target) return json(response, 400, {});
+      clientFlow.configure(target.id, config);
       return json(response, 200, {});
     }
     // Client terms: accepted by default so other flows are not blocked; a test can unset it.
@@ -1320,6 +1333,22 @@ createServer(async (request, response) => {
         );
       const menu = clientMenuResponse(url.searchParams.get("cafeteriaId"));
       return json(response, menu.status, menu.body);
+    }
+    // Reads and cancellation of the "clientflow" user, from tests/helpers/client-flow-fixture.mjs.
+    if (
+      profile.email.startsWith("clientflow@") &&
+      url.pathname.startsWith("/api/me/orders")
+    ) {
+      const answer = clientFlow.handle(
+        profile.id,
+        request.method,
+        url,
+        request.headers,
+      );
+      if (answer) {
+        response.writeHead(answer.status, answer.headers);
+        return response.end(answer.body);
+      }
     }
     // POST /api/me/orders, from tests/helpers/client-order-fixture.mjs.
     if (url.pathname === "/api/me/orders" && request.method === "POST") {

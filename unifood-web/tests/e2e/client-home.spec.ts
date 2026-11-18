@@ -59,7 +59,7 @@ for (const width of [320, 375, 390, 412, 430, 1280]) {
     await expect(
       page.getByRole("heading", { name: "¿Dónde vas a pedir hoy?" }),
     ).toBeVisible();
-    await expect(nav(page).getByRole("link")).toHaveCount(3);
+    await expect(nav(page).getByRole("link")).toHaveCount(5);
     await expect(
       nav(page).getByRole("link", { name: "Inicio", exact: true }),
     ).toHaveAttribute("aria-current", "page");

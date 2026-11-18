@@ -174,6 +174,20 @@ test("Inicio separates a server it could not reach from having no cafeteria", as
   assert.equal(name(await render(pages().home)), "SiteSelection");
 });
 
+test("Menú and Producto tell an unreachable server from an empty menu", async () => {
+  const down = pages({ contextResult: { status: "error" } });
+  const query = { cafeteria: fixtures.CAFETERIA_CENTRAL };
+  for (const page of [down.menu, down.product]) {
+    const shown = await render(page, query, { productId: "x" });
+    assert.equal(name(shown), "ConnectionError");
+    assert.equal(shown.props.title, undefined);
+  }
+  // A menu that answered with an error keeps its own retry screen.
+  const failing = pages({ menuFor: () => ({ status: "error" }) });
+  const retry = await render(failing.menu, query);
+  assert.equal(name(retry), "MenuUnavailable");
+});
+
 test("Menú validates the cafeteria and the category slug", async () => {
   const { menu } = pages();
   const all = await render(menu, { cafeteria: fixtures.CAFETERIA_CENTRAL });
