@@ -72,6 +72,13 @@ public record PushMessage(
               reference,
               compact,
               false);
+      case DELIVERED ->
+          client(
+              "Pedido entregado",
+              "¡Buen provecho! Gracias por usar UniFood.",
+              reference,
+              compact,
+              false);
     };
   }
 

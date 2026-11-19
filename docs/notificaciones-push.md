@@ -13,11 +13,13 @@ el aviso en pantalla.
 | PREPARING                         | Cliente del pedido              | «Tu pedido está en preparación»          | normal         |
 | READY                             | Cliente del pedido              | «¡Tu pedido está listo!»                 | corto / alta   |
 | CALLED                            | Cliente del pedido              | «Te están llamando, pasa a recoger»      | corto / alta   |
-| Recordatorio (1, 2 y 3)           | Cliente del pedido              | «Recuerda recoger tu pedido»             | corto / alta   |
+| Recordatorio (1 a 5)              | Cliente del pedido              | «Recuerda recoger tu pedido»             | corto / alta   |
 | Rechazado por la cafetería        | Cliente del pedido              | «La cafetería no pudo aceptar tu pedido» | normal         |
 | NOT_COLLECTED (acción del worker) | Cliente del pedido              | «Tu pedido no fue recogido»              | normal         |
+| DELIVERED                         | Cliente del pedido              | «Pedido entregado»                       | normal         |
 
-**No envían push** (decisión del 2026-11-15): la cancelación hecha por el propio cliente y el
+**No envían push** (decisión del 2026-11-15): la creación del pedido para el propio cliente (la
+hizo él; solo avisa a los workers), la cancelación hecha por el propio cliente y el
 cierre diario automático (`DailyCloseService`), para no avisar de madrugada por pedidos de
 otro día. La referencia `#A41B2C3D` son los 8 primeros caracteres del id del pedido, la misma
 que el cliente ve en la confirmación; es provisional hasta que exista un código corto.

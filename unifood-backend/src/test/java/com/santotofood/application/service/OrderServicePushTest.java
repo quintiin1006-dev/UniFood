@@ -98,15 +98,43 @@ class OrderServicePushTest {
   }
 
   @Test
-  void theClientsOwnCancellationAndTheDeliveryNeverNotify() {
+  void theClientsOwnCancellationNeverNotifiesThem() {
     when(clock.now()).thenReturn(created.plusSeconds(60));
     order(OrderStatus.PENDING, null, 0);
     service.cancelOwnOrder(id);
+    assertTrue(published.isEmpty());
+  }
+
+  @Test
+  void aDeliveryNotifiesTheClientOnce() {
     Instant called = created.plusSeconds(600);
     order(OrderStatus.CALLED, called, 0);
     when(clock.now()).thenReturn(called.plusSeconds(10));
     service.deliverOrder(id);
-    assertTrue(published.isEmpty());
+    assertEquals(List.of(OrderPushEvent.of(id, Kind.DELIVERED)), published);
+  }
+
+  @Test
+  void notCollectedNotifiesTheClient() {
+    Instant called = created.plusSeconds(600);
+    order(OrderStatus.CALLED, called, Order.MAX_REMINDERS);
+    when(clock.now()).thenReturn(called.plusSeconds(3600));
+    service.markOrderNotCollected(id);
+    assertEquals(List.of(OrderPushEvent.of(id, Kind.NOT_COLLECTED)), published);
+  }
+
+  @Test
+  void aFailingPushPortNeverBreaksTheDelivery() {
+    Instant called = created.plusSeconds(600);
+    Order order = order(OrderStatus.CALLED, called, 0);
+    when(clock.now()).thenReturn(called.plusSeconds(10));
+    PushNotificationPort broken =
+        event -> {
+          throw new IllegalStateException("push exploded");
+        };
+    var withBrokenPush = new OrderService(orders, items, clock, broken);
+    assertSame(order, assertDoesNotThrow(() -> withBrokenPush.deliverOrder(id)));
+    assertEquals(OrderStatus.DELIVERED, order.getStatus());
   }
 
   @Test
