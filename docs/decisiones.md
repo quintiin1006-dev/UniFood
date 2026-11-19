@@ -953,6 +953,24 @@ crearon los endpoints que faltaban.
 - **`/cuenta/historial` redirige a `/cuenta/pedido`** para no romper enlaces ni pruebas.
 - Sondeo cada 5 s solo con la pestaña visible, con espera creciente si falla.
 
+**Decisión, 2026-11-18: catálogo en vivo y cafetería cerrada.** El cliente ve los cambios de
+disponibilidad sin recargar:
+
+- **Refresco del catálogo cada 30 s**, solo con la pestaña visible. Al volver a la pestaña o al
+  recuperar el foco se lee de inmediato. Tras fallos, la espera crece hasta 5 min. Un refresco
+  nunca muestra carga de nuevo: si falla, el menú queda y aparece «Sin conexión. Reintentando…».
+- **Un producto no disponible sale del catálogo, del menú completo y del carrusel**. Las
+  categorías vacías dicen «No hay productos disponibles de esta categoría por el momento».
+- **Cafetería cerrada:** el banner «Cafetería cerrada» ocupa el lugar del carrusel, arriba del
+  catálogo. Se listan solo los productos disponibles; el «+» y el pago quedan deshabilitados con
+  el motivo a la vista.
+- **Producto que deja de estar disponible con el carrito lleno:** su línea dice «Ya no está
+  disponible», el pago queda bloqueado mientras siga y la línea se quita con un toque. Si el
+  backend rechaza el pedido por ese producto (`PRODUCT_UNAVAILABLE`), el mensaje del catálogo
+  lleva de vuelta al carrito.
+- **Pendiente:** la ficha de un producto abierta antes de su cambio no se refresca; el pedido la
+  rechaza en el servidor si ya no está disponible.
+
 ## 13. Línea de corte
 
 Si el 14 de noviembre el backend de pedidos no está terminado, se activa toda la línea.

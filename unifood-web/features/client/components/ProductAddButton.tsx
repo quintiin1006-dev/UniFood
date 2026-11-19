@@ -3,6 +3,7 @@
 import { Minus, Plus } from "lucide-react";
 import type { CafeteriaMenu, MenuProduct } from "../types";
 import { useClientCart } from "./ClientCartProvider";
+import { MENU_CLOSED_CHIP } from "../../shared/messages";
 import styles from "./ProductAddButton.module.css";
 
 /**
@@ -25,7 +26,7 @@ export default function ProductAddButton({
         0)
       : 0;
   const reason = !menu.cafeteria.open
-    ? "Cerrada"
+    ? MENU_CLOSED_CHIP
     : !product.available
       ? "Agotado"
       : null;

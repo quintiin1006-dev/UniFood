@@ -80,6 +80,17 @@ export const HISTORY_EMPTY_BODY =
 export const HISTORY_LOAD_MORE = "Cargar más";
 export const HISTORY_LOADING_MORE = "Cargando…";
 
+/* ---------- Cliente · catálogo en vivo y cafetería cerrada ---------- */
+
+/** The banner that replaces the carousel while the cafeteria is closed: the first thing seen. */
+export const CLOSED_BANNER_TITLE = "Cafetería cerrada";
+export const CLOSED_BANNER_BODY =
+  "Vuelve más tarde. Puedes ver el menú mientras tanto.";
+/** The cart line of a product that stopped being available while it was in the cart. */
+export const CART_LINE_UNAVAILABLE = "Ya no está disponible";
+/** Why the menu cannot be ordered from right now, shown where the «+» would be. */
+export const MENU_CLOSED_CHIP = "Cerrada";
+
 /* ---------- Push notifications (docs/notificaciones-push.md) ---------- */
 
 // The in-app notice stays the primary channel: whenever push is not available, the text says so.

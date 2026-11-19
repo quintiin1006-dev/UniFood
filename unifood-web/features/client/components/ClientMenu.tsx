@@ -12,7 +12,10 @@ import {
   menuProducts,
   productHref,
 } from "../domain/menu";
+import { useCafeteriaMenu } from "../hooks/useCafeteriaMenu";
+import { onlyAvailable } from "../menuRefresh";
 import type { CafeteriaMenu, MenuCategoryId } from "../types";
+import { OFFLINE_RETRYING } from "../../shared/messages";
 import CafeteriaSelector from "./CafeteriaSelector";
 import ProductPlaceholder from "./ProductPlaceholder";
 import styles from "./ClientCatalog.module.css";
@@ -23,7 +26,7 @@ const normalize = (value: string) =>
 
 export default function ClientMenu({
   siteName,
-  menu,
+  menu: serverMenu,
   categoryId,
 }: {
   siteName: string;
@@ -32,6 +35,12 @@ export default function ClientMenu({
 }) {
   const [search, setSearch] = useState("");
   const searchInput = useRef<HTMLInputElement>(null);
+  // The server menu is on screen at once; it is then kept fresh, and only orderable products show.
+  const { state, stale } = useCafeteriaMenu(
+    serverMenu.cafeteria.id,
+    serverMenu,
+  );
+  const menu = onlyAvailable(state.status === "ok" ? state.menu : serverMenu);
   const { cafeteria } = menu;
   const category = menuCategories.find(({ id }) => id === categoryId);
   function clearSearch() {
@@ -63,6 +72,11 @@ export default function ClientMenu({
         <p className={menuStyles.closed} role="status">
           <Clock3 size={20} aria-hidden="true" />
           {CLOSED_NOTICE}
+        </p>
+      )}
+      {stale && (
+        <p className={menuStyles.closed} role="status">
+          {OFFLINE_RETRYING}
         </p>
       )}
       <ul className={menuStyles.filters} aria-label="Categorías">

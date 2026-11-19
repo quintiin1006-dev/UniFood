@@ -43,8 +43,11 @@ test("§6 limits: 10 units per product and 15 per order, without stock", async (
 }) => {
   await login(page);
   await page.goto(productPath(PRODUCT.juice));
+  // Scoped to the page content: the streamed next page can repeat the same paragraph.
   await expect(
-    page.getByText("Máximo 10 por producto y 15 por pedido."),
+    page
+      .locator("#client-content")
+      .getByText("Máximo 10 por producto y 15 por pedido."),
   ).toBeVisible();
   for (let count = 1; count < 10; count++) await increase(page).click();
   await expect(page.getByLabel("Cantidad seleccionada")).toHaveText("10");

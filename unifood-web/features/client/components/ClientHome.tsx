@@ -1,17 +1,20 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Clock3, UtensilsCrossed } from "lucide-react";
+import { ArrowRight, UtensilsCrossed } from "lucide-react";
 import { currency } from "../domain/catalog";
 import {
-  CLOSED_NOTICE,
   EMPTY_CATEGORY,
   menuCategories,
   menuHref,
   productHref,
 } from "../domain/menu";
+import { useCafeteriaMenu } from "../hooks/useCafeteriaMenu";
+import { onlyAvailable } from "../menuRefresh";
 import type { CafeteriaMenu, MenuCategoryId, MenuProduct } from "../types";
 import { featuredProducts } from "../domain/featured";
+import { OFFLINE_RETRYING } from "../../shared/messages";
+import ClosedBanner from "./ClosedBanner";
 import FeaturedCarousel from "./FeaturedCarousel";
 import CafeteriaSelector from "./CafeteriaSelector";
 import { RememberCafeteria } from "./CafeteriaMemory";
@@ -24,7 +27,7 @@ export default function ClientHome({
   ownerId,
   fullName,
   siteName,
-  menu,
+  menu: serverMenu,
 }: {
   ownerId: string;
   fullName: string | null;
@@ -32,6 +35,14 @@ export default function ClientHome({
   menu: CafeteriaMenu;
 }) {
   const [filter, setFilter] = useState<MenuCategoryId | null>(null);
+  // The server's menu is on screen at once; the catalogue is then kept fresh in the browser.
+  const { state, stale } = useCafeteriaMenu(
+    serverMenu.cafeteria.id,
+    serverMenu,
+  );
+  const current = state.status === "ok" ? state.menu : serverMenu;
+  // Only what can be ordered is listed: a product that stopped being available leaves the page.
+  const menu = onlyAvailable(current);
   const firstName = fullName?.trim().split(/\s+/)[0];
   const { cafeteria } = menu;
   const visible = menuCategories.filter(
@@ -46,17 +57,21 @@ export default function ClientHome({
         </h1>
         <p>¿Qué te gustaría comer hoy?</p>
       </div>
-      <FeaturedCarousel
-        products={featuredProducts(menu)}
-        cafeteriaId={cafeteria.id}
-      />
-      <CafeteriaSelector siteName={siteName} cafeteria={cafeteria} />
-      {!cafeteria.open && (
+      {stale && (
         <p className={menuStyles.closed} role="status">
-          <Clock3 size={20} aria-hidden="true" />
-          {CLOSED_NOTICE}
+          {OFFLINE_RETRYING}
         </p>
       )}
+      {/* The same room either way: the closed banner takes the carousel's place. */}
+      {cafeteria.open ? (
+        <FeaturedCarousel
+          products={featuredProducts(menu)}
+          cafeteriaId={cafeteria.id}
+        />
+      ) : (
+        <ClosedBanner />
+      )}
+      <CafeteriaSelector siteName={siteName} cafeteria={cafeteria} />
       {menu.categories.length === 0 ? (
         <div className={menuStyles.state}>
           <UtensilsCrossed size={36} strokeWidth={1.5} aria-hidden="true" />
@@ -91,11 +106,7 @@ export default function ClientHome({
             const products =
               menu.categories.find(({ id }) => id === category.id)?.products ??
               [];
-            // Open: carousel of what can be ordered now. Closed: the active products, to see (§6).
-            const shown = cafeteria.open
-              ? products.filter((product) => product.available)
-              : products;
-            if (!shown.length)
+            if (!products.length)
               return (
                 <p key={category.id} className={menuStyles.compact}>
                   <strong>{category.name}</strong>: {EMPTY_CATEGORY}.
@@ -120,7 +131,7 @@ export default function ClientHome({
                 <ProductRail
                   label={category.name}
                   menu={menu}
-                  products={shown}
+                  products={products}
                 />
               </section>
             );

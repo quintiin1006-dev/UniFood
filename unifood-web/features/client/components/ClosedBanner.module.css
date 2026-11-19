@@ -1,0 +1,34 @@
+.banner {
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  /* Same minimum height as the carousel (FeaturedCarousel: 190 px): switching between them does
+     not move the content below. */
+  min-height: 190px;
+  padding: 20px;
+  border-radius: 24px;
+  background: var(--color-brand-navy);
+  color: var(--color-on-color);
+}
+.icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--color-brand-celeste);
+  color: var(--color-brand-navy);
+}
+.title {
+  margin: 4px 0 0;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.4px;
+}
+.body {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--color-brand-tint);
+}

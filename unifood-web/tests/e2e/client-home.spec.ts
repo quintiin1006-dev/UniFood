@@ -59,7 +59,7 @@ for (const width of [320, 375, 390, 412, 430, 1280]) {
     await expect(
       page.getByRole("heading", { name: "¿Dónde vas a pedir hoy?" }),
     ).toBeVisible();
-    await expect(nav(page).getByRole("link")).toHaveCount(5);
+    await expect(nav(page).getByRole("link")).toHaveCount(4);
     await expect(
       nav(page).getByRole("link", { name: "Inicio", exact: true }),
     ).toHaveAttribute("aria-current", "page");
@@ -147,10 +147,11 @@ for (const width of [320, 375, 390, 412, 430, 1280]) {
     await expect(
       page.getByRole("heading", { name: "Corriente", exact: true }),
     ).toBeVisible();
-    await expect(page.getByRole("article")).toHaveCount(2);
+    // The product that is not available today is not listed at all.
+    await expect(page.getByRole("article")).toHaveCount(1);
     await expect(
       page.getByText("No disponible por ahora", { exact: true }),
-    ).toHaveCount(1);
+    ).toHaveCount(0);
     await assertNoHours(page);
     await assertNoOverflow(page);
     await page.screenshot({ path: testInfo.outputPath(`menu-${width}.png`) });
@@ -216,19 +217,20 @@ test("closed, empty, failing and missing cafeterias show fixed Spanish states", 
   // While /cuenta streams, React keeps the next page in a hidden div#S:0 for a moment, so a
   // text query is scoped to the visible content (role queries already skip hidden nodes).
   const content = page.locator("#client-content");
+  // Closed: the banner is the first thing on the page; the carousel is not shown.
   await expect(
-    content.getByText(
-      "La cafetería está cerrada por ahora. Puedes ver el menú, pero no hacer pedidos hasta que abra.",
-    ),
+    content.getByRole("status").filter({ hasText: "Cafetería cerrada" }),
   ).toBeVisible();
-  // Closed: the active products are listed to see, not to order.
+  // Closed: only the products that are available are listed; none today in Corriente.
   await expect(
-    page.getByRole("list", { name: "Productos: Corriente" }).getByRole("link"),
-  ).toHaveCount(1);
-  await page
-    .getByRole("list", { name: "Productos: Corriente" })
-    .getByRole("link")
-    .click();
+    page.getByRole("list", { name: "Productos: Corriente" }),
+  ).toHaveCount(0);
+  await expect(
+    content.getByText("No hay productos disponibles de esta categoría").first(),
+  ).toBeVisible();
+  await page.goto(
+    `/cuenta/producto/${PRODUCT.closedChicken}?cafeteria=${CAFETERIA_BLOQUE_B}`,
+  );
   await expect(
     page.getByText(
       "La cafetería está cerrada por ahora. Podrás pedir cuando abra.",
@@ -308,7 +310,8 @@ test("menu search and category links use the real menu without operational reque
   await expect(
     page.getByRole("heading", { name: "Menú completo" }),
   ).toBeVisible();
-  await expect(page.getByRole("article")).toHaveCount(9);
+  // Two products of Central are not available today: the full menu lists only the others.
+  await expect(page.getByRole("article")).toHaveCount(7);
   const search = page.getByRole("searchbox", { name: "Buscar en el menú" });
   await search.fill("  PECHUGA  ");
   await expect(page.getByRole("article")).toHaveCount(1);
@@ -329,7 +332,8 @@ test("menu search and category links use the real menu without operational reque
   ).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("article")).toHaveCount(2);
   await categories.getByRole("link", { name: "Especial" }).click();
-  await expect(page.getByRole("article")).toHaveCount(1);
+  // «Especial de pescado» is not available today, so the category has nothing to list.
+  await expect(page.getByRole("article")).toHaveCount(0);
   for (const [path, destination] of [
     ["/cuenta/menu", "/cuenta"],
     [
