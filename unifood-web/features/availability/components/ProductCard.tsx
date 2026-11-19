@@ -33,7 +33,7 @@ export function ProductCard({
             src={source}
             alt={item.name}
             fill
-            sizes="(max-width: 340px) 72vw, (max-width: 760px) 244px, 240px"
+            sizes="(max-width: 340px) 64vw, 196px"
             className={styles.image}
             onError={() => setFailedImage(source)}
           />

@@ -20,7 +20,7 @@ export function HistoryOrderCard({ order }: { order: HistoryOrder }) {
     >
       <div className={styles.cardHeading}>
         <h3 id={`history-order-${order.id}`}>{order.reference}</h3>
-        <time dateTime={order.completedAt} title="Hora de Bogotá">
+        <time dateTime={order.completedAt}>
           {formatHistoryDate(order.completedAt)} ·{" "}
           {formatHistoryTime(order.completedAt)}
         </time>

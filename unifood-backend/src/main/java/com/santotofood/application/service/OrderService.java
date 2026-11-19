@@ -179,6 +179,7 @@ public class OrderService
     order.deliver(now);
 
     Order savedOrder = orderRepository.save(order);
+    publishStatus(savedOrder);
 
     return loadOrderItems(savedOrder);
   }

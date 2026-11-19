@@ -72,18 +72,19 @@ test("hierarchy: name, products, action, then a separate «Rechazar» outline", 
   );
 });
 
-test("the history range is short and the rows are grouped by Bogotá day", () => {
+test("the history range carries full dates and the rows are grouped by Bogotá day", () => {
   const presentation = availabilityLoader()(
     "features/worker-history/presentation.ts",
   );
   assert.equal(
     presentation.formatShortRange("2026-11-01", "2026-11-18"),
-    "01/11 – 18/11/2026",
+    "01/11/2026 – 18/11/2026",
   );
   assert.equal(
     presentation.formatShortRange("2025-12-28", "2026-01-03"),
     "28/12/2025 – 03/01/2026",
   );
+  assert.equal(presentation.formatDayDate("2026-11-19"), "19/11/2026");
   const groups = presentation.groupHistoryByDay([
     { completedAt: "2026-11-18T15:00:00Z" },
     { completedAt: "2026-11-18T13:00:00Z" },

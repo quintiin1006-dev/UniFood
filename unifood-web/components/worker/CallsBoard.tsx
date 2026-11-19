@@ -8,6 +8,7 @@ import {
   MessageSquareText,
   X,
 } from "lucide-react";
+import { formatClockTime } from "@/lib/orderTime";
 
 import { SearchEmpty } from "@/features/orders/components/BoardFeedback";
 import { clientIdentity } from "@/features/orders/utils/clientIdentity";
@@ -15,11 +16,16 @@ import { pickupLabel } from "@/features/orders/utils/pickupTime";
 import {
   NotCollectedButton,
   RemindButton,
-  ReminderSummary,
+  ReminderLimitNotice,
 } from "@/features/orders/components/CalledOrderActions";
 import type { CalledOrderAction } from "@/features/orders/calledOrderActions";
 import type { Order } from "@/types/order";
 
+import {
+  PanelCounter,
+  PanelHeader,
+  panelStyles,
+} from "@/features/worker-ui/components/PanelHeader";
 import modernStyles from "./CallsBoard.module.css";
 import classicStyles from "./CallsBoard.classic.module.css";
 import { ICON_MIN_20 } from "@/components/ui/Icon";
@@ -114,24 +120,24 @@ export default function CallsBoard({
   });
 
   return (
-    <section className={styles.container}>
+    <section className={`${styles.container} ${panelStyles.page}`}>
       <div className={styles.content}>
         {/* =================================================
             PANEL DE LLAMADAS
             ================================================= */}
 
-        <section className={styles.listPanel} aria-label="Llamadas">
-          {/* HEADER */}
+        <section
+          className={`${panelStyles.panel} ${styles.listPanel}`}
+          aria-label="Llamadas"
+        >
+          {/* HEADER: the shared panel header (F4), also used by Historial and Disponibilidad. */}
 
-          <header className={styles.listHeader}>
-            <div className={styles.headerIcon}>
-              <Megaphone size={27} style={ICON_MIN_20} strokeWidth={1.9} />
-            </div>
-
-            <h1 className={styles.title}>Llamadas</h1>
-
-            <div className={styles.counter}>{orders.length}</div>
-          </header>
+          <PanelHeader
+            level={1}
+            icon={<Megaphone size={26} style={ICON_MIN_20} strokeWidth={1.9} />}
+            title="Llamadas"
+            aside={<PanelCounter>{orders.length}</PanelCounter>}
+          />
 
           {/* LISTA */}
 
@@ -175,7 +181,9 @@ export default function CallsBoard({
                       </div>
 
                       <div className={styles.studentInfo}>
-                        <strong>{order.student}</strong>
+                        <strong id={`call-student-${order.id}`}>
+                          {order.student}
+                        </strong>
 
                         {clientIdentity(order) && (
                           <span>{clientIdentity(order)}</span>
@@ -189,6 +197,7 @@ export default function CallsBoard({
                       order={order}
                       now={now}
                       className={styles.remindButton}
+                      describedBy={`call-student-${order.id}`}
                       busy={busyOrderIds.includes(order.id)}
                       sending={busyActions[order.id] === "remind"}
                       onRemind={onRemind}
@@ -205,6 +214,13 @@ export default function CallsBoard({
 
                       <span>→</span>
                     </button>
+
+                    {/* D5: only once every reminder was sent, across the whole row. */}
+                    <ReminderLimitNotice
+                      order={order}
+                      now={now}
+                      className={styles.rowLimit}
+                    />
                   </article>
                 );
               })
@@ -240,14 +256,33 @@ export default function CallsBoard({
                ================================================= */
 
             <div className={styles.detail}>
+              {/* D4: who and when on top, the products as a clear list, the total stands out
+                  and the notes apart. Solid white, dark text. */}
               <header className={styles.detailHeader}>
                 <div className={styles.detailHeading}>
-                  <div className={styles.headingIcon}>
-                    <ShoppingBag size={22} aria-hidden="true" />
+                  <div className={styles.detailAvatar} aria-hidden="true">
+                    {getInitials(selectedOrder.student)}
                   </div>
-                  <div>
-                    <small>RESUMEN PARA ENTREGA</small>
-                    <h2>Detalle del pedido</h2>
+                  <div className={styles.detailStudentInfo}>
+                    <h2>{selectedOrder.student}</h2>
+                    <p>
+                      {selectedOrder.calledAt && (
+                        <span>
+                          Llamado a las{" "}
+                          <time dateTime={selectedOrder.calledAt}>
+                            {formatClockTime(selectedOrder.calledAt)}
+                          </time>
+                        </span>
+                      )}
+                      {pickupLabel(selectedOrder.requestedPickupAt) && (
+                        <span className={styles.pickupBadge}>
+                          {pickupLabel(selectedOrder.requestedPickupAt)}
+                        </span>
+                      )}
+                      {clientIdentity(selectedOrder) && (
+                        <span>{clientIdentity(selectedOrder)}</span>
+                      )}
+                    </p>
                   </div>
                 </div>
                 <button
@@ -256,138 +291,98 @@ export default function CallsBoard({
                   onClick={() => onSelectOrder(null)}
                   aria-label="Cerrar detalle"
                 >
-                  <X size={19} />
+                  <X size={20} style={ICON_MIN_20} aria-hidden="true" />
                 </button>
               </header>
 
               <div className={styles.detailBody}>
-                <div className={styles.studentDetail}>
-                  <div className={styles.detailAvatar}>
-                    {getInitials(selectedOrder.student)}
-                  </div>
-                  <div className={styles.detailStudentInfo}>
-                    <small>ENTREGAR A</small>
-                    <strong>{selectedOrder.student}</strong>
-                    {clientIdentity(selectedOrder) && (
-                      <span>{clientIdentity(selectedOrder)}</span>
-                    )}
-                  </div>
-                  {pickupLabel(selectedOrder.requestedPickupAt) && (
-                    <span className={styles.pickupBadge}>
-                      {pickupLabel(selectedOrder.requestedPickupAt)}
-                    </span>
-                  )}
-                  {selectedOrder.status === "called" && (
-                    <span className={styles.calledBadge}>
-                      <Check size={13} style={ICON_MIN_16} aria-hidden="true" />{" "}
-                      Avisado
-                    </span>
-                  )}
-                </div>
-
                 <section
                   className={styles.productsSection}
                   aria-label="Productos del pedido"
                 >
-                  <div className={styles.productsHeader}>
-                    <h3>Lo que pidió</h3>
-                    <span>
-                      {totalUnits} {totalUnits === 1 ? "unidad" : "unidades"}
-                    </span>
-                  </div>
-                  <div className={styles.products}>
-                    {selectedOrder.items.length === 0 && (
-                      <p className={styles.emptyProducts}>
-                        No hay productos registrados en este pedido.
-                      </p>
-                    )}
-                    {selectedOrder.items.map((item, index) => (
-                      <article
-                        key={item.id ?? `${item.name}-${index}`}
-                        className={styles.product}
-                      >
-                        {/* aria-label is not allowed on a plain div (axe):
-                            the visible «cant.» is read with its number. */}
-                        <div className={styles.quantity}>
-                          <strong>{item.quantity}</strong>
-                          <span>
-                            <span aria-hidden="true">cant.</span>
-                            <span className={styles.srOnly}>unidades</span>
+                  {selectedOrder.items.length === 0 ? (
+                    <p className={styles.emptyProducts}>
+                      No hay productos registrados en este pedido.
+                    </p>
+                  ) : (
+                    <ul className={styles.products}>
+                      {selectedOrder.items.map((item, index) => (
+                        <li
+                          key={item.id ?? `${item.name}-${index}`}
+                          className={styles.product}
+                        >
+                          <span className={styles.quantity}>
+                            {item.quantity}
+                            <span aria-hidden="true">×</span>
+                            <span className={styles.srOnly}>
+                              {item.quantity === 1
+                                ? " unidad de"
+                                : " unidades de"}
+                            </span>
                           </span>
-                        </div>
-                        <div className={styles.productInfo}>
-                          <h4>{item.name}</h4>
-                          {item.unitPrice !== undefined && (
-                            <p className={styles.unitPrice}>
-                              {formatCurrency(item.unitPrice)} por unidad
-                            </p>
-                          )}
-                          {item.beverageChoice && (
-                            <div className={styles.beverage}>
-                              <CupSoda
-                                size={20}
-                                style={ICON_MIN_20}
-                                aria-hidden="true"
-                              />
-                              <div>
-                                <span>Bebida elegida</span>
-                                <strong>{item.beverageChoice}</strong>
-                              </div>
-                            </div>
-                          )}
-                          {item.note && (
-                            <div className={styles.productNote}>
-                              <MessageSquareText
-                                size={20}
-                                style={ICON_MIN_20}
-                                aria-hidden="true"
-                              />
-                              <div>
-                                <span>Indicaciones</span>
-                                <p>{item.note}</p>
-                              </div>
-                            </div>
-                          )}
-                          <div className={styles.productPrice}>
-                            <span>Subtotal</span>
-                            <strong>
-                              {item.subtotal !== undefined
-                                ? formatCurrency(item.subtotal)
-                                : "No disponible"}
-                            </strong>
+                          <div className={styles.productInfo}>
+                            <h3>{item.name}</h3>
+                            {item.beverageChoice && (
+                              <p className={styles.beverage}>
+                                <CupSoda
+                                  size={20}
+                                  style={ICON_MIN_20}
+                                  aria-hidden="true"
+                                />
+                                {item.beverageChoice}
+                              </p>
+                            )}
+                            {item.note && (
+                              <p className={styles.productNote}>
+                                <MessageSquareText
+                                  size={20}
+                                  style={ICON_MIN_20}
+                                  aria-hidden="true"
+                                />
+                                {item.note}
+                              </p>
+                            )}
                           </div>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                  {selectedOrder.note && (
-                    <div className={styles.orderNote}>
-                      <MessageSquareText
-                        size={20}
-                        style={ICON_MIN_20}
-                        aria-hidden="true"
-                      />
-                      <div>
-                        <strong>Observaciones</strong>
-                        <p>{selectedOrder.note}</p>
-                      </div>
-                    </div>
+                          <strong className={styles.productPrice}>
+                            {item.subtotal !== undefined
+                              ? formatCurrency(item.subtotal)
+                              : "—"}
+                          </strong>
+                        </li>
+                      ))}
+                    </ul>
                   )}
+                  <div className={styles.total}>
+                    <span>
+                      Total
+                      <small>
+                        {totalUnits} {totalUnits === 1 ? "unidad" : "unidades"}
+                      </small>
+                    </span>
+                    <strong>
+                      {selectedOrder.total !== undefined
+                        ? formatCurrency(selectedOrder.total)
+                        : "No disponible"}
+                    </strong>
+                  </div>
                 </section>
+                {selectedOrder.note && (
+                  <section className={styles.orderNote} aria-label="Notas">
+                    <MessageSquareText
+                      size={20}
+                      style={ICON_MIN_20}
+                      aria-hidden="true"
+                    />
+                    <div>
+                      <strong>Observaciones</strong>
+                      <p>{selectedOrder.note}</p>
+                    </div>
+                  </section>
+                )}
               </div>
 
               <footer className={styles.detailFooter}>
-                <ReminderSummary order={selectedOrder} />
-                <div className={styles.total}>
-                  <span>
-                    Total del pedido<small>Pesos colombianos · COP</small>
-                  </span>
-                  <strong>
-                    {selectedOrder.total !== undefined
-                      ? formatCurrency(selectedOrder.total)
-                      : "No disponible"}
-                  </strong>
-                </div>
+                <ReminderLimitNotice order={selectedOrder} now={now} />
                 <button
                   type="button"
                   className={styles.deliverButton}

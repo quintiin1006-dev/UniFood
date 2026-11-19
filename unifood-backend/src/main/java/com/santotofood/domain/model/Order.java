@@ -60,7 +60,8 @@ public class Order {
   public static final int MIN_REJECTION_REASON_LENGTH = 3;
   public static final int MAX_REJECTION_REASON_LENGTH = 200;
 
-  private static final int MAX_REMINDERS = 3;
+  /** The single source of the reminder limit (jj/cliente-ajustes: 3 → 5). */
+  public static final int MAX_REMINDERS = 5;
 
   private static final Duration MIN_TIME_BETWEEN_REMINDERS = Duration.ofMinutes(5);
 

@@ -1,104 +1,54 @@
+/* Historial inside the shared glass panel (features/worker-ui, F1 and F2). Only what is its own
+   lives here: the filter row, the rows and the white detail. Frame, header, padding and radius
+   come from WorkerPanel.module.css. */
 .panel {
-  flex: none;
-  min-width: 0;
-  min-height: auto;
-  overscroll-behavior: contain;
-  padding: 4px 6px 24px;
-  color: #ffffff;
   overflow: visible;
 }
-.heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 22px;
-}
-.heading h2 {
-  margin: 0;
-  font-size: clamp(24px, 3vw, 30px);
-  font-weight: 750;
-  letter-spacing: -0.7px;
-  color: #ffffff;
-}
-.date {
-  margin: 6px 0 0;
-  font-size: 14px;
-  color: #ffffff;
-}
-.refresh,
-.error button,
-.error a {
+
+/* Small secondary actions: «Actualizar», «Limpiar filtros», «Cargar más». */
+.refresh {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
   min-height: 44px;
-  border: 1px solid var(--color-brand-tint-2);
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 12px;
-  background: var(--color-surface);
-  color: var(--color-brand);
-  padding: 10px 14px;
+  background: transparent;
+  color: #ffffff;
+  font: inherit;
   font-size: 13px;
   font-weight: 650;
   cursor: pointer;
   text-decoration: none;
-}
-.panel button:hover:not(:disabled),
-.error a:hover {
-  background: var(--color-brand-tint);
 }
 .panel button:disabled {
   cursor: wait;
   opacity: 0.65;
 }
 .panel button:focus-visible,
-.panel a:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-brand);
+.panel a:focus-visible,
+.panel select:focus-visible {
+  outline: var(--focus-ring-width) solid #ffffff;
   outline-offset: var(--focus-ring-offset);
 }
+
+/* F2: search, period and state in ONE row, 44 px tall, solid white with contained text. */
 .filters {
   display: flex;
   flex-wrap: wrap;
-  align-items: end;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-  color: #ffffff;
-  font-size: 12px;
-}
-.filters label {
-  display: grid;
-  gap: 6px;
-  flex: 1 1 160px;
-}
-.filters select {
-  width: 100%;
-  min-height: 44px;
-  padding: 8px 12px;
-  border: 1px solid var(--color-brand-tint-2);
-  border-radius: 10px;
-  color: var(--color-ink);
-  background: var(--color-surface);
-  font: inherit;
-}
-.filters select:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-brand);
-  outline-offset: var(--focus-ring-offset);
-}
-.pagination {
-  display: flex;
-  justify-content: center;
-  padding: 20px 0 4px;
+  align-items: center;
+  gap: 10px;
 }
 .search {
   display: flex;
+  flex: 1 1 260px;
   align-items: center;
-  gap: 10px;
-  width: 100%;
+  gap: 8px;
   min-width: 0;
-  padding: 4px 6px 4px 14px;
-  margin-bottom: 18px;
+  height: 44px;
+  padding: 0 4px 0 12px;
   border: 1px solid var(--color-brand-tint-2);
   border-radius: 12px;
   background: var(--color-surface);
@@ -110,12 +60,12 @@
 .search input {
   width: 100%;
   min-width: 0;
-  min-height: 42px;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--color-ink);
   font: inherit;
   font-size: 14px;
-  color: var(--color-ink);
-  background: transparent;
-  border: 0;
 }
 .search input::placeholder {
   color: var(--color-slate);
@@ -125,114 +75,168 @@
   appearance: none;
 }
 .search input:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-brand);
-  outline-offset: var(--focus-ring-offset);
-  border-radius: 4px;
+  outline: none;
+}
+.search:focus-within {
+  outline: var(--focus-ring-width) solid #ffffff;
+  outline-offset: 2px;
 }
 .search button {
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   color: var(--color-brand);
   cursor: pointer;
 }
-.clientName {
-  display: grid;
-  gap: 4px;
-  margin: 16px 0 0;
-  font-size: 13px;
-  overflow-wrap: anywhere;
+.filter {
+  flex: 0 1 190px;
+  min-width: 150px;
 }
-.clientName > span {
-  font-size: 11px;
-  color: var(--color-slate);
-}
-.clientName > strong {
-  font-weight: 550;
-}
-.empty > button {
-  margin-top: 20px;
-}
-.cards,
-.skeletons {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-  align-items: start;
-}
-.card {
-  min-width: 0;
-  background: var(--color-surface);
+.filter select {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
   border: 1px solid var(--color-brand-tint-2);
-  border-radius: 18px;
-  padding: 21px;
-  box-shadow: 0 3px 12px
-    color-mix(in srgb, var(--color-brand-hover) 2%, transparent);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 14px;
 }
-.cardHeading {
+/* A4: the full range of the selected period, at the end of the row. */
+.range {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rows inside the same panel, one thin divider between them. */
+.list {
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+.row + .row {
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+.rowHead {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 18px;
 }
-.cardHeading h3 {
-  flex: 1 0 auto;
+.rowIdentity {
   min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.rowName {
   margin: 0;
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rowIdentity time {
+  color: #ffffff;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.rowAside {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+/* F2: «Ver detalle» is a small secondary button, not the old big white one. Its 44 px touch
+   area comes from the transparent ::before. */
+.toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  background: transparent;
+  color: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--motion-press) var(--ease-soft);
+}
+.toggle::before {
+  content: "";
+  position: absolute;
+  inset: -6px 0;
+}
+.toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.chevron {
+  transition: transform var(--motion-base) var(--ease-soft);
+}
+.row[data-open] .chevron {
+  transform: rotate(180deg);
+}
+
+/* D3: the open detail is solid white with dark text (contrast 7:1 or more). */
+.detail {
+  display: grid;
+  gap: 10px;
+  margin: 0 18px 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--color-ink);
+}
+.detailStatus {
+  margin: 0;
+  color: var(--color-brand-navy);
   font-size: 14px;
   font-weight: 700;
-  overflow-wrap: anywhere;
 }
-.cardHeading time {
-  flex-shrink: 0;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
+.detailStatus time {
   color: var(--color-slate);
-}
-/* Layout of the shared StatusChip in a card: long reasons wrap. Colors come from the chip. */
-.badge {
-  max-width: 100%;
-  border-radius: var(--radius-sm);
-  white-space: normal;
-}
-/* A rejection reason can be long: it wraps instead of being cut. */
-.badge > span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.badge > svg {
-  flex-shrink: 0;
+  font-weight: 500;
 }
 .items {
-  list-style: none;
-  padding: 0;
-  margin: 22px 0;
   display: grid;
-  gap: 12px;
+  gap: 8px;
+  margin: 4px 0;
+  padding: 0;
+  list-style: none;
 }
 .items li {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  font-size: 13px;
+  color: var(--color-ink);
+  font-size: 14px;
   line-height: 1.5;
-  color: #ffffff;
 }
 .itemName {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .quantity {
-  color: #ffffff;
+  color: var(--color-brand-navy);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .amount {
@@ -240,104 +244,73 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+.noItems {
+  margin: 4px 0;
+  color: var(--color-slate);
+  font-size: 14px;
+}
 .total {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.24);
-  padding-top: 15px;
-  font-size: 13px;
-  color: #ffffff;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-line);
+  color: var(--color-ink);
+  font-size: 14px;
 }
 .total strong {
+  color: var(--color-brand-navy);
   font-size: 17px;
   font-weight: 750;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.noItems {
-  color: #ffffff;
-  font-size: 13px;
-  margin: 22px 0;
-}
+
+/* Empty: text on the glass, no white box. */
 .empty {
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 40px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
   text-align: center;
-  padding: 64px 24px;
-  border-radius: 18px;
 }
 .emptyIcon {
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
-  background: var(--color-brand-tint);
-  color: var(--color-brand);
-  border-radius: 18px;
-  margin-bottom: 20px;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 14px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.09);
+  color: #ffffff;
 }
 .empty h3 {
-  font-size: 17px;
-  font-weight: 650;
   margin: 0;
+  font-size: 16px;
+  font-weight: 650;
 }
 .empty p {
   max-width: 350px;
+  margin: 8px 0 0;
   color: #ffffff;
   font-size: 14px;
   line-height: 1.6;
-  margin: 10px 0 0;
 }
-.error {
+.empty > button {
+  margin-top: 16px;
+}
+.pagination {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  background: var(--color-brand-tint);
-  border: 1px solid var(--color-brand-tint);
-  border-radius: 14px;
-  color: var(--color-ink);
-  margin-bottom: 20px;
-  font-size: 14px;
+  justify-content: center;
+  padding: 14px 18px 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
 }
-.error > svg {
-  flex-shrink: 0;
-}
-.error > div {
-  flex: 1;
-  min-width: 0;
-}
-.error p {
-  margin: 0;
-}
-.error .stale {
+.stale {
   margin-top: 6px;
   font-size: 12px;
   line-height: 1.5;
-}
-.error button,
-.error a {
-  flex-shrink: 0;
-}
-.loading > p {
-  color: #ffffff;
-  font-size: 14px;
-  margin-bottom: 16px;
-}
-.skeletons > div {
-  height: 240px;
-  border: 1px solid var(--color-brand-tint-2);
-  border-radius: 18px;
-  background: linear-gradient(
-    var(--color-surface) 0 25%,
-    var(--color-brand-tint) 25% 28%,
-    var(--color-surface) 28% 55%,
-    var(--color-brand-tint) 55% 58%,
-    var(--color-surface) 58%
-  );
 }
 .srOnly {
   position: absolute;
@@ -350,175 +323,17 @@
   white-space: nowrap;
   border: 0;
 }
-@media (max-width: 1050px) {
-  .cards,
-  .skeletons {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (max-width: 760px) {
+  .range {
+    margin-left: 0;
+  }
+  .filter {
+    flex: 1 1 140px;
   }
 }
-@media (max-width: 600px) {
-  .panel {
-    padding-inline: 2px;
-  }
-  .heading {
-    align-items: flex-start;
-    margin-bottom: 22px;
-  }
-  .date {
-    font-size: 13px;
-    max-width: 180px;
-    line-height: 1.5;
-  }
-  .cards,
-  .skeletons {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 14px;
-  }
-  .card {
-    padding: 20px;
-  }
-  .cardHeading h3 {
-    font-size: 14px;
-  }
-  .error {
-    flex-wrap: wrap;
-  }
-  .error button,
-  .error a {
-    margin-left: 32px;
-  }
-  .empty {
-    padding: 48px 20px;
-  }
-}
-
-/* Response messages use the shared Notice (components/ui); only spacing lives here. */
-.message {
-  margin: 16px 0;
-}
-
-/* ---- Ola 2 · D3: one large container, a row per finished order, expandable (accordion). ---- */
-.list {
-  margin-top: 16px;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
-.row {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.24);
-}
-
-.row:last-child {
-  border-bottom: 0;
-}
-
-.rowHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 64px;
-  padding: 12px 18px;
-}
-
-.rowIdentity {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.rowName {
-  margin: 0;
-  overflow: hidden;
-  color: #ffffff;
-  font-size: 16px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rowIdentity span {
-  color: #ffffff;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-
-.rowAside {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-/* The compact chip: one line, short text. Remove the class to hide the state here. */
-.compactChip {
-  font-size: 12px;
-}
-
-.toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--color-control-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-ink);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    background-color var(--motion-press) var(--ease-soft),
-    transform var(--motion-press) var(--ease-soft);
-}
-
-.toggle:hover {
-  background: var(--color-brand-tint);
-}
-
-.toggle:active {
-  transform: scale(0.97);
-}
-
-.chevron {
-  transition: transform var(--motion-base) var(--ease-soft);
-}
-
-.row[data-open] .chevron {
-  transform: rotate(180deg);
-}
-
-.detail {
-  display: grid;
-  gap: 10px;
-  padding: 4px 18px 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(4, 30, 70, 0.28);
-}
-
-.detailStatus {
-  margin: 12px 0 0;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 600;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .toggle,
   .chevron {
     transition: none;
   }
-
-  .toggle:active {
-    transform: none;
-  }
-}
-
-/* The hour under the name, on the glass list (jj/cliente-correcciones). */
-.rowIdentity time {
-  color: #ffffff;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
 }

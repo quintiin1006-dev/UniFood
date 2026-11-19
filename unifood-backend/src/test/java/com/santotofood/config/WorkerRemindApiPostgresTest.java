@@ -26,6 +26,7 @@ import com.santotofood.adapter.out.persistence.repository.SpringDataOrderReposit
 import com.santotofood.application.port.in.CreateOwnOrderUseCase;
 import com.santotofood.application.service.ClientOrderQueryService;
 import com.santotofood.application.service.OrderService;
+import com.santotofood.domain.model.Order;
 import com.santotofood.domain.port.out.OrderItemRepository;
 import com.santotofood.domain.port.out.OrderRepository;
 import com.santotofood.domain.port.out.TimeProvider;
@@ -70,7 +71,8 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 /**
  * The worker's reminder and manual "no recogido" on the real schema: the same guards as the other
- * transitions, the 5-minute spacing and 3-reminder limit, and the 409 contract of docs section 11.
+ * transitions, the 5-minute spacing and the Order.MAX_REMINDERS limit (5), and the 409 contract of
+ * docs section 11.
  */
 @Timeout(120)
 class WorkerRemindApiPostgresTest {
@@ -345,11 +347,11 @@ class WorkerRemindApiPostgresTest {
   // ---------------------------------------------------------------- reminders
 
   @Test
-  void threeRemindersFiveMinutesApartAreSavedAndTheWorkerSeesThem() throws Exception {
+  void everyReminderFiveMinutesApartAreSavedAndTheWorkerSeesThem() throws Exception {
     UUID order = order(client(), CAFE, "CALLED", 0);
     expectError(act(order, "remind", WORKER, at(299)), 409, "REMINDER_TOO_EARLY");
     assertEquals(0, ((Number) row(order).get("reminder_count")).intValue());
-    for (int i = 1; i <= 3; i++) {
+    for (int i = 1; i <= Order.MAX_REMINDERS; i++) {
       act(order, "remind", WORKER, at(300L * i))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.status").value("CALLED"))
@@ -358,8 +360,8 @@ class WorkerRemindApiPostgresTest {
           .andExpect(jsonPath("$.lastRemindedAt").value(at(300L * i).toString()));
     }
     var row = row(order);
-    assertEquals(3, ((Number) row.get("reminder_count")).intValue());
-    assertEquals(at(900), ((java.sql.Timestamp) row.get("last_reminded_at")).toInstant());
+    assertEquals(5, ((Number) row.get("reminder_count")).intValue());
+    assertEquals(at(1500), ((java.sql.Timestamp) row.get("last_reminded_at")).toInstant());
   }
 
   @Test
@@ -373,8 +375,8 @@ class WorkerRemindApiPostgresTest {
   }
 
   @Test
-  void aFourthReminderReachesTheLimitAndChangesNothing() throws Exception {
-    UUID order = order(client(), CAFE, "CALLED", 3);
+  void aReminderBeyondTheLimitReachesItAndChangesNothing() throws Exception {
+    UUID order = order(client(), CAFE, "CALLED", Order.MAX_REMINDERS);
     var before = row(order);
     expectError(act(order, "remind", WORKER, at(7200)), 409, "REMINDER_LIMIT_REACHED");
     assertEquals(before, row(order));
@@ -393,8 +395,8 @@ class WorkerRemindApiPostgresTest {
   // ---------------------------------------------------------------- not collected
 
   @Test
-  void notCollectedNeedsTheThreeReminders() throws Exception {
-    UUID order = order(client(), CAFE, "CALLED", 2);
+  void notCollectedNeedsEveryReminder() throws Exception {
+    UUID order = order(client(), CAFE, "CALLED", Order.MAX_REMINDERS - 1);
     var before = row(order);
     expectError(
         act(order, "not-collected", WORKER, at(7200)), 409, "NOT_COLLECTED_REQUIREMENTS_NOT_MET");
@@ -402,13 +404,14 @@ class WorkerRemindApiPostgresTest {
   }
 
   @Test
-  void afterTheThreeRemindersItIsNotCollectedOnceAndTheClientIsFree() throws Exception {
+  void afterEveryReminderItIsNotCollectedOnceAndTheClientIsFree() throws Exception {
     UUID owner = client();
-    UUID order = order(owner, CAFE, "CALLED", 3);
+    UUID order = order(owner, CAFE, "CALLED", Order.MAX_REMINDERS);
     act(order, "not-collected", WORKER, at(1200))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("NOT_COLLECTED"))
-        .andExpect(jsonPath("$.reminderCount").value(3));
+        .andExpect(jsonPath("$.reminderCount").value(Order.MAX_REMINDERS))
+        .andExpect(jsonPath("$.maxReminders").value(5));
     var after = row(order);
     assertEquals("NOT_COLLECTED", after.get("status"));
     assertEquals(at(1200), ((java.sql.Timestamp) after.get("not_collected_at")).toInstant());
@@ -425,7 +428,7 @@ class WorkerRemindApiPostgresTest {
   @ParameterizedTest
   @ValueSource(strings = {"remind", "not-collected"})
   void anotherCafeteriasOrderAndAMissingOneAreTheSame403(String action) throws Exception {
-    UUID foreign = order(client(), OTHER_CAFE, "CALLED", 3);
+    UUID foreign = order(client(), OTHER_CAFE, "CALLED", Order.MAX_REMINDERS);
     var before = row(foreign);
     String foreignBody =
         act(foreign, action, WORKER, at(7200))
@@ -453,7 +456,7 @@ class WorkerRemindApiPostgresTest {
   @ValueSource(strings = {"remind", "not-collected"})
   void aClientAnAnonymousAndAForgedTokenCannotAct(String action) throws Exception {
     UUID owner = client();
-    UUID order = order(owner, CAFE, "CALLED", 3);
+    UUID order = order(owner, CAFE, "CALLED", Order.MAX_REMINDERS);
     var before = row(order);
     expectError(act(order, action, owner, at(7200)), 403, "FORBIDDEN");
     act(order, action, null, at(7200)).andExpect(status().isUnauthorized());

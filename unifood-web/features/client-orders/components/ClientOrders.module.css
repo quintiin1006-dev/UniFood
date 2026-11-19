@@ -17,50 +17,6 @@
   letter-spacing: -0.8px;
 }
 
-/* Sound switch: a real switch, 44 px tall, visible focus ring. */
-.soundSwitch {
-  display: inline-grid;
-  place-items: center;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0;
-  border: 1px solid var(--color-brand-tint-2);
-  border-radius: 50%;
-  background: var(--color-surface);
-  color: var(--color-text-soft);
-  cursor: pointer;
-}
-/* On: brand colour; off: muted. The state is also the icon (bell or crossed bell). */
-.soundSwitch[aria-checked="true"] {
-  color: var(--color-brand);
-  background: var(--color-brand-tint);
-}
-.switchTrack {
-  position: relative;
-  width: 44px;
-  height: 26px;
-  border-radius: 13px;
-  background: var(--color-line);
-  transition: background 160ms ease;
-}
-.switchThumb {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--color-surface);
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-ink) 30%, transparent);
-  transition: transform 160ms ease;
-}
-.soundSwitch[aria-checked="true"] .switchTrack {
-  background: var(--color-brand);
-}
-.soundSwitch[aria-checked="true"] .switchThumb {
-  transform: translateX(18px);
-}
-.soundSwitch:focus-visible,
 .dismiss:focus-visible,
 .historyRow:focus-visible {
   outline: 3px solid var(--color-brand);
@@ -479,11 +435,5 @@
 @keyframes pulse {
   50% {
     opacity: 0.55;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .switchTrack,
-  .switchThumb {
-    transition: none;
   }
 }

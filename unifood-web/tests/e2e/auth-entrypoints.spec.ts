@@ -233,10 +233,16 @@ for (const entrypoint of ["client"]) {
     await page
       .getByRole("textbox", { name: "Código de verificación", exact: true })
       .fill("123456");
+    // Step 3 only after the code is verified on its own: the code field goes away.
     await expect(
       page.getByLabel("Confirmar nueva contraseña", { exact: true }),
     ).toBeVisible();
-    // One screen: the code is verified together with the new password, on submit.
+    await expect(
+      page.getByRole("textbox", {
+        name: "Código de verificación",
+        exact: true,
+      }),
+    ).toHaveCount(0);
     let resetRequests = 0;
     page.on("request", (request) => {
       if (new URL(request.url()).pathname === "/api/auth/reset")

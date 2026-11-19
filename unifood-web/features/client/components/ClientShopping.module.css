@@ -359,6 +359,27 @@
   color: var(--color-ink);
   overflow-y: auto;
 }
+/* C1: the open dialog and its title never draw a focus outline (the two blue lines). */
+.dialog,
+.dialog h2 {
+  outline: none;
+}
+/* «Conservar»: a quiet action, no blue outline; its ring appears only with the keyboard. */
+.keepButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 24px;
+  color: var(--color-brand-navy);
+  background: var(--color-brand-tint);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
 .dialog::backdrop {
   background: color-mix(in srgb, var(--color-ink) 40%, transparent);
   backdrop-filter: blur(3px);

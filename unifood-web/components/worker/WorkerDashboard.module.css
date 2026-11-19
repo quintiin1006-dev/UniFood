@@ -57,29 +57,17 @@
 .historyPage > nav {
   flex-shrink: 0;
 }
-.historyPage > nav button span {
-  font-size: 10px;
-  white-space: nowrap;
-}
-.historyPage > nav button {
-  padding-inline: 0;
-}
 .historyPage :global(.worker-main) {
   flex: 1 1 0;
   min-height: 0;
   /* The page scrolls, not a box inside it; the padding keeps content clear of the nav. */
   overflow-y: auto;
   width: 100%;
-  max-width: 1320px;
-  margin-inline: auto;
-  padding: 22px 24px 32px;
+  padding: 0 0 8px;
 }
 @media (max-width: 760px) {
   .historyPage :global(.worker-main) {
-    padding: 16px 12px 6px;
-  }
-  .historyPage > nav {
-    margin-bottom: max(9px, env(safe-area-inset-bottom));
+    padding: 0;
   }
 }
 .availabilityPage::before {
@@ -89,29 +77,17 @@
 .availabilityPage > nav {
   flex-shrink: 0;
 }
-.availabilityPage > nav button span {
-  font-size: 10px;
-  white-space: nowrap;
-}
-.availabilityPage > nav button {
-  padding-inline: 0;
-}
 .availabilityPage :global(.worker-main) {
   flex: 1 1 0;
   min-height: 0;
   /* The page scrolls, not a box inside it; the padding keeps content clear of the nav. */
   overflow-y: auto;
   width: 100%;
-  max-width: 1320px;
-  margin-inline: auto;
-  padding: 22px 24px 32px;
+  padding: 0 0 8px;
 }
 @media (max-width: 760px) {
   .availabilityPage :global(.worker-main) {
-    padding: 16px 12px 6px;
-  }
-  .availabilityPage > nav {
-    margin-bottom: max(9px, env(safe-area-inset-bottom));
+    padding: 0;
   }
 }
 

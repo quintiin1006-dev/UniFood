@@ -10,7 +10,8 @@ import java.util.UUID;
  * Worker order: name, institutional code and client type, never the document (B20). {@code
  * requestedPickupAt} is null for "as soon as possible". {@code calledAt}, {@code reminderCount} and
  * {@code lastRemindedAt} let the panel show the reminders and enable "No recogido". {@code note} is
- * the client's free text (021), null when there is none; the panel shows it as plain text.
+ * the client's free text (021), null when there is none; the panel shows it as plain text. {@code
+ * maxReminders} is the server limit, so the panel never hardcodes it.
  */
 public record OrderResponse(
     UUID id,
@@ -29,4 +30,5 @@ public record OrderResponse(
     Instant calledAt,
     int reminderCount,
     Instant lastRemindedAt,
-    String note) {}
+    String note,
+    int maxReminders) {}

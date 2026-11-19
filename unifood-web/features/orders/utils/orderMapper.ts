@@ -51,6 +51,12 @@ export function mapBackendOrder(backendOrder: BackendOrder): Order {
       typeof backendOrder.reminderCount === "number"
         ? backendOrder.reminderCount
         : 0,
+    maxReminders:
+      typeof backendOrder.maxReminders === "number" &&
+      Number.isInteger(backendOrder.maxReminders) &&
+      backendOrder.maxReminders > 0
+        ? backendOrder.maxReminders
+        : undefined,
     lastRemindedAt: backendOrder.lastRemindedAt ?? undefined,
     note: backendOrder.note ?? undefined,
     items: backendOrder.items.map((item) => ({

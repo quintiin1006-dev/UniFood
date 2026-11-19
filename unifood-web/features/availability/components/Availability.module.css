@@ -1,38 +1,18 @@
+/* Disponibilidad inside the shared glass panel (features/worker-ui, F1 and F3). Frame, header,
+   padding and radius come from WorkerPanel.module.css. */
 .panel {
-  flex: none;
-  min-height: auto;
-  min-width: 0;
-  padding: 4px 4px 28px;
-  color: #ffffff;
-  scrollbar-gutter: stable;
   overflow: visible;
 }
-.titleRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 18px;
-}
-.titleRow > div {
-  min-width: 0;
-}
-.titleRow h2 {
-  margin: 0;
-  font-size: clamp(24px, 2.4vw, 28px);
-  font-weight: 700;
-  line-height: 1.2;
-}
 .cafeteriaName {
-  margin: 0 0 6px;
-  font-size: 20px;
+  margin: 0;
+  font-size: 17px;
   font-weight: 650;
   overflow-wrap: anywhere;
 }
 .date {
-  margin: 0;
+  margin: 4px 0 0;
   color: #ffffff;
-  font-size: 14px;
+  font-size: 13px;
 }
 .refresh,
 .error button {
@@ -41,22 +21,20 @@
   justify-content: center;
   gap: 8px;
   min-height: 44px;
-  padding: 10px 14px;
-  border: 1px solid var(--color-brand-tint-2);
-  border-radius: 10px;
-  background: white;
-  color: var(--color-ink);
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 12px;
+  background: transparent;
+  color: #ffffff;
   font: inherit;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 650;
   cursor: pointer;
-  transition:
-    background-color 160ms ease,
-    border-color 160ms ease;
+  transition: background-color 160ms ease;
 }
 .refresh:hover:not(:disabled),
 .error button:hover {
-  background: var(--color-brand-tint);
-  border-color: var(--color-brand);
+  background: rgba(255, 255, 255, 0.12);
 }
 .refresh:disabled {
   opacity: 0.65;
@@ -66,49 +44,21 @@
   flex-shrink: 0;
 }
 .cafeteriaState {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 280px);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 24px;
-  margin-bottom: 20px;
-  padding: 20px;
-  border-radius: 16px;
+  justify-content: space-between;
+  gap: 12px 24px;
   color: #ffffff;
 }
 .cafeteriaDetails,
 .cafeteriaControl {
   min-width: 0;
 }
+/* Discreet: one more part of the date line, not a badge. */
 .administrativeState {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 12px 0 0;
-  font-size: 12px;
   color: #ffffff;
-}
-.badge {
-  padding: 4px 9px;
-  border-radius: 6px;
-  background: var(--color-success-bg);
-  color: var(--color-success-ink);
-  font-weight: 600;
-}
-.inactiveBadge {
-  background: var(--color-brand-tint);
-  color: var(--color-ink);
-}
-.operationLabel {
-  margin: 0 0 8px;
   font-size: 13px;
-  font-weight: 650;
-}
-.operationHelp {
-  margin: 8px 0 0;
-  color: #ffffff;
-  font-size: 12px;
-  line-height: 1.5;
 }
 .notice,
 .warning,
@@ -164,10 +114,7 @@
   margin: 0 0 12px;
 }
 .category {
-  margin-bottom: 18px;
   min-width: 0;
-  padding: 16px;
-  border-radius: 16px;
 }
 .categoryHeader {
   display: flex;
@@ -178,7 +125,7 @@
 }
 .categoryHeader h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 650;
 }
 .categoryTitle {
@@ -188,8 +135,12 @@
   gap: 10px;
 }
 .categoryCount {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
   color: #ffffff;
   font-size: 12px;
+  font-weight: 600;
 }
 .carouselActions {
   display: flex;
@@ -200,18 +151,15 @@
   place-items: center;
   width: 44px;
   height: 44px;
-  border: 1px solid var(--color-brand-tint-2);
-  border-radius: 10px;
-  background: var(--color-brand-tint);
-  color: var(--color-ink);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
   cursor: pointer;
-  transition:
-    background-color 160ms ease,
-    border-color 160ms ease;
+  transition: background-color 160ms ease;
 }
 .carouselActions button:hover:not(:disabled) {
-  background: var(--color-brand-tint);
-  border-color: var(--color-brand-tint-2);
+  background: rgba(255, 255, 255, 0.18);
 }
 .carouselActions button:disabled {
   opacity: 0.4;
@@ -229,13 +177,13 @@
   scrollbar-width: thin;
 }
 .card {
-  flex: 0 0 240px;
+  flex: 0 0 196px;
   min-width: 0;
   overflow: hidden;
   scroll-snap-align: start;
-  border: 1px solid var(--color-brand-tint-2);
-  border-radius: 12px;
-  background: white;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
   color: var(--color-ink);
   transition:
     border-color 160ms ease,
@@ -250,12 +198,12 @@
 }
 .photo {
   position: relative;
-  aspect-ratio: 3 / 2;
+  aspect-ratio: 16 / 9;
   width: 100%;
   background: var(--color-brand-tint);
   overflow: hidden;
   /* «Arco de la U» on product images. */
-  border-radius: 0 0 40px 40px;
+  border-radius: 0 0 28px 28px;
 }
 .image {
   object-fit: cover;
@@ -272,20 +220,21 @@
   font-size: 12px;
 }
 .cardBody {
-  padding: 14px;
+  padding: 10px 12px 8px;
 }
 .productName {
-  margin: 0 0 8px;
-  min-height: 2.5em;
-  font-size: 16px;
+  margin: 0 0 4px;
+  overflow: hidden;
+  font-size: 14px;
   font-weight: 650;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .price {
-  margin: 0 0 12px;
-  color: var(--color-ink);
-  font-size: 17px;
+  margin: 0 0 8px;
+  color: var(--color-brand-navy);
+  font-size: 14px;
   font-weight: 700;
 }
 .switch {
@@ -294,11 +243,11 @@
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  min-height: 46px;
-  padding: 8px 9px;
+  min-height: 44px;
+  padding: 6px 9px;
   border: 1px solid var(--color-brand-tint-2);
-  border-radius: 8px;
-  background: var(--color-brand-tint);
+  border-radius: 10px;
+  background: var(--color-surface);
   color: var(--color-ink);
   font: inherit;
   font-size: 13px;
@@ -359,64 +308,30 @@
 }
 .empty {
   margin: 0;
-  padding: 20px 14px;
-  border: 1px dashed var(--color-brand-tint-2);
-  border-radius: 10px;
-  background: var(--color-brand-tint);
-  color: var(--color-slate);
+  color: #ffffff;
   font-size: 14px;
-}
-.loading {
-  padding: 20px 0;
-}
-.loading p {
-  margin-top: 0;
-}
-.skeleton {
-  height: 180px;
-  margin: 16px 0;
-  border-radius: 16px;
-  background: var(--color-brand-tint);
-  opacity: 0.7;
 }
 .panel button:focus-visible,
 .rail:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-brand);
+  outline: var(--focus-ring-width) solid #ffffff;
   outline-offset: var(--focus-ring-offset);
 }
 @media (max-width: 760px) {
-  .panel {
-    padding: 2px 2px 24px;
-  }
-  .titleRow {
-    gap: 10px;
-  }
   .refresh {
     padding: 10px;
   }
   .refresh span {
     display: none;
   }
-  .cafeteriaState {
-    grid-template-columns: minmax(0, 1fr);
-    align-items: stretch;
-    gap: 14px;
-    padding: 16px;
-  }
   .cafeteriaControl {
-    border-top: 1px solid var(--color-brand-tint);
-    padding-top: 14px;
-  }
-  .category {
-    padding: 12px;
-    border-radius: 14px;
+    width: 100%;
   }
   .categoryTitle {
     gap: 4px;
     flex-direction: column;
   }
   .card {
-    flex-basis: min(244px, 72vw);
+    flex-basis: min(196px, 64vw);
   }
   .rail {
     gap: 12px;
@@ -434,4 +349,13 @@
 /* Response messages use the shared Notice (components/ui); only spacing lives here. */
 .message {
   margin: 0 0 18px;
+}
+/* D1: a loading card, the size of a real one. */
+.cardGhost {
+  flex: 0 0 196px;
+}
+@media (max-width: 760px) {
+  .cardGhost {
+    flex-basis: min(196px, 64vw);
+  }
 }

@@ -4,6 +4,7 @@ import com.santotofood.application.exception.OrderNotFoundException;
 import com.santotofood.application.exception.OrderProcessingSequenceException;
 import com.santotofood.domain.exception.DomainException;
 import com.santotofood.domain.exception.InvalidRejectionReasonException;
+import com.santotofood.domain.model.Order;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import org.slf4j.Logger;
@@ -56,9 +57,12 @@ public class GlobalExceptionHandler {
               "El pedido ya cambió de estado. Actualiza el tablero y vuelve a intentarlo.";
           case REMINDER_TOO_EARLY ->
               "Debes esperar al menos 5 minutos antes de enviar otro recordatorio";
-          case REMINDER_LIMIT_REACHED -> "Este pedido ya alcanzó el máximo de 3 recordatorios";
+          case REMINDER_LIMIT_REACHED ->
+              "Este pedido ya alcanzó el máximo de " + Order.MAX_REMINDERS + " recordatorios";
           case NOT_COLLECTED_REQUIREMENTS_NOT_MET ->
-              "El pedido solo puede marcarse como no recogido después de enviar los 3 recordatorios";
+              "El pedido solo puede marcarse como no recogido después de enviar los "
+                  + Order.MAX_REMINDERS
+                  + " recordatorios";
           default -> exception.getMessage();
         },
         request);

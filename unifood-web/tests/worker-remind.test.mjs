@@ -38,6 +38,8 @@ const order = (overrides = {}) => ({
   status: "called",
   calledAt: CALLED_AT,
   reminderCount: 0,
+  // The limit the API sends (OrderResponse.maxReminders); the web never writes it.
+  maxReminders: 5,
   ...overrides,
 });
 const at = (seconds) => Date.parse(CALLED_AT) + seconds * 1000;
@@ -159,7 +161,7 @@ function rules() {
   return availabilityLoader()("features/orders/calledOrderActions.ts");
 }
 
-test("the reminder hint follows Spring: 5 minutes after the call or last reminder, 3 at most", () => {
+test("the reminder hint follows Spring: 5 minutes after the call or last reminder, up to the API's limit", () => {
   const { reminderAvailability, canMarkNotCollected } = rules();
   assert.deepEqual(reminderAvailability(order(), at(299)), {
     kind: "wait",
@@ -179,8 +181,20 @@ test("the reminder hint follows Spring: 5 minutes after the call or last reminde
   assert.equal(reminderAvailability(reminded, at(500)).kind, "wait");
   assert.equal(reminderAvailability(reminded, at(600)).kind, "available");
   assert.deepEqual(
-    reminderAvailability(order({ reminderCount: 3 }), at(9999)),
+    reminderAvailability(order({ reminderCount: 5 }), at(9999)),
     { kind: "limit" },
+  );
+  assert.equal(
+    reminderAvailability(order({ reminderCount: 3 }), at(9999)).kind,
+    "available",
+  );
+  // Without the limit from the API the browser does not guess it: Spring answers.
+  assert.equal(
+    reminderAvailability(
+      order({ reminderCount: 9, maxReminders: undefined }),
+      at(9999),
+    ).kind,
+    "available",
   );
   assert.deepEqual(reminderAvailability(order({ status: "ready" }), at(9999)), {
     kind: "unavailable",
@@ -192,10 +206,10 @@ test("the reminder hint follows Spring: 5 minutes after the call or last reminde
       kind: "available",
     },
   );
-  assert.equal(canMarkNotCollected(order({ reminderCount: 2 })), false);
-  assert.equal(canMarkNotCollected(order({ reminderCount: 3 })), true);
+  assert.equal(canMarkNotCollected(order({ reminderCount: 4 })), false);
+  assert.equal(canMarkNotCollected(order({ reminderCount: 5 })), true);
   assert.equal(
-    canMarkNotCollected(order({ reminderCount: 3, status: "delivered" })),
+    canMarkNotCollected(order({ reminderCount: 5, status: "delivered" })),
     false,
   );
 });
@@ -203,8 +217,9 @@ test("the reminder hint follows Spring: 5 minutes after the call or last reminde
 test("each error has a fixed Spanish message and Spring's text never shows", async () => {
   const expected = {
     REMINDER_TOO_EARLY: /Espera 5 minutos/,
-    REMINDER_LIMIT_REACHED: /Ya enviaste los 3 avisos/,
-    NOT_COLLECTED_REQUIREMENTS_NOT_MET: /primero debes enviar los 3 avisos/,
+    REMINDER_LIMIT_REACHED: /Ya enviaste el máximo de recordatorios/,
+    NOT_COLLECTED_REQUIREMENTS_NOT_MET:
+      /primero debes enviar todos los recordatorios/,
     INVALID_ORDER_STATE: /ya cambió de estado/,
     ORDER_CONCURRENT_MODIFICATION: /ya cambió de estado/,
     FORBIDDEN: /No tienes permisos/,
@@ -264,6 +279,11 @@ test("a successful action returns the mapped order with its reminders", async ()
   assert.equal(updated.reminderCount, 2);
   assert.equal(updated.calledAt, CALLED_AT);
   assert.equal(updated.lastRemindedAt, "2026-11-20T17:05:00.000Z");
+  assert.equal(updated.maxReminders, undefined);
+  const limited = await availabilityLoader({
+    fetchMock: async () => Response.json(backendOrder({ maxReminders: 5 })),
+  })("features/orders/api/orderApi.ts").runCalledOrderAction(order(), "remind");
+  assert.equal(limited.maxReminders, 5);
   // An older backend without the fields maps to zero reminders, never undefined.
   const mapper = availabilityLoader()("features/orders/utils/orderMapper.ts");
   const legacy = backendOrder();
@@ -300,7 +320,7 @@ function hook({ action }) {
         getOperationalOrders: () => {
           listings.push(1);
           return Promise.resolve({
-            orders: [order({ reminderCount: 3 })],
+            orders: [order({ reminderCount: 5 })],
             nextBusinessDateAt: null,
           });
         },
@@ -349,21 +369,21 @@ test("a double click sends one action and the board refreshes when it ends", asy
   await new Promise(setImmediate);
   assert.equal(app.listings.length, 1);
   const first = app.api.handleCalledOrderAction(
-    order({ reminderCount: 3 }),
+    order({ reminderCount: 5 }),
     "not-collected",
   );
   const second = await app.api.handleCalledOrderAction(
-    order({ reminderCount: 3 }),
+    order({ reminderCount: 5 }),
     "not-collected",
   );
   const remind = await app.api.handleCalledOrderAction(
-    order({ reminderCount: 3 }),
+    order({ reminderCount: 5 }),
     "remind",
   );
   assert.equal(second, null);
   assert.equal(remind, null);
   assert.deepEqual(app.actions, ["not-collected"]);
-  finish(order({ status: "not_collected", reminderCount: 3 }));
+  finish(order({ status: "not_collected", reminderCount: 5 }));
   assert.equal((await first).status, "not_collected");
   await new Promise(setImmediate);
   assert.equal(app.listings.length, 2);
@@ -372,7 +392,11 @@ test("a double click sends one action and the board refreshes when it ends", asy
 test("a failed action releases the lock and refreshes too", async () => {
   const app = hook({
     action: () =>
-      Promise.reject(new Error("Ya enviaste los 3 avisos a este pedido.")),
+      Promise.reject(
+        Object.assign(new Error("Ya enviaste el máximo de recordatorios."), {
+          code: "REMINDER_LIMIT_REACHED",
+        }),
+      ),
   });
   app.start();
   await new Promise(setImmediate);
@@ -393,18 +417,20 @@ function components() {
 const html = (type, props) =>
   renderToStaticMarkup(React.createElement(type, props));
 
-test("the bell shows the count and is disabled while busy, too early or at the limit", () => {
-  const { RemindButton } = components();
+test("D5: an icon-only bell «Recordar al estudiante», a spinning reload while waiting, and the limit notice", () => {
+  const { RemindButton, ReminderLimitNotice } = components();
   const props = { onRemind() {}, now: at(600) };
   const ready = html(RemindButton, {
     ...props,
     order: order({ reminderCount: 1 }),
+    describedBy: "call-student-x",
   });
-  assert.match(ready, /1\/3/);
-  assert.match(
-    ready,
-    /aria-label="Avisar nuevamente a Ana Torres, 1 de 3 avisos enviados"/,
-  );
+  assert.match(ready, /aria-label="Recordar al estudiante"/);
+  assert.match(ready, /aria-describedby="call-student-x"/);
+  assert.match(ready, /lucide-bell/);
+  // No visible text and no «n/max» counter.
+  assert.doesNotMatch(ready.replace(/<[^>]+>/g, ""), /\S/);
+  assert.doesNotMatch(ready, /\d\/\d/);
   assert.doesNotMatch(ready, /disabled=""/);
   assert.match(
     html(RemindButton, { ...props, order: order(), busy: true }),
@@ -412,13 +438,23 @@ test("the bell shows the count and is disabled while busy, too early or at the l
   );
   const early = html(RemindButton, { ...props, now: at(120), order: order() });
   assert.match(early, /disabled=""/);
-  assert.match(early, /title="Podrás volver a avisar en 3 min"/);
-  const limit = html(RemindButton, {
-    ...props,
-    order: order({ reminderCount: 3 }),
-  });
-  assert.match(limit, /disabled=""/);
-  assert.match(limit, /Ya enviaste los 3 avisos/);
+  assert.match(early, /lucide-refresh-cw/);
+  assert.match(early, /data-waiting="true"/);
+  assert.match(early, /title="Podrás volver a recordar en 3 min"/);
+  // At the limit the bell gives way to the notice, which only shows then.
+  const full = order({ reminderCount: 5 });
+  assert.equal(html(RemindButton, { ...props, order: full }), "");
+  assert.match(
+    html(ReminderLimitNotice, { order: full, now: at(600) }),
+    /Ya enviaste el máximo de recordatorios para este pedido/,
+  );
+  assert.equal(
+    html(ReminderLimitNotice, {
+      order: order({ reminderCount: 4 }),
+      now: at(600),
+    }),
+    "",
+  );
   const sending = html(RemindButton, {
     ...props,
     order: order(),
@@ -426,30 +462,56 @@ test("the bell shows the count and is disabled while busy, too early or at the l
     sending: true,
   });
   assert.match(sending, /aria-busy="true"/);
-  assert.match(sending, /Enviando aviso a Ana Torres/);
+  assert.match(sending, /Enviando recordatorio/);
   assert.equal(
     html(RemindButton, { ...props, order: order({ status: "ready" }) }),
     "",
   );
 });
 
-test("No recogido needs the 3 reminders and asks for a second click", () => {
+test("D5: the wait icon turns, and stays still with reduced motion; the web has no fixed maximum", async () => {
+  const fs = await import("node:fs");
+  const css = fs.readFileSync(
+    "features/orders/components/CalledOrderActions.module.css",
+    "utf8",
+  );
+  assert.match(css, /\.waitIcon \{\s*animation: wait-spin/);
+  assert.match(
+    css,
+    /prefers-reduced-motion: reduce\) \{\s*\.waitIcon \{\s*animation: none;/,
+  );
+  assert.match(css, /\.limit \{[^}]*overflow-wrap: anywhere;/);
+  for (const file of [
+    "features/orders/calledOrderActions.ts",
+    "features/orders/components/CalledOrderActions.tsx",
+    "components/worker/CallsBoard.tsx",
+  ]) {
+    const source = fs.readFileSync(file, "utf8");
+    assert.doesNotMatch(
+      source,
+      /MAX_REMINDERS|\b3 (avisos|recordatorios)|\d\/\$\{/,
+      file,
+    );
+  }
+});
+
+test("No recogido needs every reminder and asks for a second click", () => {
   const { NotCollectedButton } = components();
   const before = html(NotCollectedButton, {
-    order: order({ reminderCount: 2 }),
+    order: order({ reminderCount: 4 }),
     onConfirm() {},
   });
   assert.match(before, />No recogido</);
   assert.match(before, /disabled=""/);
-  assert.match(before, /Disponible después de enviar los 3 avisos/);
+  assert.match(before, /Disponible después de enviar todos los recordatorios/);
   const ready = html(NotCollectedButton, {
-    order: order({ reminderCount: 3 }),
+    order: order({ reminderCount: 5 }),
     onConfirm() {},
   });
   assert.match(ready, />No recogido</);
   assert.doesNotMatch(ready, /disabled=""/);
   const asking = html(NotCollectedButton, {
-    order: order({ reminderCount: 3 }),
+    order: order({ reminderCount: 5 }),
     onConfirm() {},
     initialConfirming: true,
   });
@@ -457,7 +519,7 @@ test("No recogido needs the 3 reminders and asks for a second click", () => {
   assert.match(asking, /confirming/);
   // Busy hides the confirmation and blocks the button.
   const busy = html(NotCollectedButton, {
-    order: order({ reminderCount: 3 }),
+    order: order({ reminderCount: 5 }),
     onConfirm() {},
     initialConfirming: true,
     busy: true,

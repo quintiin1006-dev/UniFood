@@ -7,7 +7,10 @@ import {
   rejectOrder,
   runCalledOrderAction,
 } from "@/features/orders/api/orderApi";
-import type { CalledOrderAction } from "@/features/orders/calledOrderActions";
+import {
+  reminderCount,
+  type CalledOrderAction,
+} from "@/features/orders/calledOrderActions";
 import { isSequenceViolation } from "@/features/orders/orderActionMessages";
 import {
   listingErrorView,
@@ -328,6 +331,18 @@ export function useOrders(enabled = true) {
         );
         return updated;
       } catch (cause) {
+        // The server says no reminder is left: show the limit notice before the next listing.
+        if (
+          (cause as { code?: unknown } | null)?.code ===
+          "REMINDER_LIMIT_REACHED"
+        )
+          replaceOrders(
+            latestOrders.current.map((item) =>
+              item.id === order.id
+                ? { ...item, maxReminders: reminderCount(item) }
+                : item,
+            ),
+          );
         setActionError(
           cause instanceof Error
             ? cause.message

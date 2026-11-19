@@ -312,7 +312,7 @@ class PushNotificationDispatcherTest {
               Instant.EPOCH);
       var event = OrderPushEvent.forStatus(order);
       switch (status) {
-        case PREPARING, READY, CALLED, NOT_COLLECTED ->
+        case PREPARING, READY, CALLED, NOT_COLLECTED, DELIVERED ->
             assertTrue(event.isPresent(), status.name());
         default -> assertTrue(event.isEmpty(), status.name());
       }

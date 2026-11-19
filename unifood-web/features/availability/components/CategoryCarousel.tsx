@@ -7,7 +7,7 @@ import {
   type AvailabilityItem,
 } from "../types";
 import { ProductCard } from "./ProductCard";
-import surfaces from "@/components/worker/surfaces.module.css";
+import { panelStyles } from "@/features/worker-ui/components/PanelHeader";
 import styles from "./Availability.module.css";
 
 export function CategoryCarousel({
@@ -62,7 +62,7 @@ export function CategoryCarousel({
   };
   return (
     <section
-      className={`${styles.category} ${surfaces.glass}`}
+      className={`${panelStyles.section} ${styles.category}`}
       aria-labelledby={headingId}
     >
       <div className={styles.categoryHeader}>

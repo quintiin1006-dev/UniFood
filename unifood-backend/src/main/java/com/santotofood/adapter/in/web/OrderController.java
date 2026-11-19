@@ -80,7 +80,10 @@ public class OrderController {
     return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
   }
 
-  /** CALLED only, at most 3 reminders and 5 minutes after the call or the previous reminder. */
+  /**
+   * CALLED only, at most Order.MAX_REMINDERS reminders and 5 minutes after the call or the previous
+   * reminder.
+   */
   @PatchMapping("/{orderId}/remind")
   @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
   public ResponseEntity<OrderResponse> remindStudent(@PathVariable UUID orderId) {
@@ -99,7 +102,10 @@ public class OrderController {
     return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
   }
 
-  /** CALLED with the 3 reminders sent; NOT_COLLECTED is terminal, so repeating it is a 409. */
+  /**
+   * CALLED with every reminder (Order.MAX_REMINDERS) sent; NOT_COLLECTED is terminal, so repeating
+   * it is a 409.
+   */
   @PatchMapping("/{orderId}/not-collected")
   @PreAuthorize("@orderAuthorization.order(authentication, #orderId)")
   public ResponseEntity<OrderResponse> markOrderNotCollected(@PathVariable UUID orderId) {

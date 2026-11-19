@@ -60,10 +60,15 @@ test("history UI lists terminal states collapsed; each row has a labelled toggle
     "Juan Pérez",
     "Entregado",
     "No recogido",
-    "Hora de Bogotá",
     "Ver detalle",
   ])
     assert.ok(markup.includes(text), text);
+  // A3: no time-zone note; A2: the state lives only inside the detail.
+  assert.doesNotMatch(markup, /Hora de Bogotá/);
+  assert.doesNotMatch(markup, /data-status=|statusChip/i);
+  // A4: one full date under the title and a full range beside the filters.
+  assert.match(markup, /\d{2}\/\d{2}\/\d{4}/);
+  assert.doesNotMatch(markup, /\d{2}\/\d{2} –/);
   // Rows are compact: time, name, total and state; the order id is not shown.
   assert.ok(markup.indexOf("Juan Pérez") < markup.indexOf("María Gómez"));
   assert.doesNotMatch(markup, /A91C6F2D|B72D5A10/);

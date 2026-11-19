@@ -1,25 +1,17 @@
 .remind {
-  width: auto;
-  min-width: calc(48px / var(--worker-zoom, 1));
-  padding: 0 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+  display: inline-grid;
+  place-items: center;
+  width: calc(44px / var(--worker-zoom, 1));
+  height: calc(44px / var(--worker-zoom, 1));
+  padding: 0;
 }
 
-/* L3: a blocked bell stays readable, because its hint explains why. */
+/* A blocked bell stays readable; its tooltip and the spinning wait icon explain why. */
 .remind:disabled {
   border-color: var(--color-brand-tint-2);
   background: var(--color-brand-tint);
   color: var(--color-slate);
   cursor: not-allowed;
-}
-
-.count {
-  font-size: calc(12px / var(--worker-zoom, 1));
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
 }
 
 .notCollected {
@@ -70,17 +62,30 @@
   }
 }
 
-.summary {
-  margin: 0 0 12px;
-  font-size: calc(13px / var(--worker-zoom, 1));
-  color: var(--color-slate);
+/* D5: the wait is a reload icon that turns while it lasts; still with reduced motion. */
+.waitIcon {
+  animation: wait-spin 1.6s linear infinite;
+}
+@keyframes wait-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .waitIcon {
+    animation: none;
+  }
 }
 
-/* L3: visible reason of a blocked reminder. */
-.hint {
-  display: block;
-  font-size: calc(11px / var(--worker-zoom, 1));
+/* D5: only at the limit. Wraps on narrow screens instead of overflowing. */
+.limit {
+  margin: 0;
+  padding: calc(8px / var(--worker-zoom, 1)) calc(12px / var(--worker-zoom, 1));
+  border-radius: calc(10px / var(--worker-zoom, 1));
+  background: #eaf4ff;
+  color: #0b2d6b;
+  font-size: calc(13px / var(--worker-zoom, 1));
   font-weight: 600;
-  line-height: 1.2;
-  white-space: nowrap;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }

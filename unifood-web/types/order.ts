@@ -33,6 +33,8 @@ export interface Order {
   calledAt?: string;
   // Reminders sent after the call (at most 3); "No recogido" needs all of them.
   reminderCount?: number;
+  /** The server's reminder limit (OrderResponse.maxReminders). */
+  maxReminders?: number;
   lastRemindedAt?: string;
   deliveredAt?: string;
   // Optional pickup time chosen by the client; informative, the queue stays FIFO.

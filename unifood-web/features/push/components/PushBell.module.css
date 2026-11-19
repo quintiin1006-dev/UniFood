@@ -67,3 +67,38 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* C4: a dot on the bell when notifications are off. */
+.bell {
+  position: relative;
+}
+.bell[data-on="false"]::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--color-surface);
+  border-radius: 50%;
+  background: var(--color-brand-navy);
+}
+.bell:focus-visible,
+.action:focus-visible {
+  outline: 3px solid var(--color-brand);
+  outline-offset: 2px;
+}
+.action[data-on="true"] {
+  border: 1px solid var(--color-brand-tint-2);
+  background: var(--color-surface);
+  color: var(--color-brand-navy);
+}
+.hint {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.recent[hidden] {
+  display: none;
+}

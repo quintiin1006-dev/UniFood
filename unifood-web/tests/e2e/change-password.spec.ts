@@ -18,7 +18,7 @@ async function login(page: Page) {
   expect(response.status()).toBe(200);
 }
 
-test("cambiar contraseña: enviar código, ver el aviso y pasar al paso 2", async ({
+test("cambiar contraseña en tres pasos: enviar código, verificarlo y crear la nueva", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -34,15 +34,37 @@ test("cambiar contraseña: enviar código, ver el aviso y pasar al paso 2", asyn
     .getByRole("button", { name: "Enviar código de verificación" })
     .click();
 
-  // Step 2, with the confirmation toast on top.
+  // Step 2: only the code, with the confirmation toast on top.
   await expect(page).toHaveURL(/\/recuperar-contrasena/);
   const toast = page.getByRole("status").filter({
     hasText: "Te enviamos un código de verificación a tu correo registrado",
   });
   await expect(toast).toBeVisible();
+  const code = page.getByRole("textbox", {
+    name: "Código de verificación",
+    exact: true,
+  });
+  await expect(code).toHaveAttribute("autocomplete", "one-time-code");
+  await expect(code).toHaveAttribute("inputmode", "numeric");
   await expect(
-    page.getByRole("textbox", { name: "Código de verificación", exact: true }),
-  ).toHaveAttribute("autocomplete", "one-time-code");
+    page.getByRole("button", { name: "Verificar código", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("Nueva contraseña", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /^Reenviar código en \d+ s$/ }),
+  ).toBeDisabled();
+
+  // A wrong code stays on step 2 with the error.
+  await code.fill("000000");
+  await expect(page.getByRole("main").getByRole("alert")).toBeVisible();
+  await expect(
+    page.getByLabel("Nueva contraseña", { exact: true }),
+  ).toHaveCount(0);
+
+  // Step 3: the right code opens the new password fields.
+  await code.fill("123456");
   await expect(
     page.getByLabel("Nueva contraseña", { exact: true }),
   ).toBeVisible();
@@ -52,9 +74,5 @@ test("cambiar contraseña: enviar código, ver el aviso y pasar al paso 2", asyn
   await expect(
     page.getByRole("button", { name: "Cambiar contraseña", exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: /^Reenviar código en \d+ s$/ }),
-  ).toBeDisabled();
-  // The toast hides by itself.
-  await expect(toast).toHaveCount(0, { timeout: 7_000 });
+  await expect(code).toHaveCount(0);
 });

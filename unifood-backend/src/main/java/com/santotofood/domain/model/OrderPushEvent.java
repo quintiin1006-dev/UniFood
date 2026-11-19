@@ -20,7 +20,9 @@ public record OrderPushEvent(UUID orderId, Kind kind, int sequence) {
     CALLED(Audience.CLIENT),
     REMINDER(Audience.CLIENT),
     REJECTED(Audience.CLIENT),
-    NOT_COLLECTED(Audience.CLIENT);
+    NOT_COLLECTED(Audience.CLIENT),
+    /** The worker handed the order over (jj/cliente-ajustes · G). */
+    DELIVERED(Audience.CLIENT);
 
     private final Audience audience;
 
@@ -58,6 +60,7 @@ public record OrderPushEvent(UUID orderId, Kind kind, int sequence) {
           case READY -> Kind.READY;
           case CALLED -> Kind.CALLED;
           case NOT_COLLECTED -> Kind.NOT_COLLECTED;
+          case DELIVERED -> Kind.DELIVERED;
           default -> null;
         };
     return java.util.Optional.ofNullable(kind).map(k -> of(order.getId(), k));

@@ -41,9 +41,9 @@ test("step 1: «Cambiar contraseña», the known address and only «Enviar códi
   assert.match(source, /recoverySendTo\(email\)/);
   // No automatic sending: the button sends the code.
   assert.doesNotMatch(source, /await sendRecoveryCode\(handed\)/);
-  // The code and the password belong to step 2 only.
-  assert.match(source, /const isPassword = isRecovery && step === 1;/);
+  // Three steps: the code alone is step 2, the new password is step 3.
   assert.match(source, /const isOtp = !isLogin && step === 1;/);
+  assert.match(source, /const isPassword = isRecovery && step === 2;/);
 });
 
 test("sending shows a 5 s toast with the same generic text for every address", () => {
@@ -65,8 +65,14 @@ test("sending shows a 5 s toast with the same generic text for every address", (
   );
 });
 
-test("step 2: code (6 digits, numeric, one-time-code), new password, confirmation and a 30 s resend", () => {
+test("step 2: only the code (6 digits, numeric, one-time-code), «Verificar código» and a 30 s resend; step 3: the new password", () => {
   const source = screen();
+  assert.equal(messages.RECOVERY_VERIFY, "Verificar código");
+  assert.match(source, /isRecovery\s*\?\s*RECOVERY_VERIFY/);
+  // The code is verified on its own, before any password is asked.
+  assert.doesNotMatch(source, /isOtp && isRecovery/);
+  // A reset refused for a lost code session returns to step 2.
+  assert.match(source, /failure\.status === 401\) \{\s*setStep\(1\);/);
   assert.match(source, /autoComplete="one-time-code"/);
   assert.match(source, /inputMode="numeric"/);
   assert.equal(messages.RECOVERY_NEW_PASSWORD, "Nueva contraseña");
@@ -128,7 +134,7 @@ const headerFor = (activeModule) => {
   );
 };
 
-test("the five worker modules use the same header, 96 px tall with a 52 px logo", () => {
+test("the five worker modules use the same header, 64 px tall with a 40 px logo", () => {
   const classes = new Set();
   for (const moduleName of [
     "orders",
@@ -145,20 +151,21 @@ test("the five worker modules use the same header, 96 px tall with a 52 px logo"
   }
   assert.equal(classes.size, 1);
   const css = read("components/worker/Header.classic.module.css");
-  assert.match(css, /height: calc\(96px \/ var\(--worker-zoom, 1\)\);/);
-  assert.match(css, /width: calc\(52px \/ var\(--worker-zoom, 1\)\);/);
+  assert.match(css, /height: calc\(64px \/ var\(--worker-zoom, 1\)\);/);
+  assert.match(css, /width: calc\(40px \/ var\(--worker-zoom, 1\)\);/);
 });
 
 test("Historial and Disponibilidad share the Pedidos surface, page and watermark", () => {
   const surfaces = read("components/worker/surfaces.module.css");
   assert.match(surfaces, /\.glass \{/);
+  assert.match(read("components/worker/KanbanBoard.tsx"), /surfaces\.glass/);
+  // jj/cliente-ajustes · F: Historial, Disponibilidad and Llamadas are one shared glass panel.
   for (const file of [
-    "components/worker/KanbanBoard.tsx",
     "features/worker-history/components/WorkerHistoryPanel.tsx",
     "features/availability/components/AvailabilityPanel.tsx",
-    "features/availability/components/CategoryCarousel.tsx",
+    "components/worker/CallsBoard.tsx",
   ])
-    assert.match(read(file), /surfaces\.glass/, file);
+    assert.match(read(file), /panelStyles\.panel/, file);
   const page = read("components/worker/WorkerDashboard.module.css");
   assert.match(page, /\.brandedPage:global\(\.worker-page\)/);
   const opacity = Number(
@@ -182,7 +189,7 @@ test("Historial and Disponibilidad share the Pedidos surface, page and watermark
   // Fields stay solid white.
   assert.match(
     history,
-    /\.filters select \{[^}]*background: var\(--color-surface\)/,
+    /\.filter select \{[^}]*background: var\(--color-surface\)/,
   );
   assert.match(history, /\.search \{[^}]*background: var\(--color-surface\)/);
 });

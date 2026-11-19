@@ -115,12 +115,7 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
-.skeletonHead,
-.skeletonCard {
-  display: block;
-  border-radius: calc(16px / var(--worker-zoom, 1));
-  background: rgba(255, 255, 255, 0.18);
-}
+/* Color, radius and shine come from the shared .skeleton (WorkerPanel.module.css). */
 
 .skeletonHead {
   height: calc(56px / var(--worker-zoom, 1));

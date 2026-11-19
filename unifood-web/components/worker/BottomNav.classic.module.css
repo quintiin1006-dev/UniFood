@@ -28,6 +28,7 @@
 .item {
   position: relative;
   min-width: 0;
+  padding-inline: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -59,8 +60,9 @@
   outline-offset: 2px;
 }
 
+/* F5: 10 real px in every module (Historial and Disponibilidad used to override it alone). */
 .item span {
-  font-size: calc(7px / var(--worker-zoom, 1));
+  font-size: calc(10px / var(--worker-zoom, 1));
   font-weight: 650;
   white-space: nowrap;
   line-height: 1.2;
@@ -99,13 +101,16 @@
   .nav {
     width: calc(100% - 16.8px / var(--worker-zoom, 1));
     min-height: calc(54.6px / var(--worker-zoom, 1));
-    margin-bottom: calc(6.3px / var(--worker-zoom, 1));
+    margin-bottom: max(
+      calc(6.3px / var(--worker-zoom, 1)),
+      env(safe-area-inset-bottom)
+    );
     border-radius: calc(17.5px / var(--worker-zoom, 1));
   }
   .item {
     border-radius: calc(12.6px / var(--worker-zoom, 1));
   }
   .item span {
-    font-size: calc(5.6px / var(--worker-zoom, 1));
+    font-size: calc(10px / var(--worker-zoom, 1));
   }
 }

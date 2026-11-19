@@ -46,15 +46,27 @@ import {
   RECOVERY_NEW_PASSWORD,
   RECOVERY_RESEND,
   RECOVERY_SEND,
+  RECOVERY_STEP_THREE_NOTE,
   RECOVERY_STEP_TWO_NOTE,
   RECOVERY_SUBMIT,
   RECOVERY_TITLE,
+  RECOVERY_VERIFY,
   recoveryResendIn,
   recoverySendTo,
 } from "../../shared/messages";
 import styles from "./AuthScreen.module.css";
 
 type Mode = "login" | "register" | "recover";
+
+/** A refused auth request: the server's Spanish message and its HTTP status. */
+class AuthRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
 // Must match Auth's Email OTP expiration of 900 s and the email templates.
 const OTP_VALIDITY_MINUTES = 15;
 const RESEND_WAIT_SECONDS = 60;
@@ -203,8 +215,9 @@ export default function AuthScreen({
   // Registration here is step 1 only: email, then the code. Step 2 has its own page.
   const isRegisterEmail = mode === "register" && step === 0;
   const isOtp = !isLogin && step === 1;
-  // Recovery is one screen after the email: the code and the new password together.
-  const isPassword = isRecovery && step === 1;
+  // Recovery in three steps (jj/cliente-ajustes · B): send the code, verify it alone, and only
+  // then the new password. The server keeps the verified session between steps 2 and 3.
+  const isPassword = isRecovery && step === 2;
 
   const typedAddress = email.trim().toLowerCase();
   const typedValid = validRegistrationEmail(typedAddress);
@@ -289,12 +302,11 @@ export default function AuthScreen({
   useEffect(() => {
     // Six digits typed, pasted or autofilled send the form once, through the same
     // submit handler and its guards as the Verify button.
-    // In recovery the code waits for the new password, so it is never sent alone.
-    if (!isOtp || isRecovery || !hydrated || code.length !== OTP_LENGTH) return;
+    if (!isOtp || !hydrated || code.length !== OTP_LENGTH) return;
     if (autoSubmitted.current === code || inFlight.current) return;
     autoSubmitted.current = code;
     formRef.current?.requestSubmit();
-  }, [code, isOtp, isRecovery, hydrated]);
+  }, [code, isOtp, hydrated]);
 
   async function request(action: string, body: Record<string, unknown>) {
     const response = await fetch(`/api/auth/${action}`, {
@@ -305,12 +317,12 @@ export default function AuthScreen({
     const data = await response.json();
     if (!response.ok) {
       if (data.code === "email_not_confirmed") setUnverified(true);
-      throw new Error(data.message || t.connection);
+      throw new AuthRequestError(data.message || t.connection, response.status);
     }
     return data;
   }
 
-  /** Sends the recovery code and opens the code + new password screen. */
+  /** Sends the recovery code and opens the code screen (step 2). */
   async function sendRecoveryCode(address: string) {
     await request("recover", { email: address });
     setEmail(address.trim().toLowerCase());
@@ -361,26 +373,6 @@ export default function AuthScreen({
         if (data.terms === "pending" || data.terms === "unavailable")
           setTermsStep({ destination: data.redirect, state: data.terms });
         else navigate(data.redirect);
-      } else if (isOtp && isRecovery) {
-        failedOnCode = true;
-        if (code.length !== OTP_LENGTH) throw new Error(t.invalidCode);
-        if (!validPassword(password)) throw new Error(t.invalidPassword);
-        if (password !== confirm) throw new Error(t.mismatch);
-        const data = await request("verify", { email, code, recovery: true });
-        failedOnCode = false;
-        // A registration left before step 2 continues there with this code session.
-        if (data.redirect) {
-          navigate(data.redirect);
-          return;
-        }
-        await request("reset", { password });
-        // Done: back to signing in, with a short confirmation on top.
-        setMode("login");
-        setStep(0);
-        setCode("");
-        setPassword("");
-        setConfirm("");
-        showToast(PASSWORD_UPDATED);
       } else if (isOtp) {
         failedOnCode = true;
         if (code.length !== OTP_LENGTH) throw new Error(t.invalidCode);
@@ -403,12 +395,25 @@ export default function AuthScreen({
       } else if (isPassword) {
         if (!validPassword(password)) throw new Error(t.invalidPassword);
         if (password !== confirm) throw new Error(t.mismatch);
-        await request("reset", { password });
+        try {
+          await request("reset", { password });
+        } catch (failure) {
+          // The verified code session is gone: back to step 2 to verify a code again.
+          if (failure instanceof AuthRequestError && failure.status === 401) {
+            setStep(1);
+            setCode("");
+            autoSubmitted.current = "";
+            failedOnCode = true;
+          }
+          throw failure;
+        }
+        // Done: back to signing in, with a short confirmation on top.
         setMode("login");
         setStep(0);
+        setCode("");
         setPassword("");
         setConfirm("");
-        setNotice(t.resetDone);
+        showToast(PASSWORD_UPDATED);
       } else if (isRegisterEmail) {
         const address = email.trim().toLowerCase();
         if (!validRegistrationEmail(address)) throw new Error(t.denied);
@@ -538,8 +543,10 @@ export default function AuthScreen({
       ) : (
         t.recoveryNote
       )
-    ) : (
+    ) : step === 1 ? (
       RECOVERY_STEP_TWO_NOTE
+    ) : (
+      RECOVERY_STEP_THREE_NOTE
     )
   ) : isOtp ? (
     <>
@@ -561,7 +568,7 @@ export default function AuthScreen({
       ? t.login
       : isOtp
         ? isRecovery
-          ? RECOVERY_SUBMIT
+          ? RECOVERY_VERIFY
           : t.verifyButton
         : isRecovery
           ? step === 0

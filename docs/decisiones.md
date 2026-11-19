@@ -411,7 +411,7 @@ suscripción no es obligatoria y el cobro no condiciona la visibilidad.
     El script manual queda como herramienta de emergencia (§11).
   - Los pedidos ya terminados no se tocan, incluidos los rechazos del worker (B18,
     `cancellation_source = 'WORKER'`).
-  - Se salta las reglas del worker para NOT_COLLECTED (CALLED con 3 recordatorios), igual que
+  - Se salta las reglas del worker para NOT_COLLECTED (CALLED con todos los recordatorios, hoy 5), igual que
     el script: un pedido olvidado de otro día se cierra en el estado que esté.
 - Historial de solo lectura, sin «repetir pedido».
 
@@ -537,7 +537,7 @@ el implementado. Las rutas de visibilidad, cobro e historial sí están implemen
 | `GET /api/worker/orders`                              | Listado operativo del worker                                   | 401, 403 `FORBIDDEN`                                                                                                                                  |
 | `PATCH /api/orders/{id}/reject`                       | Rechazo del worker `{reason}`                                  | 400 `REJECTION_REASON_REQUIRED`, `REJECTION_REASON_TOO_LONG`, 403 `FORBIDDEN`, 409 `INVALID_ORDER_STATE`                                              |
 | `PATCH /api/orders/{id}/remind`                       | Recordatorio del worker, en CALLED                             | 403 `FORBIDDEN`, 409 `REMINDER_TOO_EARLY`, `REMINDER_LIMIT_REACHED`, `INVALID_ORDER_STATE`                                                            |
-| `PATCH /api/orders/{id}/not-collected`                | No recogido tras los 3 recordatorios                           | 403 `FORBIDDEN`, 409 `NOT_COLLECTED_REQUIREMENTS_NOT_MET`, `INVALID_ORDER_STATE`                                                                      |
+| `PATCH /api/orders/{id}/not-collected`                | No recogido tras los 5 recordatorios                           | 403 `FORBIDDEN`, 409 `NOT_COLLECTED_REQUIREMENTS_NOT_MET`, `INVALID_ORDER_STATE`                                                                      |
 | `GET /api/super-admin/cafeterias`                     | Instituciones, sedes y cafeterías                              | 403 `SUPER_ADMIN_FORBIDDEN`                                                                                                                           |
 | `PATCH /api/super-admin/cafeterias/{id}/visibility`   | `{visible, expectedVisible}`                                   | 400 `SUPER_ADMIN_INVALID_REQUEST`, 403 `SUPER_ADMIN_FORBIDDEN`, 404 `CAFETERIA_NOT_FOUND`, 409 `VISIBILITY_STATE_CHANGED`, `CAFETERIA_REQUIRES_ADMIN` |
 | `PUT /api/super-admin/cafeterias/{id}/billing`        | `{model, perOrderFeeCop, subscriptionFeeCop, expectedVersion}` | 400 `BILLING_INVALID_REQUEST`, 403 `SUPER_ADMIN_FORBIDDEN`, 404 `CAFETERIA_NOT_FOUND`, 409 `BILLING_STATE_CHANGED`                                    |
@@ -1037,7 +1037,8 @@ disponibilidad sin recargar:
   1. «Cambiar contraseña» con el correo ya conocido (de Mi perfil o del login) y un único botón,
      «Enviar código de verificación». Solo se pide el correo si no se conoce.
   2. Código (6 dígitos, teclado numérico, `one-time-code`), «Nueva contraseña» y «Confirmar
-     nueva contraseña», con «Cambiar contraseña» y «Reenviar código» tras 30 s visibles.
+     nueva contraseña», con «Cambiar contraseña» y «Reenviar código» tras 30 s visibles
+     (reemplazado por tres pasos en jj/cliente-ajustes).
      Al enviar aparece arriba un aviso (`role="status"`, 5 s): «Te enviamos un código de
      verificación a tu correo registrado», igual para cualquier correo. Al terminar, «Contraseña
      actualizada» y vuelta a iniciar sesión. Se quitó el texto fijo de abajo. Mismos endpoints.
@@ -1046,7 +1047,7 @@ disponibilidad sin recargar:
   (`components/worker/surfaces.module.css`, clase `.glass`, usada desde el JSX). Historial y
   Disponibilidad vuelven al contenido de `fe8ac99` sin la hoja blanca grande ni scroll interno:
   desplaza la página, con margen inferior para el nav. Se conservan el rango corto y la fila sin id.
-- **Header único:** 96 px de alto, logo de 52 px, mismo título, nombre del módulo y «Cerrar
+- **Header único:** 64 px de alto (antes 96), logo de 40 px, mismo título, nombre del módulo y «Cerrar
   sesión» en los cinco módulos (medidas divididas entre `--worker-zoom`). Buscador y «Actualizado
   a las …» solo en Pedidos y Llamadas.
 - **Salvaguardas de legibilidad:** texto blanco sobre el cristal (≥ 4,5:1 en el punto más claro
@@ -1054,6 +1055,31 @@ disponibilidad sin recargar:
   con fondo sólido; marca de agua al 8 % como máximo y fija al fondo; separadores visibles en las
   listas.
 - **Pendiente con backend:** el código del estudiante en las filas del historial del worker.
+
+### jj/cliente-ajustes
+
+- **Límite de recordatorios en 5 (antes 3).** Vive solo en `Order.MAX_REMINDERS`; los mensajes
+  de `REMINDER_LIMIT_REACHED` y `NOT_COLLECTED_REQUIREMENTS_NOT_MET` se arman con la constante.
+  «No recogido» exige todos los recordatorios (5). La migración `030_reminder_limit_five.sql`
+  amplía `chk_order_reminder_count` (004 quedaba en `<= 3`). `OrderResponse.maxReminders` entrega
+  el límite al panel, que ya no lo escribe. La espera de 5 minutos no cambia.
+- **Contraseña en tres pasos.** 1) enviar código; 2) solo el código de 6 dígitos con «Verificar
+  código» y «Reenviar código» a los 30 s; 3) tras verificarlo, «Nueva contraseña», «Confirmar
+  nueva contraseña» y «Cambiar contraseña». Usa los endpoints existentes (`verify` con
+  `recovery: true` valida el código solo; `reset` usa esa sesión). Si `reset` responde 401, vuelve
+  al paso 2. Al terminar, «Contraseña actualizada» y vuelta al login.
+- **Campana única del cliente.** La campana del header es el único control y el interruptor
+  general de todas las notificaciones del cliente (estados, llamado, recordatorios, no recogido,
+  rechazo, entrega y las que vengan). Mi perfil y Mi pedido ya no tienen control propio; apagarla
+  también silencia el sonido de Mi pedido. Muestra «Notificaciones activadas / desactivadas», un
+  solo botón y, si el navegador las bloqueó, una línea con cómo habilitarlas; un punto en la
+  campana indica que están apagadas. El panel deja un espacio para «recientes» (pendiente). La
+  tarjeta de activación tras confirmar un pedido se mantiene.
+- **Historial, Disponibilidad y Llamadas, un solo panel.** Cada módulo es un panel de cristal con
+  la cabecera de Llamadas (`features/worker-ui`: recuadro de ícono de 52 px, título, subtítulo y
+  contador o resumen, divisor fino). Mismo ancho máximo (1320 px), padding y radio (23 px) en
+  pantalla, divididos entre `--worker-zoom`. El nav de los cinco módulos mide lo mismo (texto de
+  10 px reales); el fondo claro de Mi perfil se mantiene.
 
 ## 13. Línea de corte
 

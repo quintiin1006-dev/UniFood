@@ -111,7 +111,10 @@ export const RECOVERY_SEND = "Enviar código de verificación";
 export const recoverySendTo = (email: string) =>
   `Enviaremos un código de verificación a ${email}.`;
 export const RECOVERY_STEP_TWO_NOTE =
-  "Escribe el código que te llegó y tu nueva contraseña.";
+  "Escribe el código de 6 dígitos que te llegó al correo.";
+export const RECOVERY_STEP_THREE_NOTE =
+  "Código verificado. Ahora crea tu nueva contraseña.";
+export const RECOVERY_VERIFY = "Verificar código";
 export const RECOVERY_CODE_LABEL = "Código de verificación";
 export const RECOVERY_NEW_PASSWORD = "Nueva contraseña";
 export const RECOVERY_CONFIRM_PASSWORD = "Confirmar nueva contraseña";
@@ -122,6 +125,12 @@ export const recoveryResendIn = (seconds: number) =>
 export const PASSWORD_UPDATED = "Contraseña actualizada";
 export const CAFETERIA_STATUS_OPEN = "Abierta";
 export const CAFETERIA_STATUS_CLOSED = "Cerrada";
+export const CAFETERIA_PICKER_LIST = "Cafeterías disponibles";
+export const cafeteriaPickerLabel = (
+  name: string,
+  site: string,
+  status: string,
+) => `Cambiar cafetería. ${name}, ${site}, ${status}`;
 export const HOME_ALL_CATEGORIES = "Todo";
 export const HOME_SEE_ALL = "Ver todo";
 /** Only when the whole menu has nothing to order; empty categories are simply not shown. */
@@ -175,11 +184,15 @@ export const PUSH_MESSAGES = {
   iosTooOld: `Tu iPhone necesita iOS 16.4 o superior para recibir avisos. ${IN_APP_STAYS}`,
   failed: "No pudimos activar los avisos. Inténtalo de nuevo.",
   rateLimited: PUSH_RATE_LIMITED_TEXT,
-  bellLabelOn: "Avisos activados. Abrir opciones.",
-  bellLabelOff: "Avisos desactivados. Abrir opciones.",
-  bellStatusOn: "Recibes avisos en este dispositivo.",
-  bellStatusOff: "No recibes avisos en este dispositivo.",
-  bellDisable: "Desactivar avisos",
+  // C4: the header bell is the one switch for every client notification.
+  bellLabelOn: "Notificaciones activadas. Abrir opciones.",
+  bellLabelOff: "Notificaciones desactivadas. Abrir opciones.",
+  bellStatusOn: "Notificaciones activadas",
+  bellStatusOff: "Notificaciones desactivadas",
+  bellEnable: "Activar notificaciones",
+  bellDisable: "Desactivar notificaciones",
+  bellBlocked:
+    "El navegador las bloqueó: permite las notificaciones de UniFood en los ajustes del sitio y vuelve a intentarlo.",
 } as const;
 
 export type PushMessageKey = keyof typeof PUSH_MESSAGES;
@@ -381,9 +394,9 @@ export const BACKEND_ERROR_MESSAGES: Record<BackendErrorCode, string> = {
   REMINDER_TOO_EARLY:
     "Aún no puedes volver a avisar. Espera 5 minutos desde el último aviso.",
   REMINDER_LIMIT_REACHED:
-    "Ya enviaste los 3 avisos a este pedido. Puedes marcarlo como no recogido.",
+    "Ya enviaste el máximo de recordatorios para este pedido. Puedes marcarlo como no recogido.",
   NOT_COLLECTED_REQUIREMENTS_NOT_MET:
-    "Para marcarlo como no recogido primero debes enviar los 3 avisos.",
+    "Para marcarlo como no recogido primero debes enviar todos los recordatorios.",
   REJECTION_REASON_REQUIRED:
     "Escribe el motivo del rechazo, con al menos 3 caracteres.",
   REJECTION_REASON_TOO_LONG: `El motivo del rechazo admite hasta ${MAX_REJECTION_REASON} caracteres.`,
@@ -396,3 +409,13 @@ export const isBackendErrorCode = (code: unknown): code is BackendErrorCode =>
 export function backendErrorMessage(code: unknown, fallback: string): string {
   return isBackendErrorCode(code) ? BACKEND_ERROR_MESSAGES[code] : fallback;
 }
+
+/* ---------- Llamadas: recordatorio (jj/cliente-ajustes · D5) ---------- */
+export const REMIND_LABEL = "Recordar al estudiante";
+export const REMIND_SENDING = "Enviando recordatorio…";
+export const remindWaitTitle = (minutes: number) =>
+  `Podrás volver a recordar en ${minutes} min`;
+export const REMINDER_LIMIT_NOTICE =
+  "Ya enviaste el máximo de recordatorios para este pedido";
+export const NOT_COLLECTED_NEEDS_REMINDERS =
+  "Disponible después de enviar todos los recordatorios";

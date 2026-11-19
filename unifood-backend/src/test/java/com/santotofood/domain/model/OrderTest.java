@@ -197,69 +197,53 @@ class OrderTest {
   }
 
   @Test
-  void shouldAllowThreeRemindersSeparatedByFiveMinutes() {
+  void shouldAllowEveryReminderUpToTheLimitSeparatedByFiveMinutes() {
     Order order = createCalledOrder();
 
-    Instant firstReminder = order.getCalledAt().plusSeconds(300);
+    Instant last = remindUpToTheLimit(order);
 
-    Instant secondReminder = firstReminder.plusSeconds(300);
-
-    Instant thirdReminder = secondReminder.plusSeconds(300);
-
-    order.remindStudent(firstReminder);
-    order.remindStudent(secondReminder);
-    order.remindStudent(thirdReminder);
-
-    assertEquals(3, order.getReminderCount());
-    assertEquals(thirdReminder, order.getLastRemindedAt());
+    assertEquals(5, Order.MAX_REMINDERS);
+    assertEquals(Order.MAX_REMINDERS, order.getReminderCount());
+    assertEquals(last, order.getLastRemindedAt());
   }
 
   @Test
-  void shouldRejectFourthReminder() {
+  void shouldRejectAReminderBeyondTheLimit() {
     Order order = createCalledOrder();
 
-    Instant firstReminder = order.getCalledAt().plusSeconds(300);
-
-    Instant secondReminder = firstReminder.plusSeconds(300);
-
-    Instant thirdReminder = secondReminder.plusSeconds(300);
-
-    order.remindStudent(firstReminder);
-    order.remindStudent(secondReminder);
-    order.remindStudent(thirdReminder);
+    Instant last = remindUpToTheLimit(order);
 
     ReminderLimitReachedException exception =
         assertThrows(
-            ReminderLimitReachedException.class,
-            () -> order.remindStudent(thirdReminder.plusSeconds(300)));
+            ReminderLimitReachedException.class, () -> order.remindStudent(last.plusSeconds(300)));
 
     assertEquals(ErrorCode.REMINDER_LIMIT_REACHED, exception.getCode());
 
-    assertEquals("Este pedido ya alcanzó el máximo de 3 recordatorios", exception.getMessage());
+    assertEquals("Este pedido ya alcanzó el máximo de 5 recordatorios", exception.getMessage());
 
-    assertEquals(3, order.getReminderCount());
+    assertEquals(Order.MAX_REMINDERS, order.getReminderCount());
   }
 
   @Test
-  void shouldRejectNotCollectedBeforeThreeReminders() {
+  void shouldRejectNotCollectedBeforeEveryReminder() {
     Order order = createCalledOrder();
 
-    Instant firstReminder = order.getCalledAt().plusSeconds(300);
-
-    Instant secondReminder = firstReminder.plusSeconds(300);
-
-    order.remindStudent(firstReminder);
-    order.remindStudent(secondReminder);
+    Instant reminder = order.getCalledAt();
+    for (int sent = 0; sent < Order.MAX_REMINDERS - 1; sent++) {
+      reminder = reminder.plusSeconds(300);
+      order.remindStudent(reminder);
+    }
+    Instant lastReminder = reminder;
 
     NotCollectedRequirementsException exception =
         assertThrows(
             NotCollectedRequirementsException.class,
-            () -> order.markNotCollected(secondReminder.plusSeconds(60)));
+            () -> order.markNotCollected(lastReminder.plusSeconds(60)));
 
     assertEquals(ErrorCode.NOT_COLLECTED_REQUIREMENTS_NOT_MET, exception.getCode());
 
     assertEquals(
-        "El pedido solo puede marcarse como no recogido después de enviar los 3 recordatorios",
+        "El pedido solo puede marcarse como no recogido después de enviar los 5 recordatorios",
         exception.getMessage());
 
     assertEquals(OrderStatus.CALLED, order.getStatus());
@@ -267,20 +251,10 @@ class OrderTest {
   }
 
   @Test
-  void shouldMarkOrderAsNotCollectedAfterThreeReminders() {
+  void shouldMarkOrderAsNotCollectedAfterEveryReminder() {
     Order order = createCalledOrder();
 
-    Instant firstReminder = order.getCalledAt().plusSeconds(300);
-
-    Instant secondReminder = firstReminder.plusSeconds(300);
-
-    Instant thirdReminder = secondReminder.plusSeconds(300);
-
-    order.remindStudent(firstReminder);
-    order.remindStudent(secondReminder);
-    order.remindStudent(thirdReminder);
-
-    Instant notCollectedAt = thirdReminder.plusSeconds(60);
+    Instant notCollectedAt = remindUpToTheLimit(order).plusSeconds(60);
 
     order.markNotCollected(notCollectedAt);
 
@@ -289,6 +263,16 @@ class OrderTest {
     assertEquals(notCollectedAt, order.getNotCollectedAt());
 
     assertEquals(notCollectedAt, order.getUpdatedAt());
+  }
+
+  /** Sends every allowed reminder, five minutes apart, and returns the instant of the last one. */
+  private static Instant remindUpToTheLimit(Order order) {
+    Instant reminder = order.getCalledAt();
+    for (int sent = 0; sent < Order.MAX_REMINDERS; sent++) {
+      reminder = reminder.plusSeconds(300);
+      order.remindStudent(reminder);
+    }
+    return reminder;
   }
 
   @Test
