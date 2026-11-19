@@ -20,7 +20,7 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
 | Feature flag | Todo el menú detrás de `MENU_DINAMICO_ENABLED` (servidor y web, solo variable de servidor). Apagada, la demo sigue sin menú |
 | Límite de texto | **350 caracteres por categoría**, suma de sus fichas. Sin contador visible. Se valida igual en servidor |
 | Opciones | Máximo **20** por categoría |
-| Obligatorias | Proteína y Principio. Saltables con «Ninguna»: Bebida y Complementos. Adiciones siempre saltable |
+| Plantilla final (rev. 3) | Proteína (obligatoria), Principio (obligatoria), Acompañamientos (saltable), Complemento (saltable; una sola opción; sin costo; incluye sopa, fruta, postre) y Adiciones (con precio extra, varias). Sin categoría «Sopa» ni «Bebida»: la sopa va dentro de Complemento |
 | Platos por pedido | Uno. Cuenta como una unidad de los límites 10/15; las adiciones no cuentan |
 | Agotado con pedidos hechos | El pedido no cambia; se usa el rechazo con motivo existente (B18) |
 | Copiar el de ayer | Copia solo ingredientes, no adiciones encendidas |
@@ -28,6 +28,8 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
 | Precio del plato | Solo en el encabezado de la carta; cambia en la siguiente publicación |
 | Forma en Inicio (rev. 3) | Bloque «Menú del día» dentro de Inicio, sin página propia ni letrero. Carta blanca con chips azul `#0B5FFF` y botón «Agregar al carrito» dentro |
 | Categorías sin opciones hoy | No se muestran, ni con «Ninguna» |
+| Carta con la cafetería cerrada (Q7) | Solo lectura, con el aviso `CLOSED_NOTICE` y el botón deshabilitado, igual que el catálogo |
+| Orden en Inicio (Q8) | Selector de cafetería, carrusel de banners, filtros de categorías (Todo, Desayunos…), carta «Menú del día», secciones de productos. «Categorías» son los filtros, no el selector |
 | Precio de adición | Cambia en su siguiente encendido |
 | Categorías del admin | Se desactivan, no se borran (fase admin) |
 | Comas | Prohibidas en ingredientes (separan fichas) |
@@ -44,7 +46,8 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
 
 - Cada cafetería tiene **un** plato del día (p. ej. «Almuerzo del día») con **precio fijo**.
   Lo que cambia cada día son sus ingredientes.
-- El plato tiene categorías de **una sola opción**: Proteína, Principio, Bebida y Complementos.
+- El plato tiene categorías de **una sola opción**: Proteína (obligatoria), Principio (obligatoria),
+  Acompañamientos (saltable), Complemento (saltable; incluye sopa, fruta, postre; sin costo).
   Mientras no haya panel admin, la plantilla es fija y la misma en todas las cafeterías.
 - Las categorías obligatorias no admiten saltarse. Las saltables muestran una ficha «Ninguna», así
   que la elección es siempre explícita y queda guardada.
@@ -60,7 +63,7 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
 
 | Entra en la demo (si cabe el 25)                                                                                       | Se aplaza                                                                 |
 | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Migración 030 y siembra en staging (plato, 4 categorías, Adiciones, adiciones de ejemplo)                             | Pantalla de administración del menú (PR 9, después de la demo)            |
+| Migración 030 y siembra en staging (plato, 4 categorías de una opción, Adiciones, adiciones de ejemplo; sección 2.7)                             | Pantalla de administración del menú (PR 9, después de la demo)            |
 | Lectura del menú para el cliente: carta en Inicio                                                                    | Varios platos por pedido                                                  |
 | Backend del worker: escribir ingredientes, encender adiciones, publicar, copiar ayer                                  | Ingredientes desde un catálogo reutilizable (hoy son texto libre)         |
 | Worker: editor de ingredientes en Disponibilidad y botón de publicar                                                  | Historial del menú para el cliente                                        |
@@ -430,6 +433,105 @@ Notas sobre el borrador:
 - Inmutabilidad: `UPDATE` y `DELETE` sobre snapshots fallan con `order_daily_menu_immutable`.
 - Regresión: `uq_orders_one_active_per_client`, 011 y 021 siguen en verde.
 
+### 2.7 Siembra de staging (plantilla fija)
+
+Archivo previsto: `scripts/supabase/seed-daily-menu.sql`, en el PR 1. Sigue la misma guarda que
+`seed-demo.sql`: solo corre si `unifood.seed_target = 'staging'`. Es idempotente (`ON CONFLICT DO NOTHING`).
+Usa la cafetería de la demo («Cafetería Central», «Sede Principal»). Los precios de ejemplo están
+pendientes de confirmar (Q6).
+
+```sql
+SET unifood.seed_target = 'staging';
+DO $$
+BEGIN
+  IF current_setting('unifood.seed_target', true) IS DISTINCT FROM 'staging' THEN
+    RAISE EXCEPTION 'seed-daily-menu solo se ejecuta en staging' USING ERRCODE = 'P0001';
+  END IF;
+END $$;
+
+CREATE TEMP TABLE demo_cafeteria AS
+  SELECT c.id FROM public.cafeterias c JOIN public.sites s ON s.id = c.site_id
+  WHERE s.name = 'Sede Principal' AND c.name = 'Cafetería Central';
+
+-- Plato: título y precio fijo de ejemplo.
+INSERT INTO public.daily_menu_settings (cafeteria_id, title, plate_price)
+  SELECT id, 'Almuerzo del día', 9500.00 FROM demo_cafeteria
+  ON CONFLICT (cafeteria_id) DO NOTHING;
+
+-- Plantilla fija: 4 categorías de una opción y Adiciones.
+INSERT INTO public.daily_menu_categories (cafeteria_id, label, kind, position, can_skip)
+  SELECT d.id, v.label, v.kind, v.position, v.can_skip
+  FROM demo_cafeteria d CROSS JOIN (VALUES
+    ('Proteína',        'SINGLE',    0, false),
+    ('Principio',       'SINGLE',    1, false),
+    ('Acompañamientos', 'SINGLE',    2, true),
+    ('Complemento',     'SINGLE',    3, true),
+    ('Adiciones',       'ADDITIONS', 4, true)
+  ) AS v(label, kind, position, can_skip)
+  ON CONFLICT DO NOTHING;
+
+-- Adiciones de ejemplo (precio extra fijado por el admin; ejemplos a confirmar).
+INSERT INTO public.daily_menu_additions (cafeteria_id, name, extra_price)
+  SELECT d.id, v.name, v.price FROM demo_cafeteria d CROSS JOIN (VALUES
+    ('Huevo frito', 2000.00), ('Queso', 2000.00), ('Chicharrón', 3000.00)
+  ) AS v(name, price)
+  ON CONFLICT DO NOTHING;
+
+-- Día de la demo (opcional, solo staging). Las opciones son de ejemplo. «Ninguna» no se guarda:
+-- es la ausencia de elección en las categorías saltables.
+CREATE TEMP TABLE demo_day AS SELECT (now() AT TIME ZONE 'America/Bogota')::date AS business_date;
+
+INSERT INTO public.daily_menu_days (cafeteria_id, business_date)
+  SELECT d.id, dd.business_date FROM demo_cafeteria d CROSS JOIN demo_day dd
+  ON CONFLICT DO NOTHING;
+
+INSERT INTO public.daily_menu_options (cafeteria_id, business_date, category_id, label)
+  SELECT d.id, dd.business_date, c.id, v.label
+  FROM demo_cafeteria d CROSS JOIN demo_day dd
+  JOIN public.daily_menu_categories c ON c.cafeteria_id = d.id
+  JOIN (VALUES
+    ('Proteína',        'Pollo a la plancha'),
+    ('Proteína',        'Carne en salsa'),
+    ('Principio',       'Arroz blanco'),
+    ('Principio',       'Lentejas'),
+    ('Acompañamientos', 'Ensalada de tomate'),
+    ('Complemento',     'Sopa de verduras'),
+    ('Complemento',     'Fruta de temporada'),
+    ('Complemento',     'Postre de la casa')
+  ) AS v(cat, label) ON v.cat = c.label
+  ON CONFLICT DO NOTHING;
+
+INSERT INTO public.daily_menu_addition_availability
+    (cafeteria_id, business_date, addition_id, is_available, extra_price)
+  SELECT a.cafeteria_id, dd.business_date, a.id, true, a.extra_price
+  FROM public.daily_menu_additions a CROSS JOIN demo_day dd
+  WHERE a.cafeteria_id IN (SELECT id FROM demo_cafeteria)
+    AND a.name IN ('Huevo frito', 'Queso')
+  ON CONFLICT DO NOTHING;
+
+-- Publicar solo si existe un WORKER asignado (si no, falla la restricción de 2.5 y no deja nada a medias).
+UPDATE public.daily_menu_days dm
+  SET title_snapshot = 'Almuerzo del día',
+      plate_price_snapshot = 9500.00,
+      published_at = now(),
+      published_by = (SELECT cu.user_id FROM public.cafeteria_users cu
+                      JOIN public.user_roles ur ON ur.user_id = cu.user_id
+                      JOIN public.roles r ON r.id = ur.role_id
+                      WHERE cu.cafeteria_id = dm.cafeteria_id AND r.name = 'WORKER'
+                      LIMIT 1),
+      version = dm.version + 1
+  FROM demo_day dd
+  WHERE dm.cafeteria_id IN (SELECT id FROM demo_cafeteria)
+    AND dm.business_date = dd.business_date;
+```
+
+Notas de la siembra:
+
+- La plantilla de categorías se fija aquí. Sin panel admin, cambiarla es SQL controlado en staging.
+- El bloque del día de la demo es opcional: el camino normal es que el worker escriba y publique
+  (PR 3 y 7). Sirve para tener un menú listo si el worker todavía no tiene pantalla.
+- Ninguna cafetería real se siembra con este script. La guarda lo impide fuera de staging.
+
 ---
 
 ## 3. Backend
@@ -479,7 +581,7 @@ publicado o no está completo)
   "categories": [
     { "id": "uuid", "label": "Proteína", "kind": "SINGLE", "canSkip": false,
       "options": [{ "id": "uuid", "label": "Pollo a la plancha" }] },
-    { "id": "uuid", "label": "Bebida", "kind": "SINGLE", "canSkip": true, "options": [] },
+    { "id": "uuid", "label": "Acompañamientos", "kind": "SINGLE", "canSkip": true, "options": [] },
     { "id": "uuid", "label": "Adiciones", "kind": "ADDITIONS", "canSkip": true,
       "additions": [{ "id": "uuid", "name": "Huevo frito", "extraPrice": 2000.0 }] }
   ]
@@ -590,7 +692,7 @@ total = Σ items.subtotal                                  (productos, como hoy)
   "price": 9500.0,
   "choices": [
     { "category": "Proteína", "kind": "OPTION", "label": "Pollo a la plancha", "extraPrice": null },
-    { "category": "Bebida", "kind": "NONE", "label": null, "extraPrice": null },
+    { "category": "Complemento", "kind": "NONE", "label": null, "extraPrice": null },
     { "category": "Adiciones", "kind": "ADDITION", "label": "Huevo frito", "extraPrice": 2000.0 }
   ]
 }
@@ -702,17 +804,17 @@ categorías de catálogo. No se toca `components/worker/`.
 
 Decisión de la revisión 3: el menú no es una página ni una pestaña. Es un bloque de Inicio.
 
-- **Dónde:** dentro de Inicio, entre las categorías (selector de cafetería y categorías) y la primera
-  sección de productos. El carrusel y el banner de cerrada no cambian. No hay ruta propia ni letrero.
+- **Dónde (Q8):** dentro de Inicio, en este orden: selector de cafetería, carrusel de banners, filtros
+  de categorías (Todo, Desayunos…), **carta «Menú del día»** y, al final, las secciones de productos.
+  El banner de cerrada sigue ocupando el lugar del carrusel. No hay ruta propia ni letrero.
 - **Cuándo aparece:** menú publicado hoy, completo y bandera encendida. Con la cafetería cerrada se
   ve en solo lectura, con el aviso de `CLOSED_NOTICE` y el botón deshabilitado, igual que el catálogo
-  (propuesta; ver Q7).
+  (Q7, decidido).
 - **Aspecto:** tarjeta blanca estilo carta de restaurante: borde suave, sombra leve, título «Menú del
   día» y el nombre del plato. El precio fijo aparece **una sola vez**, en el encabezado de la carta.
   Sin letrero de precio extra en el almuerzo.
-- **Secciones:** en el orden de la plantilla. Ejemplo pedido por el dueño: Sopa, Proteína, Principio,
-  Acompañamientos, Complemento de una sola opción y, al final, Adiciones (los nombres y la
-  obligatoriedad se confirman en Q1).
+- **Secciones:** en el orden de la plantilla final: Proteína, Principio, Acompañamientos, Complemento
+  y, al final, Adiciones.
   - Categoría `SINGLE` con opciones hoy: título de la sección y sus fichas. Si es saltable, la ficha
     «Ninguna» al final.
   - **Categoría sin opciones hoy: no se muestra**, ni siquiera con «Ninguna». Una obligatoria sin
@@ -757,7 +859,7 @@ vive en la carta de la sección 4.4.
   Almuerzo del día · $9.500
   Proteína: Pollo a la plancha
   Principio: Arroz
-  Bebida: Ninguna
+  Complemento: Ninguna
   Adiciones: Huevo frito (+$2.000)
   ```
 
@@ -945,16 +1047,8 @@ admin cambia el precio a mitad de día, el cliente ve el precio que tenía al en
 siembra en staging. Si en una cafetería real hace falta otra plantilla antes de la fase 9, hay que
 cargarla con SQL controlado. ¿Es aceptable para el piloto?
 
-**Q6. Nombres y obligatoriedad de las categorías (revisión 3).** El dueño pidió: Sopa, Proteína,
-Principio, Acompañamientos, Complemento de una sola opción y Adiciones. La revisión 2 tenía Proteína,
-Principio, Bebida y Complementos. ¿Cuál es la plantilla por defecto? *Recomendación:* usar la lista nueva
-y marcar como obligatorias Proteína y Principio; Sopa, Acompañamientos y Complemento de una sola opción,
-saltables con «Ninguna». Hace falta confirmarlo porque la siembra depende de ello.
+**Q6. Precios de ejemplo.** La siembra usa 9.500 para el plato y 2.000 y 3.000 para las adiciones. Son
+valores de ejemplo: ¿cuáles son los precios reales para la demo?
 
-**Q7. Carta con la cafetería cerrada.** *Recomendación:* verla en solo lectura, con el aviso y el botón
-deshabilitado, como el catálogo. La alternativa es ocultarla, que es lo que decía la revisión 2 para el
-letrero.
-
-**Q8. Anclaje exacto en Inicio.** El dueño dijo «entre las categorías y las secciones de productos». Hay
-que confirmar si «categorías» es el selector de cafetería o la barra de filtros (Todo, Del día, Desayunos…).
-En el código, el selector está antes de las secciones por categoría; hay que verificarlo al implementar.
+*Resueltas en la revisión 3 (quedan en la tabla de decisiones): plantilla final (Q6 anterior), carta con
+la cafetería cerrada (Q7 anterior) y orden en Inicio (Q8 anterior).*
