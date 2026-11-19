@@ -47,6 +47,7 @@ export default async function ClientHomePage({
     <ClientHome
       ownerId={profile.id}
       siteName={selection.site.name}
+      sites={context.sites}
       menu={menu.menu}
     />
   );

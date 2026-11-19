@@ -125,6 +125,12 @@ export const recoveryResendIn = (seconds: number) =>
 export const PASSWORD_UPDATED = "Contraseña actualizada";
 export const CAFETERIA_STATUS_OPEN = "Abierta";
 export const CAFETERIA_STATUS_CLOSED = "Cerrada";
+export const CAFETERIA_PICKER_LIST = "Cafeterías disponibles";
+export const cafeteriaPickerLabel = (
+  name: string,
+  site: string,
+  status: string,
+) => `Cambiar cafetería. ${name}, ${site}, ${status}`;
 export const HOME_ALL_CATEGORIES = "Todo";
 export const HOME_SEE_ALL = "Ver todo";
 /** Only when the whole menu has nothing to order; empty categories are simply not shown. */

@@ -15,7 +15,8 @@ import {
 } from "../../shared/messages";
 import ClosedBanner from "./ClosedBanner";
 import FeaturedCarousel from "./FeaturedCarousel";
-import CafeteriaSelector from "./CafeteriaSelector";
+import CafeteriaPicker from "./CafeteriaPicker";
+import type { ContextSite } from "../types";
 import { RememberCafeteria } from "./CafeteriaMemory";
 import ProductAddButton from "./ProductAddButton";
 import ProductPlaceholder from "./ProductPlaceholder";
@@ -30,10 +31,13 @@ import styles from "./HomeSections.module.css";
 export default function ClientHome({
   ownerId,
   siteName,
+  sites = [],
   menu: serverMenu,
 }: {
   ownerId: string;
   siteName: string;
+  /** Every subscribed cafeteria, for the list that opens on Inicio (C2). */
+  sites?: ContextSite[];
   menu: CafeteriaMenu;
 }) {
   const [filter, setFilter] = useState<MenuCategoryId | null>(null);
@@ -63,7 +67,11 @@ export default function ClientHome({
   return (
     <section className={styles.home} aria-label="Inicio">
       <RememberCafeteria ownerId={ownerId} cafeteriaId={cafeteria.id} />
-      <CafeteriaSelector siteName={siteName} cafeteria={cafeteria} compact />
+      <CafeteriaPicker
+        siteName={siteName}
+        cafeteria={cafeteria}
+        sites={sites}
+      />
       {stale && (
         <p className={styles.notice} role="status">
           {OFFLINE_RETRYING}

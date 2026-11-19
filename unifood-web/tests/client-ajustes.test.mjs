@@ -18,3 +18,25 @@ test("C1: «Conservar carrito» has no blue outline and the open dialog draws no
   assert.match(keep, /border: 0;/);
   assert.match(keep, /min-height: 50px;/);
 });
+
+test("C2: the current cafeteria on Inicio opens the available ones in place, without navigating", () => {
+  const home = read("features/client/components/ClientHome.tsx");
+  assert.match(home, /<CafeteriaPicker/);
+  assert.doesNotMatch(home, /CafeteriaSelector/);
+  const picker = read("features/client/components/CafeteriaPicker.tsx");
+  // A disclosure button, not a link to the selection screen.
+  assert.match(picker, /aria-expanded=\{open\}/);
+  assert.match(picker, /aria-controls=\{listId\}/);
+  assert.doesNotMatch(picker, /CHANGE_CAFETERIA_HREF|href=/);
+  // Each other cafeteria goes through CafeteriaLink (it asks before emptying the cart).
+  assert.match(picker, /<CafeteriaLink/);
+  assert.match(picker, /aria-current="true"/);
+  assert.match(picker, /event\.key !== "Escape"/);
+  assert.match(read("app/cuenta/page.tsx"), /sites=\{context\.sites\}/);
+  const css = read("features/client/components/HomeSections.module.css");
+  assert.match(css, /\.pickerOption \{[^}]*min-height: 48px;/);
+  assert.match(
+    css,
+    /prefers-reduced-motion: reduce\) \{\s*\.pickerPanel \{\s*animation: none;/,
+  );
+});
