@@ -2,7 +2,7 @@
 import { useRef } from "react";
 import { History, RefreshCw, Search, X } from "lucide-react";
 import { useWorkerHistory } from "../useWorkerHistory";
-import { formatShortRange } from "../presentation";
+import { formatDayDate, formatShortRange } from "../presentation";
 import { HistoryOrderRow } from "./HistoryOrderRow";
 import type { HistoryRange, HistoryStatus } from "../types";
 import surfaces from "@/components/worker/surfaces.module.css";
@@ -30,7 +30,7 @@ export function WorkerHistoryPanel() {
           <h2 id="worker-history-title">Historial</h2>
           {state.data && (
             <p className={styles.date}>
-              {formatShortRange(state.data.monthStart, state.data.businessDate)}
+              {formatDayDate(state.data.businessDate)}
             </p>
           )}
         </div>
@@ -106,7 +106,11 @@ export function WorkerHistoryPanel() {
             <option value="CANCELLED">Cancelado</option>
           </select>
         </label>
-        <span>Hora de Bogotá</span>
+        {state.data && (
+          <span className={styles.range}>
+            {formatShortRange(state.data.rangeStart, state.data.rangeEnd)}
+          </span>
+        )}
       </div>
       {state.loading && (
         <div className={styles.loading} role="status">

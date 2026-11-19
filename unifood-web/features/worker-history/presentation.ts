@@ -54,13 +54,17 @@ export function historyStatusText(
   }
 }
 
-/** «01/11 – 18/11/2026»; the year is repeated only when the range crosses one. */
+const fullDate = (day: string) => {
+  const [y, m, d] = day.split("-");
+  return `${d}/${m}/${y}`;
+};
+/** A business day as DD/MM/AAAA. */
+export const formatDayDate = fullDate;
+/** «01/11/2026 – 18/11/2026»: both ends always carry the full date. */
 export function formatShortRange(start: string, end: string): string {
-  const [sy, sm, sd] = start.split("-");
-  const [ey, em, ed] = end.split("-");
-  return sy === ey
-    ? `${sd}/${sm} – ${ed}/${em}/${ey}`
-    : `${sd}/${sm}/${sy} – ${ed}/${em}/${ey}`;
+  return start === end
+    ? fullDate(end)
+    : `${fullDate(start)} – ${fullDate(end)}`;
 }
 
 const dayKey = new Intl.DateTimeFormat("en-CA", {

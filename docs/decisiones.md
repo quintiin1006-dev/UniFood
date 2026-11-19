@@ -1046,7 +1046,7 @@ disponibilidad sin recargar:
   (`components/worker/surfaces.module.css`, clase `.glass`, usada desde el JSX). Historial y
   Disponibilidad vuelven al contenido de `fe8ac99` sin la hoja blanca grande ni scroll interno:
   desplaza la página, con margen inferior para el nav. Se conservan el rango corto y la fila sin id.
-- **Header único:** 96 px de alto, logo de 52 px, mismo título, nombre del módulo y «Cerrar
+- **Header único:** 64 px de alto (antes 96), logo de 40 px, mismo título, nombre del módulo y «Cerrar
   sesión» en los cinco módulos (medidas divididas entre `--worker-zoom`). Buscador y «Actualizado
   a las …» solo en Pedidos y Llamadas.
 - **Salvaguardas de legibilidad:** texto blanco sobre el cristal (≥ 4,5:1 en el punto más claro

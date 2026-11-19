@@ -522,3 +522,10 @@
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
+/* A4: the full range of the selected period, beside the filters. */
+.range {
+  align-self: center;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+}

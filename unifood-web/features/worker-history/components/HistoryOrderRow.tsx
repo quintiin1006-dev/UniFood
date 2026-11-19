@@ -2,7 +2,6 @@
 
 import { useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { StatusChip } from "@/components/ui/StatusChip";
 import {
   formatHistoryDate,
   formatHistoryPrice,
@@ -13,9 +12,8 @@ import type { HistoryOrder } from "../types";
 import styles from "./WorkerHistory.module.css";
 
 /**
- * One finished order in the history list (ola 2 · D3): name and order id on the left, a compact
- * state chip and a toggle on the right. The toggle opens every detail the page has. The chip is
- * one element to remove if the owner does not want it (see docs/ui-paneles.md).
+ * One finished order in the history list: name and hour on the left, a toggle on the right.
+ * The state is shown only inside the detail (jj/cliente-ajustes · A2).
  */
 export function HistoryOrderRow({
   order,
@@ -34,16 +32,11 @@ export function HistoryOrderRow({
         <div className={styles.rowIdentity}>
           <h3 className={styles.rowName}>{name}</h3>
           {/* The hour it ended; the order id is not shown (jj/cliente-pulido). */}
-          <time dateTime={order.completedAt} title="Hora de Bogotá">
+          <time dateTime={order.completedAt}>
             {formatHistoryTime(order.completedAt)}
           </time>
         </div>
         <div className={styles.rowAside}>
-          <StatusChip
-            status={order.status}
-            cancellationSource={order.cancellationSource}
-            className={styles.compactChip}
-          />
           <button
             type="button"
             className={styles.toggle}
@@ -66,7 +59,7 @@ export function HistoryOrderRow({
         <div id={panelId} className={styles.detail}>
           <p className={styles.detailStatus}>
             {historyStatusText(order)} ·{" "}
-            <time dateTime={order.completedAt} title="Hora de Bogotá">
+            <time dateTime={order.completedAt}>
               {formatHistoryDate(order.completedAt)} ·{" "}
               {formatHistoryTime(order.completedAt)}
             </time>

@@ -128,7 +128,7 @@ const headerFor = (activeModule) => {
   );
 };
 
-test("the five worker modules use the same header, 96 px tall with a 52 px logo", () => {
+test("the five worker modules use the same header, 64 px tall with a 40 px logo", () => {
   const classes = new Set();
   for (const moduleName of [
     "orders",
@@ -145,8 +145,8 @@ test("the five worker modules use the same header, 96 px tall with a 52 px logo"
   }
   assert.equal(classes.size, 1);
   const css = read("components/worker/Header.classic.module.css");
-  assert.match(css, /height: calc\(96px \/ var\(--worker-zoom, 1\)\);/);
-  assert.match(css, /width: calc\(52px \/ var\(--worker-zoom, 1\)\);/);
+  assert.match(css, /height: calc\(64px \/ var\(--worker-zoom, 1\)\);/);
+  assert.match(css, /width: calc\(40px \/ var\(--worker-zoom, 1\)\);/);
 });
 
 test("Historial and Disponibilidad share the Pedidos surface, page and watermark", () => {
