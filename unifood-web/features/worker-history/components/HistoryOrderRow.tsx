@@ -31,21 +31,14 @@ export function HistoryOrderRow({
   return (
     <article className={styles.row} data-open={open || undefined}>
       <div className={styles.rowHead}>
-        {/* Compact: time, name, total and state; the order id is not shown. */}
         <div className={styles.rowIdentity}>
-          <time
-            className={styles.rowTime}
-            dateTime={order.completedAt}
-            title="Hora de Bogotá"
-          >
+          <h3 className={styles.rowName}>{name}</h3>
+          {/* The hour it ended; the order id is not shown (jj/cliente-pulido). */}
+          <time dateTime={order.completedAt} title="Hora de Bogotá">
             {formatHistoryTime(order.completedAt)}
           </time>
-          <h3 className={styles.rowName}>{name}</h3>
         </div>
         <div className={styles.rowAside}>
-          <strong className={styles.rowTotal}>
-            {formatHistoryPrice(order.total)}
-          </strong>
           <StatusChip
             status={order.status}
             cancellationSource={order.cancellationSource}

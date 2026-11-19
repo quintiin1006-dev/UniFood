@@ -8,6 +8,7 @@ import {
 } from "../presentation";
 import { AvailabilitySwitch } from "./AvailabilitySwitch";
 import { CategoryCarousel } from "./CategoryCarousel";
+import surfaces from "@/components/worker/surfaces.module.css";
 import styles from "./Availability.module.css";
 import { Notice } from "@/components/ui/Notice";
 import { Button } from "@/components/ui/Button";
@@ -78,7 +79,7 @@ export function AvailabilityPanel() {
       {state.data && (
         <>
           <section
-            className={styles.cafeteriaState}
+            className={`${styles.cafeteriaState} ${surfaces.glass}`}
             aria-labelledby="availability-cafeteria-name"
             aria-busy={state.cafeteriaBusy}
           >

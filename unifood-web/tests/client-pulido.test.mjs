@@ -134,41 +134,4 @@ test("the notice sound is a small icon button with its name", () => {
   assert.doesNotMatch(myOrder, /<span>Sonido de avisos<\/span>/);
 });
 
-test("forgotten password: the address travels outside the URL and the code is sent at once", () => {
-  const storage = new Map();
-  globalThis.sessionStorage = {
-    getItem: (key) => storage.get(key) ?? null,
-    setItem: (key, value) => storage.set(key, value),
-    removeItem: (key) => storage.delete(key),
-  };
-  const handoff = loadTs("features/auth/recoveryHandoff.ts");
-  handoff.handRecoveryEmail("  Ana@Uni.EDU.co ");
-  assert.equal(handoff.readRecoveryEmail(), "ana@uni.edu.co");
-  handoff.clearRecoveryEmail();
-  assert.equal(handoff.readRecoveryEmail(), null);
-  handoff.handRecoveryEmail("ana");
-  assert.equal(handoff.readRecoveryEmail(), null);
-  delete globalThis.sessionStorage;
-
-  const screen = read("features/auth/components/AuthScreen.tsx");
-  // One screen: code and new password together, verified and then saved.
-  assert.match(screen, /const isPassword = isRecovery && step === 1;/);
-  assert.match(
-    screen,
-    /request\("verify", \{ email, code, recovery: true \}\)/,
-  );
-  assert.match(screen, /await request\("reset", \{ password \}\)/);
-  assert.match(screen, /readRecoveryEmail\(\)/);
-  assert.match(screen, /RECOVERY_CODE_SENT/);
-  assert.doesNotMatch(screen, /recuperar-contrasena\?[^"]*email=/);
-  const messages = loadTs("features/shared/messages.ts");
-  assert.equal(
-    messages.RECOVERY_CODE_SENT,
-    "Si el correo existe, te enviamos un código.",
-  );
-  // From «Mi perfil» the account address goes along.
-  assert.match(
-    read("app/cuenta/perfil/contrasena/page.tsx"),
-    /email=\{profile\.email\}/,
-  );
-});
+// The change-password flow is covered by tests/client-correcciones.test.mjs.

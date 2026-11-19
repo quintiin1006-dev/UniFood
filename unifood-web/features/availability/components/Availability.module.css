@@ -1,16 +1,11 @@
 .panel {
-  flex: 1;
-  min-height: 0;
+  flex: none;
+  min-height: auto;
   min-width: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  /* A white card on the deep blue page, like the columns of Pedidos. */
-  padding: 18px 20px 28px;
-  border-radius: 24px;
-  background: var(--color-surface);
-  box-shadow: 0 13px 35px rgba(3, 39, 87, 0.2);
-  color: var(--color-ink);
+  padding: 4px 4px 28px;
+  color: #ffffff;
   scrollbar-gutter: stable;
+  overflow: visible;
 }
 .titleRow {
   display: flex;
@@ -36,7 +31,7 @@
 }
 .date {
   margin: 0;
-  color: var(--color-slate);
+  color: #ffffff;
   font-size: 14px;
 }
 .refresh,
@@ -77,10 +72,8 @@
   gap: 24px;
   margin-bottom: 20px;
   padding: 20px;
-  border: 1px solid var(--color-brand-tint-2);
   border-radius: 16px;
-  background: white;
-  color: var(--color-ink);
+  color: #ffffff;
 }
 .cafeteriaDetails,
 .cafeteriaControl {
@@ -93,7 +86,7 @@
   gap: 8px;
   margin: 12px 0 0;
   font-size: 12px;
-  color: var(--color-slate);
+  color: #ffffff;
 }
 .badge {
   padding: 4px 9px;
@@ -113,7 +106,7 @@
 }
 .operationHelp {
   margin: 8px 0 0;
-  color: var(--color-slate);
+  color: #ffffff;
   font-size: 12px;
   line-height: 1.5;
 }
@@ -174,9 +167,7 @@
   margin-bottom: 18px;
   min-width: 0;
   padding: 16px;
-  border: 1px solid var(--color-brand-tint-2);
   border-radius: 16px;
-  background: white;
 }
 .categoryHeader {
   display: flex;
@@ -197,7 +188,7 @@
   gap: 10px;
 }
 .categoryCount {
-  color: var(--color-text-soft);
+  color: #ffffff;
   font-size: 12px;
 }
 .carouselActions {

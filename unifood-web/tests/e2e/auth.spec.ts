@@ -302,17 +302,29 @@ test("password recovery goes from email and OTP to password and back to login", 
   });
   await page.goto("/recuperar-contrasena");
   await page.getByRole("textbox").fill("maria@ustavillavicencio.edu.co");
-  await page.getByRole("button", { name: "Enviar código" }).click();
-  await expect(page.getByRole("status")).toContainText("Si el correo existe");
+  await page
+    .getByRole("button", { name: "Enviar código de verificación" })
+    .click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Te enviamos un código de verificación" }),
+  ).toBeVisible();
   await page
     .getByRole("textbox", { name: "Código de verificación", exact: true })
     .fill("654321");
-  await page.getByLabel("Contraseña", { exact: true }).fill("NuevaClave9");
   await page
-    .getByLabel("Confirmar contraseña", { exact: true })
+    .getByLabel("Nueva contraseña", { exact: true })
     .fill("NuevaClave9");
-  await page.getByRole("button", { name: "Restablecer contraseña" }).click();
-  await expect(page.getByRole("status")).toContainText("se actualizó");
+  await page
+    .getByLabel("Confirmar nueva contraseña", { exact: true })
+    .fill("NuevaClave9");
+  await page
+    .getByRole("button", { name: "Cambiar contraseña", exact: true })
+    .click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Contraseña actualizada" }),
+  ).toBeVisible();
   await expect(page.getByLabel("Contraseña", { exact: true })).toHaveValue("");
   expect(actions).toEqual(["recover", "verify", "reset"]);
 });

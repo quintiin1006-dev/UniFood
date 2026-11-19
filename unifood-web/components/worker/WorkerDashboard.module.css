@@ -50,8 +50,7 @@
   background: var(--color-bg);
   --worker-zoom: 1;
 }
-.historyPage::before,
-.historyPage :global(.worker-main)::before {
+.historyPage::before {
   display: none;
 }
 .historyPage > header,
@@ -68,11 +67,12 @@
 .historyPage :global(.worker-main) {
   flex: 1 1 0;
   min-height: 0;
-  overflow: hidden;
+  /* The page scrolls, not a box inside it; the padding keeps content clear of the nav. */
+  overflow-y: auto;
   width: 100%;
   max-width: 1320px;
   margin-inline: auto;
-  padding: 22px 24px 8px;
+  padding: 22px 24px 32px;
 }
 @media (max-width: 760px) {
   .historyPage :global(.worker-main) {
@@ -82,8 +82,7 @@
     margin-bottom: max(9px, env(safe-area-inset-bottom));
   }
 }
-.availabilityPage::before,
-.availabilityPage :global(.worker-main)::before {
+.availabilityPage::before {
   display: none;
 }
 .availabilityPage > header,
@@ -100,11 +99,12 @@
 .availabilityPage :global(.worker-main) {
   flex: 1 1 0;
   min-height: 0;
-  overflow: hidden;
+  /* The page scrolls, not a box inside it; the padding keeps content clear of the nav. */
+  overflow-y: auto;
   width: 100%;
   max-width: 1320px;
   margin-inline: auto;
-  padding: 22px 24px 8px;
+  padding: 22px 24px 32px;
 }
 @media (max-width: 760px) {
   .availabilityPage :global(.worker-main) {
@@ -115,8 +115,9 @@
   }
 }
 
-/* Ola 2 · D2: Pedidos and Llamadas keep the classic look (gradient and UniFood watermark). */
-.classicPage:global(.worker-page) {
+/* One worker look (jj/cliente-correcciones): Pedidos, Llamadas, Historial and Disponibilidad
+   share the deep blue page and the UniFood watermark. */
+.brandedPage:global(.worker-page) {
   background:
     radial-gradient(
       circle at 50% 45%,
@@ -126,7 +127,7 @@
     linear-gradient(145deg, #063d82 0%, #0756a9 48%, #043d7f 100%);
 }
 
-.classicPage :global(.worker-main)::before {
+.brandedPage :global(.worker-main)::before {
   content: "";
   position: absolute;
   left: 50%;
@@ -135,21 +136,15 @@
   width: 420px;
   height: 420px;
   background: url("/unifood-pantalla.png") no-repeat center / contain;
-  opacity: 0.1;
+  /* At most 8 %: it never takes contrast from the text above it. */
+  opacity: 0.08;
   pointer-events: none;
   user-select: none;
   z-index: 0;
 }
 
-/* Disponibilidad and Historial speak the same language as Pedidos: the deep blue page and white
-   cards on it (jj/cliente-pulido). Their panels become the white cards, so text keeps contrast. */
-.availabilityPage:global(.worker-page),
-.historyPage:global(.worker-page) {
-  background:
-    radial-gradient(
-      circle at 50% 45%,
-      rgba(35, 129, 239, 0.26),
-      transparent 40%
-    ),
-    linear-gradient(145deg, #063d82 0%, #0756a9 48%, #043d7f 100%);
+/* In the modules that scroll, the watermark stays fixed to the background. */
+.historyPage :global(.worker-main)::before,
+.availabilityPage :global(.worker-main)::before {
+  position: fixed;
 }

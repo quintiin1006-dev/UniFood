@@ -103,8 +103,23 @@ export const CART_TOTAL = "Total";
 export const CART_CONFIRM = "Confirmar pedido";
 export const CART_EMPTY_ACTION = "Vaciar carrito";
 /* Contraseña olvidada: un código al correo; la respuesta no revela si la cuenta existe. */
-export const RECOVERY_CODE_SENT = "Si el correo existe, te enviamos un código.";
-export const PROFILE_RESET_WITH_CODE = "Restablecer con un código al correo";
+/** Same text whether or not the address has an account: it never reveals which ones exist. */
+export const RECOVERY_CODE_SENT =
+  "Te enviamos un código de verificación a tu correo registrado";
+export const RECOVERY_TITLE = "Cambiar contraseña";
+export const RECOVERY_SEND = "Enviar código de verificación";
+export const recoverySendTo = (email: string) =>
+  `Enviaremos un código de verificación a ${email}.`;
+export const RECOVERY_STEP_TWO_NOTE =
+  "Escribe el código que te llegó y tu nueva contraseña.";
+export const RECOVERY_CODE_LABEL = "Código de verificación";
+export const RECOVERY_NEW_PASSWORD = "Nueva contraseña";
+export const RECOVERY_CONFIRM_PASSWORD = "Confirmar nueva contraseña";
+export const RECOVERY_SUBMIT = "Cambiar contraseña";
+export const RECOVERY_RESEND = "Reenviar código";
+export const recoveryResendIn = (seconds: number) =>
+  `Reenviar código en ${seconds} s`;
+export const PASSWORD_UPDATED = "Contraseña actualizada";
 export const CAFETERIA_STATUS_OPEN = "Abierta";
 export const CAFETERIA_STATUS_CLOSED = "Cerrada";
 export const HOME_ALL_CATEGORIES = "Todo";

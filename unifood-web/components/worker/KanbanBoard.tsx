@@ -7,6 +7,7 @@ import { NEW_ORDER_BADGE_MS } from "@/features/orders/listingStatus";
 import type { Order } from "@/types/order";
 import OrderCard from "./OrderCard";
 import modernStyles from "./KanbanBoard.module.css";
+import surfaces from "./surfaces.module.css";
 import classicStyles from "./KanbanBoard.classic.module.css";
 
 interface KanbanBoardProps {
@@ -127,7 +128,7 @@ export default function KanbanBoard({
         return (
           <article
             key={column.id}
-            className={styles.column}
+            className={`${styles.column} ${surfaces.glass}`}
             data-tone={column.id}
           >
             <header className={styles.columnHeader}>

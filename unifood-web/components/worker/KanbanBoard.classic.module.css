@@ -34,26 +34,7 @@
   flex-direction: column;
 
   overflow: hidden;
-
-  /*
-   * Contenedor principal:
-   * mantenemos el radio dentro
-   * del rango acordado 20–24px.
-   */
-  border-radius: 20px;
-
-  /*
-   * Se conserva exactamente
-   * el efecto transparente original.
-   */
-  background: rgba(255, 255, 255, 0.08);
-
-  border: 1px solid rgba(255, 255, 255, 0.12);
-
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  /* Surface: .glass from surfaces.module.css, shared with Historial and Disponibilidad. */
 }
 
 /* =====================================================

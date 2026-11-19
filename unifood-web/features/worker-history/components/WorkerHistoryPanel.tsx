@@ -2,9 +2,10 @@
 import { useRef } from "react";
 import { History, RefreshCw, Search, X } from "lucide-react";
 import { useWorkerHistory } from "../useWorkerHistory";
-import { formatShortRange, groupHistoryByDay } from "../presentation";
+import { formatShortRange } from "../presentation";
 import { HistoryOrderRow } from "./HistoryOrderRow";
 import type { HistoryRange, HistoryStatus } from "../types";
+import surfaces from "@/components/worker/surfaces.module.css";
 import styles from "./WorkerHistory.module.css";
 import { Notice } from "@/components/ui/Notice";
 import { Button, buttonClass } from "@/components/ui/Button";
@@ -155,7 +156,7 @@ export function WorkerHistoryPanel() {
       {state.data && !state.loading && (
         <>
           {!state.data.orders.length ? (
-            <div className={styles.empty} role="status">
+            <div className={`${styles.empty} ${surfaces.glass}`} role="status">
               <span className={styles.emptyIcon}>
                 {state.data.hasHistory ? (
                   <Search size={26} aria-hidden="true" />
@@ -188,21 +189,12 @@ export function WorkerHistoryPanel() {
             </div>
           ) : (
             <div
-              className={styles.list}
+              className={`${styles.list} ${surfaces.glass}`}
               aria-label="Pedidos finalizados"
               aria-busy={state.refreshing}
             >
-              {groupHistoryByDay(state.data.orders).map((day) => (
-                <section
-                  key={day.key}
-                  className={styles.day}
-                  aria-label={day.label}
-                >
-                  <h3 className={styles.dayTitle}>{day.label}</h3>
-                  {day.orders.map((order) => (
-                    <HistoryOrderRow key={order.id} order={order} />
-                  ))}
-                </section>
+              {state.data.orders.map((order) => (
+                <HistoryOrderRow key={order.id} order={order} />
               ))}
             </div>
           )}

@@ -1031,6 +1031,30 @@ disponibilidad sin recargar:
   línea de 16 px. El nombre salía a 48 px por una regla `.readyCode strong` del antiguo código de
   recogida. El resto de Mi pedido no cambia.
 
+**Decisión, 2026-11-19: contraseña en dos pasos y un solo estilo del worker (`jj/cliente-correcciones`).**
+
+- **Cambiar contraseña en dos pasos** (reemplaza la pantalla única de `jj/cliente-pulido`):
+  1. «Cambiar contraseña» con el correo ya conocido (de Mi perfil o del login) y un único botón,
+     «Enviar código de verificación». Solo se pide el correo si no se conoce.
+  2. Código (6 dígitos, teclado numérico, `one-time-code`), «Nueva contraseña» y «Confirmar
+     nueva contraseña», con «Cambiar contraseña» y «Reenviar código» tras 30 s visibles.
+     Al enviar aparece arriba un aviso (`role="status"`, 5 s): «Te enviamos un código de
+     verificación a tu correo registrado», igual para cualquier correo. Al terminar, «Contraseña
+     actualizada» y vuelta a iniciar sesión. Se quitó el texto fijo de abajo. Mismos endpoints.
+- **Worker con un solo estilo en los cinco módulos.** Pedidos, Llamadas, Historial y
+  Disponibilidad comparten el fondo azul profundo, la marca de agua y el recuadro de cristal
+  (`components/worker/surfaces.module.css`, clase `.glass`, usada desde el JSX). Historial y
+  Disponibilidad vuelven al contenido de `fe8ac99` sin la hoja blanca grande ni scroll interno:
+  desplaza la página, con margen inferior para el nav. Se conservan el rango corto y la fila sin id.
+- **Header único:** 96 px de alto, logo de 52 px, mismo título, nombre del módulo y «Cerrar
+  sesión» en los cinco módulos (medidas divididas entre `--worker-zoom`). Buscador y «Actualizado
+  a las …» solo en Pedidos y Llamadas.
+- **Salvaguardas de legibilidad:** texto blanco sobre el cristal (≥ 4,5:1 en el punto más claro
+  del degradado); campos, selects y buscador en blanco sólido con texto oscuro; píldoras de estado
+  con fondo sólido; marca de agua al 8 % como máximo y fija al fondo; separadores visibles en las
+  listas.
+- **Pendiente con backend:** el código del estudiante en las filas del historial del worker.
+
 ## 13. Línea de corte
 
 Si el 14 de noviembre el backend de pedidos no está terminado, se activa toda la línea.
