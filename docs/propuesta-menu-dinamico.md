@@ -456,7 +456,7 @@ Notas sobre el borrador:
 Archivo previsto: `scripts/supabase/seed-daily-menu.sql`, en el PR 1. Sigue la misma guarda que
 `seed-demo.sql`: solo corre si `unifood.seed_target = 'staging'`. Es idempotente (`ON CONFLICT DO NOTHING`).
 Usa la cafetería de la demo («Cafetería Central», «Sede Principal»). Los precios de ejemplo están
-pendientes de confirmar (Q6).
+son valores de ejemplo: el admin los define en el panel (PR 9).
 
 ```sql
 SET unifood.seed_target = 'staging';
