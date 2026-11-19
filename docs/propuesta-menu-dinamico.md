@@ -30,7 +30,8 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
 | Categorías sin opciones hoy | No se muestran, ni con «Ninguna» |
 | Carta con la cafetería cerrada (Q7) | Solo lectura, con el aviso `CLOSED_NOTICE` y el botón deshabilitado, igual que el catálogo |
 | Cronograma (rev. 4, Q1) | Opción (a): el 25 se cumple para el mínimo (PR 1, 2, 5, 3). Orden 1→2→5→3→7→C→4→6→8, detrás de `MENU_DINAMICO_ENABLED`. Lo que no esté estable el 25 se apaga |
-| Pedidos de ayer (rev. 4, Q2 y Q3) | Cierre a medianoche prioritario, PR C antes de los PR 4 y 6. Staging autorizado; producción requiere OK aparte. El dueño revisa la configuración en Render |
+| Pedidos de ayer (rev. 4 y 5, Q2, Q3 y Q7) | Cierre a medianoche prioritario. PR C como corrección después del freeze del 21, después del PR de pulido y antes del PR 4. Staging autorizado; producción requiere OK aparte. El dueño revisa la configuración en Render |
+| Precios (rev. 5, Q6) | No bloquean: se editan en el panel admin (PR 9). Hasta entonces, staging usa los precios de ejemplo |
 | Orden en Inicio (Q8) | Selector de cafetería, carrusel de banners, filtros de categorías (Todo, Desayunos…), carta «Menú del día», secciones de productos. «Categorías» son los filtros, no el selector |
 | Precio de adición | Cambia en su siguiente encendido |
 | Categorías del admin | Se desactivan, no se borran (fase admin) |
@@ -913,13 +914,15 @@ paso deje la app en un estado usable** y para que, si hay que recortar, se sepa 
 | 7 | `menu-dia-editor` | Web: `DailyMenuEditor` en Disponibilidad, BFF del worker, publicar | 3 d | El worker publica solo por API o SQL |
 | 4 | `menu-dia-pedido` | Backend: validación del pedido, total, snapshots, `OrderResponse.dailyMenu` | 3 d | El cliente no puede pedir el menú |
 | 6 | `menu-dia-carrito` | Web: `MenuLine`, `validateCart`, `CartLineItem`, checkout, `orderForward` | 2 d | El cliente no puede pedir el menú |
-| C | `cierre-diario-medianoche` | Cierre de pedidos de días anteriores (sección 8): `pg_cron` a medianoche de Bogotá en staging, respaldo en Spring con `WARN` con conteo y, opcional, aviso al worker. Antes de los PR 4 y 6 (decisión del dueño, Q3) | 1 d | Pedidos de ayer siguen activos y bloquean al cliente |
+| C | `cierre-diario-medianoche` | Cierre de pedidos de días anteriores (sección 8): `pg_cron` a medianoche de Bogotá en staging, respaldo en Spring con `WARN` con conteo y, opcional, aviso al worker. Entra después del freeze del 21 como corrección (Q7), después del PR de pulido y antes del PR 4 | 1 d | Pedidos de ayer siguen activos y bloquean al cliente |
 | 8 | `menu-dia-ver-pedido` | Web: `DailyMenuSummary` en la tarjeta del worker y en «Mi pedido» | 1 d | El worker no ve la elección |
 | 9 | `menu-dia-admin` | Panel admin: plato, categorías, adiciones | 3 d | Después de la demo |
 
-El orden de ejecución es **1 → 2 → 5 → 3 → 7 → C → 4 → 6 → 8**, detrás de `MENU_DINAMICO_ENABLED` (Q1).
+El orden de ejecución es **1 → 2 → 5 → 3 → 7 → pulido → C → 4 → 6 → 8**, detrás de `MENU_DINAMICO_ENABLED` (Q1).
+El «PR de pulido» (Q8) no está definido en este documento: se toma como un PR previo a C.
 El PR 5 va antes que el 3 para que el cliente vea el menú cuanto antes y la lectura se pruebe sin
-esperar al worker. El PR C va antes del 4 y del 6 porque un pedido de ayer activo bloquea al cliente.
+esperar al worker. El PR C va antes del 4 porque un pedido de ayer activo bloquea al cliente, y eso también afecta a los
+pedidos con menú.
 Lo que no esté estable el 25 se apaga con la variable; la demo sigue sin esa parte.
 
 **Qué primero para cada objetivo:**
@@ -1006,8 +1009,8 @@ pedido siga activo. Ocultarlo empeora el problema.
 
 ### 8.3 Solución propuesta (PR C, `cierre-diario-medianoche`)
 
-Decidido por el dueño (Q3): es prioritario y va **antes de los PR 4 y 6**. Es una corrección, no una
-función nueva. Se asume que el freeze del 21 no lo bloquea (ver Q7).
+Decidido por el dueño (Q3): es prioritario y va **antes del PR 4**. Confirmado (Q7): es una corrección,
+entra **después del freeze del 21** y después del PR de pulido.
 
 1. **Configuración de producción:** la revisa el dueño con el conector de Render (`DAILY_CLOSE_ENABLED`,
    `DAILY_CLOSE_INTERVAL` y si el backend se apaga de noche). No la consulto desde aquí.
@@ -1041,17 +1044,54 @@ función nueva. Se asume que el freeze del 21 no lo bloquea (ver Q7).
 
 Ninguna de estas opciones cambia el listado: los pedidos siguen visibles hasta que se cierran.
 
+### 8.4 Criterios de aceptación y prueba en staging
+
+Todo ocurre en `unifood-staging`. Producción no se toca hasta el OK aparte del punto 8.3.2.
+
+**Preparación (fixture de prueba, solo staging):**
+
+1. Un cliente de prueba sin pedido activo, con su cuenta ya completa.
+2. Un pedido de ayer en PENDING, con `created_at` a las 18:00 de Bogotá de ayer, creado con datos de
+   prueba. Dos pedidos más de ayer, uno en PREPARING y otro en READY, para cubrir las dos reglas.
+3. Se ajusta `created_at` solo con SQL de prueba en staging, nunca en un flujo de producto.
+
+**Antes de las 00:05 (control):**
+
+- El pedido de ayer sigue activo.
+- El cliente intenta pedir de nuevo y recibe el error de pedido activo existente (`activeOrderExists`).
+  Este es el bloqueo que motiva el PR.
+
+**A las 00:05 de Bogotá (ejecución real):**
+
+- `cron.job_run_details` muestra la ejecución `succeeded` a las 05:05 UTC.
+- El PENDING de ayer queda `CANCELLED` con `cancellation_source = 'SYSTEM'`.
+- PREPARING y READY de ayer quedan `NOT_COLLECTED`.
+- Los pedidos de hoy no se tocan: se verifica con un pedido de hoy creado antes de la ejecución.
+- El cliente de prueba crea un pedido nuevo y se acepta (respuesta de creación, sin error de pedido activo).
+- El worker no muestra los pedidos cerrados de ayer como activos.
+
+**Repetición y respaldo:**
+
+- Una segunda ejecución no cambia nada: el conteo es 0.
+- Si el `pg_cron` falla, el cierre de Spring hace el mismo trabajo al siguiente ciclo y deja su `WARN`
+  con el conteo de pedidos cerrados, sin datos de cliente.
+
+**Si no hay ejecución a las 00:05:** se revisa `cron.job_run_details`, la zona horaria del servidor y la
+extensión `pg_cron` de staging. No se corrige en caliente en producción.
+
+**Extensión:** `pg_cron` debe estar habilitada en staging. Si no lo está, habilitarla es un paso SQL de
+staging y se muestra el comando exacto antes de ejecutarlo.
+
 ---
 
 ## 9. Preguntas abiertas
 
 Resueltas en la revisión 4 (quedan en la tabla de decisiones de arriba): Q1 (cronograma, opción a),
 Q2 (cierre diario, solo staging), Q3 (cierre antes de los PR 4 y 6), Q4 (precio de adición al encender) y
-Q5 (plantilla fija aceptable para el piloto). Quedan abiertas:
+Q5 (plantilla fija aceptable para el piloto). Quedan abiertas (revisión 5):
 
-**Q6. Precios reales.** Pendiente. Mientras tanto, staging usa los precios de ejemplo (9.500 el plato;
-2.000 y 3.000 las adiciones). No bloquea el trabajo en staging, pero sí antes de cualquier demo con
-administradores.
+Resueltas en la revisión 5: **Q6** (precios no bloquean; se editan en el panel admin, PR 9) y **Q7** (PR C
+entra después del freeze del 21 como corrección, tras el PR de pulido y antes del PR 4).
 
-**Q7. Freeze del 21 y el PR C.** El PR C es una corrección del cierre diario. ¿Confirmas que puede entrar
-después del freeze del 21 como excepción, o debe cerrarse antes de ese día?
+**Q8. «PR de pulido».** No aparece en este plan. ¿Qué PR es y cuál es su alcance, para ubicarlo antes del PR C?
+
