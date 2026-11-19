@@ -130,18 +130,18 @@ const headerFor = (activeModule) => {
 
 test("the five worker modules use the same header, 96 px tall with a 52 px logo", () => {
   const classes = new Set();
-  for (const module of [
+  for (const moduleName of [
     "orders",
     "calls",
     "history",
     "availability",
     "profile",
   ]) {
-    const html = headerFor(module);
+    const html = headerFor(moduleName);
     classes.add(html.match(/<header class="([^"]+)"/)[1]);
     // Search only in Pedidos and Llamadas.
-    const searches = module === "orders" || module === "calls";
-    assert.equal(/role="search"/.test(html), searches, module);
+    const searches = moduleName === "orders" || moduleName === "calls";
+    assert.equal(/role="search"/.test(html), searches, moduleName);
   }
   assert.equal(classes.size, 1);
   const css = read("components/worker/Header.classic.module.css");
