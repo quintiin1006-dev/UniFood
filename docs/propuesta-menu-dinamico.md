@@ -1,6 +1,7 @@
 # Propuesta: menú del día dinámico
 
-Estado: **revisión 2, borrador de diseño para aprobación**. Rama `jj/menu-dinamico`, desde `develop`.
+Estado: **revisión 6 (cierre de decisiones), borrador de diseño para aprobación**. El PR 1 arranca
+cuando el dueño lo indique, después del PR en curso. Rama `jj/menu-dinamico`, desde `develop`.
 Fecha: 2026-11-18. Esta propuesta no contiene código de la app ni migraciones aplicadas.
 La migración 030 es un borrador: no se aplica hasta revisión y prueba en una base temporal
 local, y después en `unifood-staging`.
@@ -12,14 +13,26 @@ backend `OrderEntity`, `OrderItemEntity`, `ClientOrderCreationService`, `ClientO
 `OrderService`, `DailyCloseService`, `DailyCloseScheduler`, `BusinessDate`, SQL de cierre diario,
 migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/catalogo-feedback.md`.
 
-### Decisiones incorporadas (revisión 2)
+### Decisiones (todas las rondas)
 
 | Tema | Decisión |
 | ---- | -------- |
 | Freeze | Se mueve al **25 de noviembre**, solo para el menú dinámico (PR 1–8). El resto del código sigue con el freeze del sábado 21 |
 | Feature flag | Todo el menú detrás de `MENU_DINAMICO_ENABLED` (servidor y web, solo variable de servidor). Apagada, la demo sigue sin menú |
-| Límite de texto | **350 caracteres por categoría**, suma de sus fichas. Sin contador visible. Se valida igual en servidor |
+| Límite de texto (P2) | **350 caracteres por categoría**, suma de sus fichas. Constante única `DAILY_MENU_CATEGORY_TEXT_LIMIT = 350`, en backend y en web. Sin micrófono ni contador visible; si se pasa, el recuadro se pone rojo con un aviso corto. Se valida igual en servidor. Nota: el disparador de la 030 también fija 350, así que cambiar el valor exige una migración nueva además de la constante |
 | Opciones | Máximo **20** por categoría |
+| Un plato por pedido (P4) | Un plato por pedido. Cuenta como una unidad de los límites 10/15 (P5); las adiciones no cuentan |
+| Carrito (P8) | Si el plato ya está en el carrito, el botón dice «Actualizar carrito» |
+| Adiciones (P10) | El precio de cada adición aplica en su siguiente encendido |
+| Plato (P10) | El precio del plato aplica en la siguiente publicación |
+| Copiar el de ayer (P7) | Copia solo los ingredientes, no las adiciones encendidas |
+| Agotado con pedidos hechos (P6) | El pedido no cambia; se usa el rechazo con motivo que ya existe (B18) |
+| Precio fijo (P9) | Se muestra solo en el encabezado de la carta |
+| Categorías del admin (P11) | Se desactivan, no se borran (fase admin) |
+| Comas (P12) | No se permiten en un ingrediente: separan fichas |
+| Letrero (P13) | Ya no aplica: el menú es una carta en Inicio, sin letrero |
+| Sin precio configurado (P14) | El worker ve un aviso y «Publicar menú» queda deshabilitado; el cliente no ve nada |
+| Quién publica (P15) | Solo el worker publica; el admin edita la plantilla |
 | Plantilla final (rev. 3) | Proteína (obligatoria), Principio (obligatoria), Acompañamientos (saltable), Complemento (saltable; una sola opción; sin costo; incluye sopa, fruta, postre) y Adiciones (con precio extra, varias). Sin categoría «Sopa» ni «Bebida»: la sopa va dentro de Complemento |
 | Platos por pedido | Uno. Cuenta como una unidad de los límites 10/15; las adiciones no cuentan |
 | Agotado con pedidos hechos | El pedido no cambia; se usa el rechazo con motivo existente (B18) |
@@ -30,8 +43,8 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
 | Categorías sin opciones hoy | No se muestran, ni con «Ninguna» |
 | Carta con la cafetería cerrada (Q7) | Solo lectura, con el aviso `CLOSED_NOTICE` y el botón deshabilitado, igual que el catálogo |
 | Cronograma (rev. 4, Q1) | Opción (a): el 25 se cumple para el mínimo (PR 1, 2, 5, 3). Orden 1→2→5→3→7→C→4→6→8, detrás de `MENU_DINAMICO_ENABLED`. Lo que no esté estable el 25 se apaga |
-| Pedidos de ayer (rev. 4 y 5, Q2, Q3 y Q7) | Cierre a medianoche prioritario. PR C como corrección después del freeze del 21, después del PR de pulido y antes del PR 4. Staging autorizado; producción requiere OK aparte. El dueño revisa la configuración en Render |
-| Precios (rev. 5, Q6) | No bloquean: se editan en el panel admin (PR 9). Hasta entonces, staging usa los precios de ejemplo |
+| Pedidos de ayer (Q2, Q3 y Q7) | Cierre a medianoche prioritario. PR C como corrección después del freeze del 21 y antes del PR 4. Staging autorizado; producción requiere OK aparte. El dueño revisa la configuración en Render |
+| Precios (Q6, pendiente) | No bloquean. Staging usa los precios de ejemplo; el dueño los cambiará después, y las ediciones definitivas irán en el panel admin (PR 9) |
 | Orden en Inicio (Q8) | Selector de cafetería, carrusel de banners, filtros de categorías (Todo, Desayunos…), carta «Menú del día», secciones de productos. «Categorías» son los filtros, no el selector |
 | Precio de adición | Cambia en su siguiente encendido |
 | Categorías del admin | Se desactivan, no se borran (fase admin) |
@@ -797,8 +810,8 @@ categorías de catálogo. No se toca `components/worker/`.
 - **Adiciones:** interruptores (`role="switch"`) con el nombre y «+ $2.000». Encender guarda el precio de hoy.
 - **«Copiar el de ayer»:** en la cabecera del editor. Rellena solo categorías vacías; dice cuáles omitió.
   No copia adiciones.
-- **Publicar / Despublicar:** Publicar muestra los motivos si falta algo («Falta una opción en
-  Principio»). Sin precio: «Falta el precio del plato» y publicar deshabilitado (P14 resuelta).
+- **Publicar menú / Despublicar:** «Publicar menú» muestra los motivos si falta algo («Falta una opción en
+  Principio»). Sin precio: aviso «Falta el precio del plato» y «Publicar menú» deshabilitado (P14).
 - **Pedido con menú:** la elección aparece en la tarjeta del worker (sección 4.7).
 - **Errores:** `VERSION_CONFLICT` vuelve a leer el día; «Sin conexión. Reintentando…» conserva el
   último estado confirmado.
@@ -914,12 +927,12 @@ paso deje la app en un estado usable** y para que, si hay que recortar, se sepa 
 | 7 | `menu-dia-editor` | Web: `DailyMenuEditor` en Disponibilidad, BFF del worker, publicar | 3 d | El worker publica solo por API o SQL |
 | 4 | `menu-dia-pedido` | Backend: validación del pedido, total, snapshots, `OrderResponse.dailyMenu` | 3 d | El cliente no puede pedir el menú |
 | 6 | `menu-dia-carrito` | Web: `MenuLine`, `validateCart`, `CartLineItem`, checkout, `orderForward` | 2 d | El cliente no puede pedir el menú |
-| C | `cierre-diario-medianoche` | Cierre de pedidos de días anteriores (sección 8): `pg_cron` a medianoche de Bogotá en staging, respaldo en Spring con `WARN` con conteo y, opcional, aviso al worker. Entra después del freeze del 21 como corrección (Q7), después del PR de pulido y antes del PR 4 | 1 d | Pedidos de ayer siguen activos y bloquean al cliente |
+| C | `cierre-diario-medianoche` | Cierre de pedidos de días anteriores (sección 8): `pg_cron` a medianoche de Bogotá en staging, respaldo en Spring con `WARN` con conteo y, opcional, aviso al worker. Entra después del freeze del 21 como corrección (Q7) y antes del PR 4 | 1 d | Pedidos de ayer siguen activos y bloquean al cliente |
 | 8 | `menu-dia-ver-pedido` | Web: `DailyMenuSummary` en la tarjeta del worker y en «Mi pedido» | 1 d | El worker no ve la elección |
 | 9 | `menu-dia-admin` | Panel admin: plato, categorías, adiciones | 3 d | Después de la demo |
 
-El orden de ejecución es **1 → 2 → 5 → 3 → 7 → pulido → C → 4 → 6 → 8**, detrás de `MENU_DINAMICO_ENABLED` (Q1).
-El «PR de pulido» (Q8) no está definido en este documento: se toma como un PR previo a C.
+El orden de ejecución es **1 → 2 → 5 → 3 → 7 → C → 4 → 6 → 8**, detrás de `MENU_DINAMICO_ENABLED` (Q1).
+El «PR de pulido» (Q8) no aparece en este orden; si existe y debe ir antes de C, se decide con el dueño.
 El PR 5 va antes que el 3 para que el cliente vea el menú cuanto antes y la lectura se pruebe sin
 esperar al worker. El PR C va antes del 4 porque un pedido de ayer activo bloquea al cliente, y eso también afecta a los
 pedidos con menú.
@@ -1010,7 +1023,7 @@ pedido siga activo. Ocultarlo empeora el problema.
 ### 8.3 Solución propuesta (PR C, `cierre-diario-medianoche`)
 
 Decidido por el dueño (Q3): es prioritario y va **antes del PR 4**. Confirmado (Q7): es una corrección,
-entra **después del freeze del 21** y después del PR de pulido.
+entra **después del freeze del 21**.
 
 1. **Configuración de producción:** la revisa el dueño con el conector de Render (`DAILY_CLOSE_ENABLED`,
    `DAILY_CLOSE_INTERVAL` y si el backend se apaga de noche). No la consulto desde aquí.
@@ -1086,12 +1099,10 @@ staging y se muestra el comando exacto antes de ejecutarlo.
 
 ## 9. Preguntas abiertas
 
-Resueltas en la revisión 4 (quedan en la tabla de decisiones de arriba): Q1 (cronograma, opción a),
-Q2 (cierre diario, solo staging), Q3 (cierre antes de los PR 4 y 6), Q4 (precio de adición al encender) y
-Q5 (plantilla fija aceptable para el piloto). Quedan abiertas (revisión 5):
+Todas las respuestas del dueño están en la tabla de decisiones de arriba. Quedan dos preguntas:
 
-Resueltas en la revisión 5: **Q6** (precios no bloquean; se editan en el panel admin, PR 9) y **Q7** (PR C
-entra después del freeze del 21 como corrección, tras el PR de pulido y antes del PR 4).
+**Q6. Precios reales (pendiente, no bloquea).** Staging usa los precios de ejemplo (9.500 el plato; 2.000 y
+3.000 las adiciones). El dueño los cambiará después; las ediciones definitivas irán en el panel admin (PR 9).
 
-**Q8. «PR de pulido».** No aparece en este plan. ¿Qué PR es y cuál es su alcance, para ubicarlo antes del PR C?
+**Q8. «PR de pulido».** No aparece en el orden final 1→2→5→3→7→C→4→6→8. ¿Qué PR es y debe ir antes de C?
 
