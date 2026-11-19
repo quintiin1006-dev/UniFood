@@ -138,7 +138,7 @@ test("permission is requested only from enable(), never on load", () => {
   assert.match(sync, /Notification\.permission === "granted"/);
 });
 
-test("the card lives in the checkout confirmation and the switches in Perfil and the worker panel", () => {
+test("the card lives in the checkout confirmation; the client switch is only the bell (C4), the worker keeps its own", () => {
   assert.match(
     fs.readFileSync(
       "features/client/components/CheckoutConfirmation.tsx",
@@ -146,9 +146,9 @@ test("the card lives in the checkout confirmation and the switches in Perfil and
     ),
     /<PushPromptCard \/>/,
   );
-  assert.match(
+  assert.doesNotMatch(
     fs.readFileSync("features/client/components/ClientProfile.tsx", "utf8"),
-    /<PushToggle role="client" \/>/,
+    /PushToggle/,
   );
   assert.match(
     fs.readFileSync(

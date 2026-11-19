@@ -1068,6 +1068,13 @@ disponibilidad sin recargar:
   nueva contraseña» y «Cambiar contraseña». Usa los endpoints existentes (`verify` con
   `recovery: true` valida el código solo; `reset` usa esa sesión). Si `reset` responde 401, vuelve
   al paso 2. Al terminar, «Contraseña actualizada» y vuelta al login.
+- **Campana única del cliente.** La campana del header es el único control y el interruptor
+  general de todas las notificaciones del cliente (estados, llamado, recordatorios, no recogido,
+  rechazo, entrega y las que vengan). Mi perfil y Mi pedido ya no tienen control propio; apagarla
+  también silencia el sonido de Mi pedido. Muestra «Notificaciones activadas / desactivadas», un
+  solo botón y, si el navegador las bloqueó, una línea con cómo habilitarlas; un punto en la
+  campana indica que están apagadas. El panel deja un espacio para «recientes» (pendiente). La
+  tarjeta de activación tras confirmar un pedido se mantiene.
 
 ## 13. Línea de corte
 

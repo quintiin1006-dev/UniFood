@@ -184,11 +184,15 @@ export const PUSH_MESSAGES = {
   iosTooOld: `Tu iPhone necesita iOS 16.4 o superior para recibir avisos. ${IN_APP_STAYS}`,
   failed: "No pudimos activar los avisos. Inténtalo de nuevo.",
   rateLimited: PUSH_RATE_LIMITED_TEXT,
-  bellLabelOn: "Avisos activados. Abrir opciones.",
-  bellLabelOff: "Avisos desactivados. Abrir opciones.",
-  bellStatusOn: "Recibes avisos en este dispositivo.",
-  bellStatusOff: "No recibes avisos en este dispositivo.",
-  bellDisable: "Desactivar avisos",
+  // C4: the header bell is the one switch for every client notification.
+  bellLabelOn: "Notificaciones activadas. Abrir opciones.",
+  bellLabelOff: "Notificaciones desactivadas. Abrir opciones.",
+  bellStatusOn: "Notificaciones activadas",
+  bellStatusOff: "Notificaciones desactivadas",
+  bellEnable: "Activar notificaciones",
+  bellDisable: "Desactivar notificaciones",
+  bellBlocked:
+    "El navegador las bloqueó: permite las notificaciones de UniFood en los ajustes del sitio y vuelve a intentarlo.",
 } as const;
 
 export type PushMessageKey = keyof typeof PUSH_MESSAGES;
