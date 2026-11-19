@@ -127,11 +127,12 @@ test("the history shows five orders and keeps «Cargar más»", () => {
   );
 });
 
-test("the notice sound is a small icon button with its name", () => {
+test("Mi pedido has no sound switch or notification icon: the header bell is the only one (C3)", () => {
   const myOrder = read("features/client-orders/components/MyOrder.tsx");
-  assert.match(myOrder, /role="switch"/);
-  assert.match(myOrder, /aria-label=\{SOUND_TOGGLE_LABEL\}/);
-  assert.doesNotMatch(myOrder, /<span>Sonido de avisos<\/span>/);
+  assert.doesNotMatch(myOrder, /role="switch"|SOUND_TOGGLE_LABEL|soundSwitch/);
+  assert.doesNotMatch(myOrder, /avisos-apagados/);
+  // The chime still follows the choice the bell saves.
+  assert.match(myOrder, /readMuted\(\)/);
 });
 
 // The change-password flow is covered by tests/client-correcciones.test.mjs.

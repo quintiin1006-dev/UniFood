@@ -29,10 +29,9 @@ test("«Cancelar pedido» is offered only while the order is PENDING, with a des
   assert.match(board, /<Notice tone="error"/);
 });
 
-test("a notice is announced politely, the sound can be silenced and the title is restored", () => {
+test("a notice is announced politely, the sound follows the bell and the title is restored", () => {
   assert.match(myOrder, /aria-live="polite"/);
-  assert.match(myOrder, /role="switch"/);
-  assert.match(myOrder, /aria-checked=\{!muted\}/);
+  assert.doesNotMatch(myOrder, /role="switch"/);
   assert.match(
     myOrder,
     /if \(document\.title === title\) document\.title = previous/,
@@ -88,7 +87,7 @@ test("new texts of the module live in the catalogue, not in the components", () 
 });
 
 test("touch targets are 44 px, focus is visible and motion respects the preference", () => {
-  for (const rule of ["soundSwitch", "dismiss", "historyRow"])
+  for (const rule of ["dismiss", "historyRow"])
     assert.match(
       css,
       new RegExp(`\\.${rule} \\{[^}]*min-(height|width): 44px`),

@@ -14,13 +14,12 @@ import {
   CLIENT_ORDER_GO_MENU,
   CLIENT_ORDER_TITLE,
   OFFLINE_RETRYING,
-  SOUND_TOGGLE_LABEL,
 } from "../../shared/messages";
 import type { OrderFailure } from "../errors";
 import { statusLine } from "../presentation";
 import { isDeliveredToday } from "../stages";
 import { ALERT_TEXT, tabTitle, type OrderAlert } from "../polling";
-import { armChime, playChime, readMuted, writeMuted } from "../sound";
+import { armChime, playChime, readMuted } from "../sound";
 import type { ClientOrder } from "../types";
 import { useCurrentOrder } from "../useCurrentOrder";
 import OrderBoard from "./OrderBoard";
@@ -39,22 +38,21 @@ export default function MyOrder({
     const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
-  const [muted, setMuted] = useState(false);
+  // C4: the header bell is the only switch; it also mutes this chime (readMuted).
   const mutedRef = useRef(false);
   const [alert, setAlert] = useState<OrderAlert | null>(null);
   const [cancelled, setCancelled] = useState(false);
 
   useEffect(() => {
-    const saved = readMuted();
-    mutedRef.current = saved;
     // The saved choice only exists in the browser, so it is read after hydration.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMuted(saved);
+    mutedRef.current = readMuted();
     return armChime();
   }, []);
 
   const onAlert = useCallback((next: OrderAlert) => {
     setAlert(next);
+    // Read on every alert: the bell may have changed it since the page opened.
+    mutedRef.current = readMuted();
     if (!mutedRef.current) playChime();
   }, []);
   const { loaded, order, finished, failure, offline, refresh } =
@@ -66,13 +64,6 @@ export default function MyOrder({
   // Rejected, cancelled or not collected: one status line until the next order.
   const endedOrder =
     finished && finished.status !== "DELIVERED" ? finished : null;
-
-  const toggleSound = () => {
-    const next = !muted;
-    mutedRef.current = next;
-    setMuted(next);
-    writeMuted(next);
-  };
 
   // The tab says the order is ready even when the page is in the background.
   const status = order?.status ?? null;
@@ -100,17 +91,6 @@ export default function MyOrder({
     <section className={styles.page} aria-labelledby="my-order-title">
       <div className={styles.heading}>
         <h1 id="my-order-title">{CLIENT_ORDER_TITLE}</h1>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={!muted}
-          aria-label={SOUND_TOGGLE_LABEL}
-          title={SOUND_TOGGLE_LABEL}
-          className={styles.soundSwitch}
-          onClick={toggleSound}
-        >
-          <Icon name={muted ? "avisos-apagados" : "avisos"} size={22} />
-        </button>
       </div>
 
       <div aria-live="polite" aria-atomic="true" className={styles.liveRegion}>
