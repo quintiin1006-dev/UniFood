@@ -33,7 +33,10 @@ export default function ClientDialog({
         onClose();
       }}
     >
-      <h2 id={titleId}>{title}</h2>
+      {/* C1: the title takes the first focus, so no button opens with a focus ring. */}
+      <h2 id={titleId} tabIndex={-1} autoFocus>
+        {title}
+      </h2>
       {children}
     </dialog>
   );

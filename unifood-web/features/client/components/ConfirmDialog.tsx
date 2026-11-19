@@ -19,12 +19,7 @@ export default function ConfirmDialog({
     <ClientDialog title={title} onClose={onCancel}>
       <div>{children}</div>
       <div className={styles.dialogActions}>
-        <button
-          type="button"
-          className={styles.secondaryButton}
-          onClick={onCancel}
-          autoFocus
-        >
+        <button type="button" className={styles.keepButton} onClick={onCancel}>
           Conservar carrito
         </button>
         <button
