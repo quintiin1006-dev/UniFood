@@ -17,9 +17,10 @@
   min-height: 132px;
   font-size: 40px;
 }
+/* C5: in the rails the photo leads, about 70 % of the card. */
 .placeholder[data-size="rail"] {
   width: 100%;
-  aspect-ratio: 1.35;
+  aspect-ratio: 1.1;
   /* «Arco de la U». */
   border-radius: 20px 20px 40px 40px;
   font-size: 44px;
@@ -116,23 +117,40 @@
 }
 .railCard {
   display: grid;
-  gap: 8px;
+  grid-template-rows: auto auto auto;
+  align-content: start;
+  gap: 2px;
   height: 100%;
-  padding: 8px 8px 14px;
+  padding: 6px 6px 10px;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   color: inherit;
   text-decoration: none;
 }
+/* Name and price: compact, second to the photo. */
 .railCard strong {
-  font-size: 15px;
+  margin-top: 6px;
+  padding: 0 4px;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
   line-height: 1.3;
-  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.railCard span {
-  font-size: 15px;
+.railCard > span:not([data-size]) {
+  padding: 0 4px;
+  color: var(--color-brand-navy);
+  font-size: 13px;
   font-weight: 700;
+}
+/* A real photo, when the backend sends one: cropped to fill, never stretched. */
+.railCard img {
+  width: 100%;
+  aspect-ratio: 1.1;
+  object-fit: cover;
+  border-radius: 20px 20px 40px 40px;
 }
 .railCard small {
   color: var(--color-brand-hover);
@@ -203,16 +221,15 @@
 }
 
 /* Ola 2 · D5: the «+» sits in the card's bottom-right corner, beside the link. */
+/* C5: the «+» (and its stepper) sits on the photo's bottom-right corner, so the text below
+   stays one compact line each. 100cqi is the card width; the photo is (width - 12px) / 1.1. */
 .railItem {
   position: relative;
-}
-
-.railItem > .railCard {
-  padding-bottom: 64px;
+  container-type: inline-size;
 }
 
 .railAdd {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
+  right: 12px;
+  top: calc(6px + (100cqi - 12px) / 1.1 - 50px);
 }
