@@ -51,6 +51,12 @@ import {
   RECOVERY_SUBMIT,
   RECOVERY_TITLE,
   RECOVERY_VERIFY,
+  AUTH_SAVING,
+  AUTH_SENDING,
+  AUTH_SLOW,
+  AUTH_SLOW_MS,
+  AUTH_TIMEOUT_MS,
+  AUTH_VERIFYING,
   recoveryResendIn,
   recoverySendTo,
 } from "../../shared/messages";
@@ -184,6 +190,8 @@ export default function AuthScreen({
   const [remember, setRemember] = useState(true);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  // B: after 3 s of waiting the step says so; the request itself gives up after 20 s.
+  const [slow, setSlow] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState(
     passwordUpdated
@@ -308,12 +316,29 @@ export default function AuthScreen({
     formRef.current?.requestSubmit();
   }, [code, isOtp, hydrated]);
 
+  useEffect(() => {
+    if (!busy) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSlow(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlow(true), AUTH_SLOW_MS);
+    return () => clearTimeout(timer);
+  }, [busy]);
+
   async function request(action: string, body: Record<string, unknown>) {
-    const response = await fetch(`/api/auth/${action}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...body, entrypoint }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`/api/auth/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...body, entrypoint }),
+        // Never hangs: a lost answer frees the button so the person can try again.
+        signal: AbortSignal.timeout(AUTH_TIMEOUT_MS),
+      });
+    } catch {
+      throw new Error(t.connection);
+    }
     const data = await response.json();
     if (!response.ok) {
       if (data.code === "email_not_confirmed") setUnverified(true);
@@ -563,7 +588,13 @@ export default function AuthScreen({
   const buttonText = busy
     ? isLogin
       ? t.entering
-      : t.wait
+      : isRecovery
+        ? isPassword
+          ? AUTH_SAVING
+          : isOtp
+            ? AUTH_VERIFYING
+            : AUTH_SENDING
+        : t.wait
     : isLogin
       ? t.login
       : isOtp
@@ -645,7 +676,11 @@ export default function AuthScreen({
                 className={`${styles.form} ${isLogin ? styles.loginForm : ""}`}
                 aria-busy={busy}
               >
-                <div className={styles.fields}>
+                {/* B: each step slides in (180 ms, none with reduced motion). */}
+                <div
+                  key={`${mode}-${step}`}
+                  className={`${styles.fields} ${styles.stepIn}`}
+                >
                   {isLogin && (
                     <>
                       <Field
@@ -901,12 +936,20 @@ export default function AuthScreen({
                   disabled={!hydrated || busy}
                   aria-busy={busy || undefined}
                 >
-                  {busy && isLogin ? (
+                  {busy ? (
                     <span className={styles.loginSpinner} aria-hidden="true" />
                   ) : null}
                   {buttonText}
                   {!busy && <ArrowRight size={21} />}
                 </button>
+                {/* B: the wait is announced, and said again if it runs long. */}
+                <p
+                  className={styles.busyStatus}
+                  role="status"
+                  aria-live="polite"
+                >
+                  {busy ? (slow ? AUTH_SLOW : buttonText) : ""}
+                </p>
               </form>
               {isLogin && entrypoint === "client" ? (
                 <>
