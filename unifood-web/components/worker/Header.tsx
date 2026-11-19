@@ -6,7 +6,6 @@ import Image from "next/image";
 
 import { Icon, ICON_MIN_20 } from "@/components/ui/Icon";
 
-import modernStyles from "./Header.module.css";
 import classicStyles from "./Header.classic.module.css";
 import LogoutButton from "@/features/auth/components/LogoutButton";
 import type { WorkerModule } from "./BottomNav";
@@ -30,7 +29,9 @@ export default function Header({
   onSearchChange,
   syncStatus,
 }: HeaderProps) {
-  const styles = variant === "classic" ? classicStyles : modernStyles;
+  // One header for the five modules: same height, logo and type (see the CSS).
+  void variant;
+  const styles = classicStyles;
   const titles: Record<WorkerModule, string> = {
     orders: "Gestión de pedidos",
     calls: "Llamadas",

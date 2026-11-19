@@ -1,0 +1,12 @@
+/* Worker surfaces shared by the five modules (jj/cliente-correcciones).
+   .glass: the translucent box of Pedidos and Llamadas on the deep blue page. Text on it is white;
+   it keeps 4.5:1 or more at the lightest point of the gradient. Form fields stay solid white. */
+.glass {
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  color: #ffffff;
+}

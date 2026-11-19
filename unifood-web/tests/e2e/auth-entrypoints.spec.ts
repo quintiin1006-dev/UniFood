@@ -223,14 +223,18 @@ for (const entrypoint of ["client"]) {
           "@example.invalid",
       );
     await page
-      .getByRole("button", { name: "Enviar código", exact: true })
+      .getByRole("button", { name: "Enviar código de verificación" })
       .click();
-    await expect(page.getByRole("status")).toContainText("Si el correo existe");
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "Te enviamos un código de verificación" }),
+    ).toBeVisible();
     await page
       .getByRole("textbox", { name: "Código de verificación", exact: true })
       .fill("123456");
     await expect(
-      page.getByLabel("Confirmar contraseña", { exact: true }),
+      page.getByLabel("Confirmar nueva contraseña", { exact: true }),
     ).toBeVisible();
     // One screen: the code is verified together with the new password, on submit.
     let resetRequests = 0;
@@ -238,35 +242,39 @@ for (const entrypoint of ["client"]) {
       if (new URL(request.url()).pathname === "/api/auth/reset")
         resetRequests++;
     });
-    await page.getByLabel("Contraseña", { exact: true }).fill("weakpass");
+    await page.getByLabel("Nueva contraseña", { exact: true }).fill("weakpass");
     await page
-      .getByLabel("Confirmar contraseña", { exact: true })
+      .getByLabel("Confirmar nueva contraseña", { exact: true })
       .fill("weakpass");
     await page
-      .getByRole("button", { name: "Restablecer contraseña", exact: true })
+      .getByRole("button", { name: "Cambiar contraseña", exact: true })
       .click();
     await expect(page.getByRole("main").getByRole("alert")).toContainText(
       "debe cumplir",
     );
     expect(resetRequests).toBe(0);
-    await page.getByLabel("Contraseña", { exact: true }).fill("NuevaClave9");
     await page
-      .getByLabel("Confirmar contraseña", { exact: true })
+      .getByLabel("Nueva contraseña", { exact: true })
+      .fill("NuevaClave9");
+    await page
+      .getByLabel("Confirmar nueva contraseña", { exact: true })
       .fill("OtraClave8");
     await page
-      .getByRole("button", { name: "Restablecer contraseña", exact: true })
+      .getByRole("button", { name: "Cambiar contraseña", exact: true })
       .click();
     await expect(page.getByRole("main").getByRole("alert")).toHaveText(
       "Las contraseñas no coinciden.",
     );
     expect(resetRequests).toBe(0);
     await page
-      .getByLabel("Confirmar contraseña", { exact: true })
+      .getByLabel("Confirmar nueva contraseña", { exact: true })
       .fill("NuevaClave9");
     await page
-      .getByRole("button", { name: "Restablecer contraseña", exact: true })
+      .getByRole("button", { name: "Cambiar contraseña", exact: true })
       .click();
-    await expect(page.getByRole("status")).toContainText("se actualizó");
+    await expect(
+      page.getByRole("status").filter({ hasText: "Contraseña actualizada" }),
+    ).toBeVisible();
     expect(resetRequests).toBe(1);
     await expect(
       page.getByRole("heading", {

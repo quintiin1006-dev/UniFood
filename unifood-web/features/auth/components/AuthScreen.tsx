@@ -36,14 +36,32 @@ import {
   clearRecoveryEmail,
   handRecoveryEmail,
   readRecoveryEmail,
+  readRecoverySent,
 } from "../recoveryHandoff";
-import { RECOVERY_CODE_SENT } from "../../shared/messages";
+import {
+  PASSWORD_UPDATED,
+  RECOVERY_CODE_LABEL,
+  RECOVERY_CODE_SENT,
+  RECOVERY_CONFIRM_PASSWORD,
+  RECOVERY_NEW_PASSWORD,
+  RECOVERY_RESEND,
+  RECOVERY_SEND,
+  RECOVERY_STEP_TWO_NOTE,
+  RECOVERY_SUBMIT,
+  RECOVERY_TITLE,
+  recoveryResendIn,
+  recoverySendTo,
+} from "../../shared/messages";
 import styles from "./AuthScreen.module.css";
 
 type Mode = "login" | "register" | "recover";
 // Must match Auth's Email OTP expiration of 900 s and the email templates.
 const OTP_VALIDITY_MINUTES = 15;
 const RESEND_WAIT_SECONDS = 60;
+/** Changing the password: «Reenviar código» waits 30 s, visibly. */
+const RECOVERY_RESEND_SECONDS = 30;
+/** Toasts hide by themselves after 5 s. */
+const TOAST_MS = 5000;
 // Supabase also rate-limits; this keeps one screen from spending that budget.
 const MAX_RESENDS = 3;
 type DomainCheck =
@@ -161,6 +179,10 @@ export default function AuthScreen({
       : "",
   );
   const [unverified, setUnverified] = useState(false);
+  // The address is known (handed from the login or «Mi perfil»): step 1 shows it, no field.
+  const [knownEmail, setKnownEmail] = useState(false);
+  const [toast, setToast] = useState("");
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Set only when the server says this client has to accept the terms before going on.
   const [termsStep, setTermsStep] = useState<{
     destination: string;
@@ -227,23 +249,21 @@ export default function AuthScreen({
   }, [typedAddress, typedValid, entrypoint, isRegisterEmail]);
 
   useEffect(() => {
-    // Coming from the login or «Mi perfil» with the address: the code is sent at once.
+    // Coming from the login or «Mi perfil» with the address: step 1 shows it instead of a field.
+    // From «Mi perfil» the code already went out, so the screen opens on step 2.
     if (!hydrated || !isRecovery || step !== 0) return;
     const handed = readRecoveryEmail();
     if (!handed || !validEmail(handed)) return;
-    const timer = setTimeout(async () => {
-      if (inFlight.current) return;
+    const sent = readRecoverySent();
+    const timer = setTimeout(() => {
       clearRecoveryEmail();
-      inFlight.current = true;
       setEmail(handed);
-      setBusy(true);
-      try {
-        await sendRecoveryCode(handed);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : t.connection);
-      } finally {
-        inFlight.current = false;
-        setBusy(false);
+      setKnownEmail(true);
+      if (sent) {
+        setResends(0);
+        next();
+        startCountdown(RECOVERY_RESEND_SECONDS);
+        showToast(RECOVERY_CODE_SENT);
       }
     }, 0);
     return () => clearTimeout(timer);
@@ -296,14 +316,20 @@ export default function AuthScreen({
     setEmail(address.trim().toLowerCase());
     setResends(0);
     next();
-    startCountdown();
+    startCountdown(RECOVERY_RESEND_SECONDS);
     // The same answer whether or not the address has an account.
-    setNotice(RECOVERY_CODE_SENT);
+    showToast(RECOVERY_CODE_SENT);
   }
 
-  function startCountdown() {
-    setResendAt(Date.now() + RESEND_WAIT_SECONDS * 1000);
-    setCountdown(RESEND_WAIT_SECONDS);
+  function showToast(message: string) {
+    setToast(message);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(""), TOAST_MS);
+  }
+
+  function startCountdown(seconds = RESEND_WAIT_SECONDS) {
+    setResendAt(Date.now() + seconds * 1000);
+    setCountdown(seconds);
   }
   function next() {
     setStep((current) => current + 1);
@@ -348,12 +374,13 @@ export default function AuthScreen({
           return;
         }
         await request("reset", { password });
+        // Done: back to signing in, with a short confirmation on top.
         setMode("login");
         setStep(0);
         setCode("");
         setPassword("");
         setConfirm("");
-        setNotice(t.resetDone);
+        showToast(PASSWORD_UPDATED);
       } else if (isOtp) {
         failedOnCode = true;
         if (code.length !== OTP_LENGTH) throw new Error(t.invalidCode);
@@ -422,8 +449,13 @@ export default function AuthScreen({
       setCode("");
       autoSubmitted.current = "";
       setResends((count) => (fromLogin ? 0 : count + 1));
-      startCountdown();
-      setNotice(t.resendDone);
+      if (isRecovery) {
+        startCountdown(RECOVERY_RESEND_SECONDS);
+        showToast(RECOVERY_CODE_SENT);
+      } else {
+        startCountdown();
+        setNotice(t.resendDone);
+      }
       if (fromLogin) {
         setConfirmingLogin(true);
         setMode("register");
@@ -466,6 +498,8 @@ export default function AuthScreen({
         <em>{t.noLines}</em>
       </>
     )
+  ) : isRecovery ? (
+    RECOVERY_TITLE
   ) : isOtp ? (
     <>
       {t.verify} <em>{t.yourEmail}</em>
@@ -497,6 +531,16 @@ export default function AuthScreen({
     ) : (
       t.tagline
     )
+  ) : isRecovery ? (
+    step === 0 ? (
+      knownEmail ? (
+        recoverySendTo(email)
+      ) : (
+        t.recoveryNote
+      )
+    ) : (
+      RECOVERY_STEP_TWO_NOTE
+    )
   ) : isOtp ? (
     <>
       {t.sent}
@@ -517,12 +561,12 @@ export default function AuthScreen({
       ? t.login
       : isOtp
         ? isRecovery
-          ? t.reset
+          ? RECOVERY_SUBMIT
           : t.verifyButton
         : isRecovery
           ? step === 0
-            ? t.sendCode
-            : t.reset
+            ? RECOVERY_SEND
+            : RECOVERY_SUBMIT
           : t.next;
 
   return (
@@ -530,6 +574,12 @@ export default function AuthScreen({
       className={`${styles.screen} ${entrypoint === "panel" ? `${styles.panelScreen} ${styles.panelLogin}` : ""}`}
       lang="es"
     >
+      {/* Short confirmations: on top, announced, gone after 5 s. */}
+      {(isRecovery || toast) && (
+        <div className={styles.toastRegion} role="status" aria-live="polite">
+          {toast && <p className={styles.toast}>{toast}</p>}
+        </div>
+      )}
       <div
         className={`${styles.canvas} ${entrypoint === "panel" ? styles.panelCanvas : ""}`}
       >
@@ -618,7 +668,8 @@ export default function AuthScreen({
                       />
                     </>
                   )}
-                  {(isRegisterEmail || (isRecovery && step === 0)) && (
+                  {(isRegisterEmail ||
+                    (isRecovery && step === 0 && !knownEmail)) && (
                     <Field
                       icon={<Mail size={21} />}
                       label={`usuario@${usernameDomain}`}
@@ -635,41 +686,13 @@ export default function AuthScreen({
                       disabled={!hydrated || busy}
                     />
                   )}
-                  {isPassword && (
-                    <>
-                      <Field
-                        icon={<LockKeyhole size={21} />}
-                        label={t.password}
-                        password
-                        name="new-password"
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        autoComplete="new-password"
-                        required
-                        minLength={8}
-                        maxLength={128}
-                        disabled={!hydrated || busy}
-                        aria-describedby="password-rules"
-                      />
-                      <Field
-                        icon={<LockKeyhole size={21} />}
-                        label={t.confirm}
-                        password
-                        name="confirm-password"
-                        value={confirm}
-                        onChange={(event) => setConfirm(event.target.value)}
-                        autoComplete="new-password"
-                        required
-                        minLength={8}
-                        maxLength={128}
-                        disabled={!hydrated || busy}
-                      />
-                    </>
-                  )}
                   {isOtp && (
                     <div className={styles.otp}>
-                      <label htmlFor="otp-code" className={styles.srOnly}>
-                        {t.code}
+                      <label
+                        htmlFor="otp-code"
+                        className={isRecovery ? styles.otpLabel : styles.srOnly}
+                      >
+                        {isRecovery ? RECOVERY_CODE_LABEL : t.code}
                       </label>
                       {/* One field: iOS and Android autofill the whole code into it. */}
                       <input
@@ -697,6 +720,37 @@ export default function AuthScreen({
                         }}
                       />
                     </div>
+                  )}
+                  {isPassword && (
+                    <>
+                      <Field
+                        icon={<LockKeyhole size={21} />}
+                        label={RECOVERY_NEW_PASSWORD}
+                        password
+                        name="new-password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        autoComplete="new-password"
+                        required
+                        minLength={8}
+                        maxLength={128}
+                        disabled={!hydrated || busy}
+                        aria-describedby="password-rules"
+                      />
+                      <Field
+                        icon={<LockKeyhole size={21} />}
+                        label={RECOVERY_CONFIRM_PASSWORD}
+                        password
+                        name="confirm-password"
+                        value={confirm}
+                        onChange={(event) => setConfirm(event.target.value)}
+                        autoComplete="new-password"
+                        required
+                        minLength={8}
+                        maxLength={128}
+                        disabled={!hydrated || busy}
+                      />
+                    </>
                   )}
                 </div>
                 {isLogin && (
@@ -787,9 +841,19 @@ export default function AuthScreen({
                       }
                       onClick={() => resend()}
                     >
-                      {t.resend}
-                      {countdown > 0 &&
-                        ` (${String(Math.floor(countdown / 60)).padStart(2, "0")}:${String(countdown % 60).padStart(2, "0")})`}
+                      {isRecovery ? (
+                        countdown > 0 ? (
+                          recoveryResendIn(countdown)
+                        ) : (
+                          RECOVERY_RESEND
+                        )
+                      ) : (
+                        <>
+                          {t.resend}
+                          {countdown > 0 &&
+                            ` (${String(Math.floor(countdown / 60)).padStart(2, "0")}:${String(countdown % 60).padStart(2, "0")})`}
+                        </>
+                      )}
                     </button>
                     {resends >= MAX_RESENDS && (
                       <>

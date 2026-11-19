@@ -293,7 +293,7 @@ export default function WorkerDashboard() {
 
   return (
     <main
-      className={`worker-page ${motion.tokens}${activeModule === "availability" ? ` ${styles.availabilityPage}` : activeModule === "history" ? ` ${styles.historyPage}` : activeModule === "profile" ? ` ${styles.profilePage}` : ""}${listingVariant === "classic" ? ` ${styles.classicPage}` : ""}`}
+      className={`worker-page ${motion.tokens}${activeModule === "availability" ? ` ${styles.availabilityPage}` : activeModule === "history" ? ` ${styles.historyPage}` : activeModule === "profile" ? ` ${styles.profilePage}` : ""}${activeModule !== "profile" ? ` ${styles.brandedPage}` : ""}`}
     >
       <Header
         activeModule={activeModule}

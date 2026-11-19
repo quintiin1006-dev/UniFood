@@ -1,15 +1,11 @@
 .panel {
-  flex: 1;
+  flex: none;
   min-width: 0;
-  min-height: 0;
-  overflow-y: auto;
+  min-height: auto;
   overscroll-behavior: contain;
-  /* A white card on the deep blue page, like the columns of Pedidos. */
-  padding: 18px 20px 28px;
-  border-radius: 24px;
-  background: var(--color-surface);
-  box-shadow: 0 13px 35px rgba(3, 39, 87, 0.2);
-  color: var(--color-ink);
+  padding: 4px 6px 24px;
+  color: #ffffff;
+  overflow: visible;
 }
 .heading {
   display: flex;
@@ -23,14 +19,12 @@
   font-size: clamp(24px, 3vw, 30px);
   font-weight: 750;
   letter-spacing: -0.7px;
+  color: #ffffff;
 }
 .date {
-  /* The range is context, not a headline: short and quiet. */
-  margin: 4px 0 0;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-soft);
-  font-variant-numeric: tabular-nums;
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: #ffffff;
 }
 .refresh,
 .error button,
@@ -70,7 +64,7 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
-  color: var(--color-slate);
+  color: #ffffff;
   font-size: 12px;
 }
 .filters label {
@@ -231,13 +225,14 @@
   gap: 16px;
   font-size: 13px;
   line-height: 1.5;
+  color: #ffffff;
 }
 .itemName {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .quantity {
-  color: var(--color-slate);
+  color: #ffffff;
   font-variant-numeric: tabular-nums;
 }
 .amount {
@@ -250,9 +245,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-top: 1px solid var(--color-brand-tint);
+  border-top: 1px solid rgba(255, 255, 255, 0.24);
   padding-top: 15px;
   font-size: 13px;
+  color: #ffffff;
 }
 .total strong {
   font-size: 17px;
@@ -261,7 +257,7 @@
   font-variant-numeric: tabular-nums;
 }
 .noItems {
-  color: var(--color-slate);
+  color: #ffffff;
   font-size: 13px;
   margin: 22px 0;
 }
@@ -271,9 +267,7 @@
   align-items: center;
   text-align: center;
   padding: 64px 24px;
-  border: 1px dashed var(--color-brand-tint-2);
   border-radius: 18px;
-  background: color-mix(in srgb, var(--color-surface) 50%, transparent);
 }
 .emptyIcon {
   display: grid;
@@ -292,7 +286,7 @@
 }
 .empty p {
   max-width: 350px;
-  color: var(--color-slate);
+  color: #ffffff;
   font-size: 14px;
   line-height: 1.6;
   margin: 10px 0 0;
@@ -329,7 +323,7 @@
   flex-shrink: 0;
 }
 .loading > p {
-  color: var(--color-slate);
+  color: #ffffff;
   font-size: 14px;
   margin-bottom: 16px;
 }
@@ -406,14 +400,12 @@
 /* ---- Ola 2 · D3: one large container, a row per finished order, expandable (accordion). ---- */
 .list {
   margin-top: 16px;
-  border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
   overflow: hidden;
 }
 
 .row {
-  border-bottom: 1px solid var(--color-line);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.24);
 }
 
 .row:last-child {
@@ -422,52 +414,23 @@
 
 .rowHead {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px 12px;
+  gap: 12px;
   min-height: 64px;
   padding: 12px 18px;
 }
 
 .rowIdentity {
-  /* The name keeps room: on a narrow screen the total and state wrap below it. */
-  flex: 1 1 12rem;
   min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}
-.rowTime {
-  flex-shrink: 0;
-  min-width: 4.5em;
-  color: var(--color-text-soft);
-  font-size: 14px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.rowTotal {
-  color: var(--color-ink);
-  font-size: 15px;
-  font-variant-numeric: tabular-nums;
-}
-.day + .day {
-  border-top: 1px solid var(--color-line);
-}
-.dayTitle {
-  margin: 0;
-  padding: 10px 16px 6px;
-  background: var(--color-bg);
-  color: var(--color-slate);
-  font-size: 13px;
-  font-weight: 700;
+  display: grid;
+  gap: 2px;
 }
 
 .rowName {
-  min-width: 0;
   margin: 0;
   overflow: hidden;
-  color: var(--color-ink);
+  color: #ffffff;
   font-size: 16px;
   font-weight: 700;
   text-overflow: ellipsis;
@@ -475,7 +438,7 @@
 }
 
 .rowIdentity span {
-  color: var(--color-text-soft);
+  color: #ffffff;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
@@ -531,13 +494,13 @@
   display: grid;
   gap: 10px;
   padding: 4px 18px 18px;
-  border-top: 1px solid var(--color-line);
-  background: var(--color-bg);
+  border-top: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(4, 30, 70, 0.28);
 }
 
 .detailStatus {
   margin: 12px 0 0;
-  color: var(--color-slate);
+  color: #ffffff;
   font-size: 14px;
   font-weight: 600;
 }
@@ -551,4 +514,11 @@
   .toggle:active {
     transform: none;
   }
+}
+
+/* The hour under the name, on the glass list (jj/cliente-correcciones). */
+.rowIdentity time {
+  color: #ffffff;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
