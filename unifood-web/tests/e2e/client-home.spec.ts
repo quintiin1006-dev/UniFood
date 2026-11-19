@@ -84,9 +84,8 @@ for (const width of [320, 375, 390, 412, 430, 1280]) {
     await cafeterias.filter({ hasText: "Cafetería Central" }).click();
 
     await expect(page).toHaveURL(`/cuenta?cafeteria=${CAFETERIA_CENTRAL}`);
-    await expect(
-      page.getByRole("heading", { name: "¡Hola, Usuario!" }),
-    ).toBeVisible();
+    // Inicio has no greeting: the compact selector is the first thing under the header.
+    await expect(page.getByRole("heading", { name: /^¡Hola/ })).toHaveCount(0);
     await expect(
       page.getByRole("link", {
         name: "Cambiar cafetería. Cafetería Central, Sede Principal, Abierta",
@@ -101,7 +100,6 @@ for (const width of [320, 375, 390, 412, 430, 1280]) {
       "Desayunos",
       "Corriente",
       "Ejecutivo",
-      "Especial",
       "Bebidas",
     ]);
     await expect(filters.first()).toHaveAttribute("aria-pressed", "true");
@@ -121,11 +119,8 @@ for (const width of [320, 375, 390, 412, 430, 1280]) {
         .getByRole("list", { name: "Productos: Corriente" })
         .getByRole("link"),
     ).toHaveCount(1);
-    await expect(
-      page.getByText(
-        "Especial: No hay productos disponibles de esta categoría por el momento.",
-      ),
-    ).toBeVisible();
+    // A category without available products has no chip, no section and no line.
+    await expect(page.getByText(/No hay productos disponibles/)).toHaveCount(0);
     await expect(
       page.getByRole("list", { name: "Productos: Especial" }),
     ).toHaveCount(0);
@@ -225,9 +220,10 @@ test("closed, empty, failing and missing cafeterias show fixed Spanish states", 
   await expect(
     page.getByRole("list", { name: "Productos: Corriente" }),
   ).toHaveCount(0);
+  // An empty category is simply not shown: no chip, no section and no «no hay productos».
   await expect(
-    content.getByText("No hay productos disponibles de esta categoría").first(),
-  ).toBeVisible();
+    content.getByText("No hay productos disponibles de esta categoría"),
+  ).toHaveCount(0);
   await page.goto(
     `/cuenta/producto/${PRODUCT.closedChicken}?cafeteria=${CAFETERIA_BLOQUE_B}`,
   );
@@ -245,7 +241,7 @@ test("closed, empty, failing and missing cafeterias show fixed Spanish states", 
 
   await page.goto(`/cuenta?cafeteria=${CAFETERIA_AGUAS_CLARAS}`);
   await expect(
-    page.getByRole("heading", { name: "Aún no hay productos en el menú" }),
+    page.getByText("Aún no hay productos para pedir. Vuelve más tarde."),
   ).toBeVisible();
   await page.goto(`/cuenta/menu?cafeteria=${CAFETERIA_AGUAS_CLARAS}`);
   await expect(
@@ -356,7 +352,9 @@ test("one cafeteria skips the selection, the selector stays visible, and the las
   await login(page, LONG_EMAIL);
   await page.goto("/cuenta");
   await expect(page).toHaveURL(/\/cuenta$/);
-  await expect(page.getByRole("heading", { name: /^¡Hola/ })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /^Cambiar cafetería/ }),
+  ).toBeVisible();
   await assertNoOverflow(page);
   await page.getByRole("link", { name: /^Cambiar cafetería/ }).click();
   await expect(page).toHaveURL(/elegir=1/);
@@ -380,7 +378,9 @@ test("one cafeteria skips the selection, the selector stays visible, and the las
     page.getByRole("heading", { name: "¿Dónde vas a pedir hoy?" }),
   ).toBeVisible();
   await page.goto(`/cuenta?cafeteria=${CAFETERIA_BLOQUE_B}`);
-  await expect(page.getByRole("heading", { name: /^¡Hola/ })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /^Cambiar cafetería/ }),
+  ).toBeVisible();
   await page.goto("/cuenta");
   await expect(page).toHaveURL(`/cuenta?cafeteria=${CAFETERIA_BLOQUE_B}`);
   // The selector opens the selection without jumping back to the cached one.

@@ -1,12 +1,13 @@
+/* Fixed to the whole screen: no white strip under the nav when the browser bars move. */
 .shell {
+  position: fixed;
+  inset: 0;
   --client-ink: var(--color-ink);
   --client-muted: var(--color-text-soft);
   --client-blue: var(--color-brand);
   --client-border: var(--color-brand-tint-2);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  height: 100vh;
-  height: 100dvh;
   overflow: hidden;
   color: var(--client-ink);
   background:
@@ -116,8 +117,7 @@
 
 /* Ola 2: floating pill tab bar. */
 .navInner {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: flex;
   gap: 4px;
   width: min(100%, 520px);
   margin-inline: auto;
@@ -133,6 +133,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  flex: 1 1 0;
   gap: 4px;
   min-width: 0;
   min-height: 56px;
@@ -150,17 +151,6 @@
 .navItem[aria-current="page"] {
   color: var(--color-brand);
   background: var(--color-brand-tint);
-}
-
-/* The cart with units is an ink pill: the floating cart of the identity, without a new flow. */
-.navItem:has(.cartBadge) {
-  background: var(--color-ink);
-  color: var(--color-on-color);
-}
-
-.navItem:has(.cartBadge) .cartBadge {
-  background: var(--color-surface);
-  color: var(--color-ink);
 }
 
 /* Four tabs on a 320 px screen: a touch smaller text keeps every label inside its 44 px+ cell. */

@@ -2,7 +2,7 @@
 import { useRef } from "react";
 import { History, RefreshCw, Search, X } from "lucide-react";
 import { useWorkerHistory } from "../useWorkerHistory";
-import { formatBusinessDate } from "../presentation";
+import { formatShortRange, groupHistoryByDay } from "../presentation";
 import { HistoryOrderRow } from "./HistoryOrderRow";
 import type { HistoryRange, HistoryStatus } from "../types";
 import styles from "./WorkerHistory.module.css";
@@ -29,14 +29,7 @@ export function WorkerHistoryPanel() {
           <h2 id="worker-history-title">Historial</h2>
           {state.data && (
             <p className={styles.date}>
-              Mes actual ·{" "}
-              <time dateTime={state.data.monthStart}>
-                {formatBusinessDate(state.data.monthStart)}
-              </time>{" "}
-              al{" "}
-              <time dateTime={state.data.businessDate}>
-                {formatBusinessDate(state.data.businessDate)}
-              </time>
+              {formatShortRange(state.data.monthStart, state.data.businessDate)}
             </p>
           )}
         </div>
@@ -199,8 +192,17 @@ export function WorkerHistoryPanel() {
               aria-label="Pedidos finalizados"
               aria-busy={state.refreshing}
             >
-              {state.data.orders.map((order) => (
-                <HistoryOrderRow key={order.id} order={order} />
+              {groupHistoryByDay(state.data.orders).map((day) => (
+                <section
+                  key={day.key}
+                  className={styles.day}
+                  aria-label={day.label}
+                >
+                  <h3 className={styles.dayTitle}>{day.label}</h3>
+                  {day.orders.map((order) => (
+                    <HistoryOrderRow key={order.id} order={order} />
+                  ))}
+                </section>
               ))}
             </div>
           )}

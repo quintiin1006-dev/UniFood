@@ -53,3 +53,45 @@ export function historyStatusText(
       return HISTORY_LABELS.CANCELLED;
   }
 }
+
+/** «01/11 – 18/11/2026»; the year is repeated only when the range crosses one. */
+export function formatShortRange(start: string, end: string): string {
+  const [sy, sm, sd] = start.split("-");
+  const [ey, em, ed] = end.split("-");
+  return sy === ey
+    ? `${sd}/${sm} – ${ed}/${em}/${ey}`
+    : `${sd}/${sm}/${sy} – ${ed}/${em}/${ey}`;
+}
+
+const dayKey = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/Bogota",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+const dayLabel = new Intl.DateTimeFormat("es-CO", {
+  timeZone: "America/Bogota",
+  weekday: "long",
+  day: "numeric",
+  month: "short",
+});
+
+/** Orders grouped by their Bogotá day, in the order they came (newest first). */
+export function groupHistoryByDay<T extends { completedAt: string }>(
+  orders: T[],
+): { key: string; label: string; orders: T[] }[] {
+  const groups: { key: string; label: string; orders: T[] }[] = [];
+  for (const order of orders) {
+    const when = new Date(order.completedAt);
+    const key = dayKey.format(when);
+    const last = groups.at(-1);
+    if (last && last.key === key) last.orders.push(order);
+    else {
+      const text = dayLabel.format(when);
+      // «Miércoles, 14 de oct»: only the first letter is a capital.
+      const label = text.charAt(0).toUpperCase() + text.slice(1);
+      groups.push({ key, label, orders: [order] });
+    }
+  }
+  return groups;
+}

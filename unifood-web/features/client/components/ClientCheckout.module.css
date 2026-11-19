@@ -221,3 +221,41 @@
   color: var(--client-muted);
   font-size: 13px;
 }
+
+/* One screen: a bar fixed at the bottom of the scroll area with the total and the action. */
+.bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-inline: -4px;
+  padding: 12px 4px max(12px, env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--color-line);
+  background: var(--color-brand-tint);
+}
+.barTotal {
+  display: grid;
+  min-width: 0;
+}
+.barTotal span {
+  color: var(--color-text-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+.barTotal strong {
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.bar > button {
+  flex: 1;
+}
+.noteField > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-brand-hover);
+  font-weight: 700;
+  cursor: pointer;
+}

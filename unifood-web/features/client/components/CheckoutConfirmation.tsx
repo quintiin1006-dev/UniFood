@@ -28,9 +28,7 @@ export default function CheckoutConfirmation({
         <h1 id="confirmation-title" tabIndex={-1} ref={heading}>
           Pedido enviado
         </h1>
-        <p className={shared.description}>
-          La cafetería ya recibió tu pedido. Paga en efectivo al recogerlo.
-        </p>
+        <p className={shared.description}>La cafetería ya recibió tu pedido.</p>
       </div>
       <dl className={styles.details}>
         <div>
@@ -57,10 +55,6 @@ export default function CheckoutConfirmation({
             <dd>{order.note}</dd>
           </div>
         )}
-        <div>
-          <dt>Pago</dt>
-          <dd>Efectivo en caja al recoger</dd>
-        </div>
       </dl>
       <CheckoutLines lines={order.items} />
       <div className={shared.cartTotal}>

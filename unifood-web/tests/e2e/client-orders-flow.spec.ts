@@ -223,10 +223,11 @@ test("historial: más de una página, «Cargar más» y detalle de solo lectura"
   await flow(page, { order: null, historyCount: 25 });
   await page.goto("/cuenta/pedido");
   const rows = page.getByRole("button", { name: /Cafetería Central/ });
-  await expect(rows).toHaveCount(20);
+  // The last five orders; «Cargar más» brings five more each time.
+  await expect(rows).toHaveCount(5);
   await page.getByRole("button", { name: "Cargar más" }).click();
-  await expect(rows).toHaveCount(25);
-  await expect(page.getByRole("button", { name: "Cargar más" })).toHaveCount(0);
+  await expect(rows).toHaveCount(10);
+  await expect(page.getByRole("button", { name: "Cargar más" })).toBeVisible();
   await expect(page.getByText(/repetir/i)).toHaveCount(0);
 
   await rows.first().click();

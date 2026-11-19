@@ -1,12 +1,17 @@
 import { Icon } from "@/components/ui/Icon";
-import { CLOSED_BANNER_BODY, CLOSED_BANNER_TITLE } from "../../shared/messages";
+import { CLOSED_BANNER_TITLE, closedOpensAt } from "../../shared/messages";
 import styles from "./ClosedBanner.module.css";
 
 /**
- * Shown where the carousel is while the cafeteria is closed: large, first on screen, and
- * announced once when it appears. Its height is fixed, so the page below does not move.
+ * Shown where the carousel is while the cafeteria is closed: same size and corners as the
+ * carousel card, so the page below does not move. «Abre …» appears only when the opening time is
+ * known; the menu does not carry it today, so nothing is invented.
  */
-export default function ClosedBanner() {
+export default function ClosedBanner({
+  opensAt = null,
+}: {
+  opensAt?: string | null;
+}) {
   return (
     <section
       className={styles.banner}
@@ -14,10 +19,10 @@ export default function ClosedBanner() {
       aria-label={CLOSED_BANNER_TITLE}
     >
       <span className={styles.icon} aria-hidden="true">
-        <Icon name="reloj" size={32} />
+        <Icon name="reloj" size={44} strokeWidth={1.6} />
       </span>
       <p className={styles.title}>{CLOSED_BANNER_TITLE}</p>
-      <p className={styles.body}>{CLOSED_BANNER_BODY}</p>
+      {opensAt && <p className={styles.body}>{closedOpensAt(opensAt)}</p>}
     </section>
   );
 }

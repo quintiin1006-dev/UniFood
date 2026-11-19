@@ -24,6 +24,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#0B5FFF",
+  // Installed as a PWA the page reaches the screen edges; headers and navs pad with
+  // env(safe-area-inset-*) so nothing sits under the clock or the home indicator.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

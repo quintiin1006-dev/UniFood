@@ -19,18 +19,21 @@
 
 /* Sound switch: a real switch, 44 px tall, visible focus ring. */
 .soundSwitch {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 44px;
   min-height: 44px;
-  padding: 0 4px;
-  border: 0;
-  background: transparent;
+  padding: 0;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: 50%;
+  background: var(--color-surface);
   color: var(--color-text-soft);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
   cursor: pointer;
+}
+/* On: brand colour; off: muted. The state is also the icon (bell or crossed bell). */
+.soundSwitch[aria-checked="true"] {
+  color: var(--color-brand);
+  background: var(--color-brand-tint);
 }
 .switchTrack {
   position: relative;

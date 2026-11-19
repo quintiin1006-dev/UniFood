@@ -10,6 +10,8 @@ import type { ClientOrder, OrderHistoryPage } from "./types";
 
 // Every call goes to the BFF of this origin; the browser never reaches Spring (CLAUDE.md).
 const TIMEOUT_MS = 12_000;
+/** The history shows the last five orders; «Cargar más» brings the next five. */
+export const HISTORY_PAGE_SIZE = 5;
 
 export type Outcome<T> =
   { ok: true; value: T } | { ok: false; failure: OrderFailure };
@@ -94,7 +96,7 @@ export async function fetchOrder(id: string): Promise<Outcome<ClientOrder>> {
 export async function fetchHistory(
   cursor: string | null,
 ): Promise<Outcome<OrderHistoryPage>> {
-  const query = new URLSearchParams({ limit: "20" });
+  const query = new URLSearchParams({ limit: String(HISTORY_PAGE_SIZE) });
   if (cursor) query.set("cursor", cursor);
   try {
     const response = await fetch(`/api/me/orders?${query}`, {

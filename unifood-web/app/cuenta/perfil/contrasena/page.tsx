@@ -8,5 +8,5 @@ export const metadata = { title: "Cambiar contraseña | UniFood" };
 export default async function ClientPasswordPage() {
   const { profile } = await requireAuth();
   if (!isClient(profile)) redirect(destination(profile));
-  return <ClientPassword />;
+  return <ClientPassword email={profile.email} />;
 }

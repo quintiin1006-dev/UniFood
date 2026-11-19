@@ -303,7 +303,7 @@ test("password recovery goes from email and OTP to password and back to login", 
   await page.goto("/recuperar-contrasena");
   await page.getByRole("textbox").fill("maria@ustavillavicencio.edu.co");
   await page.getByRole("button", { name: "Enviar código" }).click();
-  await expect(page.getByRole("status")).toContainText("Si existe una cuenta");
+  await expect(page.getByRole("status")).toContainText("Si el correo existe");
   await page
     .getByRole("textbox", { name: "Código de verificación", exact: true })
     .fill("654321");

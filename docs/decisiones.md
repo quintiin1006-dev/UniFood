@@ -971,6 +971,42 @@ disponibilidad sin recargar:
 - **Pendiente:** la ficha de un producto abierta antes de su cambio no se refresca; el pedido la
   rechaza en el servidor si ya no está disponible.
 
+**Decisión, 2026-11-18: pulido del cliente y ajustes del worker (`jj/cliente-pulido`).**
+
+- **Inicio, de arriba abajo:** header con safe-area, selector compacto de una línea (cafetería,
+  sede, Abierta/Cerrada), carrusel, chips y una fila horizontal con snap por categoría. Solo
+  aparecen las categorías con productos disponibles; una vacía no tiene chip, sección ni letrero.
+  Se quitó el saludo. El bloque «Menú del día» llega en otro PR.
+- **Carrusel:** bucle infinito real (copia de la primera tarjeta al final y salto sin animación al
+  original), sin controles visibles; se pausa solo con hover, foco o toque (WCAG 2.2.2).
+- **Cafetería cerrada:** el aviso ocupa el lugar del carrusel con su mismo tamaño y radio,
+  degradado de marca, reloj y «Cafetería cerrada». La línea «Abre …» solo con dato; el menú no
+  trae horario hoy, así que no se muestra.
+- **PWA:** `viewportFit: "cover"` en la raíz para que `env(safe-area-inset-*)` funcione; el
+  shell del cliente cubre toda la pantalla (sin franja blanca bajo el nav).
+- **Nav del cliente:** cuatro ítems con `flex: 1` y el mismo estilo de activo; el carrito ya no
+  se vuelve negro.
+- **Historial:** cinco pedidos por página con «Cargar más». El sonido de avisos es un botón de
+  ícono con nombre accesible. Mi pedido no cambia: su aviso de listo ya usa el azul de marca.
+- **Carrito y confirmación en una pantalla** (`/cuenta/carrito`; `/cuenta/carrito/resumen`
+  redirige): lista con stepper, recogida, nota plegada y barra fija con Total y «Confirmar
+  pedido». Sin textos de pago en efectivo, términos ni «de 15 unidades». Las reglas no cambian.
+- **Contraseña olvidada:** el correo escrito en el login o el de la cuenta (desde Mi perfil) pasa
+  por `sessionStorage`, nunca por la URL, y el código se envía al llegar. Código y nueva
+  contraseña en una pantalla. Respuesta genérica: «Si el correo existe, te enviamos un código».
+  Sin cambios de backend.
+- **Worker · detalle:** el precio una vez; «c/u» solo con cantidad mayor a 1; Total solo con
+  más de un producto o unidad; la antigüedad una sola vez junto al nombre. «Rechazar» va debajo
+  de la acción principal, con borde y separado.
+- **Worker · historial:** filas compactas (hora, nombre, total, estado) agrupadas por día; rango
+  corto «01/11 – 18/11/2026». Disponibilidad e Historial usan el azul de Pedidos con sus paneles
+  como tarjetas blancas.
+- **Worker · nav:** el de Pedidos en todos los módulos, con medidas divididas entre
+  `--worker-zoom` para que tenga el mismo tamaño y posición con la página escalada o no.
+- **Pendiente con backend:** el código del estudiante no llega al historial del worker
+  (`WorkerHistoryResponse.Entry` solo trae `clientName`) ni al cliente; la hora de apertura
+  de la cafetería no está en el menú.
+
 ## 13. Línea de corte
 
 Si el 14 de noviembre el backend de pedidos no está terminado, se activa toda la línea.

@@ -283,10 +283,8 @@ test("closed cafeteria: the banner comes first, the carousel is gone, and only a
     "the banner is above the products",
   );
   assert.match(markup, /role="status"/);
-  assert.match(
-    markup,
-    new RegExp(messages.CLOSED_BANNER_BODY.replace(/[.]/g, "\\.")),
-  );
+  // Without an opening time the notice says only «Cafetería cerrada»: nothing is invented.
+  assert.doesNotMatch(markup, /Abre /);
   // Products that are not available are never listed, even though the cafeteria is closed.
   for (const product of menuDomain
     .menuProducts(menu)

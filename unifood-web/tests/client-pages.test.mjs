@@ -97,7 +97,8 @@ test("Inicio shows the selection, then the chosen cafeteria's real menu", async 
   const chosen = await render(home, { cafeteria: fixtures.CAFETERIA_CENTRAL });
   assert.equal(name(chosen), "ClientHome");
   assert.equal(chosen.props.siteName, "Sede Principal");
-  assert.equal(chosen.props.fullName, "Ana María Pérez");
+  // Inicio no longer greets the student, so the name is not passed (jj/cliente-pulido).
+  assert.equal(chosen.props.fullName, undefined);
   assert.equal(chosen.props.menu.cafeteria.id, fixtures.CAFETERIA_CENTRAL);
   assert.deepEqual(menuCalls, [fixtures.CAFETERIA_CENTRAL]);
 });

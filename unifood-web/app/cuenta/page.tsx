@@ -46,7 +46,6 @@ export default async function ClientHomePage({
   return (
     <ClientHome
       ownerId={profile.id}
-      fullName={profile.fullName ?? context.fullName}
       siteName={selection.site.name}
       menu={menu.menu}
     />

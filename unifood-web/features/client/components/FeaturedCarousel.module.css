@@ -2,7 +2,6 @@
 .carousel {
   position: relative;
   min-width: 0;
-  margin-bottom: 20px;
 }
 
 .srOnly {
@@ -23,6 +22,9 @@
 
 .track {
   display: flex;
+}
+/* Off for the invisible jump from the copy back to the first slide. */
+.track[data-animate] {
   transition: transform 520ms ease;
 }
 
@@ -67,7 +69,7 @@
 
 /* The visible dot is small; the 44 px button around it is the touch target. */
 @media (prefers-reduced-motion: reduce) {
-  .track {
+  .track[data-animate] {
     transition: none;
   }
 }

@@ -16,6 +16,11 @@ import { ACTION_LABELS, canAdvanceOrder } from "@/lib/orderWorkflow";
 import modernStyles from "./OrderDetail.module.css";
 import classicStyles from "./OrderDetail.classic.module.css";
 import { ICON_MIN_20 } from "@/components/ui/Icon";
+import { RejectOrderButton } from "@/features/orders/components/RejectOrderDialog";
+import {
+  showsUnitPrice,
+  showsTotal,
+} from "@/features/orders/utils/detailPricing";
 
 interface OrderDetailProps {
   /** Pedidos and Llamadas use the classic look (ola 2 · D2); the rest keep the modern one. */
@@ -24,6 +29,8 @@ interface OrderDetailProps {
   busy?: boolean;
   onClose: () => void;
   onAction: (order: Order) => void;
+  /** «Rechazar», a quieter secondary action under the main one (pending or preparing only). */
+  onReject?: (order: Order) => void;
 }
 
 const FOCUSABLE_SELECTOR = [
@@ -41,6 +48,7 @@ export default function OrderDetail({
   busy = false,
   onClose,
   onAction,
+  onReject,
 }: OrderDetailProps) {
   const styles = variant === "classic" ? classicStyles : modernStyles;
   const modalRef = useRef<HTMLDivElement>(null);
@@ -164,6 +172,10 @@ export default function OrderDetail({
             <h2 id="order-detail-title">{order.student}</h2>
 
             {clientIdentity(order) && <p>{clientIdentity(order)}</p>}
+            {/* The only place the age of the order appears. */}
+            <small className={styles.since}>
+              {formatRelativeTime(order.createdAt)}
+            </small>
           </div>
         </div>
 
@@ -200,7 +212,7 @@ export default function OrderDetail({
                 </div>
 
                 {/* Precio unitario */}
-                {item.unitPrice !== undefined && (
+                {showsUnitPrice(item) && item.unitPrice !== undefined && (
                   <span className={styles.itemPrice}>
                     ${item.unitPrice.toLocaleString("es-CO")} c/u
                   </span>
@@ -221,12 +233,14 @@ export default function OrderDetail({
             ))}
           </div>
 
-          {/* Total */}
-          <div className={styles.total}>
-            <span>Total</span>
+          {/* Total: only when it is not already the single line's value. */}
+          {showsTotal(order.items) && (
+            <div className={styles.total}>
+              <span>Total</span>
 
-            <strong>${total.toLocaleString("es-CO")}</strong>
-          </div>
+              <strong>${total.toLocaleString("es-CO")}</strong>
+            </div>
+          )}
         </section>
 
         {/* Observaciones generales */}
@@ -247,17 +261,6 @@ export default function OrderDetail({
         )}
 
         <div className={styles.divider} />
-
-        {/* Tiempo */}
-        <section className={styles.timeInfo}>
-          <Clock3 size={20} style={ICON_MIN_20} aria-hidden="true" />
-
-          <div>
-            <span>Tiempo de pedido</span>
-
-            <strong>{formatRelativeTime(order.createdAt)}</strong>
-          </div>
-        </section>
 
         {pickup && (
           <section className={styles.timeInfo}>
@@ -286,6 +289,17 @@ export default function OrderDetail({
           {busy && <Spinner />}
           <span>{busy ? "Guardando…" : actionLabel}</span>
         </button>
+
+        {onReject && (
+          <div className={styles.secondary}>
+            <RejectOrderButton
+              order={order}
+              busy={busy}
+              onReject={onReject}
+              compact
+            />
+          </div>
+        )}
       </aside>
     </div>
   );

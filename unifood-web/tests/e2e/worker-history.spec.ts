@@ -245,16 +245,19 @@ test("WORKER history shows only ordered terminal snapshots and survives reload/r
         .getByLabel("Pedidos finalizados")
         .getByText(label, { exact: !label.startsWith("Rechazado") }),
     ).toBeVisible();
-  // Rows are ordered by the backend; each row shows its reference under the client name (D3).
+  // Rows are ordered by the backend and compact: time, name, total and state, no order id.
   await expect(panel(page).getByRole("article")).toContainText([
-    "Pedido · A91C6F2D",
-    "Pedido · B72D5A10",
-    "Pedido · C83E6B21",
+    "Juan Pérez",
+    "María Gómez",
+    "Juan Rodríguez",
   ]);
+  await expect(panel(page)).not.toContainText(/Pedido · [0-9A-F]{8}/);
   await expect(panel(page)).not.toContainText("Estudiante de prueba");
   await expect(panel(page)).not.toContainText("Pendiente");
-  await expect(panel(page).getByText(/14 de octubre de 2026/)).toBeVisible();
-  await expect(panel(page).getByText(/12:43/)).toBeVisible();
+  // Short, quiet range: «01/10 – 14/10/2026».
+  await expect(panel(page).getByText("01/10 – 14/10/2026")).toBeVisible();
+  // The time is in the compact row (and again in the open detail).
+  await expect(panel(page).getByText(/12:43/).first()).toBeVisible();
   const response = await page.request.get(
     `${root}?cafeteriaId=FOREIGN&date=1900-01-01&status=PENDING`,
   );
@@ -271,7 +274,10 @@ test("WORKER history shows only ordered terminal snapshots and survives reload/r
     .click();
   // Pesos without decimals (I6): a snapshot with cents rounds half up (docs/ui-paneles.md).
   await expandAllRows(page);
-  await expect(panel(page).getByText("$19.001", { exact: true })).toBeVisible();
+  // The total is in the compact row and again in the open detail.
+  await expect(
+    panel(page).getByText("$19.001", { exact: true }).first(),
+  ).toBeVisible();
   await expect(panel(page).getByText("$15.001", { exact: true })).toBeVisible();
   await configure(page, { reset: true });
   await page.getByRole("button", { name: "Pedidos", exact: true }).click();
@@ -521,7 +527,8 @@ for (const width of [390, 768, 1366]) {
     }
     await expandAllRows(page);
     const first = panel(page).getByRole("article").first();
-    await expect(first.getByText(/19\.000/)).toBeVisible();
+    // The total is in the compact row and again in the open detail.
+    await expect(first.getByText(/19\.000/).first()).toBeVisible();
     await expect(first.getByRole("heading", { level: 3 })).toBeVisible();
     const bounds = await panel(page).boundingBox();
     expect(bounds!.width).toBeLessThanOrEqual(1320);
