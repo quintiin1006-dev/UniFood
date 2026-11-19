@@ -85,9 +85,9 @@ class WorkerReminderServiceTest {
   }
 
   @Test
-  void aFourthReminderReachesTheLimitAndWritesNothing() {
+  void aReminderBeyondTheLimitReachesItAndWritesNothing() {
     Instant third = calledAt.plusSeconds(900);
-    order(OrderStatus.CALLED, 3, third, third.plusSeconds(3600));
+    order(OrderStatus.CALLED, Order.MAX_REMINDERS, third, third.plusSeconds(3600));
     var error = assertThrows(ReminderLimitReachedException.class, () -> service.remindStudent(id));
     assertEquals(ErrorCode.REMINDER_LIMIT_REACHED, error.getCode());
     verify(orders, never()).save(any());
@@ -99,7 +99,7 @@ class WorkerReminderServiceTest {
       names = {"CALLED"},
       mode = EnumSource.Mode.EXCLUDE)
   void onlyACalledOrderCanBeRemindedOrMarkedNotCollected(OrderStatus status) {
-    order(status, 3, null, calledAt.plusSeconds(3600));
+    order(status, Order.MAX_REMINDERS, null, calledAt.plusSeconds(3600));
     var remind = assertThrows(InvalidOrderStateException.class, () -> service.remindStudent(id));
     assertEquals(ErrorCode.INVALID_ORDER_STATE, remind.getCode());
     var mark =
@@ -109,8 +109,12 @@ class WorkerReminderServiceTest {
   }
 
   @Test
-  void notCollectedNeedsTheThreeRemindersAndWritesNothingBefore() {
-    order(OrderStatus.CALLED, 2, calledAt.plusSeconds(600), calledAt.plusSeconds(3600));
+  void notCollectedNeedsEveryReminderAndWritesNothingBefore() {
+    order(
+        OrderStatus.CALLED,
+        Order.MAX_REMINDERS - 1,
+        calledAt.plusSeconds(600),
+        calledAt.plusSeconds(3600));
     var error =
         assertThrows(
             NotCollectedRequirementsException.class, () -> service.markOrderNotCollected(id));
@@ -119,9 +123,9 @@ class WorkerReminderServiceTest {
   }
 
   @Test
-  void afterTheThreeRemindersTheOrderIsNotCollectedAndRepeatingItIsAConflict() {
+  void afterEveryReminderTheOrderIsNotCollectedAndRepeatingItIsAConflict() {
     Instant now = calledAt.plusSeconds(3600);
-    Order order = order(OrderStatus.CALLED, 3, calledAt.plusSeconds(900), now);
+    Order order = order(OrderStatus.CALLED, Order.MAX_REMINDERS, calledAt.plusSeconds(900), now);
     assertSame(order, service.markOrderNotCollected(id));
     assertEquals(OrderStatus.NOT_COLLECTED, order.getStatus());
     assertEquals(now, order.getNotCollectedAt());

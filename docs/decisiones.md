@@ -411,7 +411,7 @@ suscripción no es obligatoria y el cobro no condiciona la visibilidad.
     El script manual queda como herramienta de emergencia (§11).
   - Los pedidos ya terminados no se tocan, incluidos los rechazos del worker (B18,
     `cancellation_source = 'WORKER'`).
-  - Se salta las reglas del worker para NOT_COLLECTED (CALLED con 3 recordatorios), igual que
+  - Se salta las reglas del worker para NOT_COLLECTED (CALLED con todos los recordatorios, hoy 5), igual que
     el script: un pedido olvidado de otro día se cierra en el estado que esté.
 - Historial de solo lectura, sin «repetir pedido».
 
@@ -537,7 +537,7 @@ el implementado. Las rutas de visibilidad, cobro e historial sí están implemen
 | `GET /api/worker/orders`                              | Listado operativo del worker                                   | 401, 403 `FORBIDDEN`                                                                                                                                  |
 | `PATCH /api/orders/{id}/reject`                       | Rechazo del worker `{reason}`                                  | 400 `REJECTION_REASON_REQUIRED`, `REJECTION_REASON_TOO_LONG`, 403 `FORBIDDEN`, 409 `INVALID_ORDER_STATE`                                              |
 | `PATCH /api/orders/{id}/remind`                       | Recordatorio del worker, en CALLED                             | 403 `FORBIDDEN`, 409 `REMINDER_TOO_EARLY`, `REMINDER_LIMIT_REACHED`, `INVALID_ORDER_STATE`                                                            |
-| `PATCH /api/orders/{id}/not-collected`                | No recogido tras los 3 recordatorios                           | 403 `FORBIDDEN`, 409 `NOT_COLLECTED_REQUIREMENTS_NOT_MET`, `INVALID_ORDER_STATE`                                                                      |
+| `PATCH /api/orders/{id}/not-collected`                | No recogido tras los 5 recordatorios                           | 403 `FORBIDDEN`, 409 `NOT_COLLECTED_REQUIREMENTS_NOT_MET`, `INVALID_ORDER_STATE`                                                                      |
 | `GET /api/super-admin/cafeterias`                     | Instituciones, sedes y cafeterías                              | 403 `SUPER_ADMIN_FORBIDDEN`                                                                                                                           |
 | `PATCH /api/super-admin/cafeterias/{id}/visibility`   | `{visible, expectedVisible}`                                   | 400 `SUPER_ADMIN_INVALID_REQUEST`, 403 `SUPER_ADMIN_FORBIDDEN`, 404 `CAFETERIA_NOT_FOUND`, 409 `VISIBILITY_STATE_CHANGED`, `CAFETERIA_REQUIRES_ADMIN` |
 | `PUT /api/super-admin/cafeterias/{id}/billing`        | `{model, perOrderFeeCop, subscriptionFeeCop, expectedVersion}` | 400 `BILLING_INVALID_REQUEST`, 403 `SUPER_ADMIN_FORBIDDEN`, 404 `CAFETERIA_NOT_FOUND`, 409 `BILLING_STATE_CHANGED`                                    |
@@ -1054,6 +1054,14 @@ disponibilidad sin recargar:
   con fondo sólido; marca de agua al 8 % como máximo y fija al fondo; separadores visibles en las
   listas.
 - **Pendiente con backend:** el código del estudiante en las filas del historial del worker.
+
+### jj/cliente-ajustes
+
+- **Límite de recordatorios en 5 (antes 3).** Vive solo en `Order.MAX_REMINDERS`; los mensajes
+  de `REMINDER_LIMIT_REACHED` y `NOT_COLLECTED_REQUIREMENTS_NOT_MET` se arman con la constante.
+  «No recogido» exige todos los recordatorios (5). La migración `030_reminder_limit_five.sql`
+  amplía `chk_order_reminder_count` (004 quedaba en `<= 3`). `OrderResponse.maxReminders` entrega
+  el límite al panel, que ya no lo escribe. La espera de 5 minutos no cambia.
 
 ## 13. Línea de corte
 

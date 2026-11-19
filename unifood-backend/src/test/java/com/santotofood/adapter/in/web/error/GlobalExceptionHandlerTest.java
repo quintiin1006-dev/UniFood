@@ -78,9 +78,9 @@ class GlobalExceptionHandlerTest {
             new ReminderTooEarlyException(),
             "Debes esperar al menos 5 minutos antes de enviar otro recordatorio",
             new com.santotofood.domain.exception.ReminderLimitReachedException(),
-            "Este pedido ya alcanzó el máximo de 3 recordatorios",
+            "Este pedido ya alcanzó el máximo de 5 recordatorios",
             new com.santotofood.domain.exception.NotCollectedRequirementsException(),
-            "El pedido solo puede marcarse como no recogido después de enviar los 3 recordatorios");
+            "El pedido solo puede marcarse como no recogido después de enviar los 5 recordatorios");
     for (var entry : cases.entrySet()) {
       var response = errors.handleDomainException(entry.getKey(), req);
       assertEquals(HttpStatus.CONFLICT, response.getStatusCode());

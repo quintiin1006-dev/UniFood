@@ -28,7 +28,8 @@ public class OrderResponseMapper {
         order.getCalledAt(),
         order.getReminderCount(),
         order.getLastRemindedAt(),
-        order.getNote());
+        order.getNote(),
+        Order.MAX_REMINDERS);
   }
 
   private OrderItemResponse toItemResponse(OrderItem item) {
