@@ -312,16 +312,6 @@
   font-size: 12px;
   line-height: 1.5;
 }
-.loading > p {
-  margin: 0 0 12px;
-  color: #ffffff;
-  font-size: 14px;
-}
-.skeletons > div {
-  height: 64px;
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.08);
-}
 .srOnly {
   position: absolute;
   width: 1px;

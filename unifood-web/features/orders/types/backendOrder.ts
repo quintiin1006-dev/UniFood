@@ -35,6 +35,7 @@ export interface BackendOrder {
   requestedPickupAt?: string | null;
   calledAt?: string | null;
   reminderCount?: number;
+  maxReminders?: number;
   lastRemindedAt?: string | null;
   // The client's free text (021); null without one.
   note: string | null;

@@ -1,13 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bell, UserX } from "lucide-react";
+import { Bell, RefreshCw, UserX } from "lucide-react";
 import {
-  MAX_REMINDERS,
   canMarkNotCollected,
   reminderAvailability,
-  reminderCount,
 } from "@/features/orders/calledOrderActions";
+import {
+  NOT_COLLECTED_NEEDS_REMINDERS,
+  REMINDER_LIMIT_NOTICE,
+  REMIND_LABEL,
+  REMIND_SENDING,
+  remindWaitTitle,
+} from "@/features/shared/messages";
 import type { Order } from "@/types/order";
 import styles from "./CalledOrderActions.module.css";
 import { ICON_MIN_20 } from "@/components/ui/Icon";
@@ -15,26 +20,16 @@ import { ICON_MIN_20 } from "@/components/ui/Icon";
 /** How long the "Confirmar no recogido" step waits for the second click. */
 export const NOT_COLLECTED_CONFIRM_MS = 5000;
 
-function remindTitle(order: Order, now: number): string {
-  const availability = reminderAvailability(order, now);
-  if (availability.kind === "limit")
-    return `Ya enviaste los ${MAX_REMINDERS} avisos`;
-  if (availability.kind === "wait")
-    return `Podrás volver a avisar en ${availability.minutes} min`;
-  return `Avisar nuevamente (${reminderCount(order)} de ${MAX_REMINDERS})`;
-}
-
-/** L3: why the bell is blocked, visible on touch screens and read by screen readers. */
-export function remindHint(order: Order, now: number): string | null {
-  const availability = reminderAvailability(order, now);
-  if (availability.kind === "limit") return "Avisos completos";
-  if (availability.kind === "wait") return `En ${availability.minutes} min`;
-  return null;
+/** True when the server's limit (maxReminders, or its 409) says no reminder is left. */
+export function reminderLimitReached(order: Order, now: number): boolean {
+  return reminderAvailability(order, now).kind === "limit";
 }
 
 /**
- * Bell of a CALLED row. Disabled while any action of the order is in flight, after the third
- * reminder and, as a hint, before the 5 minutes; Spring decides in any case.
+ * D5 (jj/cliente-ajustes): the reminder of a CALLED row is an icon-only bell, «Recordar al
+ * estudiante», with a 44 px touch area and no visible text. While the 5 minutes run, a reload
+ * icon spins in its place (it stays still with reduced motion). At the limit the button gives
+ * way to <ReminderLimitNotice>; the web never writes the maximum, it comes from the API.
  */
 export function RemindButton({
   order,
@@ -42,6 +37,7 @@ export function RemindButton({
   sending = false,
   now,
   className,
+  describedBy,
   onRemind,
 }: {
   order: Order;
@@ -49,43 +45,68 @@ export function RemindButton({
   sending?: boolean;
   now: number;
   className?: string;
+  /** The id of the student's name in the row, so each bell says whose order it is. */
+  describedBy?: string;
   onRemind: (order: Order) => void;
 }) {
   if (order.status !== "called") return null;
   const availability = reminderAvailability(order, now);
+  if (availability.kind === "limit") return null;
+  const waiting = availability.kind === "wait";
   const blocked = busy || availability.kind !== "available";
-  const hint = remindHint(order, now);
   return (
     <button
       type="button"
       className={`${className ?? ""} ${styles.remind}`}
       disabled={blocked}
       aria-busy={sending}
-      title={sending ? "Enviando aviso…" : remindTitle(order, now)}
-      aria-label={
-        sending
-          ? `Enviando aviso a ${order.student}`
-          : `Avisar nuevamente a ${order.student}, ${reminderCount(order)} de ${MAX_REMINDERS} avisos enviados${hint ? `. ${remindTitle(order, now)}` : ""}`
+      aria-label={sending ? REMIND_SENDING : REMIND_LABEL}
+      aria-describedby={describedBy}
+      title={
+        waiting && availability.kind === "wait"
+          ? remindWaitTitle(availability.minutes)
+          : REMIND_LABEL
       }
+      data-waiting={waiting || undefined}
       onClick={() => {
         if (!blocked) onRemind(order);
       }}
     >
-      <Bell
-        size={20}
-        style={ICON_MIN_20}
-        strokeWidth={1.8}
-        aria-hidden="true"
-      />
-      <span className={styles.count} aria-hidden="true">
-        {sending ? "…" : `${reminderCount(order)}/${MAX_REMINDERS}`}
-      </span>
-      {hint && !sending && (
-        <span className={styles.hint} aria-hidden="true">
-          {hint}
-        </span>
+      {waiting ? (
+        <RefreshCw
+          size={20}
+          style={ICON_MIN_20}
+          strokeWidth={1.8}
+          aria-hidden="true"
+          className={styles.waitIcon}
+        />
+      ) : (
+        <Bell
+          size={20}
+          style={ICON_MIN_20}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
       )}
     </button>
+  );
+}
+
+/** «Ya enviaste el máximo de recordatorios para este pedido», only once the limit is reached. */
+export function ReminderLimitNotice({
+  order,
+  now,
+  className,
+}: {
+  order: Order;
+  now: number;
+  className?: string;
+}) {
+  if (!reminderLimitReached(order, now)) return null;
+  return (
+    <p className={`${styles.limit} ${className ?? ""}`} role="status">
+      {REMINDER_LIMIT_NOTICE}
+    </p>
   );
 }
 
@@ -135,11 +156,7 @@ export function NotCollectedButton({
       className={`${styles.notCollected} ${asking ? styles.confirming : ""}`}
       disabled={disabled}
       aria-busy={sending}
-      title={
-        ready
-          ? undefined
-          : `Disponible después de enviar los ${MAX_REMINDERS} avisos`
-      }
+      title={ready ? undefined : NOT_COLLECTED_NEEDS_REMINDERS}
       onClick={() => {
         if (disabled) return;
         if (timer.current !== undefined) clearTimeout(timer.current);
@@ -164,15 +181,5 @@ export function NotCollectedButton({
       />
       <span aria-live="polite">{label}</span>
     </button>
-  );
-}
-
-/** "Avisos enviados: N de 3" for the delivery detail. */
-export function ReminderSummary({ order }: { order: Order }) {
-  if (order.status !== "called") return null;
-  return (
-    <p className={styles.summary}>
-      Avisos enviados: {reminderCount(order)} de {MAX_REMINDERS}
-    </p>
   );
 }

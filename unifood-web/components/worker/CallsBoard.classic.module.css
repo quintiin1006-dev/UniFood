@@ -263,13 +263,6 @@
   background: #e2eeff;
 }
 
-.remindButton.remindButton > span:first-of-type {
-  font-size: calc(11px / var(--worker-zoom, 1));
-  font-weight: 600;
-  line-height: 1;
-  color: #5b6b85;
-}
-
 .remindButton.remindButton:disabled {
   background: #f3f6fa;
   color: #8593a8;
@@ -1191,4 +1184,180 @@
 .remindButton {
   height: auto;
   min-height: 38px;
+}
+
+/* =========================================================
+   D4 (jj/cliente-ajustes): DETALLE DE UN VISTAZO
+   Name and call time on top, one line per product with its
+   quantity, the total standing out, the notes apart.
+   Real pixels (divided by --worker-zoom), dark on white.
+   ========================================================= */
+
+.detailHeader {
+  padding: calc(16px / var(--worker-zoom, 1)) calc(18px / var(--worker-zoom, 1));
+}
+
+.detailHeading {
+  gap: calc(12px / var(--worker-zoom, 1));
+}
+
+.detailHeading .detailAvatar {
+  width: calc(48px / var(--worker-zoom, 1));
+  height: calc(48px / var(--worker-zoom, 1));
+  font-size: calc(16px / var(--worker-zoom, 1));
+}
+
+.detailStudentInfo h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #0b2d6b;
+  font-size: calc(22px / var(--worker-zoom, 1));
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.detailStudentInfo p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(4px / var(--worker-zoom, 1)) calc(10px / var(--worker-zoom, 1));
+  margin: calc(4px / var(--worker-zoom, 1)) 0 0;
+  color: #3f4a5a;
+  font-size: calc(14px / var(--worker-zoom, 1));
+}
+
+.detailStudentInfo time {
+  color: #172033;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.closeButton {
+  width: calc(44px / var(--worker-zoom, 1));
+  height: calc(44px / var(--worker-zoom, 1));
+}
+
+.productsSection {
+  padding: calc(14px / var(--worker-zoom, 1)) calc(18px / var(--worker-zoom, 1));
+}
+
+.products {
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.product {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: calc(12px / var(--worker-zoom, 1));
+  padding: calc(10px / var(--worker-zoom, 1)) 0;
+  border: 0;
+  border-bottom: 1px solid #e3e8ef;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.product .quantity {
+  display: inline;
+  padding: 0;
+  background: transparent;
+  color: #0b5fff;
+  font-size: calc(18px / var(--worker-zoom, 1));
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.productInfo h3 {
+  margin: 0;
+  color: #172033;
+  font-size: calc(16px / var(--worker-zoom, 1));
+  font-weight: 650;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.productInfo .beverage,
+.productInfo .productNote {
+  display: flex;
+  align-items: center;
+  gap: calc(6px / var(--worker-zoom, 1));
+  margin: calc(4px / var(--worker-zoom, 1)) 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #3f4a5a;
+  font-size: calc(13px / var(--worker-zoom, 1));
+}
+
+.product .productPrice {
+  display: block;
+  padding: 0;
+  border: 0;
+  color: #172033;
+  font-size: calc(15px / var(--worker-zoom, 1));
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The total stands out, right under the products. */
+.productsSection .total {
+  margin: calc(12px / var(--worker-zoom, 1)) 0 0;
+  padding: calc(12px / var(--worker-zoom, 1)) calc(14px / var(--worker-zoom, 1));
+  border-radius: calc(14px / var(--worker-zoom, 1));
+  background: #eaf4ff;
+}
+
+.productsSection .total > span {
+  color: #0b2d6b;
+  font-size: calc(15px / var(--worker-zoom, 1));
+  font-weight: 700;
+}
+
+.productsSection .total small {
+  color: #3f4a5a;
+  font-size: calc(13px / var(--worker-zoom, 1));
+}
+
+.productsSection .total > strong {
+  color: #0b2d6b;
+  font-size: calc(28px / var(--worker-zoom, 1));
+}
+
+/* Notes apart, visible, after the total. */
+.detailBody > .orderNote {
+  margin: 0 calc(18px / var(--worker-zoom, 1))
+    calc(16px / var(--worker-zoom, 1));
+  padding: calc(12px / var(--worker-zoom, 1)) calc(14px / var(--worker-zoom, 1));
+  border: 1px solid #f1d08a;
+  border-radius: calc(14px / var(--worker-zoom, 1));
+  background: #fff8e6;
+  color: #4d3507;
+  font-size: calc(14px / var(--worker-zoom, 1));
+}
+
+.detailBody > .orderNote strong {
+  color: #4d3507;
+  font-size: calc(14px / var(--worker-zoom, 1));
+}
+
+.detailFooter {
+  display: grid;
+  gap: calc(10px / var(--worker-zoom, 1));
+}
+
+/* D5: the bell is an icon-only 44 px button. */
+.remindButton.remindButton {
+  width: calc(44px / var(--worker-zoom, 1));
+  height: calc(44px / var(--worker-zoom, 1));
+  padding: 0;
+  place-items: center;
+}
+
+/* D5: the limit notice spans the whole row and wraps on narrow screens. */
+.rowLimit {
+  grid-column: 1 / -1;
 }

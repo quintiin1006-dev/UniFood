@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Notice";
 
 import styles from "./BoardFeedback.module.css";
+import { panelStyles } from "@/features/worker-ui/components/PanelHeader";
 import { ICON_MIN_20 } from "@/components/ui/Icon";
 
 /**
@@ -17,8 +18,9 @@ import { ICON_MIN_20 } from "@/components/ui/Icon";
  */
 
 /**
- * Board placeholder with the shape of its columns (ola 4): static blocks, no text block. It
- * replaces the old «Cargando pedidos…» panel, so the first paint already shows where orders go.
+ * Board placeholder with the shape of its columns (ola 4), no text block. Its blocks are the
+ * shared worker skeleton (features/worker-ui, D1): translucent glass with a soft shine, a fixed
+ * block with reduced motion. Historial and Disponibilidad use the same one.
  */
 export function BoardLoading() {
   return (
@@ -29,9 +31,13 @@ export function BoardLoading() {
     >
       {[0, 1, 2, 3].map((column) => (
         <div key={column} className={styles.skeletonColumn}>
-          <span className={styles.skeletonHead} />
-          <span className={styles.skeletonCard} />
-          {column < 2 && <span className={styles.skeletonCard} />}
+          <span className={`${panelStyles.skeleton} ${styles.skeletonHead}`} />
+          <span className={`${panelStyles.skeleton} ${styles.skeletonCard}`} />
+          {column < 2 && (
+            <span
+              className={`${panelStyles.skeleton} ${styles.skeletonCard}`}
+            />
+          )}
         </div>
       ))}
     </section>

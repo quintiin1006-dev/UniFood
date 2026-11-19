@@ -24,15 +24,15 @@ test("classic remind button has a soft box with no hard border and a 44 px invis
   assert.match(hit, /height: calc\(44px \/ var\(--worker-zoom, 1\)\);/);
 });
 
-test("the counter is smaller and quieter than the old 12 px bold one", () => {
+test("D5: no visible counter: the bell is an icon-only 44 px button", () => {
   const css = fs.readFileSync(
     "components/worker/CallsBoard.classic.module.css",
     "utf8",
   );
-  assert.match(
-    css,
-    /\.remindButton\.remindButton > span:first-of-type \{\s*font-size: calc\(11px \/ var\(--worker-zoom, 1\)\);\s*font-weight: 600;/,
-  );
+  assert.doesNotMatch(css, /\.remindButton\.remindButton > span/);
+  const last = css.slice(css.lastIndexOf(".remindButton.remindButton {"));
+  assert.match(last, /width: calc\(44px \/ var\(--worker-zoom, 1\)\);/);
+  assert.match(last, /height: calc\(44px \/ var\(--worker-zoom, 1\)\);/);
 });
 
 test("the bell uses the set's 1.8 stroke at 20 real px", () => {

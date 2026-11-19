@@ -81,12 +81,13 @@ test("the calls detail uses «Observaciones» and shows the pickup time (D1, D2)
   assert.match(html, /Recoger a las 12:30/);
 });
 
-test("a blocked reminder shows why, visibly and in its accessible name (L3)", () => {
+test("a blocked reminder explains itself without visible text: a spinning wait and a tooltip (D5)", () => {
   const file = "features/orders/components/CalledOrderActions.tsx";
   const called = order({
     status: "called",
     calledAt: "2026-11-20T16:30:00Z",
     reminderCount: 1,
+    maxReminders: 5,
     lastRemindedAt: "2026-11-20T16:30:00Z",
   });
   const waiting = render(
@@ -94,24 +95,53 @@ test("a blocked reminder shows why, visibly and in its accessible name (L3)", ()
     { order: called, now: Date.parse("2026-11-20T16:32:00Z"), onRemind() {} },
     "RemindButton",
   );
-  assert.match(waiting, />En 3 min</);
-  assert.match(waiting, /Podrás volver a avisar en 3 min/);
-  const full = render(
-    file,
-    {
-      order: { ...called, reminderCount: 3 },
-      now: Date.parse("2026-11-20T17:00:00Z"),
-      onRemind() {},
-    },
-    "RemindButton",
-  );
-  assert.match(full, />Avisos completos</);
+  assert.match(waiting, /Podrás volver a recordar en 3 min/);
+  assert.match(waiting, /lucide-refresh-cw/);
+  assert.doesNotMatch(waiting, /En \d+ min|0\/3|1\/3/);
   const ready = render(
     file,
     { order: called, now: Date.parse("2026-11-20T16:40:00Z"), onRemind() {} },
     "RemindButton",
   );
-  assert.doesNotMatch(ready, /En \d+ min|Avisos completos/);
+  assert.match(ready, /lucide-bell/);
+});
+
+test("D4: the calls detail reads at a glance: name and time on top, products, total and notes apart", () => {
+  const selected = order({
+    status: "called",
+    calledAt: "2026-11-20T16:30:00Z",
+    note: "Sin cebolla",
+    total: 26000,
+    items: [
+      { id: "a", name: "Almuerzo del día", quantity: 2, subtotal: 26000 },
+    ],
+  });
+  const html = render("components/worker/CallsBoard.tsx", {
+    orders: [selected],
+    busyOrderIds: [],
+    busyActions: {},
+    now: Date.parse("2026-11-20T16:32:00Z"),
+    selectedOrder: selected,
+    search: "",
+    onSearchChange() {},
+    onSelectOrder() {},
+    onDeliver() {},
+    onRemind() {},
+    onNotCollected() {},
+  });
+  const detail = html.slice(html.indexOf('aria-label="Detalle del pedido"'));
+  assert.match(detail, /<h2>Laura Gómez<\/h2>/);
+  assert.match(detail, /Llamado a las/);
+  assert.ok(detail.indexOf("Laura Gómez") < detail.indexOf("Almuerzo del día"));
+  assert.match(detail, /<ul class="products">/);
+  assert.match(detail, />2<span aria-hidden="true">×<\/span>/);
+  assert.ok(detail.indexOf("Almuerzo del día") < detail.indexOf(">Total"));
+  assert.ok(detail.indexOf(">Total") < detail.indexOf("Observaciones"));
+  // Less text: none of the old labels.
+  assert.doesNotMatch(
+    detail,
+    /RESUMEN PARA ENTREGA|ENTREGAR A|Lo que pidió|por unidad|Pesos colombianos|Avisos enviados|cant\./,
+  );
 });
 
 test("the rejection dialog has a visible close button besides «Volver» (D5)", () => {

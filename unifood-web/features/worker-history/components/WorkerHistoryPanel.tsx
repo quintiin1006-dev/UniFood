@@ -1,12 +1,13 @@
 "use client";
 import { useRef } from "react";
-import { History, RefreshCw, Search, X } from "lucide-react";
+import { History, Search, X } from "lucide-react";
 import { useWorkerHistory } from "../useWorkerHistory";
 import { formatDayDate, formatShortRange } from "../presentation";
 import { HistoryOrderRow } from "./HistoryOrderRow";
 import type { HistoryRange, HistoryStatus } from "../types";
 import {
   PanelHeader,
+  SkeletonBlock,
   panelStyles,
 } from "@/features/worker-ui/components/PanelHeader";
 import styles from "./WorkerHistory.module.css";
@@ -40,20 +41,6 @@ export function WorkerHistoryPanel() {
           titleId="worker-history-title"
           subtitle={
             state.data ? formatDayDate(state.data.businessDate) : undefined
-          }
-          aside={
-            state.data && !state.error ? (
-              <button
-                className={styles.refresh}
-                type="button"
-                disabled={state.refreshing || state.loadingMore}
-                onClick={() => void state.refresh()}
-                aria-label="Actualizar historial"
-              >
-                <RefreshCw size={20} style={ICON_MIN_20} aria-hidden="true" />
-                <span>{state.refreshing ? "Actualizando…" : "Actualizar"}</span>
-              </button>
-            ) : undefined
           }
         />
         <div className={`${panelStyles.section} ${styles.filters}`}>
@@ -121,14 +108,22 @@ export function WorkerHistoryPanel() {
             </span>
           )}
         </div>
+        {/* D1: ghost rows with the size of the real ones, so nothing jumps when they arrive. */}
         {state.loading && (
-          <div className={styles.loading} role="status">
-            <p>Cargando historial…</p>
-            <div className={styles.skeletons} aria-hidden="true">
-              <div />
-              <div />
-              <div />
-            </div>
+          <div
+            className={styles.list}
+            role="status"
+            aria-label="Cargando historial"
+          >
+            {[0, 1, 2, 3, 4].map((row) => (
+              <div key={row} className={`${styles.row} ${styles.rowHead}`}>
+                <span className={styles.rowIdentity}>
+                  <SkeletonBlock height={18} width={row % 2 ? 150 : 190} />
+                  <SkeletonBlock height={14} width={64} />
+                </span>
+                <SkeletonBlock height={32} width={104} />
+              </div>
+            ))}
           </div>
         )}
         {state.error && (

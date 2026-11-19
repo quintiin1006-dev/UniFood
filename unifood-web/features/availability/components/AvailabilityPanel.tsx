@@ -10,6 +10,7 @@ import { AvailabilitySwitch } from "./AvailabilitySwitch";
 import { CategoryCarousel } from "./CategoryCarousel";
 import {
   PanelHeader,
+  SkeletonBlock,
   panelStyles,
 } from "@/features/worker-ui/components/PanelHeader";
 import styles from "./Availability.module.css";
@@ -55,11 +56,33 @@ export function AvailabilityPanel() {
           titleId="availability-title"
           aside={refresh}
         />
+        {/* D1: the cafeteria row and two category sections, with the cards' own size. */}
         {state.loading && (
-          <div className={styles.loading} role="status">
-            <p>Cargando disponibilidad…</p>
-            <div className={styles.skeleton} aria-hidden="true" />
-            <div className={styles.skeleton} aria-hidden="true" />
+          <div role="status" aria-label="Cargando disponibilidad">
+            <div className={`${panelStyles.section} ${styles.cafeteriaState}`}>
+              <span className={styles.cafeteriaDetails}>
+                <SkeletonBlock height={20} width={210} />
+                <SkeletonBlock height={14} width={260} />
+              </span>
+              <SkeletonBlock height={44} width={150} />
+            </div>
+            {[0, 1].map((section) => (
+              <div
+                key={section}
+                className={`${panelStyles.section} ${styles.category}`}
+              >
+                <SkeletonBlock height={18} width={120} />
+                <div className={styles.rail}>
+                  {[0, 1, 2, 3].map((card) => (
+                    <SkeletonBlock
+                      key={card}
+                      height={196}
+                      className={styles.cardGhost}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
         {state.notice && (

@@ -311,19 +311,6 @@
   color: #ffffff;
   font-size: 14px;
 }
-.loading {
-  padding: 14px 18px;
-}
-.loading p {
-  margin-top: 0;
-}
-.skeleton {
-  height: 180px;
-  margin: 16px 0;
-  border-radius: 16px;
-  background: var(--color-brand-tint);
-  opacity: 0.7;
-}
 .panel button:focus-visible,
 .rail:focus-visible {
   outline: var(--focus-ring-width) solid #ffffff;
@@ -362,4 +349,13 @@
 /* Response messages use the shared Notice (components/ui); only spacing lives here. */
 .message {
   margin: 0 0 18px;
+}
+/* D1: a loading card, the size of a real one. */
+.cardGhost {
+  flex: 0 0 196px;
+}
+@media (max-width: 760px) {
+  .cardGhost {
+    flex-basis: min(196px, 64vw);
+  }
 }

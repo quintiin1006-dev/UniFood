@@ -80,13 +80,15 @@ test("F4: same maximum width, padding and radius on screen at zoom 0.7 (Llamadas
   assert.match(css, /\.section \+ \.section \{\s*border-top: 1px solid/);
   // Historial and Disponibilidad no longer set their own width or side padding.
   const page = read("components/worker/WorkerDashboard.module.css");
-  for (const module of ["historyPage", "availabilityPage"])
+  for (const pageName of ["historyPage", "availabilityPage"])
     assert.doesNotMatch(
       page.match(
-        new RegExp(String.raw`\.${module} :global\(\.worker-main\) \{[^}]*\}`),
+        new RegExp(
+          String.raw`\.${pageName} :global\(\.worker-main\) \{[^}]*\}`,
+        ),
       )[0],
       /max-width|padding: 2/,
-      module,
+      pageName,
     );
 });
 
@@ -152,5 +154,54 @@ test("F5: Mi perfil uses the same nav with the same measures as every module", (
   assert.match(
     read("components/worker/BottomNav.tsx"),
     /style=\{ICON_MIN_20\}/,
+  );
+});
+
+test("D1: Pedidos, Historial and Disponibilidad load with the same shared glass skeleton", () => {
+  const css = read(PANEL_CSS);
+  assert.match(
+    css,
+    /\.skeleton \{[^}]*background: rgba\(255, 255, 255, 0\.16\);/,
+  );
+  assert.match(css, /\.skeleton::after \{[^}]*animation: shine/);
+  // A fixed block with reduced motion: no moving shine.
+  assert.match(
+    css,
+    /prefers-reduced-motion: reduce\) \{\s*\.skeleton::after \{\s*animation: none;/,
+  );
+  assert.match(
+    read("features/orders/components/BoardFeedback.tsx"),
+    /panelStyles\.skeleton/,
+  );
+  for (const file of [
+    "features/worker-history/components/WorkerHistoryPanel.tsx",
+    "features/availability/components/AvailabilityPanel.tsx",
+  ]) {
+    const source = read(file);
+    assert.match(source, /<SkeletonBlock/, file);
+    assert.doesNotMatch(source, /styles\.skeletons?\b/, file);
+  }
+  // Ghost rows of Historial have the real row's classes, so nothing jumps.
+  assert.match(
+    read("features/worker-history/components/WorkerHistoryPanel.tsx"),
+    /className=\{`\$\{styles\.row\} \$\{styles\.rowHead\}`\}/,
+  );
+  // No skeleton CSS copied in the modules.
+  for (const file of [
+    "features/worker-history/components/WorkerHistory.module.css",
+    "features/availability/components/Availability.module.css",
+  ])
+    assert.doesNotMatch(read(file), /\.skeletons? \{|\.skeletons > div/, file);
+});
+
+test("D2: Historial refreshes by itself, so no «Actualizar»; Disponibilidad does not, so it keeps it", () => {
+  assert.doesNotMatch(
+    read("features/worker-history/components/WorkerHistoryPanel.tsx"),
+    /Actualizar historial|>Actualizar</,
+  );
+  assert.match(read("features/worker-history/state.ts"), /}, 30000\);/);
+  assert.match(
+    read("features/availability/components/AvailabilityPanel.tsx"),
+    /aria-label="Actualizar disponibilidad"/,
   );
 });

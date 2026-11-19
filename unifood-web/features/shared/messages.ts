@@ -394,9 +394,9 @@ export const BACKEND_ERROR_MESSAGES: Record<BackendErrorCode, string> = {
   REMINDER_TOO_EARLY:
     "Aún no puedes volver a avisar. Espera 5 minutos desde el último aviso.",
   REMINDER_LIMIT_REACHED:
-    "Ya enviaste los 3 avisos a este pedido. Puedes marcarlo como no recogido.",
+    "Ya enviaste el máximo de recordatorios para este pedido. Puedes marcarlo como no recogido.",
   NOT_COLLECTED_REQUIREMENTS_NOT_MET:
-    "Para marcarlo como no recogido primero debes enviar los 3 avisos.",
+    "Para marcarlo como no recogido primero debes enviar todos los recordatorios.",
   REJECTION_REASON_REQUIRED:
     "Escribe el motivo del rechazo, con al menos 3 caracteres.",
   REJECTION_REASON_TOO_LONG: `El motivo del rechazo admite hasta ${MAX_REJECTION_REASON} caracteres.`,
@@ -409,3 +409,13 @@ export const isBackendErrorCode = (code: unknown): code is BackendErrorCode =>
 export function backendErrorMessage(code: unknown, fallback: string): string {
   return isBackendErrorCode(code) ? BACKEND_ERROR_MESSAGES[code] : fallback;
 }
+
+/* ---------- Llamadas: recordatorio (jj/cliente-ajustes · D5) ---------- */
+export const REMIND_LABEL = "Recordar al estudiante";
+export const REMIND_SENDING = "Enviando recordatorio…";
+export const remindWaitTitle = (minutes: number) =>
+  `Podrás volver a recordar en ${minutes} min`;
+export const REMINDER_LIMIT_NOTICE =
+  "Ya enviaste el máximo de recordatorios para este pedido";
+export const NOT_COLLECTED_NEEDS_REMINDERS =
+  "Disponible después de enviar todos los recordatorios";
