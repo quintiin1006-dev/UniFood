@@ -1,0 +1,865 @@
+# Propuesta: menú del día dinámico
+
+Estado: **borrador de diseño para aprobación**. Rama `jj/menu-dinamico`, desde `develop`.
+Fecha: 2026-11-18. Esta propuesta no contiene código de la app ni migraciones aplicadas.
+La migración 030 es un borrador: no se aplica hasta revisión y prueba en una base temporal
+local, y después en `unifood-staging`.
+
+Base revisada: `features/availability`, `features/client` (`ClientHome`, `ClosedBanner`,
+`ProductAddButton`, `CartLineItem`, `domain/cart.ts`, `domain/menu.ts`, `types.ts`),
+`features/client-orders`, `features/shared/messages.ts`, `components/worker/OrderCard.tsx`,
+backend `OrderEntity`, `OrderItemEntity`, `ClientOrderCreationService`, `ClientOrderRequests`,
+migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/catalogo-feedback.md`.
+
+---
+
+## 1. Resumen y alcance
+
+### Resumen
+
+- Cada cafetería tiene **un** plato del día (p. ej. «Almuerzo del día») con **precio fijo**.
+  Lo que cambia cada día son sus ingredientes.
+- El plato tiene categorías de **una sola opción**: Proteína, Principio, Bebida y Complementos
+  por defecto. Cada cafetería puede añadir más, ordenarlas y marcar cuáles se pueden saltar.
+- Cada categoría es obligatoria. Las saltables muestran una ficha «Ninguna», así que la
+  elección es siempre explícita y queda guardada.
+- **Adiciones** es la única categoría de varias opciones, opcional, con precio extra fijado
+  por el admin. El worker enciende cada día cuáles hay.
+- El worker escribe los ingredientes de hoy en Disponibilidad. El menú se reinicia cada día
+  a las 00:00 de Colombia porque todas las filas llevan `business_date`.
+- El cliente ve un letrero «Menú del día» en Inicio. Lleva a `/cuenta/menu-del-dia`, un módulo
+  propio con fichas. La barra inferior se queda en cuatro pestañas.
+- El pedido guarda una **copia** de las opciones, de los precios y del precio del plato. Así el
+  historial no depende de lo que el worker escriba después.
+
+### Alcance de la demo (propuesta)
+
+| Entra en la demo                                                                                                        | Se aplaza (después de la demo)                                                                   |
+| ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Migración 030 y siembra en staging (plato, 4 categorías por defecto, Adiciones, adiciones de ejemplo)                   | Pantalla de administración del menú (PR 9)                                                       |
+| Backend: lectura del menú, pedido con elección, total calculado en servidor, snapshots                                  | Categorías creadas por el admin desde la UI (en demo se siembran)                                |
+| Worker: editor de ingredientes en Disponibilidad, «Copiar el de ayer», encender adiciones, publicar                     | Varios platos por pedido                                                                         |
+| Cliente: letrero, módulo con fichas, carrito y checkout con la elección                                                 | Historial del menú para el cliente (el pedido ya muestra la elección)                            |
+| Worker y cliente ven la elección en el pedido                                                                           | Ingredientes a partir de un catálogo reutilizable (hoy son texto libre)                          |
+
+### Calendario: problema que hay que decidir
+
+- Hoy es **miércoles 18**. El freeze es el **sábado 21**: quedan tres días hábiles.
+- Estimación de esfuerzo (sección 6): **~17 días-persona** para la demo completa (PR 1–8), o
+  **~9–10 días de calendario** con dos personas en paralelo (una en backend, otra en web) si el
+  contrato de API de este documento se aprueba hoy.
+- Con el freeze del 21 no cabe ni la demo mínima. Ver la pregunta **P1**.
+
+### Hallazgos del código que cambian el diseño
+
+1. **El plato no se modela como fila de `lunches`.** Ese catálogo está atado a la enum de seis
+   categorías fijas, a `stock` y a un precio por producto. Usarlo obliga al carrito y al pedido a
+   tratar el plato como producto.
+2. **`order_items.beverage_choice` no sirve.** La columna existe (001), se mapea en
+   `OrderItemEntity`, pero ningún código la escribe. Es una columna de texto única por línea: no
+   admite varias elecciones ni precio copiado.
+3. **`order_items` no admite un ítem sin producto.** `lunch_id` es NOT NULL con FK compuesta
+   (011). Meter el plato ahí rompería esa integridad. Las elecciones van en tablas propias.
+4. **El total se calcula en servicio, no en la base.** `orders.total` lo fija la aplicación y el
+   CHECK de 011 solo cubre `subtotal = unit_price × quantity` por línea. El total con menú se
+   calcula igual y se prueba.
+5. **El letrero puede ocupar el hueco del banner.** `ClientHome` ya pone el carrusel o el
+   `ClosedBanner` en el mismo sitio. El letrero solo se muestra con la cafetería abierta, así que
+   nunca choca con el banner.
+6. **`OrderCard` está en `components/worker/`**, que es histórico. La vista de la elección va en
+   un componente nuevo dentro de `features/daily-menu/`, y `OrderCard` solo lo importa.
+7. **El reinicio diario sale gratis.** La 013 guarda cada día por `business_date` sin backfill ni
+   jobs. Una fila de otro día no aparece hoy. No hace falta un job de medianoche.
+
+---
+
+## 2. Modelo de datos
+
+### 2.1 Tablas
+
+| Tabla                                | Qué guarda                                                                                  | Quién escribe                              |
+| ------------------------------------ | ------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `daily_menu_settings`                | Título y precio fijo del plato de la cafetería                                              | ADMIN (fase admin); SQL de siembra         |
+| `daily_menu_categories`              | Plantilla: nombre, orden, tipo `SINGLE`/`ADDITIONS`, si se puede saltar, activa             | ADMIN (fase admin); al primer uso, la app  |
+| `daily_menu_additions`               | Catálogo de adiciones con su precio extra                                                   | ADMIN                                      |
+| `daily_menu_days`                    | Cabecera del día: publicado, versión, título y precio congelados al publicar                | WORKER                                     |
+| `daily_menu_options`                 | Ingredientes de hoy, uno por fila, por categoría `SINGLE`                                   | WORKER                                     |
+| `daily_menu_addition_availability`   | Qué adiciones hay hoy, con el precio que tenían al encenderse                               | WORKER                                     |
+| `order_daily_menus`                  | Cabecera de la elección dentro del pedido: título y precio del plato copiados               | Spring, al crear el pedido                 |
+| `order_daily_menu_choices`           | Una fila por elección: categoría, opción o «Ninguna» o adición, y precio copiado            | Spring, al crear el pedido                 |
+
+### 2.2 Reglas
+
+- **Una opción por categoría `SINGLE`.** Por pedido, cada categoría `SINGLE` activa tiene
+  exactamente una elección: una opción o «Ninguna». «Ninguna» solo se permite si la categoría
+  tiene `can_skip = true`. La regla se valida en servicio bajo bloqueo y se prueba. Un índice
+  único parcial impide dos elecciones de la misma categoría en el mismo pedido.
+- **Adiciones:** solo una categoría `ADDITIONS` por cafetería (índice único parcial). Puede
+  elegirse cero o más adiciones, sin repetir. Siempre es saltable.
+- **Obligatoriedad y publicación.** Un menú solo se puede publicar si tiene precio fijo y cada
+  categoría `SINGLE` activa y no saltable tiene al menos una opción hoy. Si después de publicar
+  se vacía una categoría obligatoria, el menú queda **incompleto**: el letrero se oculta y el
+  worker ve qué falta. Se calcula al leer, no se guarda.
+- **Reinicio diario.** Solo cuentan las filas con `business_date` igual al día de negocio de
+  Spring (America/Bogota). Lo de ayer queda como historial y no se muestra.
+- **Precios congelados.**
+  - El precio del plato y el título se copian en `daily_menu_days` al **publicar**. Un cambio del
+    admin aplica desde la siguiente publicación.
+  - El precio de cada adición se copia en `daily_menu_addition_availability` al **encenderla**.
+    Lo que el cliente ve y lo que se cobra es el mismo número.
+- **Textos del worker.** Cada opción: quitar espacios de los extremos, colapsar espacios
+  internos, 1 a 100 caracteres, sin comas (la coma separa fichas). Se rechazan duplicados sin
+  distinguir mayúsculas (`lower(btrim(label))`) dentro de la categoría del día. Máximo 20 opciones
+  por categoría (propuesta, P2).
+- **Límite de 100 caracteres.** Interpretación literal del requisito: la suma de los caracteres de
+  las fichas de una categoría no supera 100. Un disparador lo aplica en la base; el servicio lo
+  valida antes para dar un error claro (ver P2).
+
+### 2.3 Cómo se guarda la elección del cliente en el pedido
+
+El pedido debe guardar una **copia** de lo elegido: título, categoría, opción o «Ninguna»,
+adición y su precio, y el precio del plato. Así el historial no cambia cuando el worker edita el
+menú del día.
+
+| Opción | Descripción | Ventajas | Contras |
+| ------ | ----------- | -------- | ------- |
+| **A. Tablas normalizadas con copia (recomendada)** | `order_daily_menus` (cabecera) y `order_daily_menu_choices` (una fila por elección), con snapshots y referencias de origen sin FK | Consultable por el worker y en reportes. CHECK por tipo de elección e índices únicos que protegen la regla «una por categoría». Inmutable por trigger. Se integra con la FK compuesta de `orders` (011) | Dos tablas más y más inserts por pedido |
+| B. `jsonb` en `orders` | Una columna `orders.daily_menu` con el arreglo de elecciones | Una sola escritura, sin joins | Sin FK ni CHECK por elemento. La regla «una por categoría» queda solo en la aplicación. Consultas incómodas |
+| C. Filas en `order_items` | El plato y las adiciones como líneas con `lunch_id` nulo | Reusa el total por línea | La 011 exige `lunch_id` NOT NULL con FK a `lunches`. Rompería la integridad que la 011 acaba de cerrar |
+| D. Solo IDs de origen | Guardar IDs de opciones y reconstruir | Muy poco espacio | Las opciones se borran al día siguiente: el historial se pierde |
+
+**Recomendación: A.** Las referencias de origen (`source_option_id`, `source_addition_id`) no tienen
+FK a propósito: borrar un ingrediente de hoy no debe fallar por un pedido de hoy, y el dato queda
+solo como trazabilidad. La copia es lo que se muestra y lo que cuenta.
+
+### 2.4 Permisos y RLS
+
+- Las ocho tablas nuevas siguen el patrón de la 013: `ENABLE ROW LEVEL SECURITY` sin políticas y
+  `REVOKE ALL ... FROM PUBLIC, anon, authenticated`. El navegador no lee ni escribe ninguna.
+- Spring es el único que lee y escribe, con el mismo rol que ya usa para `orders` y
+  `daily_item_availability`. Las comprobaciones de rol, cafetería y día se hacen en el backend.
+- Las funciones de disparador tienen `REVOKE ALL ... FROM PUBLIC, anon, authenticated`, como en
+  016, 019 y 021.
+- No hay secuencias: los IDs son `gen_random_uuid()`.
+
+### 2.5 Borrador de la migración 030
+
+Archivo previsto: `unifood-backend/supabase/migrations/030_daily_menu.sql`. Es el siguiente
+número libre; **no se tocan 027, 028 ni 029**. Este bloque es un borrador para revisar, no un
+archivo aplicable.
+
+```sql
+BEGIN;
+
+-- 1. Plato del día por cafetería: título y precio fijo vigente. Cambia solo para la
+--    siguiente publicación; cada día publicado guarda su copia en daily_menu_days.
+CREATE TABLE public.daily_menu_settings (
+  cafeteria_id uuid PRIMARY KEY REFERENCES public.cafeterias(id) ON DELETE RESTRICT,
+  title varchar(100) NOT NULL DEFAULT 'Almuerzo del día',
+  plate_price numeric(12,2),
+  version bigint NOT NULL DEFAULT 0 CHECK (version >= 0),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT chk_daily_menu_settings_title
+    CHECK (title = btrim(title) AND length(title) BETWEEN 1 AND 100),
+  CONSTRAINT chk_daily_menu_settings_price
+    CHECK (plate_price IS NULL OR plate_price > 0)
+);
+
+-- 2. Plantilla de categorías por cafetería. SINGLE: una opción por pedido. ADDITIONS: varias.
+--    Position único y diferible para poder reordenar en una transacción.
+CREATE TABLE public.daily_menu_categories (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  cafeteria_id uuid NOT NULL REFERENCES public.cafeterias(id) ON DELETE RESTRICT,
+  label varchar(60) NOT NULL,
+  kind text NOT NULL,
+  position integer NOT NULL,
+  can_skip boolean NOT NULL,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_daily_menu_categories_id_cafeteria UNIQUE (id, cafeteria_id),
+  CONSTRAINT uq_daily_menu_categories_position
+    UNIQUE (cafeteria_id, position) DEFERRABLE INITIALLY DEFERRED,
+  CONSTRAINT chk_daily_menu_categories_kind CHECK (kind IN ('SINGLE', 'ADDITIONS')),
+  CONSTRAINT chk_daily_menu_categories_label
+    CHECK (label = btrim(label) AND length(label) BETWEEN 1 AND 60),
+  CONSTRAINT chk_daily_menu_categories_position CHECK (position >= 0),
+  CONSTRAINT chk_daily_menu_categories_additions_optional
+    CHECK (kind = 'SINGLE' OR can_skip)
+);
+CREATE UNIQUE INDEX uq_daily_menu_categories_one_additions
+  ON public.daily_menu_categories(cafeteria_id) WHERE kind = 'ADDITIONS';
+CREATE UNIQUE INDEX uq_daily_menu_categories_label
+  ON public.daily_menu_categories(cafeteria_id, lower(label));
+
+-- 3. Catálogo de adiciones con precio extra definido por el admin.
+CREATE TABLE public.daily_menu_additions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  cafeteria_id uuid NOT NULL REFERENCES public.cafeterias(id) ON DELETE RESTRICT,
+  name varchar(100) NOT NULL,
+  extra_price numeric(12,2) NOT NULL,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_daily_menu_additions_id_cafeteria UNIQUE (id, cafeteria_id),
+  CONSTRAINT chk_daily_menu_additions_name
+    CHECK (name = btrim(name) AND length(name) BETWEEN 1 AND 100),
+  CONSTRAINT chk_daily_menu_additions_price CHECK (extra_price > 0)
+);
+CREATE UNIQUE INDEX uq_daily_menu_additions_name
+  ON public.daily_menu_additions(cafeteria_id, lower(name));
+
+-- 4. Cabecera del día. Se crea con la primera escritura del worker. Publicar congela el
+--    título y el precio. version lo incrementa Spring con WHERE version = esperada.
+CREATE TABLE public.daily_menu_days (
+  cafeteria_id uuid NOT NULL REFERENCES public.cafeterias(id) ON DELETE RESTRICT,
+  business_date date NOT NULL,
+  title_snapshot varchar(100),
+  plate_price_snapshot numeric(12,2),
+  published_at timestamptz,
+  published_by uuid REFERENCES public.users(id) ON DELETE RESTRICT,
+  version bigint NOT NULL DEFAULT 0 CHECK (version >= 0),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (cafeteria_id, business_date),
+  CONSTRAINT chk_daily_menu_days_publication CHECK (
+    (published_at IS NULL) = (published_by IS NULL)
+    AND (published_at IS NULL
+         OR (title_snapshot IS NOT NULL AND plate_price_snapshot > 0))
+  )
+);
+
+-- 5. Ingredientes de hoy. Reemplazo completo por categoría dentro de una transacción con
+--    la cabecera bloqueada (FOR UPDATE). label_key implementa la regla de duplicados.
+CREATE TABLE public.daily_menu_options (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  cafeteria_id uuid NOT NULL,
+  business_date date NOT NULL,
+  category_id uuid NOT NULL,
+  label varchar(100) NOT NULL,
+  label_key text GENERATED ALWAYS AS (lower(btrim(label))) STORED,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT fk_daily_menu_options_day FOREIGN KEY (cafeteria_id, business_date)
+    REFERENCES public.daily_menu_days(cafeteria_id, business_date) ON DELETE RESTRICT,
+  CONSTRAINT fk_daily_menu_options_category FOREIGN KEY (category_id, cafeteria_id)
+    REFERENCES public.daily_menu_categories(id, cafeteria_id) ON DELETE RESTRICT,
+  CONSTRAINT uq_daily_menu_options_label
+    UNIQUE (cafeteria_id, business_date, category_id, label_key),
+  CONSTRAINT chk_daily_menu_options_label CHECK (
+    label = btrim(label)
+    AND length(label) BETWEEN 1 AND 100
+    AND position(',' IN label) = 0
+  )
+);
+
+CREATE FUNCTION public.guard_daily_menu_option()
+RETURNS trigger LANGUAGE plpgsql SET search_path = '' AS $$
+DECLARE
+  category_kind text;
+  used integer;
+BEGIN
+  SELECT c.kind INTO category_kind
+    FROM public.daily_menu_categories c WHERE c.id = NEW.category_id;
+  IF category_kind IS DISTINCT FROM 'SINGLE' THEN
+    RAISE EXCEPTION 'Daily menu options belong to SINGLE categories only'
+      USING ERRCODE = '23514', CONSTRAINT = 'daily_menu_option_category_kind';
+  END IF;
+  SELECT coalesce(sum(length(o.label)), 0)::integer INTO used
+    FROM public.daily_menu_options o
+    WHERE o.cafeteria_id = NEW.cafeteria_id
+      AND o.business_date = NEW.business_date
+      AND o.category_id = NEW.category_id
+      AND o.id IS DISTINCT FROM NEW.id;
+  IF used + length(NEW.label) > 100 THEN
+    RAISE EXCEPTION 'Daily menu category text exceeds 100 characters'
+      USING ERRCODE = '23514', CONSTRAINT = 'daily_menu_option_text_budget';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.guard_daily_menu_option() FROM PUBLIC, anon, authenticated;
+CREATE TRIGGER trg_daily_menu_option_guard BEFORE INSERT OR UPDATE ON public.daily_menu_options
+  FOR EACH ROW EXECUTE FUNCTION public.guard_daily_menu_option();
+
+-- 6. Adiciones encendidas hoy. extra_price es el precio de ese día (copia al encender).
+CREATE TABLE public.daily_menu_addition_availability (
+  cafeteria_id uuid NOT NULL,
+  business_date date NOT NULL,
+  addition_id uuid NOT NULL,
+  is_available boolean NOT NULL,
+  extra_price numeric(12,2) NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (addition_id, business_date),
+  CONSTRAINT chk_daily_menu_addition_price CHECK (extra_price > 0),
+  CONSTRAINT fk_daily_menu_addition_day FOREIGN KEY (cafeteria_id, business_date)
+    REFERENCES public.daily_menu_days(cafeteria_id, business_date) ON DELETE RESTRICT,
+  CONSTRAINT fk_daily_menu_addition_item FOREIGN KEY (addition_id, cafeteria_id)
+    REFERENCES public.daily_menu_additions(id, cafeteria_id) ON DELETE RESTRICT
+);
+
+-- 7. Snapshot del pedido: cabecera (una por pedido con menú).
+CREATE TABLE public.order_daily_menus (
+  order_id uuid PRIMARY KEY,
+  cafeteria_id uuid NOT NULL,
+  business_date date NOT NULL,
+  title_snapshot varchar(100) NOT NULL,
+  plate_price numeric(12,2) NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_order_daily_menus_order_cafeteria UNIQUE (order_id, cafeteria_id),
+  CONSTRAINT fk_order_daily_menu_order FOREIGN KEY (order_id, cafeteria_id)
+    REFERENCES public.orders(id, cafeteria_id) ON DELETE RESTRICT,
+  CONSTRAINT chk_order_daily_menu_price CHECK (plate_price > 0)
+);
+
+-- 8. Snapshot del pedido: una fila por elección (opción, «Ninguna» o adición).
+--    category_id, source_option_id y source_addition_id no tienen FK a propósito:
+--    son trazabilidad y no deben impedir borrar ingredientes de hoy.
+CREATE TABLE public.order_daily_menu_choices (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id uuid NOT NULL,
+  cafeteria_id uuid NOT NULL,
+  line_kind text NOT NULL,
+  category_id uuid NOT NULL,
+  category_label varchar(60) NOT NULL,
+  option_label varchar(100),
+  extra_price numeric(12,2),
+  source_option_id uuid,
+  source_addition_id uuid,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT fk_choice_order_menu FOREIGN KEY (order_id, cafeteria_id)
+    REFERENCES public.order_daily_menus(order_id, cafeteria_id) ON DELETE RESTRICT,
+  CONSTRAINT chk_choice_shape CHECK (
+    (line_kind = 'OPTION' AND option_label IS NOT NULL AND extra_price IS NULL
+       AND source_option_id IS NOT NULL AND source_addition_id IS NULL)
+    OR (line_kind = 'NONE' AND option_label IS NULL AND extra_price IS NULL
+       AND source_option_id IS NULL AND source_addition_id IS NULL)
+    OR (line_kind = 'ADDITION' AND option_label IS NOT NULL AND extra_price > 0
+       AND source_addition_id IS NOT NULL AND source_option_id IS NULL)
+  )
+);
+CREATE UNIQUE INDEX uq_choice_one_per_category
+  ON public.order_daily_menu_choices(order_id, category_id)
+  WHERE line_kind IN ('OPTION', 'NONE');
+CREATE UNIQUE INDEX uq_choice_addition_once
+  ON public.order_daily_menu_choices(order_id, source_addition_id)
+  WHERE line_kind = 'ADDITION';
+
+-- 9. Inmutabilidad de lo copiado (mismo criterio que sync_order_cancellation_source, 021).
+CREATE FUNCTION public.forbid_daily_menu_snapshot_change()
+RETURNS trigger LANGUAGE plpgsql SET search_path = '' AS $$
+BEGIN
+  RAISE EXCEPTION 'Daily menu order snapshots are immutable'
+    USING ERRCODE = '23514', CONSTRAINT = 'order_daily_menu_immutable';
+END;
+$$;
+REVOKE ALL ON FUNCTION public.forbid_daily_menu_snapshot_change() FROM PUBLIC, anon, authenticated;
+CREATE TRIGGER trg_order_daily_menus_immutable
+  BEFORE UPDATE OR DELETE ON public.order_daily_menus
+  FOR EACH ROW EXECUTE FUNCTION public.forbid_daily_menu_snapshot_change();
+CREATE TRIGGER trg_order_daily_menu_choices_immutable
+  BEFORE UPDATE OR DELETE ON public.order_daily_menu_choices
+  FOR EACH ROW EXECUTE FUNCTION public.forbid_daily_menu_snapshot_change();
+
+-- 10. Cierre: RLS sin políticas y ningún privilegio para el navegador (patrón de la 013).
+ALTER TABLE public.daily_menu_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.daily_menu_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.daily_menu_additions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.daily_menu_days ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.daily_menu_options ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.daily_menu_addition_availability ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.order_daily_menus ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.order_daily_menu_choices ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE
+  public.daily_menu_settings, public.daily_menu_categories, public.daily_menu_additions,
+  public.daily_menu_days, public.daily_menu_options, public.daily_menu_addition_availability,
+  public.order_daily_menus, public.order_daily_menu_choices
+  FROM PUBLIC, anon, authenticated;
+
+COMMIT;
+
+-- Reverso (orden inverso; solo en base temporal):
+-- BEGIN;
+-- DROP TABLE IF EXISTS public.order_daily_menu_choices, public.order_daily_menus,
+--   public.daily_menu_addition_availability, public.daily_menu_options,
+--   public.daily_menu_days, public.daily_menu_additions, public.daily_menu_categories,
+--   public.daily_menu_settings;
+-- DROP FUNCTION IF EXISTS public.forbid_daily_menu_snapshot_change();
+-- DROP FUNCTION IF EXISTS public.guard_daily_menu_option();
+-- COMMIT;
+```
+
+Notas sobre el borrador:
+
+- Las categorías por defecto (Proteína, Principio, Bebida, Complementos y Adiciones) **no** se
+  siembran en la migración. La aplicación las crea con `INSERT ... ON CONFLICT DO NOTHING` la
+  primera vez que la cafetería abre su configuración, en la misma transacción que la cabecera.
+  Así las cafeterías nuevas reciben su plantilla sin disparadores sobre `cafeterias`.
+- Los ingredientes del día son texto libre. Un catálogo reutilizable queda fuera de la demo.
+- La regla «una por categoría» y «obligatoria» se valida en servicio bajo bloqueo. La base
+  garantiza lo que puede garantizar sin leer otras tablas: un solo registro por categoría en un
+  pedido, adiciones sin repetir, forma correcta de cada elección e inmutabilidad.
+
+### 2.6 Pruebas de la migración (base temporal, nunca el proyecto)
+
+- RLS activa y sin privilegios para `anon` y `authenticated` en las ocho tablas.
+- Disparador de opciones: rechaza una opción en una categoría `ADDITIONS`; rechaza que la suma
+  de caracteres por categoría pase de 100; acepta 100 exactos.
+- Índices: dos categorías `ADDITIONS` en una cafetería fallan; dos elecciones `OPTION`/`NONE` de
+  la misma categoría en un pedido fallan; la misma adición dos veces en un pedido falla.
+- CHECK de forma: `OPTION` sin `source_option_id` falla; `ADDITION` con precio 0 falla; `NONE`
+  con etiqueta falla.
+- FKs compuestas: una opción de otra cafetería, o un día sin cabecera, falla.
+- Inmutabilidad: `UPDATE` y `DELETE` sobre snapshots fallan con `order_daily_menu_immutable`.
+- Regresión: `uq_orders_one_active_per_client`, 011 y 021 siguen en verde.
+
+---
+
+## 3. Backend
+
+### 3.1 Endpoints
+
+Rutas nuevas bajo `/api/me` y `/api/worker` (y `/api/admin` en fase admin), con el mismo estilo
+que `ClientCatalogController`, `AvailabilityController` y `ClientOrderController`.
+
+| Método y ruta | Rol | Qué hace | Fase |
+| ------------- | --- | -------- | ---- |
+| `GET /api/me/daily-menu?cafeteriaId=` | CLIENT | Menú publicado y completo de hoy, solo opciones disponibles | Demo |
+| `GET /api/me/menu` (ampliar) | CLIENT | Añade `dailyMenu: { available }` para el letrero | Demo |
+| `POST /api/me/orders` (ampliar) | CLIENT | Acepta `dailyMenu` opcional en el cuerpo | Demo |
+| `GET /api/worker/daily-menu/today` | WORKER | Estado del día: categorías, opciones, adiciones, publicado, completo, versión | Demo |
+| `PUT /api/worker/daily-menu/today/categories/{categoryId}/options` | WORKER | Reemplaza las opciones de una categoría `SINGLE` | Demo |
+| `PUT /api/worker/daily-menu/today/additions/{additionId}` | WORKER | Enciende o apaga una adición; copia su precio | Demo |
+| `POST /api/worker/daily-menu/today/copy-yesterday` | WORKER | Copia las opciones de ayer solo a categorías vacías hoy | Demo |
+| `POST /api/worker/daily-menu/today/publish` | WORKER | Publica si está completo; congela título y precio | Demo |
+| `POST /api/worker/daily-menu/today/unpublish` | WORKER | Oculta el menú para pedidos nuevos; los pedidos en curso no cambian | Demo |
+| `GET/PUT /api/admin/daily-menu/settings` | ADMIN | Título y precio fijo | Fase admin |
+| `POST/PATCH /api/admin/daily-menu/categories`, `PUT .../categories/order` | ADMIN | Crear, editar, desactivar y ordenar categorías | Fase admin |
+| `POST/PATCH /api/admin/daily-menu/additions` | ADMIN | Crear y editar adiciones con su precio | Fase admin |
+
+Todas las escrituras del worker llevan `expectedVersion`. El servicio bloquea la cabecera del día
+con `FOR UPDATE`, compara la versión y la incrementa. Si no coincide, responde 409
+`DAILY_MENU_VERSION_CONFLICT` y el BFF resincroniza con un GET.
+
+### 3.2 Contratos JSON
+
+**Cliente — `GET /api/me/daily-menu?cafeteriaId=`** (200; 404 `DAILY_MENU_NOT_PUBLISHED` si no está
+publicado o no está completo)
+
+```json
+{
+  "cafeteria": { "id": "uuid", "name": "Cafetería Central", "open": true },
+  "businessDate": "2026-11-18",
+  "title": "Almuerzo del día",
+  "price": 9500.0,
+  "categories": [
+    { "id": "uuid", "label": "Proteína", "kind": "SINGLE", "canSkip": false,
+      "options": [{ "id": "uuid", "label": "Pollo a la plancha" }] },
+    { "id": "uuid", "label": "Bebida", "kind": "SINGLE", "canSkip": true, "options": [] },
+    { "id": "uuid", "label": "Adiciones", "kind": "ADDITIONS", "canSkip": true,
+      "additions": [{ "id": "uuid", "name": "Huevo frito", "extraPrice": 2000.0 }] }
+  ]
+}
+```
+
+- `options: []` con `canSkip: true` significa que el cliente solo ve «Ninguna».
+- Las categorías `ADDITIONS` sin adiciones encendidas se omiten. Una categoría `SINGLE` obligatoria
+  nunca llega vacía, porque el menú no se puede publicar así.
+
+**Cliente — `POST /api/me/orders`** (cuerpo ampliado; los demás campos no cambian)
+
+```json
+{
+  "cafeteriaId": "uuid",
+  "items": [{ "productId": "uuid", "quantity": 2 }],
+  "dailyMenu": {
+    "businessDate": "2026-11-18",
+    "choices": [
+      { "categoryId": "uuid", "optionId": "uuid" },
+      { "categoryId": "uuid", "skip": true }
+    ],
+    "additionIds": ["uuid"]
+  },
+  "note": "sin cebolla",
+  "requestedPickupAt": null
+}
+```
+
+- `dailyMenu` es opcional. Sin él, el pedido se comporta como hoy.
+- `skip: true` y `optionId` son excluyentes. Nunca se envía un precio ni un total.
+- `ClientOrderRequests` lee solo estos campos. `Normalized.hash()` incluye `dailyMenu` para que
+  una repetición de idempotencia con otro menú responda `IDEMPOTENCY_KEY_CONFLICT`.
+
+**Worker — `GET /api/worker/daily-menu/today`**
+
+```json
+{
+  "businessDate": "2026-11-18",
+  "version": 7,
+  "published": false,
+  "complete": false,
+  "missingCategories": ["Principio"],
+  "title": "Almuerzo del día",
+  "price": 9500.0,
+  "categories": [
+    { "id": "uuid", "label": "Principio", "kind": "SINGLE", "canSkip": false,
+      "options": [{ "id": "uuid", "label": "Arroz" }] }
+  ],
+  "additions": [
+    { "id": "uuid", "name": "Huevo frito", "extraPrice": 2000.0, "available": true }
+  ],
+  "textUsed": { "uuid-de-categoria": 4 }
+}
+```
+
+**Worker — `PUT .../categories/{categoryId}/options`**
+
+```json
+{ "expectedVersion": 7, "options": ["Arroz", "Lentejas"] }
+```
+
+El servidor normaliza cada texto (sección 2.2), rechaza duplicados y comas, y suma caracteres.
+Responde con el estado nuevo del día y `version: 8`.
+
+### 3.3 Validaciones del servidor
+
+- **Escritura de opciones:** cafetería del worker desde `cafeteria_users`; la categoría existe,
+  pertenece a la cafetería, está activa y es `SINGLE`; máximo 20 opciones; cada texto 1–100
+  tras normalizar; sin comas; sin duplicados por `label_key`; suma ≤ 100; versión esperada.
+- **Publicar:** precio fijo presente; cada categoría `SINGLE` activa no saltable tiene al menos una
+  opción hoy; si falta algo responde 409 `DAILY_MENU_INCOMPLETE` con `missingCategories`.
+- **Adición:** existe, activa en el catálogo, y el precio es > 0 al encenderla.
+- **Copiar ayer:** solo rellena categorías que hoy no tienen opciones; devuelve cuáles omitió.
+  No copia el encendido de adiciones (P7).
+- **Pedido:**
+  - `businessDate` igual al día de negocio de Spring; si no, 409 `DAILY_MENU_DATE_CHANGED`.
+  - Cafetería abierta y visible (reglas actuales de 022).
+  - Día publicado y completo; si no, 409 `DAILY_MENU_NOT_PUBLISHED`.
+  - Una elección por cada categoría `SINGLE` activa: opción existente hoy o «Ninguna» si
+    `canSkip`; si no, 400 `DAILY_MENU_SELECTION_INVALID`.
+  - Adiciones: sin repetir, encendidas hoy; si no, 409 `DAILY_MENU_ADDITION_UNAVAILABLE`.
+  - Como máximo **un** plato por pedido (P4); cuenta como 1 unidad del límite de 15 (P5).
+
+### 3.4 Total calculado en el servidor
+
+```
+total = Σ items.subtotal                       (productos, como hoy)
+      + daily_menu_days.plate_price_snapshot    (precio del plato publicado hoy)
+      + Σ daily_menu_addition_availability.extra_price   (adiciones elegidas hoy)
+```
+
+- Orden de bloqueo (extiende el de §11 de `decisiones.md`): cafetería → productos → cabecera del
+  día con `FOR SHARE` → opciones y disponibilidad de hoy. El worker bloquea la cabecera con `FOR
+  UPDATE`, así un pedido nunca ve un menú a medio publicar.
+- La transacción `@Transactional(timeout = 15)` y la idempotencia actual siguen igual.
+- Las filas de `order_daily_menus` y `order_daily_menu_choices` se insertan en la misma
+  transacción que `orders` y `order_items`. Si algo falla, no queda nada a medias.
+
+### 3.5 Respuesta del pedido
+
+`OrderResponse` añade `dailyMenu`, que es `null` si el pedido no tiene menú:
+
+```json
+"dailyMenu": {
+  "title": "Almuerzo del día",
+  "price": 9500.0,
+  "choices": [
+    { "category": "Proteína", "kind": "OPTION", "label": "Pollo a la plancha", "extraPrice": null },
+    { "category": "Bebida", "kind": "NONE", "label": null, "extraPrice": null },
+    { "category": "Adiciones", "kind": "ADDITION", "label": "Huevo frito", "extraPrice": 2000.0 }
+  ]
+}
+```
+
+Las respuestas del worker y del cliente usan el mismo bloque.
+
+### 3.6 Códigos de error (`MÓDULO_MOTIVO`)
+
+Cada código necesita texto en `features/shared/messages.ts`; `tests/messages-catalog.test.mjs`
+falla si falta.
+
+| Código | HTTP | Cuándo |
+| ------ | ---- | ------ |
+| `DAILY_MENU_NOT_PUBLISHED` | 404 / 409 | No publicado, incompleto o cafetería sin menú |
+| `DAILY_MENU_INCOMPLETE` | 409 | Publicar con una categoría obligatoria vacía |
+| `DAILY_MENU_VERSION_CONFLICT` | 409 | `expectedVersion` distinto |
+| `DAILY_MENU_OPTION_INVALID` | 400 | Vacía, más de 100, con coma o más de 20 opciones |
+| `DAILY_MENU_OPTION_DUPLICATED` | 400 | Repetida sin distinguir mayúsculas |
+| `DAILY_MENU_TEXT_TOO_LONG` | 400 | Suma de la categoría > 100 |
+| `DAILY_MENU_CATEGORY_NOT_FOUND` | 404 | Categoría inexistente, ajena o inactiva |
+| `DAILY_MENU_SELECTION_INVALID` | 400 | Falta elección, opción ajena o «Ninguna» no permitida |
+| `DAILY_MENU_ADDITION_UNAVAILABLE` | 409 | Adición apagada o inexistente hoy |
+| `DAILY_MENU_DATE_CHANGED` | 409 | El día de negocio cambió entre la vista y el envío |
+| `DAILY_MENU_PRICE_NOT_SET` | 409 | Publicar sin precio fijo |
+
+### 3.7 Pruebas (backend)
+
+Nombres según convención: `*Test`, `*AuthorizationTest`, `*PostgresTest`.
+
+- **Unitarias (`DailyMenuRulesTest`):** normalización (espacios, mayúsculas, comas), duplicados,
+  límite de 100 con exactamente 100 y con 101, máximo de opciones, regla «una por categoría»,
+  «Ninguna» solo si `canSkip`, adiciones sin repetir, total calculado con redondeo a 2 decimales.
+- **Servicio (`DailyMenuServiceTest`):** publicar incompleto, republicar, copiar ayer sin pisar,
+  conflicto de versión, pedido con fecha cambiada, pedido con adición apagada.
+- **Autorización (`DailyMenuAuthorizationTest`):** worker de otra cafetería no lee ni escribe;
+  cliente no escribe en worker ni admin; cafetería oculta no sirve menú (regla 022).
+- **Postgres (`DailyMenuPostgresTest`, clúster temporal local):** la sección 2.6 más una prueba
+  de concurrencia: dos escrituras de opciones con la misma versión, una gana y la otra recibe 409.
+- **Pedido con menú (`ClientOrderDailyMenuPostgresTest`):** el total coincide con
+  `items + precio + adiciones`; el snapshot no cambia cuando el worker borra la opción después;
+  repetición idempotente con el mismo menú devuelve el mismo pedido.
+
+Comandos (desde `unifood-backend/`):
+
+```sh
+./mvnw -o test "-Dtest=!*PostgresTest"
+./mvnw -o spotless:check
+./mvnw -o test -Dtest=DailyMenuPostgresTest        # clúster temporal local
+./mvnw -o test -Dtest=ClientOrderDailyMenuPostgresTest
+```
+
+---
+
+## 4. BFF y pantallas
+
+### 4.1 BFF (`unifood-web`)
+
+Patrón de `features/availability/server/forward.ts` y de las rutas del worker: sesión verificada,
+rol exclusivo, `sameOrigin` en cada mutación, validación estricta de cuerpo y tipos, `fetch` con
+`cache: "no-store"`, `redirect: "error"` y timeout. Sin errores crudos: los códigos se traducen
+con `messages.ts`. Solo se reenvían campos publicados, nunca cookies ni cuerpos técnicos.
+
+- Worker: `app/api/worker/daily-menu/today/...` (GET y los PUT/POST de la sección 3.1).
+- Cliente: el menú nuevo se lee con `features/client/server/menu.ts` ampliado o con una ruta
+  hermana, y el pedido se envía con `features/client/server/orderForward.ts` (solo añade
+  `dailyMenu` al cuerpo).
+- La cafetería, la actividad administrativa y el día salen del backend. El BFF no los confía del
+  navegador.
+
+### 4.2 Estructura de archivos
+
+```
+features/daily-menu/
+  api.ts  contracts.ts  errors.ts  state.ts  types.ts  presentation.ts
+  useDailyMenu.ts               (worker, lectura y escritura con cola de cambios)
+  useClientDailyMenu.ts         (cliente, lectura)
+  server/forward.ts
+  components/
+    DailyMenuEditor.tsx         (worker, dentro de Disponibilidad)
+    DailyMenuChips.tsx          (fichas: radio para SINGLE, toggle para adiciones)
+    DailyMenuSummary.tsx        (elección en el pedido: worker y cliente)
+    DailyMenuLetrero.tsx        (letrero de Inicio)
+    DailyMenuModule.tsx         (/cuenta/menu-del-dia)
+```
+
+`features/availability/components/AvailabilityPanel.tsx` monta `DailyMenuEditor` debajo de las
+categorías de catálogo. No se toca `components/worker/`.
+
+### 4.3 Worker: editor en Disponibilidad
+
+- **Por cada categoría `SINGLE`:** título de la categoría, un recuadro con las fichas creadas y un
+  campo de texto. Enter o coma crea una ficha. Los espacios de los extremos se quitan al crearla.
+- **Límite:** si la suma de fichas más el texto pendiente pasa de 100, el recuadro se pone rojo
+  con «Superaste el máximo de 100 caracteres». No se crea la ficha. **Publicar queda deshabilitado**
+  mientras algún recuadro esté en rojo. Sin contador visible.
+- **Sin micrófono.**
+- **Duplicado:** no crea ficha y muestra el aviso junto al campo, con foco en el campo.
+- **Guardado:** cada ficha creada o borrada hace un `PUT` de esa categoría, con el mismo patrón
+  de overlay optimista que `features/availability/README.md`: la ficha aparece al instante con
+  «Guardando…» y, si falla, vuelve y avisa. Las escrituras se encolan; no se inicia otra mientras
+  una está en vuelo para no pisar `expectedVersion`.
+- **Adiciones:** lista de interruptores (`role="switch"`) con el nombre y «+ $2.000». Encender
+  guarda el precio de hoy.
+- **«Copiar el de ayer»:** un botón en la cabecera del editor. Rellena solo categorías vacías y
+  dice cuáles omitió.
+- **Publicar / Despublicar:** un botón con estado. Publicar muestra los motivos si falta algo
+  («Falta una opción en Principio»).
+- **Pedido con menú:** la elección aparece en la tarjeta del worker (sección 4.7).
+- **Errores:** `VERSION_CONFLICT` vuelve a leer el día; «Sin conexión. Reintentando…» conserva el
+  último estado confirmado, como en Disponibilidad.
+
+### 4.4 Cliente: letrero en Inicio
+
+- **Dónde:** en Inicio, justo encima del carrusel y dentro del mismo hueco que ocupa el
+  `ClosedBanner` cuando la cafetería está cerrada. Son mutuamente excluyentes: el letrero exige
+  cafetería abierta y el banner aparece solo cuando está cerrada. No hay que reordenar nada.
+- **Cuándo se muestra:** `dailyMenu.available === true` del menú (publicado, completo, cafetería
+  abierta). Llega con el refresco de 30 s que ya tiene `useCafeteriaMenu`.
+- **Contenido:** una tarjeta de ancho completo con el título «Menú del día» y una flecha. Es un
+  enlace a `/cuenta/menu-del-dia?cafeteria=…`. Sin precio en el letrero (el precio va en el
+  módulo).
+- **Si no está disponible:** no se renderiza nada; el carrusel ocupa el hueco como hoy.
+
+### 4.5 Cliente: módulo `/cuenta/menu-del-dia`
+
+- **Encabezado:** título del plato y **precio fijo mostrado una sola vez**, aquí (ver P9). Debajo,
+  el texto de cafetería abierta o el `CLOSED_NOTICE` existente.
+- **Categorías:** en el orden de la plantilla. Cada una con su nombre y sus fichas. Las
+  categorías `ADDITIONS` sin adiciones se omiten; las `SINGLE` con «Ninguna» solo muestran esa
+  ficha. Nunca aparece «no hay».
+- **Fichas `SINGLE`:** `role="radiogroup"` con `role="radio"` y `aria-checked`. Elegida: fondo
+  `#0B5FFF` y texto blanco (contraste 5,1:1, cumple AA para texto normal). Sin elegir: borde gris
+  y texto oscuro. Flechas para moverse, foco visible, mínimo 44 px de alto.
+- **Fichas `ADDITIONS`:** `role="checkbox"` con `aria-checked`, mismo estilo. Muestran el precio
+  extra dentro de la ficha: «Huevo frito · + $2.000».
+- **Botón único «Agregar al carrito»**, deshabilitado mientras falte algo. El motivo va en texto
+  visible y en `aria-live`: «Falta elegir: Principio y Bebida».
+- **Cafetería cerrada:** el módulo se ve, con el texto de cerrada de `CLOSED_NOTICE`, y el botón
+  muestra «Cerrada» sin permitir añadir.
+- **Plato ya en el carrito:** ver P8.
+- **Sin menú publicado:** pantalla de estado «El menú de hoy aún no está listo» (texto nuevo en
+  `messages.ts`), sin enlaces rotos.
+
+### 4.6 Carrito, checkout y `CartLineItem`
+
+- **Tipo de línea:** `CartLine` pasa a ser una unión. Las líneas de producto se quedan igual;
+  la nueva `MenuLine` es `{ kind: "menu", businessDate, choices: {categoryId: optionId | "NONE"},
+  additionIds: string[] }`. Las líneas antiguas no tienen `kind` y se tratan como producto.
+- **Clave de almacenamiento:** se conserva `unifood.client.cart.v2`. La restauración valida la
+  forma de la línea nueva y descarta lo que no entienda, igual que hoy.
+- **Un plato por carrito**, que es lo mismo que un plato por pedido (P4).
+- **`validateCart`:** para la línea de menú comprueba que el menú publicado sigue igual: mismas
+  categorías, opciones existentes y adiciones encendidas. Si algo cambió, la línea queda marcada
+  con «Ya no está disponible» o «El menú cambió: vuelve a elegir», igual que un producto agotado,
+  y bloquea el pago hasta que el cliente la corrija. Nunca hay sustitución silenciosa.
+- **`CartLineItem`:** muestra el título, las elecciones con su texto (incluido «Ninguna»), las
+  adiciones con su precio y el importe de la línea. Quitar la línea funciona igual que hoy.
+- **Checkout:** el resumen suma el plato y las adiciones con los precios del menú publicado; el
+  servidor recalcula el total.
+- **Límites de unidades:** el plato cuenta como una unidad (P5). Las adiciones no cuentan.
+
+### 4.7 Ver la elección en el pedido
+
+- **Worker:** `DailyMenuSummary` dentro de la tarjeta del pedido y del detalle. Formato:
+
+  ```
+  Almuerzo del día · $9.500
+  Proteína: Pollo a la plancha
+  Principio: Arroz
+  Bebida: Ninguna
+  Adiciones: Huevo frito (+$2.000)
+  ```
+
+  «Ninguna» aparece siempre que el cliente la eligió. Es el dato que el worker necesita para
+  preparar el pedido.
+- **Cliente:** el mismo bloque en «Mi pedido» y en el historial, de solo lectura.
+- **Historial del worker:** `HistoryOrderCard` usa el mismo componente.
+
+---
+
+## 5. Casos límite
+
+| Caso | Comportamiento | Dónde se valida |
+| ---- | -------------- | --------------- |
+| **Opción agotada después de que el cliente la escogió (pedido ya creado)** | El pedido no cambia: la copia guarda lo que se eligió. El worker lo ve y, si no puede cumplirlo, usa el rechazo con motivo (B18, en PENDING o PREPARING) | Snapshot (3.4, 2.3) |
+| **Opción agotada con el carrito sin enviar** | Al enviar, el servidor responde `DAILY_MENU_SELECTION_INVALID`. La línea queda marcada y el cliente vuelve a elegir. No hay sustitución | `validateCart` y servicio |
+| **Categoría obligatoria sin opciones hoy** | No se puede publicar (`DAILY_MENU_INCOMPLETE`). Si se vacía después de publicar, el menú queda incompleto: el letrero se oculta y el worker ve qué falta | Publicar y lectura calculada |
+| **Categoría saltable sin opciones hoy** | Solo aparece «Ninguna» | Lectura del cliente |
+| **Cafetería cerrada** | Letrero oculto. El módulo se ve sin poder añadir. El pedido responde `CAFETERIA_CLOSED` | Lectura y 022 |
+| **Cafetería oculta por SUPER_ADMIN** | Sin menú; el pedido responde `CAFETERIA_NOT_SUBSCRIBED` como hoy | 022 |
+| **Cambio de menú con pedidos activos** | Los pedidos en curso conservan su copia. Publicar o despublicar solo afecta a pedidos nuevos. Como en §5 de `decisiones.md`, los pedidos en curso se atienden | Snapshot y `unpublish` |
+| **Cambio de precio del plato con pedidos activos** | El pedido conserva el precio de su copia. El nuevo precio aplica en la siguiente publicación | `daily_menu_days` congela el precio |
+| **Adición encendida después de que el cliente la eligió** | Si se apaga antes de enviar, el pedido responde `DAILY_MENU_ADDITION_UNAVAILABLE`. Si ya está enviado, no cambia | Servicio y snapshot |
+| **Adición cuyo precio cambió entre la vista y el envío** | No cambia: el precio de hoy es el copiado al encender. El admin cambia el precio para el siguiente encendido | `daily_menu_addition_availability` |
+| **Opciones repetidas** (`Arroz` y ` arroz `) | `DAILY_MENU_OPTION_DUPLICATED` en el servidor; en el editor, no crea ficha y avisa en el campo | Normalización y `label_key` |
+| **Opciones con comas** (`Arroz, lentejas`) | La coma separa en el editor (dos fichas). Una coma que llegue por API responde `DAILY_MENU_OPTION_INVALID` | Editor y servidor |
+| **Texto de más de 100** | El editor pone el recuadro en rojo y bloquea «Publicar». El servidor responde `DAILY_MENU_TEXT_TOO_LONG` y no trunca nada | Editor, servicio y disparador |
+| **Dos workers editan a la vez** | Uno gana y el otro recibe `DAILY_MENU_VERSION_CONFLICT` y vuelve a leer | `expectedVersion` y `FOR UPDATE` |
+| **Cambio de día con el cliente en el módulo** | El pedido responde `DAILY_MENU_DATE_CHANGED`. El cliente recarga el menú del nuevo día | Servidor (3.3) |
+| **Pedido repetido por red (misma clave)** | Misma respuesta. Si el menú cambió en el cuerpo, `IDEMPOTENCY_KEY_CONFLICT` | `Normalized.hash()` |
+| **Más de un plato por pedido** | Rechazado en el carrito y en el servidor (P4) | Carrito y servicio |
+| **Menú de ayer** | Nunca se muestra: todas las consultas filtran por `business_date` | Consultas |
+| **Publicar sin precio fijo** | `DAILY_MENU_PRICE_NOT_SET` | Publicar |
+| **Un ingrediente con más de 100 caracteres en la base** | `CHECK` de la columna y disparador lo impiden | Base |
+
+---
+
+## 6. Plan de implementación
+
+Orden por dependencias. Cada PR es pequeño, con su verificación. El contrato de API de este
+documento se aprueba antes de empezar PR 2 y PR 5, para que backend y web trabajen en paralelo.
+
+| # | PR | Contenido | Dependencias | Esfuerzo |
+| - | -- | --------- | ------------ | -------- |
+| 1 | `jj/menu-dia-db` | Migración 030, pruebas de base, `scripts/supabase/seed-daily-menu.sql` (con `SET unifood.seed_target = 'staging'`) | Aprobación de este documento | 2 d |
+| 2 | `jj/menu-dia-lectura` | Backend: `GET /api/me/daily-menu`, `dailyMenu` en `/api/me/menu`, pruebas | PR 1 | 1 d |
+| 3 | `jj/menu-dia-worker` | Backend: lectura y escrituras del worker, publicar, copiar ayer, pruebas de autorización y concurrencia | PR 1 | 2,5 d |
+| 4 | `jj/menu-dia-pedido` | Backend: validación del pedido, total, snapshots, `OrderResponse.dailyMenu`, pruebas | PR 2 y 3 | 3 d |
+| 5 | `jon/menu-dia-letrero` | Web: BFF de lectura, letrero en Inicio, módulo de solo lectura (fichas, sin carrito) | PR 2 (contrato) | 2,5 d |
+| 6 | `jon/menu-dia-carrito` | Web: unión `MenuLine`, `validateCart`, `CartLineItem`, checkout, `orderForward` | PR 4 y 5 | 2 d |
+| 7 | `jj/menu-dia-editor` | Web: `DailyMenuEditor` en Disponibilidad, BFF del worker, «Copiar el de ayer», publicar | PR 3 | 3 d |
+| 8 | `jj/menu-dia-ver-pedido` | Web: `DailyMenuSummary` en tarjetas del worker y en «Mi pedido» e historial | PR 4 | 1 d |
+| 9 | `jj/menu-dia-admin` | Pantalla del admin: plato, categorías, adiciones | PR 1 y 3 | 3 d (después de la demo) |
+
+**Total sin PR 9:** ~17 días-persona. **Demo (sin PR 9):** dos personas en paralelo, backend
+(PR 1–4, ~8,5 d) y web (PR 5–8, ~8,5 d), más revisiones: **~9–10 días de calendario**.
+
+**Criterio para cada PR:** `npm run lint`, `npx tsc --noEmit --incremental false`,
+`npx prettier --check <archivos>` y `npm test` (web); `./mvnw -o test "-Dtest=!*PostgresTest"`,
+`./mvnw -o spotless:check` y las pruebas Postgres del área (backend). Las suites completas se
+ejecutan al cerrar la demo, no en cada PR.
+
+**Siembra en staging para la demo:** el PR 1 deja el plato, las cuatro categorías por defecto,
+Adiciones, cinco adiciones de ejemplo y las opciones de hoy. El worker sigue pudiendo editarlas
+desde PR 7. Se ejecuta con la misma guarda que `seed-demo.sql`: solo en staging.
+
+---
+
+## 7. Preguntas abiertas (con recomendación)
+
+**P1. Freeze del 21 de noviembre.** El plan completo son ~17 días-persona y el freeze es en tres
+días hábiles. *Recomendación:* mover el freeze al **25 de noviembre** solo para los PR 1–8, y
+dejar fuera de la demo el PR 9. Alternativa: demostrar con datos sembrados y el worker sin
+editor, pero eso quita la parte del worker que pediste. Necesito tu decisión porque cambia el
+calendario.
+
+**P2. Límite de 100 caracteres.** Implementé la lectura literal: 100 caracteres por categoría
+(suma de fichas). *Recomendación:* confirmar. Si quieres 100 por ficha, cambia una línea del
+disparador y del servicio. También propongo un máximo de **20 opciones** por categoría.
+
+**P3. Obligatoriedad por defecto.** *Recomendación:* Proteína y Principio obligatorias; Bebida y
+Complementos saltables (con «Ninguna»). Adiciones siempre saltable. Son valores sembrados que
+cada cafetería puede cambiar.
+
+**P4. ¿Cuántos platos por pedido?** *Recomendación:* **uno**. Con un plato por pedido, las
+elecciones y las adiciones son de ese plato, y encaja con un pedido activo por estudiante.
+Varios platos exigirían una elección completa por plato.
+
+**P5. ¿El plato cuenta contra los límites de 10 por producto y 15 en total?** *Recomendación:* sí,
+como una unidad. Las adiciones no cuentan.
+
+**P6. ¿Qué pasa si el ingrediente se agota con pedidos ya hechos?** *Recomendación:* el worker
+borra la ficha, el pedido no cambia, y si no se puede cumplir usa el rechazo con motivo que ya
+existe (B18). No se agrega un estado «agotado» nuevo.
+
+**P7. «Copiar el de ayer».** *Recomendación:* copiar solo los ingredientes (opciones). Las
+adiciones encendidas se vuelven a encender cada día, porque son la disponibilidad de hoy.
+
+**P8. Plato ya en el carrito.** Si el cliente abre el módulo con el plato en el carrito, ¿qué
+botón ve? *Recomendación:* el módulo abre con sus elecciones cargadas y el botón cambia a
+«Actualizar carrito». Así se mantiene un solo botón y un solo plato por carrito.
+
+**P9. Precio del plato y dónde se muestra.** *Recomendación:* solo en el encabezado del módulo;
+el letrero no lo muestra. Los importes del carrito y del checkout son totales normales y no
+cuentan como repetición.
+
+**P10. Cambio de precio del plato y de adiciones.** *Recomendación:* el precio del plato cambia
+en la siguiente publicación; el de cada adición, en su siguiente encendido. Ya está reflejado en
+el diseño. Confirmar.
+
+**P11. Categorías creadas por el admin: ¿se borran o se desactivan?** *Recomendación:*
+**desactivar** (`active = false`). Las opciones y los snapshots conservan su historial.
+
+**P12. Coma en los ingredientes.** *Recomendación:* prohibida (la coma separa fichas). Así no hay
+que escapar nada y el texto que el worker escribe es el que ve el cliente.
+
+**P13. Ubicación del letrero.** *Recomendación:* encima del carrusel, en el mismo hueco que el
+banner de cerrada (sección 4.4). Alternativa: debajo del carrusel, pero en pantallas pequeñas
+quedaría fuera de la primera vista.
+
+**P14. Cafetería sin plato configurado.** Si el admin no ha fijado precio, ¿la cafetería muestra
+algo al worker? *Recomendación:* el editor muestra un aviso «Falta el precio del plato» y
+publicar queda deshabilitado. El cliente no ve nada.
+
+**P15. ¿Quién puede publicar?** *Recomendación:* solo el worker de la cafetería, igual que abrir y
+cerrar. El admin edita la plantilla (fase admin) pero no publica el día.
