@@ -1075,6 +1075,11 @@ disponibilidad sin recargar:
   solo botón y, si el navegador las bloqueó, una línea con cómo habilitarlas; un punto en la
   campana indica que están apagadas. El panel deja un espacio para «recientes» (pendiente). La
   tarjeta de activación tras confirmar un pedido se mantiene.
+- **Historial, Disponibilidad y Llamadas, un solo panel.** Cada módulo es un panel de cristal con
+  la cabecera de Llamadas (`features/worker-ui`: recuadro de ícono de 52 px, título, subtítulo y
+  contador o resumen, divisor fino). Mismo ancho máximo (1320 px), padding y radio (23 px) en
+  pantalla, divididos entre `--worker-zoom`. El nav de los cinco módulos mide lo mismo (texto de
+  10 px reales); el fondo claro de Mi perfil se mantiene.
 
 ## 13. Línea de corte
 

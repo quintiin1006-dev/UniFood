@@ -20,6 +20,11 @@ import {
 import type { CalledOrderAction } from "@/features/orders/calledOrderActions";
 import type { Order } from "@/types/order";
 
+import {
+  PanelCounter,
+  PanelHeader,
+  panelStyles,
+} from "@/features/worker-ui/components/PanelHeader";
 import modernStyles from "./CallsBoard.module.css";
 import classicStyles from "./CallsBoard.classic.module.css";
 import { ICON_MIN_20 } from "@/components/ui/Icon";
@@ -114,24 +119,24 @@ export default function CallsBoard({
   });
 
   return (
-    <section className={styles.container}>
+    <section className={`${styles.container} ${panelStyles.page}`}>
       <div className={styles.content}>
         {/* =================================================
             PANEL DE LLAMADAS
             ================================================= */}
 
-        <section className={styles.listPanel} aria-label="Llamadas">
-          {/* HEADER */}
+        <section
+          className={`${panelStyles.panel} ${styles.listPanel}`}
+          aria-label="Llamadas"
+        >
+          {/* HEADER: the shared panel header (F4), also used by Historial and Disponibilidad. */}
 
-          <header className={styles.listHeader}>
-            <div className={styles.headerIcon}>
-              <Megaphone size={27} style={ICON_MIN_20} strokeWidth={1.9} />
-            </div>
-
-            <h1 className={styles.title}>Llamadas</h1>
-
-            <div className={styles.counter}>{orders.length}</div>
-          </header>
+          <PanelHeader
+            level={1}
+            icon={<Megaphone size={26} style={ICON_MIN_20} strokeWidth={1.9} />}
+            title="Llamadas"
+            aside={<PanelCounter>{orders.length}</PanelCounter>}
+          />
 
           {/* LISTA */}
 

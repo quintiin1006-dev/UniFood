@@ -8,175 +8,182 @@ import {
 } from "../presentation";
 import { AvailabilitySwitch } from "./AvailabilitySwitch";
 import { CategoryCarousel } from "./CategoryCarousel";
-import surfaces from "@/components/worker/surfaces.module.css";
+import {
+  PanelHeader,
+  panelStyles,
+} from "@/features/worker-ui/components/PanelHeader";
 import styles from "./Availability.module.css";
 import { Notice } from "@/components/ui/Notice";
 import { Button } from "@/components/ui/Button";
-import { ICON_MIN_20 } from "@/components/ui/Icon";
+import { Icon, ICON_MIN_20 } from "@/components/ui/Icon";
 
+/**
+ * Disponibilidad as ONE glass panel, like Llamadas (F1, F3): the shared header with the nav's
+ * switch icon (the module name appears once), the cafeteria as a row, and each category as a
+ * section of the same panel, all separated by thin dividers.
+ */
 export function AvailabilityPanel() {
   const state = useAvailability();
   const blocked = state.refreshing || state.error !== null;
-  return (
-    <section
-      className={styles.panel}
-      aria-labelledby="availability-title"
-      aria-busy={state.loading || state.refreshing}
+  // No automatic refresh here (only on window focus), so «Actualizar» stays (D2).
+  const refresh = state.data ? (
+    <button
+      type="button"
+      className={styles.refresh}
+      aria-label="Actualizar disponibilidad"
+      disabled={
+        state.refreshing || state.cafeteriaBusy || state.busyItems.length > 0
+      }
+      onClick={() => {
+        void state.refresh();
+      }}
     >
-      <div className={styles.titleRow}>
-        <div>
-          <h2 id="availability-title">Disponibilidad</h2>
-        </div>
-        {state.data && (
-          <button
-            type="button"
-            className={styles.refresh}
-            aria-label="Actualizar disponibilidad"
-            disabled={
-              state.refreshing ||
-              state.cafeteriaBusy ||
-              state.busyItems.length > 0
-            }
-            onClick={() => {
-              void state.refresh();
-            }}
-          >
-            <RefreshCw size={20} style={ICON_MIN_20} aria-hidden="true" />
-            <span>{state.refreshing ? "Actualizando…" : "Actualizar"}</span>
-          </button>
+      <RefreshCw size={20} style={ICON_MIN_20} aria-hidden="true" />
+      <span>{state.refreshing ? "Actualizando…" : "Actualizar"}</span>
+    </button>
+  ) : undefined;
+  return (
+    <div className={panelStyles.page}>
+      <section
+        className={`${panelStyles.panel} ${styles.panel}`}
+        aria-labelledby="availability-title"
+        aria-busy={state.loading || state.refreshing}
+      >
+        <PanelHeader
+          icon={<Icon name="disponibilidad" size={26} />}
+          title="Disponibilidad"
+          titleId="availability-title"
+          aside={refresh}
+        />
+        {state.loading && (
+          <div className={styles.loading} role="status">
+            <p>Cargando disponibilidad…</p>
+            <div className={styles.skeleton} aria-hidden="true" />
+            <div className={styles.skeleton} aria-hidden="true" />
+          </div>
         )}
-      </div>
-      {state.loading && (
-        <div className={styles.loading} role="status">
-          <p>Cargando disponibilidad…</p>
-          <div className={styles.skeleton} aria-hidden="true" />
-          <div className={styles.skeleton} aria-hidden="true" />
-        </div>
-      )}
-      {state.notice && (
-        <Notice tone="info" className={styles.message}>
-          {state.notice}
-        </Notice>
-      )}
-      {state.error && (
-        <Notice
-          tone="error"
-          className={styles.message}
-          action={
-            <Button
-              variant="secondary"
-              onClick={() => {
-                void state.refresh();
-              }}
-            >
-              Reintentar
-            </Button>
-          }
-        >
-          {state.error}
-        </Notice>
-      )}
-      {state.data && (
-        <>
-          <section
-            className={`${styles.cafeteriaState} ${surfaces.glass}`}
-            aria-labelledby="availability-cafeteria-name"
-            aria-busy={state.cafeteriaBusy}
-          >
-            <div className={styles.cafeteriaDetails}>
-              <h3
-                id="availability-cafeteria-name"
-                className={styles.cafeteriaName}
-              >
-                {state.data.cafeteria.name}
-              </h3>
-              <p className={styles.date}>
-                Hoy ·{" "}
-                <time dateTime={state.data.businessDate}>
-                  {formatBusinessDate(state.data.businessDate)}
-                </time>
-              </p>
-              <p className={styles.administrativeState}>
-                Estado administrativo
-                <span
-                  className={`${styles.badge} ${!state.data.cafeteria.active ? styles.inactiveBadge : ""}`}
+        {state.notice && (
+          <div className={panelStyles.section}>
+            <Notice tone="info">{state.notice}</Notice>
+          </div>
+        )}
+        {state.error && (
+          <div className={panelStyles.section}>
+            <Notice
+              tone="error"
+              action={
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    void state.refresh();
+                  }}
                 >
-                  {state.data.cafeteria.active ? "Activa" : "Inactiva"}
-                </span>
-              </p>
-              {!state.data.cafeteria.active && (
-                <p id="availability-inactive" className={styles.warning}>
-                  <CircleAlert
-                    size={20}
-                    style={ICON_MIN_20}
-                    aria-hidden="true"
-                  />
-                  <span>
-                    La cafetería está administrativamente inactiva. Puedes
-                    cerrar y deshabilitar productos; no abrir ni habilitar.
+                  Reintentar
+                </Button>
+              }
+            >
+              {state.error}
+            </Notice>
+          </div>
+        )}
+        {state.data && (
+          <>
+            <section
+              className={`${panelStyles.section} ${styles.cafeteriaState}`}
+              aria-labelledby="availability-cafeteria-name"
+              aria-busy={state.cafeteriaBusy}
+            >
+              <div className={styles.cafeteriaDetails}>
+                <h3
+                  id="availability-cafeteria-name"
+                  className={styles.cafeteriaName}
+                >
+                  {state.data.cafeteria.name}
+                </h3>
+                <p className={styles.date}>
+                  Hoy ·{" "}
+                  <time dateTime={state.data.businessDate}>
+                    {formatBusinessDate(state.data.businessDate)}
+                  </time>
+                  <span className={styles.administrativeState}>
+                    {" · "}Estado administrativo:{" "}
+                    <strong>
+                      {state.data.cafeteria.active ? "Activa" : "Inactiva"}
+                    </strong>
                   </span>
                 </p>
-              )}
-            </div>
-            <div className={styles.cafeteriaControl}>
-              <p className={styles.operationLabel}>Estado de la cafetería</p>
-              <AvailabilitySwitch
-                checked={state.data.cafeteria.open}
-                disabled={
-                  state.cafeteriaBusy ||
-                  blocked ||
-                  (!state.data.cafeteria.active && !state.data.cafeteria.open)
-                }
-                label="Apertura de cafetería"
-                text={state.data.cafeteria.open ? "ABIERTA" : "CERRADA"}
-                descriptionId={
-                  !state.data.cafeteria.active
-                    ? "availability-inactive"
-                    : "availability-cafeteria-feedback"
-                }
-                onChange={(value) => {
-                  void state.setCafeteria(value);
+                {!state.data.cafeteria.active && (
+                  <p id="availability-inactive" className={styles.warning}>
+                    <CircleAlert
+                      size={20}
+                      style={ICON_MIN_20}
+                      aria-hidden="true"
+                    />
+                    <span>
+                      La cafetería está administrativamente inactiva. Puedes
+                      cerrar y deshabilitar productos; no abrir ni habilitar.
+                    </span>
+                  </p>
+                )}
+              </div>
+              <div className={styles.cafeteriaControl}>
+                <AvailabilitySwitch
+                  checked={state.data.cafeteria.open}
+                  disabled={
+                    state.cafeteriaBusy ||
+                    blocked ||
+                    (!state.data.cafeteria.active && !state.data.cafeteria.open)
+                  }
+                  label="Apertura de cafetería"
+                  text={state.data.cafeteria.open ? "ABIERTA" : "CERRADA"}
+                  descriptionId={
+                    !state.data.cafeteria.active
+                      ? "availability-inactive"
+                      : "availability-cafeteria-feedback"
+                  }
+                  onChange={(value) => {
+                    void state.setCafeteria(value);
+                  }}
+                />
+                <p
+                  id="availability-cafeteria-feedback"
+                  className={styles.feedback}
+                  role={state.cafeteriaError ? "alert" : "status"}
+                >
+                  {state.cafeteriaBusy
+                    ? "Guardando…"
+                    : (state.cafeteriaError ?? "")}
+                </p>
+              </div>
+            </section>
+            {openWithoutAvailableProducts(state.data) && (
+              <div className={panelStyles.section}>
+                <p
+                  id="availability-open-without-products"
+                  className={styles.openWarning}
+                  role="status"
+                >
+                  <CircleAlert size={20} aria-hidden="true" />
+                  <span>{OPEN_WITHOUT_PRODUCTS_MESSAGE}</span>
+                </p>
+              </div>
+            )}
+            {state.data.categories.map((group) => (
+              <CategoryCarousel
+                key={group.category}
+                {...group}
+                cafeteriaActive={state.data!.cafeteria.active}
+                busyItems={state.busyItems}
+                blocked={blocked}
+                errors={state.itemErrors}
+                onChange={(id, value) => {
+                  void state.setItem(id, value);
                 }}
               />
-              <p className={styles.operationHelp}>
-                Controla la apertura para hoy.
-              </p>
-              <p
-                id="availability-cafeteria-feedback"
-                className={styles.feedback}
-                role={state.cafeteriaError ? "alert" : "status"}
-              >
-                {state.cafeteriaBusy
-                  ? "Guardando…"
-                  : (state.cafeteriaError ?? "")}
-              </p>
-            </div>
-          </section>
-          {openWithoutAvailableProducts(state.data) && (
-            <p
-              id="availability-open-without-products"
-              className={styles.openWarning}
-              role="status"
-            >
-              <CircleAlert size={20} aria-hidden="true" />
-              <span>{OPEN_WITHOUT_PRODUCTS_MESSAGE}</span>
-            </p>
-          )}
-          {state.data.categories.map((group) => (
-            <CategoryCarousel
-              key={group.category}
-              {...group}
-              cafeteriaActive={state.data!.cafeteria.active}
-              busyItems={state.busyItems}
-              blocked={blocked}
-              errors={state.itemErrors}
-              onChange={(id, value) => {
-                void state.setItem(id, value);
-              }}
-            />
-          ))}
-        </>
-      )}
-    </section>
+            ))}
+          </>
+        )}
+      </section>
+    </div>
   );
 }

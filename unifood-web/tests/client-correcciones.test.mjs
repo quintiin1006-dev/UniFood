@@ -158,13 +158,14 @@ test("the five worker modules use the same header, 64 px tall with a 40 px logo"
 test("Historial and Disponibilidad share the Pedidos surface, page and watermark", () => {
   const surfaces = read("components/worker/surfaces.module.css");
   assert.match(surfaces, /\.glass \{/);
+  assert.match(read("components/worker/KanbanBoard.tsx"), /surfaces\.glass/);
+  // jj/cliente-ajustes · F: Historial, Disponibilidad and Llamadas are one shared glass panel.
   for (const file of [
-    "components/worker/KanbanBoard.tsx",
     "features/worker-history/components/WorkerHistoryPanel.tsx",
     "features/availability/components/AvailabilityPanel.tsx",
-    "features/availability/components/CategoryCarousel.tsx",
+    "components/worker/CallsBoard.tsx",
   ])
-    assert.match(read(file), /surfaces\.glass/, file);
+    assert.match(read(file), /panelStyles\.panel/, file);
   const page = read("components/worker/WorkerDashboard.module.css");
   assert.match(page, /\.brandedPage:global\(\.worker-page\)/);
   const opacity = Number(
@@ -188,7 +189,7 @@ test("Historial and Disponibilidad share the Pedidos surface, page and watermark
   // Fields stay solid white.
   assert.match(
     history,
-    /\.filters select \{[^}]*background: var\(--color-surface\)/,
+    /\.filter select \{[^}]*background: var\(--color-surface\)/,
   );
   assert.match(history, /\.search \{[^}]*background: var\(--color-surface\)/);
 });

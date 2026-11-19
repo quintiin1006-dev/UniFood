@@ -5,12 +5,20 @@ import { useWorkerHistory } from "../useWorkerHistory";
 import { formatDayDate, formatShortRange } from "../presentation";
 import { HistoryOrderRow } from "./HistoryOrderRow";
 import type { HistoryRange, HistoryStatus } from "../types";
-import surfaces from "@/components/worker/surfaces.module.css";
+import {
+  PanelHeader,
+  panelStyles,
+} from "@/features/worker-ui/components/PanelHeader";
 import styles from "./WorkerHistory.module.css";
 import { Notice } from "@/components/ui/Notice";
 import { Button, buttonClass } from "@/components/ui/Button";
-import { ICON_MIN_20 } from "@/components/ui/Icon";
+import { Icon, ICON_MIN_20 } from "@/components/ui/Icon";
 
+/**
+ * Historial as ONE glass panel, like Llamadas (F1, F2): the shared header with the nav's clock
+ * icon and the day as subtitle, the filters in one row, then the rows, all separated by thin
+ * dividers inside the same panel.
+ */
 export function WorkerHistoryPanel() {
   const state = useWorkerHistory();
   const searchInput = useRef<HTMLInputElement>(null);
@@ -20,209 +28,212 @@ export function WorkerHistoryPanel() {
   };
   const denied = state.error?.status === 401 || state.error?.status === 403;
   return (
-    <section
-      className={styles.panel}
-      aria-labelledby="worker-history-title"
-      aria-busy={state.loading || state.refreshing || state.loadingMore}
-    >
-      <div className={styles.heading}>
-        <div>
-          <h2 id="worker-history-title">Historial</h2>
-          {state.data && (
-            <p className={styles.date}>
-              {formatDayDate(state.data.businessDate)}
-            </p>
-          )}
-        </div>
-        {state.data && !state.error && (
-          <button
-            className={styles.refresh}
-            type="button"
-            disabled={state.refreshing || state.loadingMore}
-            onClick={() => void state.refresh()}
-            aria-label="Actualizar historial"
-          >
-            <RefreshCw size={20} style={ICON_MIN_20} aria-hidden="true" />
-            <span>{state.refreshing ? "Actualizando…" : "Actualizar"}</span>
-          </button>
-        )}
-      </div>
-      <div
-        className={styles.search}
-        role="search"
-        aria-label="Buscar en el historial del mes"
+    <div className={panelStyles.page}>
+      <section
+        className={`${panelStyles.panel} ${styles.panel}`}
+        aria-labelledby="worker-history-title"
+        aria-busy={state.loading || state.refreshing || state.loadingMore}
       >
-        <label htmlFor="worker-history-search" className={styles.srOnly}>
-          Buscar por pedido, cliente, estado o producto
-        </label>
-        <Search size={20} style={ICON_MIN_20} aria-hidden="true" />
-        <input
-          id="worker-history-search"
-          ref={searchInput}
-          type="search"
-          maxLength={120}
-          placeholder="Buscar por pedido, cliente, estado o producto"
-          autoComplete="off"
-          value={state.query}
-          onChange={(event) => state.setQuery(event.target.value)}
-        />
-        {state.query.length > 0 && (
-          <button
-            type="button"
-            aria-label="Limpiar búsqueda"
-            onClick={clearSearch}
-          >
-            <X size={17} aria-hidden="true" />
-          </button>
-        )}
-      </div>
-      <div className={styles.filters}>
-        <label>
-          Período
-          <select
-            aria-label="Período del historial"
-            value={state.range}
-            onChange={(event) =>
-              state.setRange(event.target.value as HistoryRange)
-            }
-          >
-            <option value="MONTH">Mes actual</option>
-            <option value="WEEK">Esta semana</option>
-            <option value="TODAY">Hoy</option>
-          </select>
-        </label>
-        <label>
-          Estado
-          <select
-            aria-label="Estado del historial"
-            value={state.status}
-            onChange={(event) =>
-              state.setStatus(event.target.value as HistoryStatus | "")
-            }
-          >
-            <option value="">Todos los estados</option>
-            <option value="DELIVERED">Entregado</option>
-            <option value="NOT_COLLECTED">No recogido</option>
-            <option value="CANCELLED">Cancelado</option>
-          </select>
-        </label>
-        {state.data && (
-          <span className={styles.range}>
-            {formatShortRange(state.data.rangeStart, state.data.rangeEnd)}
-          </span>
-        )}
-      </div>
-      {state.loading && (
-        <div className={styles.loading} role="status">
-          <p>Cargando historial…</p>
-          <div className={styles.skeletons} aria-hidden="true">
-            <div />
-            <div />
-            <div />
-          </div>
-        </div>
-      )}
-      {state.error && (
-        <Notice
-          tone="error"
-          className={styles.message}
-          action={
-            state.error.status === 401 ? (
-              <a className={buttonClass("secondary")} href="/panel/login">
-                Iniciar sesión
-              </a>
-            ) : (
-              !denied && (
-                <Button
-                  variant="secondary"
-                  disabled={
-                    state.loading || state.refreshing || state.loadingMore
-                  }
-                  onClick={() => void state.refresh()}
-                >
-                  {state.loading || state.refreshing
-                    ? "Reintentando…"
-                    : "Reintentar"}
-                </Button>
-              )
-            )
+        <PanelHeader
+          icon={<Icon name="historial" size={26} />}
+          title="Historial"
+          titleId="worker-history-title"
+          subtitle={
+            state.data ? formatDayDate(state.data.businessDate) : undefined
           }
-        >
-          <p>{state.error.message}</p>
-          {state.data && (
-            <p className={styles.stale}>
-              Datos de la última consulta. Actualiza para confirmar el
-              historial.
-            </p>
-          )}
-        </Notice>
-      )}
-      {state.data && !state.loading && (
-        <>
-          {!state.data.orders.length ? (
-            <div className={`${styles.empty} ${surfaces.glass}`} role="status">
-              <span className={styles.emptyIcon}>
-                {state.data.hasHistory ? (
-                  <Search size={26} aria-hidden="true" />
-                ) : (
-                  <History size={26} aria-hidden="true" />
-                )}
-              </span>
-              <h3>
-                {state.data.hasHistory
-                  ? "No encontramos pedidos que coincidan con los filtros."
-                  : "Aún no hay pedidos finalizados este mes."}
-              </h3>
-              {state.data.hasHistory ? (
-                <button
-                  className={styles.refresh}
-                  type="button"
-                  onClick={() => {
-                    state.clearFilters();
-                    searchInput.current?.focus();
-                  }}
-                >
-                  Limpiar filtros
-                </button>
-              ) : (
-                <p>
-                  Los pedidos entregados, no recogidos y cancelados aparecerán
-                  aquí.
-                </p>
-              )}
-            </div>
-          ) : (
-            <div
-              className={`${styles.list} ${surfaces.glass}`}
-              aria-label="Pedidos finalizados"
-              aria-busy={state.refreshing}
-            >
-              {state.data.orders.map((order) => (
-                <HistoryOrderRow key={order.id} order={order} />
-              ))}
-            </div>
-          )}
-          {state.data.nextCursor && (
-            <div className={styles.pagination}>
+          aside={
+            state.data && !state.error ? (
               <button
                 className={styles.refresh}
                 type="button"
-                onClick={() => void state.loadMore()}
-                disabled={state.loadingMore || state.refreshing}
+                disabled={state.refreshing || state.loadingMore}
+                onClick={() => void state.refresh()}
+                aria-label="Actualizar historial"
               >
-                {state.loadingMore ? "Cargando…" : "Cargar más"}
+                <RefreshCw size={20} style={ICON_MIN_20} aria-hidden="true" />
+                <span>{state.refreshing ? "Actualizando…" : "Actualizar"}</span>
               </button>
-            </div>
+            ) : undefined
+          }
+        />
+        <div className={`${panelStyles.section} ${styles.filters}`}>
+          <div
+            className={styles.search}
+            role="search"
+            aria-label="Buscar en el historial del mes"
+          >
+            <label htmlFor="worker-history-search" className={styles.srOnly}>
+              Buscar por pedido, cliente, estado o producto
+            </label>
+            <Search size={20} style={ICON_MIN_20} aria-hidden="true" />
+            <input
+              id="worker-history-search"
+              ref={searchInput}
+              type="search"
+              maxLength={120}
+              placeholder="Buscar por pedido, cliente, estado o producto"
+              autoComplete="off"
+              value={state.query}
+              onChange={(event) => state.setQuery(event.target.value)}
+            />
+            {state.query.length > 0 && (
+              <button
+                type="button"
+                aria-label="Limpiar búsqueda"
+                onClick={clearSearch}
+              >
+                <X size={20} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+          <label className={styles.filter}>
+            <span className={styles.srOnly}>Período</span>
+            <select
+              aria-label="Período del historial"
+              value={state.range}
+              onChange={(event) =>
+                state.setRange(event.target.value as HistoryRange)
+              }
+            >
+              <option value="MONTH">Mes actual</option>
+              <option value="WEEK">Esta semana</option>
+              <option value="TODAY">Hoy</option>
+            </select>
+          </label>
+          <label className={styles.filter}>
+            <span className={styles.srOnly}>Estado</span>
+            <select
+              aria-label="Estado del historial"
+              value={state.status}
+              onChange={(event) =>
+                state.setStatus(event.target.value as HistoryStatus | "")
+              }
+            >
+              <option value="">Todos los estados</option>
+              <option value="DELIVERED">Entregado</option>
+              <option value="NOT_COLLECTED">No recogido</option>
+              <option value="CANCELLED">Cancelado</option>
+            </select>
+          </label>
+          {state.data && (
+            <span className={styles.range}>
+              {formatShortRange(state.data.rangeStart, state.data.rangeEnd)}
+            </span>
           )}
-        </>
-      )}
-      <span className={styles.srOnly} role="status">
-        {state.refreshing
-          ? "Actualizando historial…"
-          : state.loadingMore
-            ? "Cargando más pedidos…"
-            : ""}
-      </span>
-    </section>
+        </div>
+        {state.loading && (
+          <div className={styles.loading} role="status">
+            <p>Cargando historial…</p>
+            <div className={styles.skeletons} aria-hidden="true">
+              <div />
+              <div />
+              <div />
+            </div>
+          </div>
+        )}
+        {state.error && (
+          <div className={panelStyles.section}>
+            <Notice
+              tone="error"
+              action={
+                state.error.status === 401 ? (
+                  <a className={buttonClass("secondary")} href="/panel/login">
+                    Iniciar sesión
+                  </a>
+                ) : (
+                  !denied && (
+                    <Button
+                      variant="secondary"
+                      disabled={
+                        state.loading || state.refreshing || state.loadingMore
+                      }
+                      onClick={() => void state.refresh()}
+                    >
+                      {state.loading || state.refreshing
+                        ? "Reintentando…"
+                        : "Reintentar"}
+                    </Button>
+                  )
+                )
+              }
+            >
+              <p>{state.error.message}</p>
+              {state.data && (
+                <p className={styles.stale}>
+                  Datos de la última consulta. Actualiza para confirmar el
+                  historial.
+                </p>
+              )}
+            </Notice>
+          </div>
+        )}
+        {state.data && !state.loading && (
+          <>
+            {!state.data.orders.length ? (
+              <div className={styles.empty} role="status">
+                <span className={styles.emptyIcon}>
+                  {state.data.hasHistory ? (
+                    <Search size={26} aria-hidden="true" />
+                  ) : (
+                    <History size={26} aria-hidden="true" />
+                  )}
+                </span>
+                <h3>
+                  {state.data.hasHistory
+                    ? "No encontramos pedidos que coincidan con los filtros."
+                    : "Aún no hay pedidos finalizados este mes."}
+                </h3>
+                {state.data.hasHistory ? (
+                  <button
+                    className={styles.refresh}
+                    type="button"
+                    onClick={() => {
+                      state.clearFilters();
+                      searchInput.current?.focus();
+                    }}
+                  >
+                    Limpiar filtros
+                  </button>
+                ) : (
+                  <p>
+                    Los pedidos entregados, no recogidos y cancelados aparecerán
+                    aquí.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div
+                className={styles.list}
+                aria-label="Pedidos finalizados"
+                aria-busy={state.refreshing}
+              >
+                {state.data.orders.map((order) => (
+                  <HistoryOrderRow key={order.id} order={order} />
+                ))}
+              </div>
+            )}
+            {state.data.nextCursor && (
+              <div className={styles.pagination}>
+                <button
+                  className={styles.refresh}
+                  type="button"
+                  onClick={() => void state.loadMore()}
+                  disabled={state.loadingMore || state.refreshing}
+                >
+                  {state.loadingMore ? "Cargando…" : "Cargar más"}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+        <span className={styles.srOnly} role="status">
+          {state.refreshing
+            ? "Actualizando historial…"
+            : state.loadingMore
+              ? "Cargando más pedidos…"
+              : ""}
+        </span>
+      </section>
+    </div>
   );
 }

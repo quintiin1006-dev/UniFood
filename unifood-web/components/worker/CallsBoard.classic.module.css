@@ -4,15 +4,8 @@
 
 .container {
   flex: 1;
-
   min-height: 0;
-
-  width: 100%;
-
-  padding: 18px 24px;
-
   background: transparent;
-
   color: #ffffff;
 }
 
@@ -40,107 +33,14 @@
 
 .listPanel {
   min-height: 0;
-
   display: flex;
   flex-direction: column;
-
   overflow: hidden;
-
-  /*
-   * Contenedor principal.
-   */
-  border-radius: 23px;
-
-  border: 1px solid rgba(255, 255, 255, 0.18);
-
-  /*
-   * Se mantiene el efecto
-   * transparente original.
-   */
-  background: rgba(35, 110, 190, 0.38);
-
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 10px 28px rgba(0, 35, 85, 0.12);
-
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
 
 /* =========================================================
    HEADER DE LLAMADAS
    ========================================================= */
-
-.listHeader {
-  height: 76px;
-
-  flex-shrink: 0;
-
-  display: flex;
-  align-items: center;
-
-  gap: 13px;
-
-  padding: 11px 18px;
-
-  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
-
-  background: rgba(40, 125, 210, 0.28);
-}
-
-.headerIcon {
-  width: 50px;
-  height: 50px;
-
-  flex-shrink: 0;
-
-  display: grid;
-  place-items: center;
-
-  border-radius: 15px;
-
-  color: #ffffff;
-
-  background: rgba(255, 255, 255, 0.09);
-
-  border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.title {
-  flex: 1;
-
-  margin: 0;
-
-  color: #ffffff;
-
-  font-size: 20px;
-  font-weight: 700;
-
-  line-height: 1.1;
-
-  letter-spacing: -0.02em;
-}
-
-.counter {
-  width: 44px;
-  height: 44px;
-
-  flex-shrink: 0;
-
-  display: grid;
-  place-items: center;
-
-  border-radius: 999px;
-
-  color: #ffffff;
-
-  font-size: 14px;
-  font-weight: 600;
-
-  background: rgba(255, 255, 255, 0.25);
-
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
 
 /* =========================================================
    LISTA
@@ -1193,30 +1093,8 @@
    ========================================================= */
 
 @media (max-width: 600px) {
-  .container {
-    padding: 10px;
-  }
-
   .content {
     gap: 12px;
-  }
-
-  .listHeader {
-    height: 68px;
-  }
-
-  .headerIcon {
-    width: 42px;
-    height: 42px;
-  }
-
-  .title {
-    font-size: 20px;
-  }
-
-  .counter {
-    width: 40px;
-    height: 40px;
   }
 
   .orderRow {
