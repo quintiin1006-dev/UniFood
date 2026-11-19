@@ -44,7 +44,7 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
 | Carta con la cafetería cerrada (Q7) | Solo lectura, con el aviso `CLOSED_NOTICE` y el botón deshabilitado, igual que el catálogo |
 | Cronograma (rev. 4, Q1) | Opción (a): el 25 se cumple para el mínimo (PR 1, 2, 5, 3). Orden 1→2→5→3→7→C→4→6→8, detrás de `MENU_DINAMICO_ENABLED`. Lo que no esté estable el 25 se apaga |
 | Pedidos de ayer (Q2, Q3 y Q7) | Cierre a medianoche prioritario. PR C como corrección después del freeze del 21 y antes del PR 4. Staging autorizado; producción requiere OK aparte. El dueño revisa la configuración en Render |
-| Precios (Q6, pendiente) | No bloquean. Staging usa los precios de ejemplo; el dueño los cambiará después, y las ediciones definitivas irán en el panel admin (PR 9) |
+| Precios (Q6, resuelta) | El admin los define en el panel (PR 9). Staging usa valores de ejemplo |
 | Orden en Inicio (Q8) | Selector de cafetería, carrusel de banners, filtros de categorías (Todo, Desayunos…), carta «Menú del día», secciones de productos. «Categorías» son los filtros, no el selector |
 | Precio de adición | Cambia en su siguiente encendido |
 | Categorías del admin | Se desactivan, no se borran (fase admin) |
@@ -52,7 +52,9 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
 | Ubicación | Bloque dentro de Inicio, entre las categorías y las secciones de productos (sustituye al letrero) |
 | Sin precio configurado | Aviso al worker; publicar deshabilitado; el cliente no ve nada |
 | Quién publica | Solo el worker. La plantilla de categorías queda fija hasta la fase admin |
-| Panel admin (PR 9) | Después de la demo |
+| Panel admin (PR 9) | Requisito antes del piloto de febrero: sin él el admin no puede crear adiciones ni fijar precios. Va después de la demo |
+| Precios (Q6, resuelta) | El admin los define en el panel (PR 9). Staging usa valores de ejemplo (9.500 el plato; 2.000 y 3.000 las adiciones). Hasta el panel, cambios con SQL controlado en staging |
+| Pulido del cliente (nota) | Existe un PR aparte, `jj/cliente-pulido` (otra sesión). Va antes de todo este plan y no cambia su orden. No es un PR de este plan |
 
 ---
 
@@ -79,7 +81,7 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
 
 | Entra en la demo (si cabe el 25)                                                                                       | Se aplaza                                                                 |
 | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Migración 030 y siembra en staging (plato, 4 categorías de una opción, Adiciones, adiciones de ejemplo; sección 2.7)                             | Pantalla de administración del menú (PR 9, después de la demo)            |
+| Migración 030 y siembra en staging (plato, 4 categorías de una opción, Adiciones, adiciones de ejemplo; sección 2.7)                             | Pantalla de administración del menú (PR 9; requisito antes del piloto de febrero) |
 | Lectura del menú para el cliente: carta en Inicio                                                                    | Varios platos por pedido                                                  |
 | Backend del worker: escribir ingredientes, encender adiciones, publicar, copiar ayer                                  | Ingredientes desde un catálogo reutilizable (hoy son texto libre)         |
 | Worker: editor de ingredientes en Disponibilidad y botón de publicar                                                  | Historial del menú para el cliente                                        |
@@ -577,7 +579,7 @@ Rutas nuevas bajo `/api/me` y `/api/worker` (y `/api/admin` en fase 9), con el e
 | `POST /api/worker/daily-menu/today/copy-yesterday` | WORKER | Copia las opciones de ayer solo a categorías vacías hoy | PR 3 |
 | `POST /api/worker/daily-menu/today/publish` | WORKER | Publica si está completo; congela título y precio | PR 3 |
 | `POST /api/worker/daily-menu/today/unpublish` | WORKER | Oculta el menú para pedidos nuevos; los pedidos en curso no cambian | PR 3 |
-| `GET/PUT /api/admin/daily-menu/...` | ADMIN | Plato, categorías y adiciones | PR 9 (después de la demo) |
+| `GET/PUT /api/admin/daily-menu/...` | ADMIN | Plato, precios, categorías y adiciones | PR 9 (requisito antes del piloto de febrero) |
 
 Todas las escrituras del worker llevan `expectedVersion`. El servicio bloquea la cabecera del día con
 `FOR UPDATE`, compara la versión y la incrementa. Si no coincide, responde 409
@@ -929,10 +931,10 @@ paso deje la app en un estado usable** y para que, si hay que recortar, se sepa 
 | 6 | `menu-dia-carrito` | Web: `MenuLine`, `validateCart`, `CartLineItem`, checkout, `orderForward` | 2 d | El cliente no puede pedir el menú |
 | C | `cierre-diario-medianoche` | Cierre de pedidos de días anteriores (sección 8): `pg_cron` a medianoche de Bogotá en staging, respaldo en Spring con `WARN` con conteo y, opcional, aviso al worker. Entra después del freeze del 21 como corrección (Q7) y antes del PR 4 | 1 d | Pedidos de ayer siguen activos y bloquean al cliente |
 | 8 | `menu-dia-ver-pedido` | Web: `DailyMenuSummary` en la tarjeta del worker y en «Mi pedido» | 1 d | El worker no ve la elección |
-| 9 | `menu-dia-admin` | Panel admin: plato, categorías, adiciones | 3 d | Después de la demo |
+| 9 | `menu-dia-admin` | Panel admin: plato, precios, categorías, adiciones. Requisito antes del piloto de febrero | 3 d | Adiciones y precios solo por SQL en staging |
 
 El orden de ejecución es **1 → 2 → 5 → 3 → 7 → C → 4 → 6 → 8**, detrás de `MENU_DINAMICO_ENABLED` (Q1).
-El «PR de pulido» (Q8) no aparece en este orden; si existe y debe ir antes de C, se decide con el dueño.
+El PR de pulido del cliente (`jj/cliente-pulido`, otra sesión) va antes de todo este plan y no cambia el orden.
 El PR 5 va antes que el 3 para que el cliente vea el menú cuanto antes y la lectura se pruebe sin
 esperar al worker. El PR C va antes del 4 porque un pedido de ayer activo bloquea al cliente, y eso también afecta a los
 pedidos con menú.
@@ -978,7 +980,7 @@ por API o SQL, no por pantalla; **nadie puede pedir el menú**.
 1. PR 4 y PR 6: el pedido con menú y el carrito. Sin ellos la demo no muestra el flujo de compra.
 2. PR 7: el editor del worker. Publicar sigue funcionando por API o SQL.
 3. PR 8: la elección en el pedido.
-4. PR 9: admin (ya estaba después de la demo).
+4. PR 9: admin. No se recorta: es requisito antes del piloto de febrero.
 
 **Si el 25 es innegociable para el flujo completo:** la fecha realista del menú completo con una
 sesión es **~6 de diciembre** (18 días a partir del 19, incluido el PR C de 1 día). Eso deja el 28 de noviembre con la demo sin
@@ -1099,10 +1101,12 @@ staging y se muestra el comando exacto antes de ejecutarlo.
 
 ## 9. Preguntas abiertas
 
-Todas las respuestas del dueño están en la tabla de decisiones de arriba. Quedan dos preguntas:
+**Sin preguntas abiertas.** Todas las respuestas del dueño están en la tabla de decisiones de arriba.
 
-**Q6. Precios reales (pendiente, no bloquea).** Staging usa los precios de ejemplo (9.500 el plato; 2.000 y
-3.000 las adiciones). El dueño los cambiará después; las ediciones definitivas irán en el panel admin (PR 9).
-
-**Q8. «PR de pulido».** No aparece en el orden final 1→2→5→3→7→C→4→6→8. ¿Qué PR es y debe ir antes de C?
+Resueltas en el cierre final:
+- **Precios:** los define el admin en el panel (PR 9). La siembra de staging solo pone valores de ejemplo
+  (9.500 el plato; 2.000 y 3.000 las adiciones). Hasta que exista el panel, cualquier cambio de precio se
+  hace con SQL controlado en staging.
+- **PR de pulido:** existe un PR aparte de pulido del cliente (rama `jj/cliente-pulido`, otra sesión). Va
+  antes de todo este plan y no cambia su orden. No es un PR de este plan.
 
