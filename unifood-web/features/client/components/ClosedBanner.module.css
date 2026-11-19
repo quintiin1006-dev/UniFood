@@ -1,11 +1,14 @@
 /* Same box as the carousel card (FeaturedCarousel: radius 22 px, at least 190 px tall). */
 .banner {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
   min-height: 190px;
-  padding: 22px 24px 28px;
+  padding: 22px 24px 26px;
   border-radius: 22px;
   color: var(--color-on-color);
   background: linear-gradient(
@@ -14,13 +17,94 @@
     var(--color-brand-navy) 100%
   );
 }
+
+/* The quiet scene: translucent, behind the text, slow. */
+.scene {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  opacity: 0.3;
+}
+.stroke {
+  fill: none;
+  stroke: var(--color-on-color);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.fill {
+  fill: var(--color-on-color);
+}
+.hourHand,
+.minuteHand {
+  /* Each hand turns around its base, the centre of the clock. */
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+.hourHand {
+  animation: turn 12s linear infinite;
+}
+.minuteHand {
+  animation: turn 6s linear infinite;
+}
+.steam,
+.steamLate {
+  fill: none;
+  stroke: var(--color-on-color);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  opacity: 0;
+  animation: steam 6s ease-in-out infinite;
+}
+.steamLate {
+  animation-delay: 3s;
+}
+.float {
+  animation: float 8s ease-in-out infinite;
+}
+.zed {
+  fill: var(--color-on-color);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+@keyframes turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes steam {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
 .icon {
   display: grid;
   place-items: center;
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
   margin-bottom: auto;
-  border-radius: 20px;
+  border-radius: 18px;
   background: rgb(255 255 255 / 16%);
 }
 .title {
@@ -35,4 +119,18 @@
   font-size: 16px;
   font-weight: 600;
   line-height: 1.4;
+}
+
+/* Reduced motion: the same drawing, still. */
+@media (prefers-reduced-motion: reduce) {
+  .hourHand,
+  .minuteHand,
+  .float {
+    animation: none;
+  }
+  .steam,
+  .steamLate {
+    animation: none;
+    opacity: 1;
+  }
 }

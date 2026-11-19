@@ -11,6 +11,7 @@ import {
   CANCEL_DIALOG_BODY,
   CANCEL_DIALOG_TITLE,
   CANCEL_KEEP,
+  CLIENT_ORDER_CALLED_TITLE,
   CLIENT_ORDER_CANCEL,
   CLIENT_ORDER_CASH_NOTE,
   CLIENT_ORDER_NAME_LABEL,
@@ -108,14 +109,26 @@ export default function OrderBoard({
         <p className={styles.statusDetail}>{line.detail}</p>
 
         {ready && (
-          <div className={styles.readyNotice}>
-            <p className={styles.readyTitle}>{CLIENT_ORDER_READY_TITLE}</p>
-            {studentName && (
-              <p className={styles.readyCode}>
-                <span>{CLIENT_ORDER_NAME_LABEL}</span>
-                <strong className={styles.readyName}>{studentName}</strong>
+          <div className={styles.readyNotice} data-status={order.status}>
+            {/* The kitchen bell with a soft halo that pulses twice on arrival. */}
+            <span className={styles.readyIcon} aria-hidden="true">
+              <Icon name="mi-pedido" size={28} />
+            </span>
+            <div className={styles.readyText}>
+              <p className={styles.readyTitle}>
+                {order.status === "CALLED"
+                  ? CLIENT_ORDER_CALLED_TITLE
+                  : CLIENT_ORDER_READY_TITLE}
               </p>
-            )}
+              {studentName && (
+                <p className={styles.readyStudent}>
+                  <span className={styles.srOnly}>
+                    {CLIENT_ORDER_NAME_LABEL}:{" "}
+                  </span>
+                  {studentName}
+                </p>
+              )}
+            </div>
           </div>
         )}
       </section>

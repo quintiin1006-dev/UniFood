@@ -371,7 +371,14 @@ test("cart editing respects the 10-unit limit and swiping reveals an explicit de
     name: "Aumentar cantidad de Pechuga a la plancha",
   });
   for (let count = 1; count < 10; count++) await increase.click();
-  await expect(increase).toBeDisabled();
+  // At the limit «+» stays usable and shows a 3 s notice instead.
+  await increase.click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Máximo 10 por producto" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("status", { name: "Cantidad de Pechuga a la plancha" }),
+  ).toHaveText("10");
   await page
     .getByRole("button", { name: "Reducir cantidad de Pechuga a la plancha" })
     .click();

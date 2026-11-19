@@ -1,48 +1,123 @@
-/* Ola 2 · D5: the «+» on a product card. Circle 40 px; press sinks 3 %. */
-.add,
-.step {
+/* «+» and «− n +» on a product card (jj/cliente-agregar). Every target is 44 × 44 px; what is
+   drawn inside is a 36 px circle, so the control never grows past 44 px and the card does not
+   move when «+» becomes «− n +». */
+.root {
+  position: relative;
+  display: inline-flex;
+}
+
+.target {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--color-brand);
+  background: transparent;
   color: var(--color-on-color);
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.face {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
   transition:
     transform var(--motion-press) var(--ease-soft),
     background-color var(--motion-press) var(--ease-soft);
 }
+.face > svg {
+  grid-area: 1 / 1;
+}
 
-.add:hover,
-.step:hover {
+.target:hover .face {
   background: var(--color-brand-hover);
 }
-
-.add:active,
-.step:active {
-  transform: scale(0.97);
+.target:active .face {
+  transform: scale(0.94);
+}
+.target:focus-visible {
+  outline: none;
+}
+.target:focus-visible .face {
+  outline: 3px solid var(--color-brand-navy);
+  outline-offset: 2px;
 }
 
+/* The ring: a circle drawn clockwise from the top in 600 ms, then the check appears. */
+.ring {
+  position: absolute;
+  inset: 0;
+  width: 44px;
+  height: 44px;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+.ring circle {
+  fill: none;
+  stroke: var(--color-brand-celeste);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: draw-ring 600ms var(--ease-soft) forwards;
+}
+.checkIcon {
+  opacity: 0;
+  animation: check-in 140ms ease-out 460ms forwards;
+}
+.target[data-ringing] .plusIcon {
+  animation: plus-out 140ms ease-out 460ms forwards;
+}
+
+@keyframes draw-ring {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes check-in {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes plus-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* «− n +»: 44 px tall at most, the two drawn buttons 36 px. */
 .stepper {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px;
+  height: 44px;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-pill);
   background: var(--color-surface);
 }
-
 .count {
-  min-width: 28px;
+  min-width: 24px;
   text-align: center;
   color: var(--color-ink);
   font-size: 16px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   animation: pop var(--motion-press) var(--ease-soft);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .blocked {
@@ -64,18 +139,22 @@
   }
 }
 
+/* Reduced motion: no ring, a still check for the same 600 ms. */
 @media (prefers-reduced-motion: reduce) {
-  .add,
-  .step {
-    transition: none;
+  .ring {
+    display: none;
   }
-
-  .add:active,
-  .step:active {
-    transform: none;
-  }
-
-  .count {
+  .checkIcon {
+    opacity: 1;
     animation: none;
+  }
+  .target[data-ringing] .plusIcon {
+    opacity: 0;
+    animation: none;
+  }
+  .count,
+  .face {
+    animation: none;
+    transition: none;
   }
 }

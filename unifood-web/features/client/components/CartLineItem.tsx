@@ -5,8 +5,13 @@ import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import type { CafeteriaMenu, CartLine, MenuProduct } from "../types";
 import { currency } from "../domain/catalog";
-import { CLOSED_MESSAGE, maxQuantity } from "../domain/cart";
-import { CART_LINE_UNAVAILABLE } from "../../shared/messages";
+import { CLOSED_MESSAGE, MAX_PER_PRODUCT, maxQuantity } from "../domain/cart";
+import {
+  CART_LINE_UNAVAILABLE,
+  LIMIT_PER_ORDER,
+  LIMIT_PER_PRODUCT,
+} from "../../shared/messages";
+import { useLimitNotice } from "../hooks/useLimitNotice";
 import { productHref } from "../domain/menu";
 import { useClientCart } from "./ClientCartProvider";
 import ProductPlaceholder from "./ProductPlaceholder";
@@ -35,8 +40,8 @@ export default function CartLineItem({
       : !product.available
         ? CART_LINE_UNAVAILABLE
         : null;
-  const canIncrease =
-    !blocker && line.quantity < maxQuantity(cart, line.productId);
+  const limit = useLimitNotice();
+  const atLimit = line.quantity >= maxQuantity(cart, line.productId);
   return (
     <li
       className={`${styles.cartLine} ${cartStyles.item}`}
@@ -75,6 +80,11 @@ export default function CartLineItem({
           <strong>{currency.format(product.price * line.quantity)}</strong>
         )}
         {blocker && <small>{blocker}</small>}
+        {limit.message && (
+          <small className={styles.limitNotice} role="status">
+            {limit.message}
+          </small>
+        )}
       </div>
       <button
         type="button"
@@ -102,8 +112,17 @@ export default function CartLineItem({
           <button
             type="button"
             aria-label={`Aumentar cantidad de ${name}`}
-            disabled={!canIncrease}
-            onClick={() => update(menu, line.productId, line.quantity + 1)}
+            // Not disabled at the limit: a tap there explains it for 3 s.
+            disabled={!!blocker}
+            onClick={() => {
+              if (atLimit)
+                limit.show(
+                  line.quantity >= MAX_PER_PRODUCT
+                    ? LIMIT_PER_PRODUCT
+                    : LIMIT_PER_ORDER,
+                );
+              else update(menu, line.productId, line.quantity + 1);
+            }}
           >
             <Plus size={17} aria-hidden="true" />
           </button>
