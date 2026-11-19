@@ -111,7 +111,10 @@ export const RECOVERY_SEND = "Enviar código de verificación";
 export const recoverySendTo = (email: string) =>
   `Enviaremos un código de verificación a ${email}.`;
 export const RECOVERY_STEP_TWO_NOTE =
-  "Escribe el código que te llegó y tu nueva contraseña.";
+  "Escribe el código de 6 dígitos que te llegó al correo.";
+export const RECOVERY_STEP_THREE_NOTE =
+  "Código verificado. Ahora crea tu nueva contraseña.";
+export const RECOVERY_VERIFY = "Verificar código";
 export const RECOVERY_CODE_LABEL = "Código de verificación";
 export const RECOVERY_NEW_PASSWORD = "Nueva contraseña";
 export const RECOVERY_CONFIRM_PASSWORD = "Confirmar nueva contraseña";

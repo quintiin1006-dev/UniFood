@@ -41,9 +41,9 @@ test("step 1: «Cambiar contraseña», the known address and only «Enviar códi
   assert.match(source, /recoverySendTo\(email\)/);
   // No automatic sending: the button sends the code.
   assert.doesNotMatch(source, /await sendRecoveryCode\(handed\)/);
-  // The code and the password belong to step 2 only.
-  assert.match(source, /const isPassword = isRecovery && step === 1;/);
+  // Three steps: the code alone is step 2, the new password is step 3.
   assert.match(source, /const isOtp = !isLogin && step === 1;/);
+  assert.match(source, /const isPassword = isRecovery && step === 2;/);
 });
 
 test("sending shows a 5 s toast with the same generic text for every address", () => {
@@ -65,8 +65,14 @@ test("sending shows a 5 s toast with the same generic text for every address", (
   );
 });
 
-test("step 2: code (6 digits, numeric, one-time-code), new password, confirmation and a 30 s resend", () => {
+test("step 2: only the code (6 digits, numeric, one-time-code), «Verificar código» and a 30 s resend; step 3: the new password", () => {
   const source = screen();
+  assert.equal(messages.RECOVERY_VERIFY, "Verificar código");
+  assert.match(source, /isRecovery\s*\?\s*RECOVERY_VERIFY/);
+  // The code is verified on its own, before any password is asked.
+  assert.doesNotMatch(source, /isOtp && isRecovery/);
+  // A reset refused for a lost code session returns to step 2.
+  assert.match(source, /failure\.status === 401\) \{\s*setStep\(1\);/);
   assert.match(source, /autoComplete="one-time-code"/);
   assert.match(source, /inputMode="numeric"/);
   assert.equal(messages.RECOVERY_NEW_PASSWORD, "Nueva contraseña");

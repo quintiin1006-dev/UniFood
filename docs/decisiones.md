@@ -1037,7 +1037,8 @@ disponibilidad sin recargar:
   1. «Cambiar contraseña» con el correo ya conocido (de Mi perfil o del login) y un único botón,
      «Enviar código de verificación». Solo se pide el correo si no se conoce.
   2. Código (6 dígitos, teclado numérico, `one-time-code`), «Nueva contraseña» y «Confirmar
-     nueva contraseña», con «Cambiar contraseña» y «Reenviar código» tras 30 s visibles.
+     nueva contraseña», con «Cambiar contraseña» y «Reenviar código» tras 30 s visibles
+     (reemplazado por tres pasos en jj/cliente-ajustes).
      Al enviar aparece arriba un aviso (`role="status"`, 5 s): «Te enviamos un código de
      verificación a tu correo registrado», igual para cualquier correo. Al terminar, «Contraseña
      actualizada» y vuelta a iniciar sesión. Se quitó el texto fijo de abajo. Mismos endpoints.
@@ -1062,6 +1063,11 @@ disponibilidad sin recargar:
   «No recogido» exige todos los recordatorios (5). La migración `030_reminder_limit_five.sql`
   amplía `chk_order_reminder_count` (004 quedaba en `<= 3`). `OrderResponse.maxReminders` entrega
   el límite al panel, que ya no lo escribe. La espera de 5 minutos no cambia.
+- **Contraseña en tres pasos.** 1) enviar código; 2) solo el código de 6 dígitos con «Verificar
+  código» y «Reenviar código» a los 30 s; 3) tras verificarlo, «Nueva contraseña», «Confirmar
+  nueva contraseña» y «Cambiar contraseña». Usa los endpoints existentes (`verify` con
+  `recovery: true` valida el código solo; `reset` usa esa sesión). Si `reset` responde 401, vuelve
+  al paso 2. Al terminar, «Contraseña actualizada» y vuelta al login.
 
 ## 13. Línea de corte
 
