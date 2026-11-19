@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { LogOut } from "lucide-react";
 import { dropPushBeforeSignOut } from "@/features/push/signOut";
+import { clearSessionStores } from "@/features/shared/sessionStore";
 import { loginPath, type AuthEntrypoint } from "../validation";
 import { ICON_MIN_20 } from "@/components/ui/Icon";
 
@@ -31,6 +32,7 @@ export default function LogoutButton({
       if (!response.ok)
         throw new Error("No se pudo cerrar la sesión. Inténtalo de nuevo.");
       window.dispatchEvent(new Event("unifood:logout"));
+      clearSessionStores();
       window.location.replace(loginPath(entrypoint));
     } catch (err) {
       setError(

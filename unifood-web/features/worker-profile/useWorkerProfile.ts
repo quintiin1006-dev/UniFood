@@ -1,10 +1,14 @@
 "use client";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import { useWorkerStore } from "@/features/worker-ui/session";
 import { workerProfileApi } from "./api";
 import { WorkerProfileStore } from "./state";
 
 export function useWorkerProfile() {
-  const [store] = useState(() => new WorkerProfileStore(workerProfileApi));
+  const store = useWorkerStore(
+    "profile",
+    () => new WorkerProfileStore(workerProfileApi),
+  );
   const state = useSyncExternalStore(
     store.subscribe,
     store.getSnapshot,

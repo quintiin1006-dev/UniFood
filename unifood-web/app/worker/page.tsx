@@ -8,5 +8,5 @@ export const dynamic = "force-dynamic";
 export default async function WorkerPage() {
   const { profile } = await requireAuth("panel");
   if (!isWorker(profile)) redirect(destination(profile));
-  return <WorkerDashboard />;
+  return <WorkerDashboard userId={profile.id} />;
 }

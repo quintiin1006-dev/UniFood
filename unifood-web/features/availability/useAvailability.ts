@@ -1,10 +1,14 @@
 "use client";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import { useWorkerStore } from "@/features/worker-ui/session";
 import { availabilityApi } from "./api";
 import { AvailabilityStore } from "./state";
 
 export function useAvailability() {
-  const [store] = useState(() => new AvailabilityStore(availabilityApi));
+  const store = useWorkerStore(
+    "availability",
+    () => new AvailabilityStore(availabilityApi),
+  );
   const state = useSyncExternalStore(
     store.subscribe,
     store.getSnapshot,

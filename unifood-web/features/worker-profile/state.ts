@@ -33,7 +33,12 @@ export class WorkerProfileStore {
     const controller = new AbortController();
     this.active = controller;
     // A complete profile is displayed only after a successful current response.
-    this.update({ data: null, loading: true, error: null });
+    // Back in Mi perfil the last data stays on screen while it refreshes (A).
+    this.update({
+      ...this.state,
+      loading: this.state.data === null,
+      error: null,
+    });
     try {
       const data = await this.api.get(controller.signal);
       if (this.disposed || this.active !== controller) return;
