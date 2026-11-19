@@ -18,6 +18,7 @@ import FeaturedCarousel from "./FeaturedCarousel";
 import CafeteriaSelector from "./CafeteriaSelector";
 import { RememberCafeteria } from "./CafeteriaMemory";
 import ProductAddButton from "./ProductAddButton";
+import ProductPlaceholder from "./ProductPlaceholder";
 import menuStyles from "./ClientMenu.module.css";
 import styles from "./HomeSections.module.css";
 
@@ -134,7 +135,10 @@ export default function ClientHome({
   );
 }
 
-/** A horizontal row with snap: the carousel's cards, smaller. */
+/**
+ * A horizontal row with snap of white product cards, as before #160: thumbnail with the initial,
+ * name, price and the «+» in the bottom-right corner, beside the link.
+ */
 function ProductRail({
   label,
   menu,
@@ -146,18 +150,23 @@ function ProductRail({
 }) {
   const cafeteriaId = menu.cafeteria.id;
   return (
-    <ul className={styles.rail} aria-label={`Productos: ${label}`}>
+    <ul
+      className={menuStyles.rail}
+      aria-label={`Productos: ${label}`}
+      aria-roledescription="carrusel"
+    >
       {products.map((product) => (
-        <li key={product.id} className={styles.railItem}>
+        <li key={product.id} className={menuStyles.railItem}>
           <Link
-            className={styles.railCard}
+            className={menuStyles.railCard}
             href={productHref(cafeteriaId, product.id)}
           >
+            <ProductPlaceholder name={product.name} size="rail" />
             <strong>{product.name}</strong>
             <span>{currency.format(product.price)}</span>
           </Link>
           {/* Sibling of the link, not inside it: its clicks never open the product. */}
-          <div className={styles.railAdd}>
+          <div className={menuStyles.railAdd}>
             <ProductAddButton menu={menu} product={product} />
           </div>
         </li>

@@ -1007,6 +1007,30 @@ disponibilidad sin recargar:
   (`WorkerHistoryResponse.Entry` solo trae `clientName`) ni al cliente; la hora de apertura
   de la cafetería no está en el menú.
 
+**Decisión, 2026-11-18: agregar al carrito y ajustes tras probar #160 (`jj/cliente-agregar`).**
+
+- **Tarjetas de producto de Inicio:** vuelven las blancas de antes de #160 (miniatura con la
+  inicial, nombre, precio y «+» abajo a la derecha). Se mantiene la fila horizontal con snap:
+  funciona igual con estas tarjetas. Se conserva lo aprobado en #160: orden de Inicio, categorías
+  vacías ocultas y sin letreros de relleno.
+- **«+» y «− n +» compactos:** cada botón ocupa 44 × 44 px de área táctil y dibuja 36 px; el
+  control nunca pasa de 44 px de alto. El «− n +» de antes medía unos 50 × 130 px (botones de
+  40 px más el borde), y en las tarjetas azules pequeñas de #160 llenaba casi toda la tarjeta.
+- **Animación al agregar:** un anillo SVG se dibuja en sentido horario en 600 ms y termina en un
+  check; luego aparece la cantidad. Los toques durante el anillo suman unidades. Con movimiento
+  reducido, solo un check fijo durante 600 ms. Se anuncia «Agregado, n en el carrito».
+- **Límites como aviso, no como texto fijo:** la ficha del producto ya no muestra «Máximo 10 por
+  producto y 15 por pedido» ni el selector de cafetería. Al intentar pasar del límite, el «+»
+  sigue tocable y aparece «Máximo 10 por producto» o «Máximo 15 por pedido» con
+  `role="status"` durante 3 s. Igual en el carrito. Los límites y su validación no cambian.
+- **Cafetería cerrada:** «Cafetería cerrada» y «Vuelve más tarde» («Abre a las …» solo con dato).
+  Fondo con una escena SVG en línea (reloj, taza con vapor, luna con «z»), con opacidad 0,3 y
+  ciclos de 6 a 12 s; quieta con movimiento reducido.
+- **Mi pedido, banner listo/llamado:** campana con halo (dos pulsos al entrar), título de 23 px
+  («Tu pedido está listo, pasa a recogerlo» o «Te estamos llamando») y el nombre como segunda
+  línea de 16 px. El nombre salía a 48 px por una regla `.readyCode strong` del antiguo código de
+  recogida. El resto de Mi pedido no cambia.
+
 ## 13. Línea de corte
 
 Si el 14 de noviembre el backend de pedidos no está terminado, se activa toda la línea.

@@ -164,11 +164,13 @@ test("the card names the order, the cafeteria and the products, without estimate
 });
 
 test("«Tu pedido está listo, pasa a recogerlo» appears with the code for READY and CALLED only", () => {
-  for (const status of ["READY", "CALLED"]) {
-    const markup = board(status);
-    assert.match(markup, /Tu pedido está listo, pasa a recogerlo/, status);
-    assert.match(markup, /Ana María Pérez/, status);
-  }
+  const ready = board("READY");
+  assert.match(ready, /Tu pedido está listo, pasa a recogerlo/);
+  assert.match(ready, /Ana María Pérez/);
+  // While the cafeteria calls, the banner says so; the name stays a second line.
+  const called = board("CALLED");
+  assert.match(called, /Te estamos llamando/);
+  assert.match(called, /Ana María Pérez/);
   for (const status of ["PENDING", "PREPARING", "DELIVERED"])
     assert.doesNotMatch(board(status), /pasa a recogerlo/, status);
 });

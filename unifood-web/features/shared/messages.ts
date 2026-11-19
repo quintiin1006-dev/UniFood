@@ -116,6 +116,19 @@ export const HOME_EMPTY_MENU =
 export const closedOpensAt = (when: string) => `Abre ${when}`;
 export const CAROUSEL_LABEL = "Productos destacados";
 
+/* ---------- Cliente · agregar al carrito (jj/cliente-agregar) ---------- */
+
+/** Announced after each «+»: what was done and how many are now in the cart. */
+export const addedLive = (count: number) => `Agregado, ${count} en el carrito`;
+export const addProductLabel = (name: string) => `Agregar ${name} al carrito`;
+/** Shown for 3 s only when the student tries to go past a limit; never as fixed text. */
+export const LIMIT_PER_PRODUCT = "Máximo 10 por producto";
+export const LIMIT_PER_ORDER = "Máximo 15 por pedido";
+export const CLOSED_BANNER_BACK_LATER = "Vuelve más tarde";
+export const closedOpensAtTime = (time: string) => `Abre a las ${time}`;
+/** Mi pedido, ready banner while the cafeteria is calling the student. */
+export const CLIENT_ORDER_CALLED_TITLE = "Te estamos llamando";
+
 /* ---------- Push notifications (docs/notificaciones-push.md) ---------- */
 
 // The in-app notice stays the primary channel: whenever push is not available, the text says so.

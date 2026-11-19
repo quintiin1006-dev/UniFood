@@ -32,9 +32,10 @@ const increase = (page: Page) =>
 async function addProduct(page: Page, productId: string, quantity = 1) {
   await page.goto(productPath(productId));
   for (let count = 1; count < quantity; count++) await increase(page).click();
-  await expect(page.getByLabel("Cantidad seleccionada")).toHaveText(
-    String(quantity),
-  );
+  // Scoped to the page content: the streamed next page can repeat the selector.
+  await expect(
+    page.locator("#client-content").getByLabel("Cantidad seleccionada"),
+  ).toHaveText(String(quantity));
   await addButton(page).click();
 }
 
@@ -43,15 +44,16 @@ test("§6 limits: 10 units per product and 15 per order, without stock", async (
 }) => {
   await login(page);
   await page.goto(productPath(PRODUCT.juice));
-  // Scoped to the page content: the streamed next page can repeat the same paragraph.
-  await expect(
-    page
-      .locator("#client-content")
-      .getByText("Máximo 10 por producto y 15 por pedido."),
-  ).toBeVisible();
+  // The limits are not fixed text: they show only when the student tries to pass them.
+  await expect(page.getByText(/Máximo 10 por producto y 15/)).toHaveCount(0);
   for (let count = 1; count < 10; count++) await increase(page).click();
   await expect(page.getByLabel("Cantidad seleccionada")).toHaveText("10");
-  await expect(increase(page)).toBeDisabled();
+  await expect(increase(page)).toBeEnabled();
+  await increase(page).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Máximo 10 por producto" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Cantidad seleccionada")).toHaveText("10");
   await expect(page.getByText(/\$\s*45\.000/)).toBeVisible();
   await addButton(page).click();
   await expect(cartNav(page)).toHaveAccessibleName("Carrito, 10 unidades");
@@ -63,7 +65,10 @@ test("§6 limits: 10 units per product and 15 per order, without stock", async (
 
   await page.goto(productPath(PRODUCT.lemonade));
   for (let count = 1; count < 5; count++) await increase(page).click();
-  await expect(increase(page)).toBeDisabled();
+  await increase(page).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Máximo 15 por pedido" }),
+  ).toBeVisible();
   await addButton(page).click();
   await expect(cartNav(page)).toHaveAccessibleName("Carrito, 15 unidades");
 
@@ -77,9 +82,13 @@ test("§6 limits: 10 units per product and 15 per order, without stock", async (
   // The cart no longer counts «n de 15 unidades»; the limit still blocks «+».
   await expect(page.getByText("15 de 15 unidades")).toHaveCount(0);
   await expect(page.getByText(/\$\s*75\.000/)).toBeVisible();
+  // At its limit the cart's «+» explains it instead of being silently disabled.
+  await page
+    .getByRole("button", { name: "Aumentar cantidad de Jugo natural" })
+    .click();
   await expect(
-    page.getByRole("button", { name: "Aumentar cantidad de Jugo natural" }),
-  ).toBeDisabled();
+    page.getByRole("status").filter({ hasText: "Máximo 10 por producto" }),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Reducir cantidad de Jugo natural" })
     .click();
@@ -198,6 +207,8 @@ test("changing cafeteria and emptying require confirmation and restore focus on 
   await page.goto(productPath(PRODUCT.chicken));
   await addButton(page).click();
   await expect(cartNav(page)).toHaveAccessibleName("Carrito, 1 unidad");
+  // The product page no longer shows the cafeteria box: Inicio has the selector.
+  await page.goto(`/cuenta?cafeteria=${CAFETERIA_CENTRAL}`);
   await page.getByRole("link", { name: /^Cambiar cafetería/ }).click();
   await page.getByRole("link", { name: /^Sede Principal/ }).click();
   const other = page.getByRole("link", { name: /^Cafetería Bloque B/ });

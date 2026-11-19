@@ -421,3 +421,15 @@
     font-size: 14px;
   }
 }
+
+/* A limit the student tried to pass: shown for 3 s after the attempt, never as fixed text. */
+.limitNotice {
+  display: block;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--color-brand-tint);
+  color: var(--color-brand-navy);
+  font-size: 14px;
+  font-weight: 700;
+}

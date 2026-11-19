@@ -14,8 +14,9 @@ import {
 import { categoryName, menuCategories, menuHref } from "../domain/menu";
 import type { CafeteriaMenu, MenuProduct } from "../types";
 import { useClientCart } from "./ClientCartProvider";
-import CafeteriaSelector from "./CafeteriaSelector";
 import ProductPlaceholder from "./ProductPlaceholder";
+import { useLimitNotice } from "../hooks/useLimitNotice";
+import { LIMIT_PER_ORDER, LIMIT_PER_PRODUCT } from "../../shared/messages";
 import styles from "./ClientShopping.module.css";
 
 type ProductProps = {
@@ -41,13 +42,13 @@ export default function ClientProduct(props: ProductProps) {
 }
 
 function ProductDetails({
-  siteName,
   menu,
   product,
   inCart,
 }: ProductProps & { inCart: number }) {
   const { cart, ready, add, update } = useClientCart();
   const [quantity, setQuantity] = useState(inCart || 1);
+  const limit = useLimitNotice();
   const conflict =
     cart.lines.length > 0 && cart.cafeteriaId !== menu.cafeteria.id
       ? OTHER_CAFETERIA_MESSAGE
@@ -70,7 +71,6 @@ function ProductDetails({
         <ArrowLeft size={22} aria-hidden="true" />
         Volver al menú
       </Link>
-      <CafeteriaSelector siteName={siteName} cafeteria={menu.cafeteria} />
       <ProductPlaceholder name={product.name} size="hero" />
       <div>
         <p className={styles.eyebrow}>{categoryName(product.category)}</p>
@@ -94,10 +94,6 @@ function ProductDetails({
         <div className={styles.quantityRow}>
           <div>
             <label id="quantity-label">Cantidad</label>
-            <p>
-              Máximo {MAX_PER_PRODUCT} por producto y {MAX_CART_UNITS} por
-              pedido.
-            </p>
             {inCart > 0 && (
               <p>
                 Ya tienes {inCart} en el carrito. Ajusta la cantidad y guarda
@@ -122,15 +118,27 @@ function ProductDetails({
             <button
               type="button"
               aria-label="Aumentar cantidad"
-              disabled={!ready || quantity >= maximum || !!blocker}
-              onClick={() =>
-                setQuantity((value) => Math.min(maximum, value + 1))
-              }
+              // Not disabled at the limit: a tap there explains it for 3 s.
+              disabled={!ready || !!blocker || maximum === 0}
+              onClick={() => {
+                if (quantity >= maximum)
+                  limit.show(
+                    quantity >= MAX_PER_PRODUCT
+                      ? LIMIT_PER_PRODUCT
+                      : LIMIT_PER_ORDER,
+                  );
+                else setQuantity((value) => Math.min(maximum, value + 1));
+              }}
             >
               <Plus size={19} aria-hidden="true" />
             </button>
           </div>
         </div>
+        {limit.message && (
+          <p className={styles.limitNotice} role="status">
+            {limit.message}
+          </p>
+        )}
         {reason && (
           <p
             className={styles.notice}
