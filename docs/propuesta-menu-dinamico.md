@@ -29,6 +29,8 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
 | Forma en Inicio (rev. 3) | Bloque «Menú del día» dentro de Inicio, sin página propia ni letrero. Carta blanca con chips azul `#0B5FFF` y botón «Agregar al carrito» dentro |
 | Categorías sin opciones hoy | No se muestran, ni con «Ninguna» |
 | Carta con la cafetería cerrada (Q7) | Solo lectura, con el aviso `CLOSED_NOTICE` y el botón deshabilitado, igual que el catálogo |
+| Cronograma (rev. 4, Q1) | Opción (a): el 25 se cumple para el mínimo (PR 1, 2, 5, 3). Orden 1→2→5→3→7→C→4→6→8, detrás de `MENU_DINAMICO_ENABLED`. Lo que no esté estable el 25 se apaga |
+| Pedidos de ayer (rev. 4, Q2 y Q3) | Cierre a medianoche prioritario, PR C antes de los PR 4 y 6. Staging autorizado; producción requiere OK aparte. El dueño revisa la configuración en Render |
 | Orden en Inicio (Q8) | Selector de cafetería, carrusel de banners, filtros de categorías (Todo, Desayunos…), carta «Menú del día», secciones de productos. «Categorías» son los filtros, no el selector |
 | Precio de adición | Cambia en su siguiente encendido |
 | Categorías del admin | Se desactivan, no se borran (fase admin) |
@@ -911,15 +913,18 @@ paso deje la app en un estado usable** y para que, si hay que recortar, se sepa 
 | 7 | `menu-dia-editor` | Web: `DailyMenuEditor` en Disponibilidad, BFF del worker, publicar | 3 d | El worker publica solo por API o SQL |
 | 4 | `menu-dia-pedido` | Backend: validación del pedido, total, snapshots, `OrderResponse.dailyMenu` | 3 d | El cliente no puede pedir el menú |
 | 6 | `menu-dia-carrito` | Web: `MenuLine`, `validateCart`, `CartLineItem`, checkout, `orderForward` | 2 d | El cliente no puede pedir el menú |
+| C | `cierre-diario-medianoche` | Cierre de pedidos de días anteriores (sección 8): `pg_cron` a medianoche de Bogotá en staging, respaldo en Spring con `WARN` con conteo y, opcional, aviso al worker. Antes de los PR 4 y 6 (decisión del dueño, Q3) | 1 d | Pedidos de ayer siguen activos y bloquean al cliente |
 | 8 | `menu-dia-ver-pedido` | Web: `DailyMenuSummary` en la tarjeta del worker y en «Mi pedido» | 1 d | El worker no ve la elección |
 | 9 | `menu-dia-admin` | Panel admin: plato, categorías, adiciones | 3 d | Después de la demo |
 
-El orden de ejecución es 1 → 2 → 5 → 3 → 7 → 4 → 6 → 8. El PR 5 va antes que el 3 para que el
-cliente vea el menú cuanto antes y la lectura se pruebe sin esperar al worker.
+El orden de ejecución es **1 → 2 → 5 → 3 → 7 → C → 4 → 6 → 8**, detrás de `MENU_DINAMICO_ENABLED` (Q1).
+El PR 5 va antes que el 3 para que el cliente vea el menú cuanto antes y la lectura se pruebe sin
+esperar al worker. El PR C va antes del 4 y del 6 porque un pedido de ayer activo bloquea al cliente.
+Lo que no esté estable el 25 se apaga con la variable; la demo sigue sin esa parte.
 
 **Qué primero para cada objetivo:**
 - **Que el worker publique:** PR 1, 3 y 7 (≈ 7,5 d).
-- **Que el cliente pida:** PR 1, 2, 4, 5 y 6 (≈ 10,5 d). Sin PR 8, el pedido se guarda pero el worker no
+- **Que el cliente pida:** PR 1, 2, 4, 5, 6 y C (≈ 11,5 d). Sin PR 8, el pedido se guarda pero el worker no
   ve la elección en su tarjeta, así que el PR 8 no es opcional para operar; sí lo es para la demo.
 - **Mínimo útil para la demo:** PR 1, 2, 5 y 3 (≈ 8 d). El cliente ve el menú y el worker puede publicar
   por API o SQL.
@@ -960,7 +965,7 @@ por API o SQL, no por pantalla; **nadie puede pedir el menú**.
 4. PR 9: admin (ya estaba después de la demo).
 
 **Si el 25 es innegociable para el flujo completo:** la fecha realista del menú completo con una
-sesión es **~5 de diciembre** (17 días a partir del 19). Eso deja el 28 de noviembre con la demo sin
+sesión es **~6 de diciembre** (18 días a partir del 19, incluido el PR C de 1 día). Eso deja el 28 de noviembre con la demo sin
 pedidos, o con el menú en solo lectura. Hay que elegir antes de empezar (P1).
 
 ---
@@ -999,21 +1004,40 @@ el pedido seguiría activo en la base y el worker no lo vería; además, el índ
 `uq_orders_one_active_per_client` (020) **impediría al cliente hacer un pedido nuevo** mientras ese
 pedido siga activo. Ocultarlo empeora el problema.
 
-### 8.3 Solución propuesta
+### 8.3 Solución propuesta (PR C, `cierre-diario-medianoche`)
 
-En orden de prioridad, en un PR aparte (`jj/cierre-diario-medianoche`), fuera del freeze del menú:
+Decidido por el dueño (Q3): es prioritario y va **antes de los PR 4 y 6**. Es una corrección, no una
+función nueva. Se asume que el freeze del 21 no lo bloquea (ver Q7).
 
-1. **Confirmar la configuración de producción:** valores reales de `DAILY_CLOSE_ENABLED` y
-   `DAILY_CLOSE_INTERVAL`, y si el backend se apaga de noche. Sin esto no se sabe qué caso ocurre.
-2. **Ejecutar el cierre a las 00:00 de Bogotá sin depender del backend:** `pg_cron` con
-   `scripts/supabase/close-stale-orders.sql` (ya existe con la misma regla), programado para la
-   medianoche de America/Bogota. Ya estaba previsto usar `pg_cron` en `decisiones.md` §3. Requiere OK
-   explícito porque toca Supabase remoto (CLAUDE.md: no tocar Supabase remoto sin mostrar el comando y
-   recibir OK).
-3. **Mantener el cierre en Spring** como respaldo, pero con un `WARN` que incluya el número de pedidos
-   afectados, para verlo en los logs.
-4. **Mostrar al worker un aviso** cuando haya activos de días anteriores («Hay N pedidos de ayer sin
-   cerrar»), sin ocultarlos. Es un cambio de UI pequeño.
+1. **Configuración de producción:** la revisa el dueño con el conector de Render (`DAILY_CLOSE_ENABLED`,
+   `DAILY_CLOSE_INTERVAL` y si el backend se apaga de noche). No la consulto desde aquí.
+2. **Cierre a medianoche de Bogotá sin depender del backend, primero en staging:** `pg_cron` ejecuta la
+   misma regla de `scripts/supabase/close-stale-orders.sql`, con el corte calculado en America/Bogota:
+
+   ```sql
+   -- Corte: 00:00 de hoy en America/Bogota (UTC-5, sin horario de verano).
+   -- Programado a las 05:05 UTC = 00:05 en Bogotá, para dejar margen tras la medianoche.
+   SELECT cron.schedule('cierre-diario-bogota', '5 5 * * *', $$
+     WITH corte AS (
+       SELECT (date_trunc('day', now() AT TIME ZONE 'America/Bogota')) AT TIME ZONE 'America/Bogota' AS t
+     ), stale AS (
+       SELECT o.id FROM public.orders o, corte
+       WHERE o.status = 'PENDING' AND o.created_at < corte.t
+       FOR UPDATE SKIP LOCKED
+     )
+     UPDATE public.orders o SET status = 'CANCELLED', cancelled_at = now(), cancellation_source = 'SYSTEM'
+     FROM stale s WHERE o.id = s.id;
+     -- Igual para PREPARING/READY/CALLED → NOT_COLLECTED (not-collect-stale.sql).
+   $$);
+   ```
+
+   El bloque es un borrador: la versión final sale de `close-stale-orders.sql` y se prueba en staging.
+   **Producción no se toca**: requiere mostrar el comando exacto y recibir un OK aparte (CLAUDE.md).
+   `pg_cron` ya estaba previsto en `decisiones.md` §3.
+3. **Respaldo en Spring:** el cierre existente se mantiene. Su fallo deja de ser un `WARN` sin datos y
+   pasa a registrar cuántos pedidos quedaron sin cerrar.
+4. **Aviso al worker (opcional):** cuando haya activos de días anteriores, «Hay N pedidos de ayer sin
+   cerrar», sin ocultarlos.
 
 Ninguna de estas opciones cambia el listado: los pedidos siguen visibles hasta que se cierran.
 
@@ -1021,34 +1045,13 @@ Ninguna de estas opciones cambia el listado: los pedidos siguen visibles hasta q
 
 ## 9. Preguntas abiertas
 
-Las resueltas en la revisión 2 ya no aparecen. Quedan estas:
+Resueltas en la revisión 4 (quedan en la tabla de decisiones de arriba): Q1 (cronograma, opción a),
+Q2 (cierre diario, solo staging), Q3 (cierre antes de los PR 4 y 6), Q4 (precio de adición al encender) y
+Q5 (plantilla fija aceptable para el piloto). Quedan abiertas:
 
-**Q1. Cronograma y freeze (sección 7).** Con una sola sesión, el 25 cabe la demo mínima (el cliente ve
-el menú y el worker publica por API o SQL), y no cabe el flujo de pedido. Opciones:
-- **(a) Recomendada:** el 25 se cumple solo para el mínimo (PR 1, 2, 5 y 3). El pedido con menú (PR 4, 6,
-  7, 8) queda para después de la demo.
-- **(b)** Mover el freeze del menú al **5 de diciembre** y demostrar el flujo completo ese día.
-- **(c)** Demo del 28 con el menú sembrado en solo lectura y sin ningún pedido.
+**Q6. Precios reales.** Pendiente. Mientras tanto, staging usa los precios de ejemplo (9.500 el plato;
+2.000 y 3.000 las adiciones). No bloquea el trabajo en staging, pero sí antes de cualquier demo con
+administradores.
 
-*Necesito tu elección porque cambia qué se muestra el 28.*
-
-**Q2. Pedidos de ayer (sección 8).** ¿Autorizas revisar la configuración de producción (`DAILY_CLOSE_ENABLED`,
-`DAILY_CLOSE_INTERVAL`) y, si hace falta, mover el cierre a `pg_cron` a medianoche? Para ver la
-configuración necesito que me la confirmes tú; no la leo de ningún archivo `.env`.
-
-**Q3. Pedidos atascados y el cliente.** Un pedido activo de ayer bloquea al cliente para hacer un pedido
-nuevo (`uq_orders_one_active_per_client`). ¿Quieres que el cierre a medianoche (Q2) sea prioritario
-por eso, aunque la demo no dependa de ello?
-
-**Q4. Adiciones con precio distinto por día.** Propuesto: el precio se fija al encender la adición. Si el
-admin cambia el precio a mitad de día, el cliente ve el precio que tenía al encenderse. ¿Confirmas?
-
-**Q5. Plantilla fija hasta el panel admin.** Las categorías y las adiciones de ejemplo las pone la
-siembra en staging. Si en una cafetería real hace falta otra plantilla antes de la fase 9, hay que
-cargarla con SQL controlado. ¿Es aceptable para el piloto?
-
-**Q6. Precios de ejemplo.** La siembra usa 9.500 para el plato y 2.000 y 3.000 para las adiciones. Son
-valores de ejemplo: ¿cuáles son los precios reales para la demo?
-
-*Resueltas en la revisión 3 (quedan en la tabla de decisiones): plantilla final (Q6 anterior), carta con
-la cafetería cerrada (Q7 anterior) y orden en Inicio (Q8 anterior).*
+**Q7. Freeze del 21 y el PR C.** El PR C es una corrección del cierre diario. ¿Confirmas que puede entrar
+después del freeze del 21 como excepción, o debe cerrarse antes de ese día?
