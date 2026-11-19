@@ -17,19 +17,21 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
 | Tema | Decisión |
 | ---- | -------- |
 | Freeze | Se mueve al **25 de noviembre**, solo para el menú dinámico (PR 1–8). El resto del código sigue con el freeze del sábado 21 |
-| Feature flag | Todo el módulo detrás de `MENU_DINAMICO_ENABLED` (servidor y web, solo variable de servidor). Apagada, la demo sigue sin menú |
+| Feature flag | Todo el menú detrás de `MENU_DINAMICO_ENABLED` (servidor y web, solo variable de servidor). Apagada, la demo sigue sin menú |
 | Límite de texto | **350 caracteres por categoría**, suma de sus fichas. Sin contador visible. Se valida igual en servidor |
 | Opciones | Máximo **20** por categoría |
 | Obligatorias | Proteína y Principio. Saltables con «Ninguna»: Bebida y Complementos. Adiciones siempre saltable |
 | Platos por pedido | Uno. Cuenta como una unidad de los límites 10/15; las adiciones no cuentan |
 | Agotado con pedidos hechos | El pedido no cambia; se usa el rechazo con motivo existente (B18) |
 | Copiar el de ayer | Copia solo ingredientes, no adiciones encendidas |
-| Plato ya en el carrito | El botón del módulo dice «Actualizar carrito» |
-| Precio del plato | Solo en el encabezado del módulo; cambia en la siguiente publicación |
+| Plato ya en el carrito | El botón de la carta dice «Actualizar carrito» |
+| Precio del plato | Solo en el encabezado de la carta; cambia en la siguiente publicación |
+| Forma en Inicio (rev. 3) | Bloque «Menú del día» dentro de Inicio, sin página propia ni letrero. Carta blanca con chips azul `#0B5FFF` y botón «Agregar al carrito» dentro |
+| Categorías sin opciones hoy | No se muestran, ni con «Ninguna» |
 | Precio de adición | Cambia en su siguiente encendido |
 | Categorías del admin | Se desactivan, no se borran (fase admin) |
 | Comas | Prohibidas en ingredientes (separan fichas) |
-| Letrero | Encima del carrusel, en el hueco del banner de cerrada |
+| Ubicación | Bloque dentro de Inicio, entre las categorías y las secciones de productos (sustituye al letrero) |
 | Sin precio configurado | Aviso al worker; publicar deshabilitado; el cliente no ve nada |
 | Quién publica | Solo el worker. La plantilla de categorías queda fija hasta la fase admin |
 | Panel admin (PR 9) | Después de la demo |
@@ -50,8 +52,8 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
   admin. El worker enciende cada día cuáles hay.
 - El worker escribe los ingredientes de hoy en Disponibilidad y publica el menú. El menú se
   reinicia cada día a las 00:00 de Colombia porque todas las filas llevan `business_date`.
-- El cliente ve un letrero «Menú del día» en Inicio. Lleva a `/cuenta/menu-del-dia`, un módulo
-  propio con fichas. La barra inferior se queda en cuatro pestañas.
+- El cliente ve la carta «Menú del día» dentro de Inicio, entre las categorías y los productos. Es un
+  bloque de Inicio, no una página: la barra inferior se queda en cuatro pestañas.
 - El pedido guarda una **copia** de las opciones, de los precios y del precio del plato.
 
 ### Alcance de la demo
@@ -59,7 +61,7 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
 | Entra en la demo (si cabe el 25)                                                                                       | Se aplaza                                                                 |
 | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | Migración 030 y siembra en staging (plato, 4 categorías, Adiciones, adiciones de ejemplo)                             | Pantalla de administración del menú (PR 9, después de la demo)            |
-| Lectura del menú para el cliente: letrero y módulo                                                                    | Varios platos por pedido                                                  |
+| Lectura del menú para el cliente: carta en Inicio                                                                    | Varios platos por pedido                                                  |
 | Backend del worker: escribir ingredientes, encender adiciones, publicar, copiar ayer                                  | Ingredientes desde un catálogo reutilizable (hoy son texto libre)         |
 | Worker: editor de ingredientes en Disponibilidad y botón de publicar                                                  | Historial del menú para el cliente                                        |
 | Cliente: carrito y checkout con la elección, y pedido con copia                                                       | Corrección del cierre diario de pedidos (sección 8; va en PR aparte)      |
@@ -82,8 +84,8 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
    Las elecciones van en tablas propias.
 4. **El total se calcula en servicio, no en la base.** `orders.total` lo fija la aplicación; el CHECK
    de 011 solo cubre cada línea de producto.
-5. **El letrero puede ocupar el hueco del banner.** `ClientHome` ya pone el carrusel o el
-   `ClosedBanner` en el mismo sitio.
+5. **El menú cabe en Inicio sin página nueva.** `ClientHome` ya tiene secciones por categoría; la
+   carta se inserta entre el selector y la primera sección de productos. El banner de cerrada no cambia.
 6. **`OrderCard` está en `components/worker/`**, que es histórico. La vista de la elección va en un
    componente nuevo dentro de `features/daily-menu/`.
 7. **El reinicio diario del menú sale gratis.** La 013 guarda cada día por `business_date`. Esto no
@@ -115,7 +117,7 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
   adiciones, sin repetir. Siempre saltable.
 - **Obligatoriedad y publicación.** Un menú solo se publica si tiene precio fijo y cada categoría
   `SINGLE` activa y no saltable (Proteína, Principio) tiene al menos una opción hoy. Si después de
-  publicar se vacía una obligatoria, el menú queda **incompleto**: el letrero se oculta y el worker
+  publicar se vacía una obligatoria, el menú queda **incompleto**: la carta se oculta en Inicio y el worker
   ve qué falta. Se calcula al leer, no se guarda.
 - **Reinicio diario del menú.** Solo cuentan las filas con `business_date` igual al día de negocio de
   Spring (America/Bogota). Lo de ayer queda como historial y no se muestra.
@@ -439,7 +441,7 @@ Notas sobre el borrador:
 
 - Las lecturas y escrituras del menú responden 404 `DAILY_MENU_DISABLED`.
 - Un pedido con `dailyMenu` responde 409 `DAILY_MENU_DISABLED`; el pedido sin menú funciona como hoy.
-- El BFF web lee la misma variable en servidor (sin `NEXT_PUBLIC_`) y oculta el letrero, el módulo y
+- El BFF web lee la misma variable en servidor (sin `NEXT_PUBLIC_`) y oculta la carta de Inicio y
   el editor. Así el navegador nunca recibe la bandera y no hace falta una variable pública.
 - Al implementar, la variable se añade a la lista de variables de `CLAUDE.md`.
 
@@ -449,7 +451,7 @@ Rutas nuevas bajo `/api/me` y `/api/worker` (y `/api/admin` en fase 9), con el e
 | Método y ruta | Rol | Qué hace | PR |
 | ------------- | --- | -------- | -- |
 | `GET /api/me/daily-menu?cafeteriaId=` | CLIENT | Menú publicado y completo de hoy, solo opciones disponibles | PR 2 |
-| `GET /api/me/menu` (ampliar) | CLIENT | Añade `dailyMenu: { available }` para el letrero | PR 2 |
+| `GET /api/me/menu` (ampliar) | CLIENT | Añade `dailyMenu: { available }` para la carta de Inicio | PR 2 |
 | `POST /api/me/orders` (ampliar) | CLIENT | Acepta `dailyMenu` opcional en el cuerpo | PR 4 |
 | `GET /api/worker/daily-menu/today` | WORKER | Estado del día: categorías, opciones, adiciones, publicado, completo, versión | PR 3 |
 | `PUT /api/worker/daily-menu/today/categories/{categoryId}/options` | WORKER | Reemplaza las opciones de una categoría `SINGLE` | PR 3 |
@@ -669,8 +671,7 @@ features/daily-menu/
     DailyMenuEditor.tsx         (worker, dentro de Disponibilidad)
     DailyMenuChips.tsx          (fichas: radio para SINGLE, toggle para adiciones)
     DailyMenuSummary.tsx        (elección en el pedido: worker y cliente)
-    DailyMenuLetrero.tsx        (letrero de Inicio)
-    DailyMenuModule.tsx         (/cuenta/menu-del-dia)
+    DailyMenuCard.tsx           (carta «Menú del día» dentro de Inicio)
 ```
 
 `features/availability/components/AvailabilityPanel.tsx` monta `DailyMenuEditor` debajo de las
@@ -697,32 +698,41 @@ categorías de catálogo. No se toca `components/worker/`.
 - **Errores:** `VERSION_CONFLICT` vuelve a leer el día; «Sin conexión. Reintentando…» conserva el
   último estado confirmado.
 
-### 4.4 Cliente: letrero en Inicio
+### 4.4 Cliente: carta «Menú del día» dentro de Inicio
 
-- **Dónde:** encima del carrusel, en el mismo hueco que el `ClosedBanner` cuando la cafetería está
-  cerrada. Son mutuamente excluyentes: el letrero exige cafetería abierta.
-- **Cuándo se muestra:** `dailyMenu.available === true` (publicado, completo, abierta y bandera
-  encendida). Llega con el refresco de 30 s que ya tiene `useCafeteriaMenu`.
-- **Contenido:** tarjeta de ancho completo con «Menú del día» y una flecha; enlace a
-  `/cuenta/menu-del-dia?cafeteria=…`. Sin precio.
-- **Si no está disponible:** no se renderiza nada; el carrusel ocupa el hueco como hoy.
+Decisión de la revisión 3: el menú no es una página ni una pestaña. Es un bloque de Inicio.
 
-### 4.5 Cliente: módulo `/cuenta/menu-del-dia`
-
-- **Encabezado:** título del plato y **precio fijo, mostrado una sola vez** (P9). Debajo, el texto de
-  cafetería abierta o el `CLOSED_NOTICE` existente.
-- **Categorías:** en el orden de la plantilla. Las `ADDITIONS` sin adiciones se omiten; las `SINGLE`
-  saltables con solo «Ninguna» muestran esa ficha. Nunca aparece «no hay».
+- **Dónde:** dentro de Inicio, entre las categorías (selector de cafetería y categorías) y la primera
+  sección de productos. El carrusel y el banner de cerrada no cambian. No hay ruta propia ni letrero.
+- **Cuándo aparece:** menú publicado hoy, completo y bandera encendida. Con la cafetería cerrada se
+  ve en solo lectura, con el aviso de `CLOSED_NOTICE` y el botón deshabilitado, igual que el catálogo
+  (propuesta; ver Q7).
+- **Aspecto:** tarjeta blanca estilo carta de restaurante: borde suave, sombra leve, título «Menú del
+  día» y el nombre del plato. El precio fijo aparece **una sola vez**, en el encabezado de la carta.
+  Sin letrero de precio extra en el almuerzo.
+- **Secciones:** en el orden de la plantilla. Ejemplo pedido por el dueño: Sopa, Proteína, Principio,
+  Acompañamientos, Complemento de una sola opción y, al final, Adiciones (los nombres y la
+  obligatoriedad se confirman en Q1).
+  - Categoría `SINGLE` con opciones hoy: título de la sección y sus fichas. Si es saltable, la ficha
+    «Ninguna» al final.
+  - **Categoría sin opciones hoy: no se muestra**, ni siquiera con «Ninguna». Una obligatoria sin
+    opciones impide publicar, así que en la práctica solo ocurre con una saltable.
+  - `ADDITIONS`: solo las adiciones encendidas hoy, con «+ $2.000» dentro de cada ficha. Sin
+    adiciones encendidas, la sección no aparece.
 - **Fichas `SINGLE`:** `role="radiogroup"` con `role="radio"` y `aria-checked`. Elegida: fondo
   `#0B5FFF` y texto blanco (contraste 5,1:1, cumple AA para texto normal). Sin elegir: borde gris y
   texto oscuro. Flechas para moverse, foco visible, mínimo 44 px de alto.
-- **Fichas `ADDITIONS`:** `role="checkbox"` con `aria-checked`, mismo estilo. Muestran el precio extra
-  dentro de la ficha: «Huevo frito · + $2.000».
-- **Botón único «Agregar al carrito»**, deshabilitado mientras falte algo. El motivo va en texto visible
-  y en `aria-live`: «Falta elegir: Principio».
-- **Plato ya en el carrito:** el módulo abre con sus elecciones cargadas y el botón dice «Actualizar carrito» (P8).
-- **Cafetería cerrada:** el módulo se ve con `CLOSED_NOTICE` y el botón muestra «Cerrada».
-- **Sin menú publicado:** «El menú de hoy aún no está listo» (texto nuevo en `messages.ts`).
+- **Fichas `ADDITIONS`:** `role="checkbox"` con `aria-checked`, mismo estilo.
+- **Botón «Agregar al carrito» dentro de la carta**, al pie y a todo el ancho. Deshabilitado mientras
+  falte algo; el motivo va en texto visible y en `aria-live`: «Falta elegir: Principio».
+- **Plato ya en el carrito:** la carta abre con sus elecciones cargadas y el botón dice «Actualizar
+  carrito» (P8).
+- **Sin menú publicado o incompleto:** la carta no aparece y Inicio se ve como hoy.
+
+### 4.5 Cliente: sin página propia
+
+No existe `/cuenta/menu-del-dia`. La barra inferior se queda en cuatro pestañas. Todo lo del menú
+vive en la carta de la sección 4.4.
 
 ### 4.6 Carrito, checkout y `CartLineItem`
 
@@ -763,9 +773,9 @@ categorías de catálogo. No se toca `components/worker/`.
 | ---- | -------------- | --------------- |
 | **Opción agotada después de que el cliente la escogió (pedido ya creado)** | El pedido no cambia. El worker lo ve y, si no puede cumplirlo, usa el rechazo con motivo (B18) | Snapshot (2.3) |
 | **Opción agotada con el carrito sin enviar** | Al enviar, `DAILY_MENU_SELECTION_INVALID`. La línea queda marcada y el cliente vuelve a elegir | `validateCart` y servicio |
-| **Categoría obligatoria sin opciones hoy** | No se publica (`DAILY_MENU_INCOMPLETE`). Si se vacía después, el menú queda incompleto: el letrero se oculta y el worker ve qué falta | Publicar y lectura calculada |
+| **Categoría obligatoria sin opciones hoy** | No se publica (`DAILY_MENU_INCOMPLETE`). Si se vacía después, el menú queda incompleto: la carta se oculta en Inicio y el worker ve qué falta | Publicar y lectura calculada |
 | **Categoría saltable sin opciones hoy** | Solo aparece «Ninguna» | Lectura del cliente |
-| **Cafetería cerrada** | Letrero oculto. El módulo se ve sin poder añadir. El pedido responde `CAFETERIA_CLOSED` | Lectura y 022 |
+| **Cafetería cerrada** | La carta se ve en solo lectura, con el botón deshabilitado (Q7). El pedido responde `CAFETERIA_CLOSED` | Lectura y 022 |
 | **Cafetería oculta por SUPER_ADMIN** | Sin menú; el pedido responde `CAFETERIA_NOT_SUBSCRIBED` como hoy | 022 |
 | **Cambio de menú con pedidos activos** | Los pedidos en curso conservan su copia. Publicar o despublicar solo afecta a pedidos nuevos | Snapshot y `unpublish` |
 | **Cambio de precio del plato con pedidos activos** | El pedido conserva su precio; el nuevo aplica en la siguiente publicación | `daily_menu_days` |
@@ -776,11 +786,11 @@ categorías de catálogo. No se toca `components/worker/`.
 | **Texto de más de 350 por categoría** | El editor pone el recuadro en rojo y bloquea «Publicar». El servidor responde `DAILY_MENU_TEXT_TOO_LONG` y no trunca | Editor, servicio y disparador |
 | **Más de 20 opciones** | No se crea la ficha número 21; `DAILY_MENU_OPTION_INVALID` | Editor y servidor |
 | **Dos workers editan a la vez** | Uno gana; el otro recibe `DAILY_MENU_VERSION_CONFLICT` y vuelve a leer | `expectedVersion` y `FOR UPDATE` |
-| **Cambio de día con el cliente en el módulo** | El pedido responde `DAILY_MENU_DATE_CHANGED`; el cliente recarga | Servidor (3.3) |
+| **Cambio de día con el cliente en Inicio** | El pedido responde `DAILY_MENU_DATE_CHANGED`; el cliente recarga | Servidor (3.3) |
 | **Pedido repetido por red (misma clave)** | Misma respuesta; si el menú cambió en el cuerpo, `IDEMPOTENCY_KEY_CONFLICT` | `Normalized.hash()` |
 | **Más de un plato por pedido** | Rechazado en el carrito y en el servidor | Carrito y servicio |
 | **Menú de ayer** | Nunca se muestra: todas las consultas filtran por `business_date` | Consultas |
-| **Bandera apagada** | Endpoints 404 `DAILY_MENU_DISABLED`; web sin letrero ni módulo ni editor | Servidor y BFF |
+| **Bandera apagada** | Endpoints 404 `DAILY_MENU_DISABLED`; web sin carta ni editor | Servidor y BFF |
 | **Pedido de ayer activo (no es del menú)** | Ver sección 8 | Cierre diario |
 
 ---
@@ -794,7 +804,7 @@ paso deje la app en un estado usable** y para que, si hay que recortar, se sepa 
 | - | -- | --------- | -------- | ----------------------- |
 | 1 | `menu-dia-db` | Migración 030, pruebas de base, siembra de staging con `SET unifood.seed_target = 'staging'`, bandera | 2 d | Nada del menú |
 | 2 | `menu-dia-lectura` | Backend: `GET /api/me/daily-menu`, `dailyMenu` en `/api/me/menu`, pruebas | 1 d | El cliente no ve el menú |
-| 5 | `menu-dia-letrero-modulo` | Web: BFF de lectura, letrero en Inicio, módulo en solo lectura (fichas, sin carrito) | 2,5 d | El cliente no ve el menú |
+| 5 | `menu-dia-carta-inicio` | Web: BFF de lectura y carta «Menú del día» en Inicio con fichas. El botón «Agregar al carrito» queda deshabilitado hasta el PR 6 | 2,5 d | El cliente no ve el menú |
 | 3 | `menu-dia-worker-api` | Backend: escrituras del worker, publicar, copiar ayer, autorización y concurrencia | 2,5 d | El worker no puede publicar |
 | 7 | `menu-dia-editor` | Web: `DailyMenuEditor` en Disponibilidad, BFF del worker, publicar | 3 d | El worker publica solo por API o SQL |
 | 4 | `menu-dia-pedido` | Backend: validación del pedido, total, snapshots, `OrderResponse.dailyMenu` | 3 d | El cliente no puede pedir el menú |
@@ -833,10 +843,10 @@ no hay margen para revisiones ni para errores de pruebas.
 | Mié 18 | Revisión 2 de la propuesta | — | Hoy |
 | Jue 19 – vie 20 | PR 1: migración, pruebas, siembra | 2 d | Cabe |
 | Sáb 21 | PR 2: lectura del backend | 3 d | Cabe |
-| Dom 22 – lun 23 | PR 5: letrero y módulo de solo lectura | 5,5 d | Cabe |
+| Dom 22 – lun 23 | PR 5: carta en Inicio, solo lectura | 5,5 d | Cabe |
 | Mar 24 – mié 25 | PR 3: escrituras del worker (2,5 d) | 8 d | **No cabe del todo**: el último medio día cae el jueves 26 |
 
-**Respuesta honesta:** con una sola sesión, **no cabe el módulo completo el 25**. Lo que cabe es el
+**Respuesta honesta:** con una sola sesión, **no cabe el menú completo el 25**. Lo que cabe es el
 mínimo de la demo con un medio día de retraso en PR 3. El cliente ve el menú; el worker publica
 por API o SQL, no por pantalla; **nadie puede pedir el menú**.
 
@@ -847,7 +857,7 @@ por API o SQL, no por pantalla; **nadie puede pedir el menú**.
 3. PR 8: la elección en el pedido.
 4. PR 9: admin (ya estaba después de la demo).
 
-**Si el 25 es innegociable para el flujo completo:** la fecha realista del módulo completo con una
+**Si el 25 es innegociable para el flujo completo:** la fecha realista del menú completo con una
 sesión es **~5 de diciembre** (17 días a partir del 19). Eso deja el 28 de noviembre con la demo sin
 pedidos, o con el menú en solo lectura. Hay que elegir antes de empezar (P1).
 
@@ -915,7 +925,7 @@ Las resueltas en la revisión 2 ya no aparecen. Quedan estas:
 el menú y el worker publica por API o SQL), y no cabe el flujo de pedido. Opciones:
 - **(a) Recomendada:** el 25 se cumple solo para el mínimo (PR 1, 2, 5 y 3). El pedido con menú (PR 4, 6,
   7, 8) queda para después de la demo.
-- **(b)** Mover el freeze del módulo al **5 de diciembre** y demostrar el flujo completo ese día.
+- **(b)** Mover el freeze del menú al **5 de diciembre** y demostrar el flujo completo ese día.
 - **(c)** Demo del 28 con el menú sembrado en solo lectura y sin ningún pedido.
 
 *Necesito tu elección porque cambia qué se muestra el 28.*
@@ -934,3 +944,17 @@ admin cambia el precio a mitad de día, el cliente ve el precio que tenía al en
 **Q5. Plantilla fija hasta el panel admin.** Las categorías y las adiciones de ejemplo las pone la
 siembra en staging. Si en una cafetería real hace falta otra plantilla antes de la fase 9, hay que
 cargarla con SQL controlado. ¿Es aceptable para el piloto?
+
+**Q6. Nombres y obligatoriedad de las categorías (revisión 3).** El dueño pidió: Sopa, Proteína,
+Principio, Acompañamientos, Complemento de una sola opción y Adiciones. La revisión 2 tenía Proteína,
+Principio, Bebida y Complementos. ¿Cuál es la plantilla por defecto? *Recomendación:* usar la lista nueva
+y marcar como obligatorias Proteína y Principio; Sopa, Acompañamientos y Complemento de una sola opción,
+saltables con «Ninguna». Hace falta confirmarlo porque la siembra depende de ello.
+
+**Q7. Carta con la cafetería cerrada.** *Recomendación:* verla en solo lectura, con el aviso y el botón
+deshabilitado, como el catálogo. La alternativa es ocultarla, que es lo que decía la revisión 2 para el
+letrero.
+
+**Q8. Anclaje exacto en Inicio.** El dueño dijo «entre las categorías y las secciones de productos». Hay
+que confirmar si «categorías» es el selector de cafetería o la barra de filtros (Todo, Del día, Desayunos…).
+En el código, el selector está antes de las secciones por categoría; hay que verificarlo al implementar.
