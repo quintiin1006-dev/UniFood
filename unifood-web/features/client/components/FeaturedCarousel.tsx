@@ -2,33 +2,26 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
-import { Icon } from "@/components/ui/Icon";
 import { currency } from "../domain/catalog";
 import {
   canRotate,
-  isPaused,
+  carouselSlides,
   nextIndex,
   prevIndex,
   ROTATE_MS,
-  type CarouselPauses,
 } from "../domain/featured";
 import { productHref } from "../domain/menu";
 import type { MenuProduct } from "../types";
 import styles from "./FeaturedCarousel.module.css";
 
-const NO_PAUSE: CarouselPauses = {
-  hover: false,
-  focus: false,
-  touch: false,
-  user: false,
-};
 /** Horizontal distance, in pixels, that counts as a swipe. */
 const SWIPE_PX = 40;
 
 /**
- * Portada of the client's home (ola 4): a large card that rotates through the available products.
- * It pauses on hover, focus, touch and with the pause button, swipes with a finger, and moves with
- * the arrow keys. Reduced motion keeps it still. Automatic changes are not announced.
+ * Portada of the client's home: a large card that moves by itself every five seconds through the
+ * available products. It cannot be paused. With reduced motion nothing moves and the first product
+ * stays on screen. A swipe or the arrow keys still change the slide. Automatic changes are not
+ * announced to screen readers.
  */
 export default function FeaturedCarousel({
   products,
@@ -37,10 +30,8 @@ export default function FeaturedCarousel({
   products: MenuProduct[];
   cafeteriaId: string;
 }) {
-  const count = products.length;
   const [index, setIndex] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [pauses, setPauses] = useState<CarouselPauses>(NO_PAUSE);
   const swipeStart = useRef<number | null>(null);
   const swiped = useRef(false);
   const regionName = useId();
@@ -53,10 +44,11 @@ export default function FeaturedCarousel({
     return () => query.removeEventListener("change", apply);
   }, []);
 
+  const slides = carouselSlides(products, reducedMotion);
+  const count = slides.length;
   // A shorter list (a product went out of stock) must not leave the index past the end.
   const current = count > 0 ? Math.min(index, count - 1) : 0;
-  const paused = isPaused(pauses);
-  const rotating = canRotate({ count, reducedMotion, paused });
+  const rotating = canRotate({ count, reducedMotion });
 
   // Restarted on every change of slide, so a manual move gives the new slide its full time.
   useEffect(() => {
@@ -79,19 +71,6 @@ export default function FeaturedCarousel({
       className={styles.carousel}
       aria-roledescription="carrusel"
       aria-labelledby={regionName}
-      onPointerEnter={(event) => {
-        if (event.pointerType === "mouse")
-          setPauses((p) => ({ ...p, hover: true }));
-      }}
-      onPointerLeave={(event) => {
-        if (event.pointerType === "mouse")
-          setPauses((p) => ({ ...p, hover: false }));
-      }}
-      onFocus={() => setPauses((p) => ({ ...p, focus: true }))}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null))
-          setPauses((p) => ({ ...p, focus: false }));
-      }}
       onKeyDown={(event) => {
         if (count < 2) return;
         if (event.key === "ArrowRight") {
@@ -109,14 +88,13 @@ export default function FeaturedCarousel({
       <div
         className={styles.viewport}
         onPointerDown={(event) => {
+          if (count < 2) return;
           swipeStart.current = event.clientX;
           swiped.current = false;
-          setPauses((p) => ({ ...p, touch: true }));
         }}
         onPointerUp={(event) => {
           const start = swipeStart.current;
           swipeStart.current = null;
-          setPauses((p) => ({ ...p, touch: false }));
           if (start === null) return;
           const distance = event.clientX - start;
           if (Math.abs(distance) >= SWIPE_PX && count > 1) {
@@ -126,7 +104,6 @@ export default function FeaturedCarousel({
         }}
         onPointerCancel={() => {
           swipeStart.current = null;
-          setPauses((p) => ({ ...p, touch: false }));
         }}
         onClickCapture={(event) => {
           // A swipe that ends over a link must not open the product.
@@ -143,7 +120,7 @@ export default function FeaturedCarousel({
           style={{ transform: `translateX(-${current * 100}%)` }}
           aria-live="off"
         >
-          {products.map((product, i) => (
+          {slides.map((product, i) => (
             <div
               key={product.id}
               className={styles.slide}
@@ -165,48 +142,6 @@ export default function FeaturedCarousel({
           ))}
         </div>
       </div>
-
-      {count > 1 && (
-        <div className={styles.controls}>
-          <button
-            type="button"
-            className={styles.arrow}
-            aria-label="Producto anterior"
-            onClick={() => go(-1)}
-          >
-            <Icon name="flecha-izquierda" size={20} />
-          </button>
-          <div className={styles.dots}>
-            {products.map((product, i) => (
-              <button
-                key={product.id}
-                type="button"
-                className={styles.dot}
-                aria-label={`Ver ${product.name}`}
-                aria-current={i === current ? "true" : undefined}
-                onClick={() => setIndex(i)}
-              />
-            ))}
-          </div>
-          <button
-            type="button"
-            className={styles.arrow}
-            aria-label="Producto siguiente"
-            onClick={() => go(1)}
-          >
-            <Icon name="flecha-derecha" size={20} />
-          </button>
-          {!reducedMotion && (
-            <button
-              type="button"
-              className={styles.pause}
-              onClick={() => setPauses((p) => ({ ...p, user: !p.user }))}
-            >
-              {pauses.user ? "Reanudar carrusel" : "Pausar carrusel"}
-            </button>
-          )}
-        </div>
-      )}
     </section>
   );
 }
