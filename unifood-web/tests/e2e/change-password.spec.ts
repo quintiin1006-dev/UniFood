@@ -36,11 +36,9 @@ test("cambiar contraseña: enviar código, ver el aviso y pasar al paso 2", asyn
 
   // Step 2, with the confirmation toast on top.
   await expect(page).toHaveURL(/\/recuperar-contrasena/);
-  const toast = page
-    .getByRole("status")
-    .filter({
-      hasText: "Te enviamos un código de verificación a tu correo registrado",
-    });
+  const toast = page.getByRole("status").filter({
+    hasText: "Te enviamos un código de verificación a tu correo registrado",
+  });
   await expect(toast).toBeVisible();
   await expect(
     page.getByRole("textbox", { name: "Código de verificación", exact: true }),
