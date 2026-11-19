@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { ArrowLeft, LockKeyhole, Mail } from "lucide-react";
+import RecoveryCodeLink from "@/features/auth/components/RecoveryCodeLink";
+import { PROFILE_RESET_WITH_CODE } from "../../shared/messages";
 import styles from "./ClientProfile.module.css";
 
-export default function ClientPassword() {
+/** The code goes to the account address at once; the student does not type it again. */
+export default function ClientPassword({ email }: { email: string }) {
   return (
     <section className={styles.profile} aria-labelledby="password-title">
       <Link className={styles.back} href="/cuenta/perfil">
@@ -22,13 +25,10 @@ export default function ClientPassword() {
           Te enviaremos un código a tu correo institucional. Después de
           verificarlo, podrás establecer una nueva contraseña.
         </p>
-        <Link
-          className={styles.primaryButton}
-          href="/recuperar-contrasena?entrypoint=client"
-        >
+        <RecoveryCodeLink email={email} className={styles.primaryButton}>
           <Mail size={20} aria-hidden="true" />
-          Continuar por correo
-        </Link>
+          {PROFILE_RESET_WITH_CODE}
+        </RecoveryCodeLink>
         <p className={styles.passwordNote}>
           Al actualizarla, volverás a iniciar sesión con tu nueva contraseña.
         </p>

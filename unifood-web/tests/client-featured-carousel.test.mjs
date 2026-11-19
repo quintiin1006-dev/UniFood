@@ -73,9 +73,36 @@ test("with reduced motion only the first product stays on screen; otherwise all 
   assert.deepEqual(carouselSlides([], true), []);
 });
 
-test("the carousel has no pause logic left", () => {
-  const { isPaused } = domain();
-  assert.equal(isPaused, undefined);
+test("hover, focus or a finger pauses it (WCAG 2.2.2); nothing else does", () => {
+  const { isPaused, canRotate } = domain();
+  const none = { hover: false, focus: false, touch: false };
+  assert.equal(isPaused(none), false);
+  for (const key of ["hover", "focus", "touch"])
+    assert.equal(isPaused({ ...none, [key]: true }), true, key);
+  assert.equal(
+    canRotate({ count: 3, reducedMotion: false, paused: true }),
+    false,
+  );
+});
+
+test("the loop goes forward onto a copy of the first slide and never rewinds", () => {
+  const { loopTrack, nextLoopPosition } = domain();
+  const track = loopTrack(["a", "b", "c"]);
+  assert.deepEqual(
+    track.map(({ item }) => item),
+    ["a", "b", "c", "a"],
+  );
+  assert.deepEqual(
+    track.map(({ clone }) => clone),
+    [false, false, false, true],
+  );
+  // From the last real slide the next step is the copy, never back to 0 with a rewind.
+  assert.equal(nextLoopPosition(2, 3), 3);
+  assert.equal(nextLoopPosition(3, 3), 3);
+  assert.equal(nextLoopPosition(0, 3), 1);
+  // One slide needs no copy and does not move.
+  assert.deepEqual(loopTrack(["a"]).length, 1);
+  assert.equal(nextLoopPosition(0, 1), 0);
 });
 
 function render(products) {
@@ -108,8 +135,10 @@ test("several products render every slide, and only the current one is reachable
     (html.match(/aria-roledescription="diapositiva"/g) || []).length,
     3,
   );
-  // Only the current slide is reachable: the other two are inert.
-  assert.equal((html.match(/inert=""/g) || []).length, 2);
+  // Only the current slide is reachable: the other two and the loop copy are inert.
+  assert.equal((html.match(/inert=""/g) || []).length, 3);
+  // The copy of the first slide is hidden from assistive technology.
+  assert.equal((html.match(/aria-hidden="true" inert=""/g) || []).length, 1);
 });
 
 test("the carousel shows no arrows, dots or pause button", () => {

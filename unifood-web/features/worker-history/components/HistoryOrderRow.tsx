@@ -31,11 +31,21 @@ export function HistoryOrderRow({
   return (
     <article className={styles.row} data-open={open || undefined}>
       <div className={styles.rowHead}>
+        {/* Compact: time, name, total and state; the order id is not shown. */}
         <div className={styles.rowIdentity}>
+          <time
+            className={styles.rowTime}
+            dateTime={order.completedAt}
+            title="Hora de Bogotá"
+          >
+            {formatHistoryTime(order.completedAt)}
+          </time>
           <h3 className={styles.rowName}>{name}</h3>
-          <span>{order.reference}</span>
         </div>
         <div className={styles.rowAside}>
+          <strong className={styles.rowTotal}>
+            {formatHistoryPrice(order.total)}
+          </strong>
           <StatusChip
             status={order.status}
             cancellationSource={order.cancellationSource}
@@ -71,7 +81,7 @@ export function HistoryOrderRow({
           {order.items.length > 0 ? (
             <ul
               className={styles.items}
-              aria-label={`Productos de ${order.reference}`}
+              aria-label={`Productos del pedido de ${name}`}
             >
               {order.items.map((item, index) => (
                 <li key={index}>

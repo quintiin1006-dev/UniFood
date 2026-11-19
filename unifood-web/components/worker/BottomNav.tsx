@@ -2,7 +2,6 @@
 
 import { Icon, type IconName, ICON_MIN_20 } from "@/components/ui/Icon";
 
-import modernStyles from "./BottomNav.module.css";
 import classicStyles from "./BottomNav.classic.module.css";
 
 export type WorkerModule =
@@ -48,7 +47,9 @@ export default function BottomNav({
   activeModule,
   onChange,
 }: BottomNavProps) {
-  const styles = variant === "classic" ? classicStyles : modernStyles;
+  // One nav for every module: the Pedidos look, at the same size and position (see the CSS).
+  void variant;
+  const styles = classicStyles;
   return (
     <nav className={styles.nav} aria-label="Navegación principal">
       {modules.map((module) => {

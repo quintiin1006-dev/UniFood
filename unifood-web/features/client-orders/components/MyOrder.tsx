@@ -14,6 +14,7 @@ import {
   CLIENT_ORDER_GO_MENU,
   CLIENT_ORDER_TITLE,
   OFFLINE_RETRYING,
+  SOUND_TOGGLE_LABEL,
 } from "../../shared/messages";
 import type { OrderFailure } from "../errors";
 import { statusLine } from "../presentation";
@@ -103,13 +104,12 @@ export default function MyOrder({
           type="button"
           role="switch"
           aria-checked={!muted}
+          aria-label={SOUND_TOGGLE_LABEL}
+          title={SOUND_TOGGLE_LABEL}
           className={styles.soundSwitch}
           onClick={toggleSound}
         >
-          <span aria-hidden="true" className={styles.switchTrack}>
-            <span className={styles.switchThumb} />
-          </span>
-          <span>Sonido de avisos</span>
+          <Icon name={muted ? "avisos-apagados" : "avisos"} size={22} />
         </button>
       </div>
 

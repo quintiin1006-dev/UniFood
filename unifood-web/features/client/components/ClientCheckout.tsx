@@ -2,14 +2,13 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { TERMS_PATH } from "@/features/auth/legal";
-import { ArrowLeft, Banknote, Clock3, ShoppingBag } from "lucide-react";
+import { Clock3, ShoppingBag } from "lucide-react";
 import { Notice } from "@/components/ui/Notice";
 import { Spinner } from "@/components/ui/Spinner";
 import type { CafeteriaMenu, ClientCart } from "../types";
 import { placeOrder } from "../api/placeOrder";
 import { currency } from "../domain/catalog";
-import { validateCart } from "../domain/cart";
+import { cartItems, validateCart } from "../domain/cart";
 import {
   checkoutLines,
   earliestPickup,
@@ -33,7 +32,15 @@ import {
   type Attempt,
 } from "../idempotency";
 import { useClientCart } from "./ClientCartProvider";
-import CheckoutLines from "./CheckoutLines";
+import CartLineItem from "./CartLineItem";
+import {
+  CART_ADD_NOTE,
+  CART_CONFIRM,
+  CART_EMPTY_ACTION,
+  CART_PICKUP_AT,
+  CART_TITLE,
+  CART_TOTAL,
+} from "../../shared/messages";
 import CheckoutConfirmation from "./CheckoutConfirmation";
 import shared from "./ClientShopping.module.css";
 import styles from "./ClientCheckout.module.css";
@@ -74,10 +81,9 @@ export default function ClientCheckout({
         </button>
       </section>
     );
-  // Any cart change requires reviewing the new contents and accepting again.
+  // One screen: the lines are edited here, so the form keeps its time and note across changes.
   return (
     <CheckoutForm
-      key={JSON.stringify(cart)}
       cart={cart}
       menu={state.menu}
       initialTime={initialTime}
@@ -99,12 +105,13 @@ function CheckoutForm({
   initialTime: string;
   onPlaced: (order: PlacedOrder) => void;
 }) {
-  const { ownerId, latestCart, completeOrder } = useClientCart();
+  const { ownerId, latestCart, completeOrder, clear } = useClientCart();
   const now = useColombiaClock(initialTime);
   const [note, setNote] = useState("");
   const [choosePickup, setChoosePickup] = useState(false);
   const [pickupTime, setPickupTime] = useState("");
   const [noteLimitReached, setNoteLimitReached] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [pending, setPending] = useState(false);
   const sending = useRef(false);
@@ -149,7 +156,10 @@ function CheckoutForm({
               : undefined,
       });
       if (review.field === "pickup") timeInput.current?.focus();
-      if (review.field === "note") noteInput.current?.focus();
+      if (review.field === "note") {
+        setNoteOpen(true);
+        setTimeout(() => noteInput.current?.focus(), 0);
+      }
       return;
     }
     const current = nextAttempt(
@@ -177,29 +187,34 @@ function CheckoutForm({
     setProblem({ message: result.error.message, action: result.error.action });
     if (result.error.action === "time")
       setTimeout(() => timeInput.current?.focus(), 0);
-    if (result.error.action === "note")
+    if (result.error.action === "note") {
+      setNoteOpen(true);
       setTimeout(() => noteInput.current?.focus(), 0);
+    }
   }
 
   return (
     <section className={shared.shopping} aria-labelledby="checkout-title">
-      <Link className={shared.back} href="/cuenta/carrito">
-        <ArrowLeft size={21} aria-hidden="true" /> Volver al carrito
-      </Link>
       <div>
-        <h1 id="checkout-title">Resumen del pedido</h1>
+        <h1 id="checkout-title">{CART_TITLE}</h1>
         <p className={shared.description}>
-          Revisa tus productos y confirma tu pedido.
+          {CART_PICKUP_AT} <strong>{menu.cafeteria.name}</strong>
         </p>
       </div>
-      <div className={styles.location}>
-        <span>Recoger en</span>
-        <strong>{menu.cafeteria.name}</strong>
-      </div>
-      <CheckoutLines lines={lines} />
-      <Link href="/cuenta/carrito" className={styles.editCart}>
-        Editar productos
-      </Link>
+      <ul className={shared.cartList}>
+        {cartItems(cart, menu).map(({ line, product }) => (
+          <CartLineItem
+            key={line.productId}
+            line={line}
+            product={product}
+            menu={menu}
+          />
+        ))}
+      </ul>
+      {/* Asks for confirmation in the provider before emptying. */}
+      <button type="button" className={shared.secondaryButton} onClick={clear}>
+        {CART_EMPTY_ACTION}
+      </button>
       {cartIssue && (
         <p role="alert" className={shared.notice}>
           {cartIssue}
@@ -274,7 +289,12 @@ function CheckoutForm({
             </p>
           )}
         </fieldset>
-        <div className={styles.noteField}>
+        <details
+          className={styles.noteField}
+          open={noteOpen}
+          onToggle={(event) => setNoteOpen(event.currentTarget.open)}
+        >
+          <summary>{CART_ADD_NOTE}</summary>
           <label htmlFor="order-note">
             Nota para el pedido <span>(opcional)</span>
           </label>
@@ -298,18 +318,7 @@ function CheckoutForm({
               El límite es de {NOTE_LIMIT} caracteres.
             </Notice>
           )}
-        </div>
-        <div className={styles.payment}>
-          <Banknote size={24} aria-hidden="true" />
-          <div>
-            <strong>Efectivo al recoger</strong>
-            <p>Paga el total en la caja de la cafetería.</p>
-          </div>
-        </div>
-        <div className={shared.cartTotal}>
-          <span>Total estimado</span>
-          <strong>{currency.format(total)}</strong>
-        </div>
+        </details>
         {problem && (
           <div role="alert" className={shared.notice}>
             <p>{problem.message}</p>
@@ -319,23 +328,26 @@ function CheckoutForm({
             />
           </div>
         )}
-        <button
-          type="submit"
-          className={shared.primaryButton}
-          disabled={pending || !!cartIssue || !!pickupError}
-          aria-busy={pending || undefined}
-        >
-          {pending && <Spinner />}
-          {pending
-            ? "Enviando pedido…"
-            : problem?.action === "retry"
-              ? "Reintentar envío"
-              : "Confirmar pedido"}
-        </button>
-        <p className={styles.reminder}>
-          Recuerda recoger tu pedido a tiempo. Al pedir aceptas los{" "}
-          <Link href={TERMS_PATH}>términos y condiciones</Link>.
-        </p>
+        {/* Fixed at the bottom of the screen: the total and the one action. */}
+        <div className={styles.bar}>
+          <div className={styles.barTotal}>
+            <span>{CART_TOTAL}</span>
+            <strong>{currency.format(total)}</strong>
+          </div>
+          <button
+            type="submit"
+            className={shared.primaryButton}
+            disabled={pending || !!cartIssue || !!pickupError}
+            aria-busy={pending || undefined}
+          >
+            {pending && <Spinner />}
+            {pending
+              ? "Enviando pedido…"
+              : problem?.action === "retry"
+                ? "Reintentar envío"
+                : CART_CONFIRM}
+          </button>
+        </div>
       </form>
     </section>
   );

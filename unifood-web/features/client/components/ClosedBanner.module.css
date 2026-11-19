@@ -1,34 +1,38 @@
+/* Same box as the carousel card (FeaturedCarousel: radius 22 px, at least 190 px tall). */
 .banner {
-  display: grid;
-  align-content: center;
-  gap: 6px;
-  /* Same minimum height as the carousel (FeaturedCarousel: 190 px): switching between them does
-     not move the content below. */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
   min-height: 190px;
-  padding: 20px;
-  border-radius: 24px;
-  background: var(--color-brand-navy);
+  padding: 22px 24px 28px;
+  border-radius: 22px;
   color: var(--color-on-color);
+  background: linear-gradient(
+    150deg,
+    var(--color-brand) 0%,
+    var(--color-brand-navy) 100%
+  );
 }
 .icon {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: var(--color-brand-celeste);
-  color: var(--color-brand-navy);
+  width: 64px;
+  height: 64px;
+  margin-bottom: auto;
+  border-radius: 20px;
+  background: rgb(255 255 255 / 16%);
 }
 .title {
-  margin: 4px 0 0;
-  font-size: 26px;
-  font-weight: 700;
+  margin: 0;
+  font-size: clamp(24px, 6vw, 30px);
+  font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.4px;
 }
 .body {
   margin: 0;
   font-size: 16px;
-  line-height: 1.45;
-  color: var(--color-brand-tint);
+  font-weight: 600;
+  line-height: 1.4;
 }

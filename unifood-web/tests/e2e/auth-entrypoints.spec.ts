@@ -225,16 +225,14 @@ for (const entrypoint of ["client"]) {
     await page
       .getByRole("button", { name: "Enviar código", exact: true })
       .click();
-    await expect(page.getByRole("status")).toContainText(
-      "Si existe una cuenta",
-    );
+    await expect(page.getByRole("status")).toContainText("Si el correo existe");
     await page
       .getByRole("textbox", { name: "Código de verificación", exact: true })
       .fill("123456");
     await expect(
       page.getByLabel("Confirmar contraseña", { exact: true }),
     ).toBeVisible();
-    expect((await page.context().cookies()).length).toBeGreaterThan(0);
+    // One screen: the code is verified together with the new password, on submit.
     let resetRequests = 0;
     page.on("request", (request) => {
       if (new URL(request.url()).pathname === "/api/auth/reset")

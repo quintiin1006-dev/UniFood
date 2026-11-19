@@ -32,6 +32,12 @@ import AcceptTermsForm, {
 } from "./AcceptTermsForm";
 import { PanelAuthHero } from "./PanelAuthHero";
 import { useAuthHydration } from "../useAuthHydration";
+import {
+  clearRecoveryEmail,
+  handRecoveryEmail,
+  readRecoveryEmail,
+} from "../recoveryHandoff";
+import { RECOVERY_CODE_SENT } from "../../shared/messages";
 import styles from "./AuthScreen.module.css";
 
 type Mode = "login" | "register" | "recover";
@@ -175,7 +181,8 @@ export default function AuthScreen({
   // Registration here is step 1 only: email, then the code. Step 2 has its own page.
   const isRegisterEmail = mode === "register" && step === 0;
   const isOtp = !isLogin && step === 1;
-  const isPassword = isRecovery && step === 2;
+  // Recovery is one screen after the email: the code and the new password together.
+  const isPassword = isRecovery && step === 1;
 
   const typedAddress = email.trim().toLowerCase();
   const typedValid = validRegistrationEmail(typedAddress);
@@ -220,6 +227,31 @@ export default function AuthScreen({
   }, [typedAddress, typedValid, entrypoint, isRegisterEmail]);
 
   useEffect(() => {
+    // Coming from the login or «Mi perfil» with the address: the code is sent at once.
+    if (!hydrated || !isRecovery || step !== 0) return;
+    const handed = readRecoveryEmail();
+    if (!handed || !validEmail(handed)) return;
+    const timer = setTimeout(async () => {
+      if (inFlight.current) return;
+      clearRecoveryEmail();
+      inFlight.current = true;
+      setEmail(handed);
+      setBusy(true);
+      try {
+        await sendRecoveryCode(handed);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t.connection);
+      } finally {
+        inFlight.current = false;
+        setBusy(false);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+    // Only on arrival: the recovery screen reads the handed address once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
+
+  useEffect(() => {
     if (!resendAt) return;
     const tick = () =>
       setCountdown(Math.max(0, Math.ceil((resendAt - Date.now()) / 1000)));
@@ -237,11 +269,12 @@ export default function AuthScreen({
   useEffect(() => {
     // Six digits typed, pasted or autofilled send the form once, through the same
     // submit handler and its guards as the Verify button.
-    if (!isOtp || !hydrated || code.length !== OTP_LENGTH) return;
+    // In recovery the code waits for the new password, so it is never sent alone.
+    if (!isOtp || isRecovery || !hydrated || code.length !== OTP_LENGTH) return;
     if (autoSubmitted.current === code || inFlight.current) return;
     autoSubmitted.current = code;
     formRef.current?.requestSubmit();
-  }, [code, isOtp, hydrated]);
+  }, [code, isOtp, isRecovery, hydrated]);
 
   async function request(action: string, body: Record<string, unknown>) {
     const response = await fetch(`/api/auth/${action}`, {
@@ -255,6 +288,17 @@ export default function AuthScreen({
       throw new Error(data.message || t.connection);
     }
     return data;
+  }
+
+  /** Sends the recovery code and opens the code + new password screen. */
+  async function sendRecoveryCode(address: string) {
+    await request("recover", { email: address });
+    setEmail(address.trim().toLowerCase());
+    setResends(0);
+    next();
+    startCountdown();
+    // The same answer whether or not the address has an account.
+    setNotice(RECOVERY_CODE_SENT);
   }
 
   function startCountdown() {
@@ -291,6 +335,25 @@ export default function AuthScreen({
         if (data.terms === "pending" || data.terms === "unavailable")
           setTermsStep({ destination: data.redirect, state: data.terms });
         else navigate(data.redirect);
+      } else if (isOtp && isRecovery) {
+        failedOnCode = true;
+        if (code.length !== OTP_LENGTH) throw new Error(t.invalidCode);
+        if (!validPassword(password)) throw new Error(t.invalidPassword);
+        if (password !== confirm) throw new Error(t.mismatch);
+        const data = await request("verify", { email, code, recovery: true });
+        failedOnCode = false;
+        // A registration left before step 2 continues there with this code session.
+        if (data.redirect) {
+          navigate(data.redirect);
+          return;
+        }
+        await request("reset", { password });
+        setMode("login");
+        setStep(0);
+        setCode("");
+        setPassword("");
+        setConfirm("");
+        setNotice(t.resetDone);
       } else if (isOtp) {
         failedOnCode = true;
         if (code.length !== OTP_LENGTH) throw new Error(t.invalidCode);
@@ -330,12 +393,7 @@ export default function AuthScreen({
         next();
       } else {
         if (!validEmail(email.trim())) throw new Error(t.invalidEmail);
-        await request("recover", { email });
-        setEmail(email.trim().toLowerCase());
-        setResends(0);
-        next();
-        startCountdown();
-        setNotice(t.recoverySent);
+        await sendRecoveryCode(email);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t.connection);
@@ -458,7 +516,9 @@ export default function AuthScreen({
     : isLogin
       ? t.login
       : isOtp
-        ? t.verifyButton
+        ? isRecovery
+          ? t.reset
+          : t.verifyButton
         : isRecovery
           ? step === 0
             ? t.sendCode
@@ -657,6 +717,13 @@ export default function AuthScreen({
                           ? "/panel/recuperar"
                           : "/recuperar-contrasena?entrypoint=client"
                       }
+                      onClick={() => {
+                        // The address typed here goes with the student, who gets the code at once.
+                        if (entrypoint === "client")
+                          handRecoveryEmail(
+                            normalizeIdentifier(email, usernameDomain),
+                          );
+                      }}
                     >
                       {t.forgot}
                     </Link>

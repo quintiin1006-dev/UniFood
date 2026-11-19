@@ -64,7 +64,9 @@ test("history UI lists terminal states collapsed; each row has a labelled toggle
     "Ver detalle",
   ])
     assert.ok(markup.includes(text), text);
-  assert.ok(markup.indexOf("A91C6F2D") < markup.indexOf("B72D5A10"));
+  // Rows are compact: time, name, total and state; the order id is not shown.
+  assert.ok(markup.indexOf("Juan Pérez") < markup.indexOf("María Gómez"));
+  assert.doesNotMatch(markup, /A91C6F2D|B72D5A10/);
   assert.match(markup, /aria-expanded="false"/);
   assert.doesNotMatch(markup, /Almuerzo del día/);
   assert.doesNotMatch(markup, /PENDING|PREPARING|clientDocument/);

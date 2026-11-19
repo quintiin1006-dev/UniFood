@@ -4,7 +4,11 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 4px 6px 24px;
+  /* A white card on the deep blue page, like the columns of Pedidos. */
+  padding: 18px 20px 28px;
+  border-radius: 24px;
+  background: var(--color-surface);
+  box-shadow: 0 13px 35px rgba(3, 39, 87, 0.2);
   color: var(--color-ink);
 }
 .heading {
@@ -21,9 +25,12 @@
   letter-spacing: -0.7px;
 }
 .date {
-  margin: 6px 0 0;
-  font-size: 14px;
-  color: var(--color-slate);
+  /* The range is context, not a headline: short and quiet. */
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-soft);
+  font-variant-numeric: tabular-nums;
 }
 .refresh,
 .error button,
@@ -415,20 +422,49 @@
 
 .rowHead {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
   min-height: 64px;
   padding: 12px 18px;
 }
 
 .rowIdentity {
+  /* The name keeps room: on a narrow screen the total and state wrap below it. */
+  flex: 1 1 12rem;
   min-width: 0;
-  display: grid;
-  gap: 2px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.rowTime {
+  flex-shrink: 0;
+  min-width: 4.5em;
+  color: var(--color-text-soft);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.rowTotal {
+  color: var(--color-ink);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.day + .day {
+  border-top: 1px solid var(--color-line);
+}
+.dayTitle {
+  margin: 0;
+  padding: 10px 16px 6px;
+  background: var(--color-bg);
+  color: var(--color-slate);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .rowName {
+  min-width: 0;
   margin: 0;
   overflow: hidden;
   color: var(--color-ink);

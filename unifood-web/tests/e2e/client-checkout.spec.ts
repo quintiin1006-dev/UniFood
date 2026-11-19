@@ -29,13 +29,12 @@ async function addChicken(page: Page) {
     page.getByRole("heading", { name: "Tu carrito", exact: true }),
   ).toBeVisible({ timeout: 30_000 });
 }
+// Cart and confirmation are one screen: the cart already has the pickup time, the note and
+// «Confirmar pedido». The note starts folded under «Agregar una nota».
 async function openSummary(page: Page) {
   await addChicken(page);
-  await page.getByRole("link", { name: "Continuar con el pedido" }).click();
-  // The summary reads the menu through the BFF; the first visit compiles it in next dev.
-  await expect(
-    page.getByRole("heading", { name: "Resumen del pedido" }),
-  ).toBeVisible({ timeout: 30_000 });
+  await expect(confirmButton(page)).toBeVisible({ timeout: 30_000 });
+  await page.getByText("Agregar una nota").click();
 }
 async function noOverflow(page: Page) {
   expect(
@@ -97,10 +96,6 @@ for (const width of [320, 375, 390, 412, 430, 1280]) {
       page.getByRole("status", { name: "Cantidad de Pechuga a la plancha" }),
     ).toHaveText("2");
     await noOverflow(page);
-    await page.getByRole("link", { name: "Continuar con el pedido" }).click();
-    await expect(
-      page.getByRole("heading", { name: "Resumen del pedido" }),
-    ).toBeVisible({ timeout: 30_000 });
     await expect(
       page
         .getByRole("navigation", { name: "Navegación del estudiante" })
@@ -113,11 +108,15 @@ for (const width of [320, 375, 390, 412, 430, 1280]) {
     await expect(page.locator("#pickup-time")).toHaveCount(0);
     const confirm = confirmButton(page);
     await expect(confirm).toBeEnabled();
-    // Ordering needs no acceptance: the terms are shown as a link under the button.
+    // Ordering needs no acceptance and no terms line: they are accepted once, at sign-up.
     await expect(page.getByRole("checkbox")).toHaveCount(0);
     await expect(
       page.getByRole("link", { name: "términos y condiciones" }),
-    ).toHaveAttribute("href", "/terminos");
+    ).toHaveCount(0);
+    // The removed texts stay out of the single screen.
+    await expect(
+      page.getByText(/Total estimado|de 15 unidades|efectivo/i),
+    ).toHaveCount(0);
     await noOverflow(page);
     await page.screenshot({
       path: testInfo.outputPath(`checkout-${width}.png`),
@@ -351,9 +350,10 @@ test("checkout revalidates persisted changes before confirming and cannot confir
   }, storageKey);
   await confirmButton(page).click();
   await expect(page.getByText(/El carrito cambió/)).toBeVisible();
+  // One screen: the line's stepper shows what is stored now.
   await expect(
-    page.getByRole("list", { name: "Productos del pedido" }),
-  ).toContainText("3 × Pechuga");
+    page.getByRole("status", { name: "Cantidad de Pechuga a la plancha" }),
+  ).toHaveText("3");
   await page.evaluate((key) => localStorage.removeItem(key), storageKey);
   await confirmButton(page).click();
   await expect(

@@ -91,6 +91,31 @@ export const CART_LINE_UNAVAILABLE = "Ya no está disponible";
 /** Why the menu cannot be ordered from right now, shown where the «+» would be. */
 export const MENU_CLOSED_CHIP = "Cerrada";
 
+/* ---------- Cliente · Inicio (orden de jj/cliente-pulido) ---------- */
+
+/** Mi pedido: the small bell that turns the notice sound on or off. */
+export const SOUND_TOGGLE_LABEL = "Sonido de avisos";
+/* Carrito y confirmación en una sola pantalla. */
+export const CART_TITLE = "Tu carrito";
+export const CART_PICKUP_AT = "Recoger en";
+export const CART_ADD_NOTE = "Agregar una nota";
+export const CART_TOTAL = "Total";
+export const CART_CONFIRM = "Confirmar pedido";
+export const CART_EMPTY_ACTION = "Vaciar carrito";
+/* Contraseña olvidada: un código al correo; la respuesta no revela si la cuenta existe. */
+export const RECOVERY_CODE_SENT = "Si el correo existe, te enviamos un código.";
+export const PROFILE_RESET_WITH_CODE = "Restablecer con un código al correo";
+export const CAFETERIA_STATUS_OPEN = "Abierta";
+export const CAFETERIA_STATUS_CLOSED = "Cerrada";
+export const HOME_ALL_CATEGORIES = "Todo";
+export const HOME_SEE_ALL = "Ver todo";
+/** Only when the whole menu has nothing to order; empty categories are simply not shown. */
+export const HOME_EMPTY_MENU =
+  "Aún no hay productos para pedir. Vuelve más tarde.";
+/** Second line of the closed notice, only when the opening time is known. */
+export const closedOpensAt = (when: string) => `Abre ${when}`;
+export const CAROUSEL_LABEL = "Productos destacados";
+
 /* ---------- Push notifications (docs/notificaciones-push.md) ---------- */
 
 // The in-app notice stays the primary channel: whenever push is not available, the text says so.

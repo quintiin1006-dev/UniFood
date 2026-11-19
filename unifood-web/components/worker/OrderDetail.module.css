@@ -631,3 +631,20 @@
     transform: none;
   }
 }
+
+/* The age of the order, once, small, under the name. */
+.since {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-text-soft);
+  /* Smaller than the name, and scaled with the dialog like it. */
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+/* «Rechazar» stays apart from the main action and quieter: an outline, not a fill. */
+.secondary {
+  margin-top: calc(16px / var(--worker-zoom, 1));
+  padding-top: calc(12px / var(--worker-zoom, 1));
+  border-top: 1px solid var(--color-line);
+}

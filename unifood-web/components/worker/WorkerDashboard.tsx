@@ -336,6 +336,11 @@ export default function WorkerDashboard() {
           order={orders.find((order) => order.id === selectedOrder?.id) ?? null}
           onClose={() => setSelectedOrder(null)}
           onAction={onOrderAction}
+          onReject={(order) => {
+            // The reason dialog takes over: the detail closes so focus stays in one dialog.
+            setSelectedOrder(null);
+            setOrderToReject(order);
+          }}
           variant={listingVariant}
         />
       )}

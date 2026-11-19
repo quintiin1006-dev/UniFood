@@ -305,6 +305,12 @@ test("every student route enforces an active CLIENT role", async () => {
           page(props),
           (error) => error.location === destination,
         );
+      else if (file === "app/cuenta/carrito/resumen/page.tsx")
+        // The summary is part of the cart screen now: a client goes there.
+        await assert.rejects(
+          page(props),
+          (error) => error.location === "/cuenta/carrito",
+        );
       else assert.match(renderToStaticMarkup(await page(props)), /Student/);
     }
     for (const current of [null, profile(["CLIENT"], false)]) {

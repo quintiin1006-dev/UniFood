@@ -71,7 +71,6 @@ export default function CartLineItem({
         ) : (
           <h2>{name}</h2>
         )}
-        <p>Cantidad: {line.quantity}</p>
         {product && (
           <strong>{currency.format(product.price * line.quantity)}</strong>
         )}

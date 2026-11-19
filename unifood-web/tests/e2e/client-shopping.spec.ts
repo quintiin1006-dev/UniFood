@@ -74,7 +74,8 @@ test("§6 limits: 10 units per product and 15 per order, without stock", async (
   await expect(addButton(page)).toBeDisabled();
 
   await cartNav(page).click();
-  await expect(page.getByText("15 de 15 unidades")).toBeVisible();
+  // The cart no longer counts «n de 15 unidades»; the limit still blocks «+».
+  await expect(page.getByText("15 de 15 unidades")).toHaveCount(0);
   await expect(page.getByText(/\$\s*75\.000/)).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Aumentar cantidad de Jugo natural" }),
@@ -114,7 +115,7 @@ test("breakfast, lunch and drinks share one cart and one line per product", asyn
     "Jugo natural",
   ]);
   await expect(
-    page.getByRole("link", { name: "Continuar con el pedido" }),
+    page.getByRole("button", { name: "Confirmar pedido" }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: /Observaciones/ })).toHaveCount(
     0,
@@ -319,7 +320,7 @@ test("a product that left the menu stays removable and blocks continuing", async
     ),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Continuar con el pedido" }),
+    page.getByRole("button", { name: "Confirmar pedido" }),
   ).toBeDisabled();
   await page
     .getByRole("button", {
@@ -327,6 +328,6 @@ test("a product that left the menu stays removable and blocks continuing", async
     })
     .click();
   await expect(
-    page.getByRole("link", { name: "Continuar con el pedido" }),
+    page.getByRole("button", { name: "Confirmar pedido" }),
   ).toBeVisible();
 });
