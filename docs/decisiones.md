@@ -1099,6 +1099,29 @@ disponibilidad sin recargar:
   central (44 px, hasta 560 px) y «Actualizado a las …» es una píldora con el ícono de recarga, que
   gira solo mientras se refresca. El header del cliente ya mostraba solo la marca.
 
+### jj/menu-dia-db (PR 1 del menú del día dinámico)
+
+Diseño completo: `docs/propuesta-menu-dinamico.md` (secciones 2, 2.5 a 2.7 y fila 1 de la 6).
+
+- **Migración 031, no 030.** La 030 es la del límite de recordatorios. `031_daily_menu.sql` crea
+  las ocho tablas del menú (plato, plantilla, adiciones, día, opciones, adiciones del día y la copia
+  en el pedido), cerradas al navegador como la 013: RLS sin políticas y `REVOKE ALL` a `PUBLIC`,
+  `anon` y `authenticated`, también en sus dos funciones. Re-ejecutable como la 027. Se registra
+  con `apply-migrations.ps1` como cualquier otra; el bootstrap no cambia (solo cubre hasta la 024).
+- **Base de datos garantiza** lo que no exige leer otras tablas del pedido: forma de cada elección,
+  una por categoría, adiciones sin repetir, 350 caracteres por categoría (disparador), opciones solo
+  en categorías `SINGLE`, FKs compuestas por cafetería y copias del pedido inmutables
+  (`order_daily_menu_immutable`). Un pedido con copia de menú ya no se puede borrar (FK `RESTRICT`).
+- **Limpieza de cuentas.** `daily_menu_days.published_by` referencia `users`; como solo publica un
+  WORKER, el chequeo de `user_roles` de la limpieza lo cubre (mismo criterio que
+  `orders.rejected_by`). Se añadió a `staging-check.sql` y al test de registro seguro.
+- **Siembra de staging** `scripts/supabase/seed-daily-menu.sql`: solo «Cafetería Central» de «Sede
+  Principal», guarda `unifood.seed_target = 'staging'` (el archivo no la fija), idempotente. Precios
+  de ejemplo (9.500 el plato; 2.000 y 3.000 las adiciones); los reales los define el admin (PR 9).
+- **Bandera `MENU_DINAMICO_ENABLED`**, apagada por defecto. Backend: `menu.dinamico.enabled` y el
+  bean `DailyMenuFeature`; un valor no booleano falla al arrancar. Web: `serverDailyMenuEnabled()`
+  en `config/server.ts`, solo servidor, acepta `true`/`false`. Nadie la consume todavía.
+
 ## 13. Línea de corte
 
 Si el 14 de noviembre el backend de pedidos no está terminado, se activa toda la línea.
