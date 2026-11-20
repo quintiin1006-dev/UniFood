@@ -1094,6 +1094,10 @@ disponibilidad sin recargar:
   de red del worker y del cliente: franja azul (cristal en el worker, tinte `#EAF4FF` en el
   cliente), nube sin conexión de 20 px, «Reintentar» secundario y `role="status"`. Sin datos que
   mostrar usa un tono de error suave; el rojo queda para errores que impiden actuar.
+- **Header del worker sin nombre de módulo.** A la izquierda solo el logo y «UniFood» (el nav
+  dice el módulo); 64 px en los cinco módulos. En Pedidos y Llamadas el buscador ocupa el espacio
+  central (44 px, hasta 560 px) y «Actualizado a las …» es una píldora con el ícono de recarga, que
+  gira solo mientras se refresca. El header del cliente ya mostraba solo la marca.
 
 ## 13. Línea de corte
 

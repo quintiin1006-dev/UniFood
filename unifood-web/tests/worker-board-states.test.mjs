@@ -63,6 +63,7 @@ test("the header status tells the last successful read instead of a fixed «En l
   // 17:43 UTC is 12:43 in Bogotá.
   assert.deepEqual(syncStatusLabel(Date.parse("2026-11-20T17:43:10Z"), false), {
     text: "Actualizado a las 12:43",
+    time: "12:43",
     tone: "ok",
   });
   assert.equal(syncStatusLabel(Date.now(), true).tone, "warning");

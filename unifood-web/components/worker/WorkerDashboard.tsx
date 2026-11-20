@@ -51,6 +51,7 @@ export default function WorkerDashboard({
     clearActionError,
     syncFailure,
     lastSyncedAt,
+    refreshing,
     announcement,
     newOrderIds,
     retry,
@@ -322,6 +323,7 @@ export default function WorkerDashboard({
                 undefined)
               : undefined
           }
+          refreshing={listingModule && refreshing}
           variant={listingVariant}
         />
 

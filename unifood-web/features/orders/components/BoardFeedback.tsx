@@ -5,7 +5,6 @@ import { CircleAlert, RefreshCw, SearchX } from "lucide-react";
 import type { ListingErrorView } from "../listingStatus";
 import { STALE_LISTING_MESSAGE } from "../listingStatus";
 
-
 import styles from "./BoardFeedback.module.css";
 import { ConnectionNotice } from "@/features/shared/components/ConnectionNotice";
 

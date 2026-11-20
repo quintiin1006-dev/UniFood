@@ -252,9 +252,10 @@ test("WORKER header is module-aware and keeps order search out of Availability",
         onSearchChange() {},
       }),
     );
-  assert.match(markup("orders"), /Gestión de pedidos/);
+  // jj/cliente-ajustes-2 · D1: only the brand in the header; the nav names the module.
+  assert.doesNotMatch(markup("orders"), /Gestión de pedidos/);
   assert.match(markup("orders"), /role="search"/);
-  assert.match(markup("availability"), /Disponibilidad/);
+  assert.doesNotMatch(markup("availability"), /<p>Disponibilidad<\/p>/);
   assert.ok(!markup("availability").includes('role="search"'));
   const BottomNav = load("components/worker/BottomNav.tsx").default;
   const nav = renderToStaticMarkup(

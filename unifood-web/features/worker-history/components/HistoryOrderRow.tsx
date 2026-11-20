@@ -56,39 +56,41 @@ export function HistoryOrderRow({
         </div>
       </div>
       {open && (
-        <div id={panelId} className={styles.detail}>
-          <p className={styles.detailStatus}>
-            {historyStatusText(order)} ·{" "}
-            <time dateTime={order.completedAt}>
-              {formatHistoryDate(order.completedAt)} ·{" "}
-              {formatHistoryTime(order.completedAt)}
-            </time>
-          </p>
-          {order.items.length > 0 ? (
-            <ul
-              className={styles.items}
-              aria-label={`Productos del pedido de ${name}`}
-            >
-              {order.items.map((item, index) => (
-                <li key={index}>
-                  <span className={styles.itemName}>
-                    <span className={styles.quantity}>{item.quantity}×</span>{" "}
-                    <span>{item.name}</span>
-                  </span>
-                  <span className={styles.amount}>
-                    {formatHistoryPrice(item.subtotal)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className={styles.noItems}>
-              Sin detalle de productos registrado.
+        <div className={styles.detailWrap}>
+          <div id={panelId} className={styles.detail}>
+            <p className={styles.detailStatus}>
+              {historyStatusText(order)} ·{" "}
+              <time dateTime={order.completedAt}>
+                {formatHistoryDate(order.completedAt)} ·{" "}
+                {formatHistoryTime(order.completedAt)}
+              </time>
             </p>
-          )}
-          <div className={styles.total}>
-            <span>Total</span>
-            <strong>{formatHistoryPrice(order.total)}</strong>
+            {order.items.length > 0 ? (
+              <ul
+                className={styles.items}
+                aria-label={`Productos del pedido de ${name}`}
+              >
+                {order.items.map((item, index) => (
+                  <li key={index}>
+                    <span className={styles.itemName}>
+                      <span className={styles.quantity}>{item.quantity}×</span>{" "}
+                      <span>{item.name}</span>
+                    </span>
+                    <span className={styles.amount}>
+                      {formatHistoryPrice(item.subtotal)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.noItems}>
+                Sin detalle de productos registrado.
+              </p>
+            )}
+            <div className={styles.total}>
+              <span>Total</span>
+              <strong>{formatHistoryPrice(order.total)}</strong>
+            </div>
           </div>
         </div>
       )}

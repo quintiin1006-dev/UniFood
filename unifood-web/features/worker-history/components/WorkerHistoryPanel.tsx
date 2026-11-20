@@ -2,7 +2,7 @@
 import { useRef } from "react";
 import { History, Search, X } from "lucide-react";
 import { useWorkerHistory } from "../useWorkerHistory";
-import { formatDayDate, formatShortRange } from "../presentation";
+import { formatDayDate } from "../presentation";
 import { HistoryOrderRow } from "./HistoryOrderRow";
 import type { HistoryRange, HistoryStatus } from "../types";
 import {
@@ -103,11 +103,6 @@ export function WorkerHistoryPanel() {
               <option value="CANCELLED">Cancelado</option>
             </select>
           </label>
-          {state.data && (
-            <span className={styles.range}>
-              {formatShortRange(state.data.rangeStart, state.data.rangeEnd)}
-            </span>
-          )}
         </div>
         {/* D1: ghost rows with the size of the real ones, so nothing jumps when they arrive. */}
         {state.loading && (

@@ -17,7 +17,14 @@ interface HeaderProps {
   search: string;
   onSearchChange: (value: string) => void;
   /** Last read of the order listing (W1); absent in modules that do not poll. */
-  syncStatus?: { text: string; tone: "ok" | "warning" | "pending" };
+  syncStatus?: {
+    text: string;
+    /** «HH:MM» alone, for the narrow pill. */
+    time?: string;
+    tone: "ok" | "warning" | "pending";
+  };
+  /** A read is in flight: the reload icon turns (D3). */
+  refreshing?: boolean;
 }
 
 const searchInputId = "worker-search-input";
@@ -28,17 +35,11 @@ export default function Header({
   search,
   onSearchChange,
   syncStatus,
+  refreshing = false,
 }: HeaderProps) {
   // One header for the five modules: same height, logo and type (see the CSS).
   void variant;
   const styles = classicStyles;
-  const titles: Record<WorkerModule, string> = {
-    orders: "Gestión de pedidos",
-    calls: "Llamadas",
-    history: "Historial",
-    availability: "Disponibilidad",
-    profile: "Mi perfil",
-  };
   const showSearch = activeModule === "orders" || activeModule === "calls";
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
@@ -64,17 +65,17 @@ export default function Header({
           />
         </div>
 
+        {/* D1: only the brand; the nav already says which module this is. */}
         <div className={styles.brandInfo}>
           <h1>
             Uni<span>Food</span>
           </h1>
-
-          <p>{titles[activeModule]}</p>
         </div>
       </div>
 
-      <div className={styles.actions}>
-        {showSearch && (
+      {/* D2: the search takes the room between the brand and the actions. */}
+      {showSearch && (
+        <div className={styles.center}>
           <div
             className={`${styles.search} ${
               mobileSearchOpen ? styles.searchOpen : ""
@@ -120,22 +121,33 @@ export default function Header({
               </button>
             )}
           </div>
-        )}
+        </div>
+      )}
 
+      <div className={styles.actions}>
+        {/* D3: a small glass pill; the icon turns only while the board refreshes. */}
         {syncStatus && (
           <div
             className={`${styles.status} ${
-              syncStatus.tone === "warning"
-                ? styles.statusWarning
-                : syncStatus.tone === "pending"
-                  ? styles.statusPending
-                  : ""
+              syncStatus.tone === "warning" ? styles.statusWarning : ""
             }`}
             title={syncStatus.text}
+            aria-busy={refreshing || undefined}
           >
-            <span className={styles.statusDot} aria-hidden="true" />
-
-            <span>{syncStatus.text}</span>
+            <Icon
+              name="recargar"
+              size={20}
+              style={ICON_MIN_20}
+              className={refreshing ? styles.statusSpin : undefined}
+            />
+            {syncStatus.time ? (
+              <span>
+                <span className={styles.statusLabel}>Actualizado a las </span>
+                <time>{syncStatus.time}</time>
+              </span>
+            ) : (
+              <span>{syncStatus.text}</span>
+            )}
           </div>
         )}
         <LogoutButton entrypoint="panel" className={styles.logout} />

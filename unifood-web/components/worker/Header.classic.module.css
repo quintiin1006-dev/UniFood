@@ -62,24 +62,27 @@
   color: var(--color-brand);
 }
 /* The module name: dark enough on white (7:1). */
-.brandInfo p {
-  margin: calc(5px / var(--worker-zoom, 1)) 0 0;
-  color: var(--color-slate);
-  font-size: calc(14px / var(--worker-zoom, 1));
-  font-weight: 500;
-  line-height: 1.2;
-}
-
 .actions {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
-  gap: calc(20px / var(--worker-zoom, 1));
-  margin-left: calc(24px / var(--worker-zoom, 1));
+  gap: calc(12px / var(--worker-zoom, 1));
+}
+
+/* D2: the room between the brand and the actions; the search grows into it, centred, up to a
+   comfortable width, and never touches «Cerrar sesión». */
+.center {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  padding: 0 calc(24px / var(--worker-zoom, 1));
 }
 
 /* Search: solid white field with dark text, only in Pedidos and Llamadas. */
 .search {
-  width: min(calc(380px / var(--worker-zoom, 1)), 32vw);
+  width: 100%;
+  max-width: calc(560px / var(--worker-zoom, 1));
   height: calc(44px / var(--worker-zoom, 1));
   display: flex;
   align-items: center;
@@ -133,30 +136,39 @@
 .status {
   display: flex;
   align-items: center;
-  gap: calc(8px / var(--worker-zoom, 1));
+  gap: calc(6px / var(--worker-zoom, 1));
+  height: calc(36px / var(--worker-zoom, 1));
+  padding: 0 calc(12px / var(--worker-zoom, 1));
+  border: 1px solid #cfe3ff;
+  border-radius: 999px;
+  background: rgba(234, 244, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: var(--color-brand-navy);
-  font-size: calc(14px / var(--worker-zoom, 1));
-  font-weight: 500;
+  font-size: calc(13px / var(--worker-zoom, 1));
+  font-weight: 600;
   white-space: nowrap;
 }
-.statusDot {
-  width: calc(10px / var(--worker-zoom, 1));
-  height: calc(10px / var(--worker-zoom, 1));
+.status time {
+  font-variant-numeric: tabular-nums;
+}
+.status > svg {
   flex-shrink: 0;
-  background: #19b66b;
-  border-radius: 50%;
-  animation: pulse 2.3s ease-out infinite;
+  color: #0b5fff;
 }
-.statusPending .statusDot {
-  background: #9aa8bc;
+/* D3: the reload icon turns only while the board refreshes. */
+.statusSpin {
+  animation: status-spin 1s linear infinite;
 }
-.statusWarning {
-  color: #b42318;
-}
-.statusWarning .statusDot {
-  background: #d92d20;
+@keyframes status-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
+.statusWarning {
+  color: var(--color-brand-navy);
+}
 /* «Cerrar sesión»: the same size in every module, a 44 px target. */
 .logout {
   min-height: calc(44px / var(--worker-zoom, 1));
@@ -187,17 +199,6 @@
   to {
     opacity: 1;
     transform: scale(1);
-  }
-}
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(25, 182, 107, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 8px rgba(25, 182, 107, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(25, 182, 107, 0);
   }
 }
 
@@ -231,7 +232,18 @@
   .searchOpen input {
     display: block;
   }
-  .status span:last-child {
+  .center {
+    justify-content: flex-end;
+    padding: 0 calc(8px / var(--worker-zoom, 1));
+  }
+  /* Narrow: the pill keeps the icon and the time. */
+  .statusLabel,
+  .statusWarning > span {
+    display: none;
+  }
+}
+@media (max-width: 1100px) {
+  .statusLabel {
     display: none;
   }
 }
@@ -239,7 +251,7 @@
 @media (prefers-reduced-motion: reduce) {
   .header,
   .logoWrapper,
-  .statusDot {
+  .statusSpin {
     animation: none;
   }
   .search {

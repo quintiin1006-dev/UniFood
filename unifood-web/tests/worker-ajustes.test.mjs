@@ -112,7 +112,8 @@ test("F2: one 44 px row of solid white filters, a small «Ver detalle» and a wh
   assert.match(css, /\.toggle::before \{[^}]*inset: -6px 0;/);
   assert.match(
     css,
-    /\.detail \{[^}]*background: #ffffff;[^}]*color: var\(--color-ink\);/,
+    // jj/cliente-ajustes-2 · D5: the white card is the whole open row.
+    /\.row\[data-open\] \{[^}]*background: #ffffff;[^}]*color: var\(--color-ink\);/,
   );
 });
 
