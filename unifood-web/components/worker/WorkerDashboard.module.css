@@ -124,3 +124,9 @@
 .availabilityPage :global(.worker-main)::before {
   position: fixed;
 }
+
+/* E3 (jj/cliente-ajustes-2): Llamadas leaves its outer padding to the shared .page, like
+   Historial and Disponibilidad, so the three panels have the same margin and width. */
+.callsPage :global(.worker-main) {
+  padding: 0 0 calc(8px / var(--worker-zoom, 1));
+}

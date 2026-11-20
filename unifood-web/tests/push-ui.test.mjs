@@ -138,13 +138,22 @@ test("permission is requested only from enable(), never on load", () => {
   assert.match(sync, /Notification\.permission === "granted"/);
 });
 
-test("the card lives in the checkout confirmation; the client switch is only the bell (C4), the worker keeps its own", () => {
-  assert.match(
+test("the client has no push card after an order and no switch in Perfil: only the bell (E2, C4); the worker keeps its own", () => {
+  assert.doesNotMatch(
     fs.readFileSync(
       "features/client/components/CheckoutConfirmation.tsx",
       "utf8",
     ),
-    /<PushPromptCard \/>/,
+    /PushPromptCard/,
+  );
+  // Notifications off: the bell itself shows it with its dot.
+  assert.match(
+    fs.readFileSync("features/push/components/PushBell.module.css", "utf8"),
+    /\.bell\[data-on="false"\]::after/,
+  );
+  assert.match(
+    fs.readFileSync("features/push/components/PushBell.tsx", "utf8"),
+    /data-on=\{on\}/,
   );
   assert.doesNotMatch(
     fs.readFileSync("features/client/components/ClientProfile.tsx", "utf8"),

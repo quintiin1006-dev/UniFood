@@ -311,7 +311,7 @@ export default function WorkerDashboard({
   return (
     <WorkerSessionContext.Provider value={userId}>
       <main
-        className={`worker-page ${motion.tokens}${activeModule === "availability" ? ` ${styles.availabilityPage}` : activeModule === "history" ? ` ${styles.historyPage}` : activeModule === "profile" ? ` ${styles.profilePage}` : ""}${activeModule !== "profile" ? ` ${styles.brandedPage}` : ""}`}
+        className={`worker-page ${motion.tokens}${activeModule === "availability" ? ` ${styles.availabilityPage}` : activeModule === "history" ? ` ${styles.historyPage}` : activeModule === "profile" ? ` ${styles.profilePage}` : activeModule === "calls" ? ` ${styles.callsPage}` : ""}${activeModule !== "profile" ? ` ${styles.brandedPage}` : ""}`}
       >
         <Header
           activeModule={activeModule}
