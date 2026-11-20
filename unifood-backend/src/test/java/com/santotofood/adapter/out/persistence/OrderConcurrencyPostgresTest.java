@@ -151,6 +151,10 @@ class OrderConcurrencyPostgresTest {
     return cafe;
   }
 
+  /**
+   * A CALLED fixture has its reminders exhausted, so both terminal transitions (deliver and
+   * not-collected) are legal for it. The count follows the domain limit instead of copying it.
+   */
   static UUID order(UUID cafe, String state, int offset) throws Exception {
     UUID id = UUID.randomUUID();
     sql(
@@ -162,7 +166,9 @@ class OrderConcurrencyPostgresTest {
             + state
             + "','2026-10-10T10:00:00Z'::timestamptz + interval '"
             + offset
-            + " second', '2026-10-10T11:00:00Z',3)");
+            + " second', '2026-10-10T11:00:00Z',"
+            + Order.MAX_REMINDERS
+            + ")");
     return id;
   }
 
