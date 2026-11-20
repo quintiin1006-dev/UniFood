@@ -39,6 +39,9 @@ export function useOrders(enabled = true) {
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const [newOrderIds, setNewOrderIds] = useState<Record<string, number>>({});
+  // D3: the header's reload icon turns only while a read is in flight. Last on purpose:
+  // the hook tests read the states by position.
+  const [refreshing, setRefreshing] = useState(false);
   /** Whether a listing was read since the last withdrawal; the first read marks nothing new. */
   const hasRead = useRef(false);
   const pending = useRef(new Set<string>());
@@ -99,6 +102,7 @@ export function useOrders(enabled = true) {
         return;
       const version = ++revision.current;
       activeRefresh.current = version;
+      setRefreshing(true);
       try {
         const listing = await getOperationalOrders();
         if (version !== revision.current || pending.current.size) return;
@@ -149,6 +153,7 @@ export function useOrders(enabled = true) {
       } finally {
         if (activeRefresh.current === version) activeRefresh.current = null;
         if (version === revision.current) setLoading(false);
+        setRefreshing(activeRefresh.current !== null);
       }
     },
     [replaceOrders],
@@ -377,6 +382,7 @@ export function useOrders(enabled = true) {
     clearActionError,
     syncFailure,
     lastSyncedAt,
+    refreshing,
     announcement,
     newOrderIds,
     retry: refresh,

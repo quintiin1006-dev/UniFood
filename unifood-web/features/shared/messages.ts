@@ -17,6 +17,13 @@ export const ORDER_STATE_CHANGED =
   "El pedido ya cambió de estado. Revisa el tablero actualizado.";
 
 export const OFFLINE_RETRYING = "Sin conexión. Reintentando…";
+/* C (jj/cliente-ajustes-2): the brand's connection notice (features/shared/components). */
+export const CONNECTION_OFFLINE =
+  "Sin conexión. Mostramos lo último que cargó.";
+export const CONNECTION_STALE_HISTORY =
+  "Mostramos la última consulta. Lo intentamos de nuevo en un momento.";
+export const CONNECTION_RETRY = "Reintentar";
+export const CONNECTION_RETRYING = "Reintentando…";
 
 export const SAVING = "Guardando…";
 
@@ -123,6 +130,14 @@ export const RECOVERY_RESEND = "Reenviar código";
 export const recoveryResendIn = (seconds: number) =>
   `Reenviar código en ${seconds} s`;
 export const PASSWORD_UPDATED = "Contraseña actualizada";
+/* B (jj/cliente-ajustes-2): what a busy step says while it waits for the server. */
+export const AUTH_SENDING = "Enviando…";
+export const AUTH_VERIFYING = "Verificando…";
+export const AUTH_SAVING = "Guardando…";
+export const AUTH_SLOW = "Esto está tardando más de lo normal…";
+/** How long a step waits before saying it is slow, and before giving up. */
+export const AUTH_SLOW_MS = 3000;
+export const AUTH_TIMEOUT_MS = 20000;
 export const CAFETERIA_STATUS_OPEN = "Abierta";
 export const CAFETERIA_STATUS_CLOSED = "Cerrada";
 export const CAFETERIA_PICKER_LIST = "Cafeterías disponibles";

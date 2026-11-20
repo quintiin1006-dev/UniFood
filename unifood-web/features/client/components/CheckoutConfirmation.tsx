@@ -5,7 +5,6 @@ import Link from "next/link";
 import { CircleCheck } from "lucide-react";
 import { currency } from "../domain/catalog";
 import { pickupLabel, type PlacedOrder } from "../domain/checkout";
-import { PushPromptCard } from "@/features/push/components/PushControls";
 import CheckoutLines from "./CheckoutLines";
 import shared from "./ClientShopping.module.css";
 import styles from "./ClientCheckout.module.css";
@@ -61,7 +60,6 @@ export default function CheckoutConfirmation({
         <span>Total</span>
         <strong>{currency.format(order.total)}</strong>
       </div>
-      <PushPromptCard />
       <Link href="/cuenta" className={shared.primaryButton}>
         Volver al inicio
       </Link>

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Clock3, ShoppingBag } from "lucide-react";
 import { Notice } from "@/components/ui/Notice";
 import { Spinner } from "@/components/ui/Spinner";
@@ -52,6 +53,7 @@ export default function ClientCheckout({
 }) {
   const { cart, ready } = useClientCart();
   const [placed, setPlaced] = useState<PlacedOrder | null>(null);
+  const router = useRouter();
   const { state, retry } = useCafeteriaMenu(
     ready && cart.lines.length && !placed ? cart.cafeteriaId : null,
   );
@@ -87,7 +89,11 @@ export default function ClientCheckout({
       cart={cart}
       menu={state.menu}
       initialTime={initialTime}
-      onPlaced={setPlaced}
+      onPlaced={(order) => {
+        setPlaced(order);
+        // The pages cached for 30 s (Inicio, Mi pedido) must not show the cart before the order.
+        router.refresh();
+      }}
     />
   );
 }

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import Header from "@/components/worker/Header";
 import KanbanBoard from "@/components/worker/KanbanBoard";
 import CallsBoard from "@/components/worker/CallsBoard";
 import OrderDetail from "@/components/worker/OrderDetail";
 import BottomNav, { type WorkerModule } from "@/components/worker/BottomNav";
+import { WorkerSessionContext } from "@/features/worker-ui/session";
 
 import { useOrders } from "@/features/orders/hooks/useOrders";
 import { RejectOrderDialog } from "@/features/orders/components/RejectOrderDialog";
@@ -30,7 +31,12 @@ import { WorkerProfilePanel } from "@/features/worker-profile/components/WorkerP
 import motion from "@/features/orders/components/motion.module.css";
 import styles from "./WorkerDashboard.module.css";
 
-export default function WorkerDashboard() {
+export default function WorkerDashboard({
+  userId = "anonymous",
+}: {
+  /** The signed-in worker: the module stores are kept per account. */
+  userId?: string;
+} = {}) {
   const [activeModule, setActiveModule] = useState<WorkerModule>("orders");
   const {
     orders,
@@ -45,6 +51,7 @@ export default function WorkerDashboard() {
     clearActionError,
     syncFailure,
     lastSyncedAt,
+    refreshing,
     announcement,
     newOrderIds,
     retry,
@@ -73,6 +80,14 @@ export default function WorkerDashboard() {
   const listingBlocked =
     !!listingView && (listingView.withdraw || lastSyncedAt === null);
   const listingModule = activeModule === "orders" || activeModule === "calls";
+
+  /* A: the scroll of each module, restored when it is shown again. */
+  const mainRef = useRef<HTMLDivElement>(null);
+  const scrolls = useRef<Partial<Record<WorkerModule, number>>>({});
+  useLayoutEffect(() => {
+    if (mainRef.current)
+      mainRef.current.scrollTop = scrolls.current[activeModule] ?? 0;
+  }, [activeModule]);
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
@@ -188,6 +203,8 @@ export default function WorkerDashboard() {
      ========================================================= */
 
   const handleModuleChange = (module: WorkerModule) => {
+    // A: each module comes back where it was left.
+    scrolls.current[activeModule] = mainRef.current?.scrollTop ?? 0;
     setActiveModule(module);
 
     setSelectedOrder(null);
@@ -292,90 +309,96 @@ export default function WorkerDashboard() {
      ========================================================= */
 
   return (
-    <main
-      className={`worker-page ${motion.tokens}${activeModule === "availability" ? ` ${styles.availabilityPage}` : activeModule === "history" ? ` ${styles.historyPage}` : activeModule === "profile" ? ` ${styles.profilePage}` : ""}${activeModule !== "profile" ? ` ${styles.brandedPage}` : ""}`}
-    >
-      <Header
-        activeModule={activeModule}
-        search={search}
-        onSearchChange={setSearch}
-        syncStatus={
-          listingModule
-            ? (syncStatusLabel(lastSyncedAt, syncFailure !== null) ?? undefined)
-            : undefined
-        }
-        variant={listingVariant}
-      />
+    <WorkerSessionContext.Provider value={userId}>
+      <main
+        className={`worker-page ${motion.tokens}${activeModule === "availability" ? ` ${styles.availabilityPage}` : activeModule === "history" ? ` ${styles.historyPage}` : activeModule === "profile" ? ` ${styles.profilePage}` : activeModule === "calls" ? ` ${styles.callsPage}` : ""}${activeModule !== "profile" ? ` ${styles.brandedPage}` : ""}`}
+      >
+        <Header
+          activeModule={activeModule}
+          search={search}
+          onSearchChange={setSearch}
+          syncStatus={
+            listingModule
+              ? (syncStatusLabel(lastSyncedAt, syncFailure !== null) ??
+                undefined)
+              : undefined
+          }
+          refreshing={listingModule && refreshing}
+          variant={listingVariant}
+        />
 
-      <div className="worker-main">
-        {listingModule && listingView && !listingBlocked && (
-          <StaleListingBanner retrying={retrying} onRetry={onRetry} />
-        )}
-        {renderModule()}
-      </div>
+        <div className="worker-main" ref={mainRef}>
+          {listingModule && listingView && !listingBlocked && (
+            <StaleListingBanner retrying={retrying} onRetry={onRetry} />
+          )}
+          {renderModule()}
+        </div>
 
-      {listingModule && <BoardAnnouncer message={announcement} />}
+        {listingModule && <BoardAnnouncer message={announcement} />}
 
-      {/* =====================================================
+        {/* =====================================================
           NAVEGACIÓN INFERIOR
           ===================================================== */}
 
-      <BottomNav
-        activeModule={activeModule}
-        onChange={handleModuleChange}
-        variant={listingVariant}
-      />
+        <BottomNav
+          activeModule={activeModule}
+          onChange={handleModuleChange}
+          variant={listingVariant}
+        />
 
-      {/* =====================================================
+        {/* =====================================================
           DETALLE DE PEDIDO
           ===================================================== */}
 
-      {activeModule === "orders" && (
-        <OrderDetail
-          busy={busyOrderIds.includes(selectedOrder?.id ?? "")}
-          order={orders.find((order) => order.id === selectedOrder?.id) ?? null}
-          onClose={() => setSelectedOrder(null)}
-          onAction={onOrderAction}
-          onReject={(order) => {
-            // The reason dialog takes over: the detail closes so focus stays in one dialog.
-            setSelectedOrder(null);
-            setOrderToReject(order);
-          }}
-          variant={listingVariant}
-        />
-      )}
+        {activeModule === "orders" && (
+          <OrderDetail
+            busy={busyOrderIds.includes(selectedOrder?.id ?? "")}
+            order={
+              orders.find((order) => order.id === selectedOrder?.id) ?? null
+            }
+            onClose={() => setSelectedOrder(null)}
+            onAction={onOrderAction}
+            onReject={(order) => {
+              // The reason dialog takes over: the detail closes so focus stays in one dialog.
+              setSelectedOrder(null);
+              setOrderToReject(order);
+            }}
+            variant={listingVariant}
+          />
+        )}
 
-      {activeModule === "orders" && orderToReject && (
-        <RejectOrderDialog
-          order={orderToReject}
-          onClose={() => setOrderToReject(null)}
-          onConfirm={async (order, reason) => {
-            const result = await handleOrderReject(order, reason);
-            if ("order" in result)
-              setSelectedOrder((current) =>
-                current?.id === result.order.id ? null : current,
-              );
-            return result;
-          }}
-        />
-      )}
+        {activeModule === "orders" && orderToReject && (
+          <RejectOrderDialog
+            order={orderToReject}
+            onClose={() => setOrderToReject(null)}
+            onConfirm={async (order, reason) => {
+              const result = await handleOrderReject(order, reason);
+              if ("order" in result)
+                setSelectedOrder((current) =>
+                  current?.id === result.order.id ? null : current,
+                );
+              return result;
+            }}
+          />
+        )}
 
-      {/* =====================================================
+        {/* =====================================================
           ERROR DE ACCIÓN
           ===================================================== */}
 
-      {actionError &&
-        (activeModule === "orders" || activeModule === "calls") && (
-          <OrderActionAlert
-            title={
-              isPriorityError
-                ? "Acción no disponible"
-                : "No se pudo completar la acción"
-            }
-            message={actionError}
-            onClose={clearActionError}
-          />
-        )}
-    </main>
+        {actionError &&
+          (activeModule === "orders" || activeModule === "calls") && (
+            <OrderActionAlert
+              title={
+                isPriorityError
+                  ? "Acción no disponible"
+                  : "No se pudo completar la acción"
+              }
+              message={actionError}
+              onClose={clearActionError}
+            />
+          )}
+      </main>
+    </WorkerSessionContext.Provider>
   );
 }

@@ -5,6 +5,13 @@ import { fetchOrder, pollCurrentOrder } from "./api";
 import { connectionFailure, orderFailure, type OrderFailure } from "./errors";
 import { alertFor, createPoller, type OrderAlert } from "./polling";
 import type { ClientOrder } from "./types";
+import { sessionStore } from "@/features/shared/sessionStore";
+
+/** The last answer of this session: back in Mi pedido it shows at once, then refreshes (A). */
+const lastState = () =>
+  sessionStore("client:current-order", () => ({
+    value: null as CurrentOrderState | null,
+  }));
 
 export type CurrentOrderState = {
   /** The first answer arrived (an order, or none). */
@@ -32,7 +39,9 @@ const INITIAL: CurrentOrderState = {
  * last state is fetched once so the client can read how it ended.
  */
 export function useCurrentOrder(onAlert: (alert: OrderAlert) => void) {
-  const [state, setState] = useState<CurrentOrderState>(INITIAL);
+  const [state, setState] = useState<CurrentOrderState>(
+    () => lastState().value ?? INITIAL,
+  );
   const alertRef = useRef(onAlert);
   const refreshRef = useRef<() => void>(() => undefined);
 
@@ -40,10 +49,17 @@ export function useCurrentOrder(onAlert: (alert: OrderAlert) => void) {
     alertRef.current = onAlert;
   });
 
+  // Only a real answer is kept; a failure never outlives the screen that saw it.
+  useEffect(() => {
+    lastState().value =
+      state.loaded && !state.failure ? { ...state, offline: false } : null;
+  }, [state]);
+
   useEffect(() => {
     let alive = true;
-    let current: ClientOrder | null = null;
-    let loaded = false;
+    const cached = lastState().value;
+    let current: ClientOrder | null = cached?.order ?? null;
+    let loaded = cached?.loaded ?? false;
 
     const poller = createPoller({
       load: pollCurrentOrder,

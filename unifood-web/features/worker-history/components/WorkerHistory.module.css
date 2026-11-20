@@ -109,15 +109,6 @@
   font: inherit;
   font-size: 14px;
 }
-/* A4: the full range of the selected period, at the end of the row. */
-.range {
-  flex-shrink: 0;
-  margin-left: auto;
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
 
 /* Rows inside the same panel, one thin divider between them. */
 .list {
@@ -194,14 +185,61 @@
   transform: rotate(180deg);
 }
 
-/* D3: the open detail is solid white with dark text (contrast 7:1 or more). */
+/* D5: open, the WHOLE row is the white card (name, hour, «Ocultar» and the detail on one solid
+   white background, dark text), and the detail grows in. */
+.row {
+  transition:
+    background-color 200ms ease,
+    margin 200ms ease,
+    border-radius 200ms ease;
+}
+.row[data-open] {
+  margin: 8px 12px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: var(--color-ink);
+  box-shadow: 0 8px 24px rgba(4, 30, 70, 0.18);
+}
+.row[data-open] + .row,
+.row + .row[data-open] {
+  border-top-color: transparent;
+}
+.row[data-open] .rowName {
+  color: var(--color-brand-navy);
+}
+.row[data-open] .rowIdentity time {
+  color: var(--color-slate);
+}
+.row[data-open] .toggle {
+  border-color: var(--color-brand-tint-2);
+  color: var(--color-brand-navy);
+}
+.row[data-open] .toggle:hover {
+  background: var(--color-brand-tint);
+}
+.row[data-open] .toggle:focus-visible {
+  outline-color: var(--color-brand);
+}
+.detailWrap {
+  display: grid;
+  animation: detail-open 220ms ease-out;
+}
+@keyframes detail-open {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
 .detail {
   display: grid;
   gap: 10px;
-  margin: 0 18px 14px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: #ffffff;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 18px 16px;
   color: var(--color-ink);
 }
 .detailStatus {
@@ -324,16 +362,17 @@
   border: 0;
 }
 @media (max-width: 760px) {
-  .range {
-    margin-left: 0;
-  }
   .filter {
     flex: 1 1 140px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .toggle,
-  .chevron {
+  .chevron,
+  .row {
     transition: none;
+  }
+  .detailWrap {
+    animation: none;
   }
 }

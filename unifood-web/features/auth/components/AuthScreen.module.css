@@ -815,8 +815,8 @@
 
 /* Ola 4 · destello: «Entrando…» with a small spinner. Reduced motion keeps it still. */
 .loginSpinner {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   margin-right: 8px;
   display: inline-block;
   border: 2px solid currentColor;
@@ -879,4 +879,36 @@
   .toast {
     animation: none;
   }
+}
+
+/* B (jj/cliente-ajustes-2): steps slide in; nothing moves with reduced motion. */
+.stepIn {
+  animation: step-in 180ms ease-out;
+}
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stepIn {
+    animation: none;
+  }
+}
+/* What the busy step is doing, and «Esto está tardando…» after 3 s. */
+.busyStatus {
+  min-height: 1.4em;
+  margin: 10px 0 0;
+  color: var(--color-text-soft);
+  font-size: 14px;
+  text-align: center;
+}
+.busyStatus:empty {
+  margin: 0;
+  min-height: 0;
 }

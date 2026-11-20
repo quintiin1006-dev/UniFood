@@ -109,7 +109,8 @@ test("loading and initial error do not render unconfirmed switches; retry and sa
   assert.match(loading, /Cargando disponibilidad/);
   assert.ok(!loading.includes('role="switch"'));
   const failed = render({ data: null, error: "Error temporal" });
-  assert.match(failed, /role="alert"/);
+  // C: a failed read is the brand's soft notice, not a red alert.
+  assert.match(failed, /data-tone="error" data-surface="glass" role="status"/);
   assert.match(failed, /Reintentar/);
   const saving = render({
     busyItems: [availabilityFixture().categories[1].items[0].id],
@@ -251,9 +252,10 @@ test("WORKER header is module-aware and keeps order search out of Availability",
         onSearchChange() {},
       }),
     );
-  assert.match(markup("orders"), /Gestión de pedidos/);
+  // jj/cliente-ajustes-2 · D1: only the brand in the header; the nav names the module.
+  assert.doesNotMatch(markup("orders"), /Gestión de pedidos/);
   assert.match(markup("orders"), /role="search"/);
-  assert.match(markup("availability"), /Disponibilidad/);
+  assert.doesNotMatch(markup("availability"), /<p>Disponibilidad<\/p>/);
   assert.ok(!markup("availability").includes('role="search"'));
   const BottomNav = load("components/worker/BottomNav.tsx").default;
   const nav = renderToStaticMarkup(

@@ -15,6 +15,11 @@ const nextConfig: NextConfig = {
   // Binding to :: does not allow the browser's IPv4/IPv6 loopback origins.
   allowedDevOrigins: ["127.0.0.1", "[::1]", ...networkHosts],
   turbopack: { root: process.cwd() },
+  // A (jj/cliente-ajustes-2): back in a tab of the client within 30 s, the page is painted from
+  // the router cache instead of waiting for the server. Signing in or out and accepting the
+  // terms are full page loads (the cache goes with them); placing an order calls
+  // router.refresh(). Data that changes by itself (Mi pedido, the menu) refreshes in the browser.
+  experimental: { staleTimes: { dynamic: 30 } },
   async headers() {
     return [
       {

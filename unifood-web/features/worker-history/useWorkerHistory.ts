@@ -1,10 +1,15 @@
 "use client";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import { useWorkerStore } from "@/features/worker-ui/session";
 import { workerHistoryApi } from "./api";
 import { WorkerHistoryStore } from "./state";
 
 export function useWorkerHistory() {
-  const [store] = useState(() => new WorkerHistoryStore(workerHistoryApi));
+  // Kept per account: back in Historial its rows, filters and pages are there at once (A).
+  const store = useWorkerStore(
+    "history",
+    () => new WorkerHistoryStore(workerHistoryApi),
+  );
   const state = useSyncExternalStore(
     store.subscribe,
     store.getSnapshot,

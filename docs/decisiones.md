@@ -1081,6 +1081,24 @@ disponibilidad sin recargar:
   pantalla, divididos entre `--worker-zoom`. El nav de los cinco módulos mide lo mismo (texto de
   10 px reales); el fondo claro de Mi perfil se mantiene.
 
+### jj/cliente-ajustes-2
+
+- **Cambio de módulo instantáneo.** Worker: los stores de Historial, Disponibilidad y Mi perfil
+  viven por sesión y por cuenta (`features/worker-ui/session.ts`, clave `worker:<usuario>:<módulo>`);
+  al volver se pinta lo último y se refresca en segundo plano, con filtros y scroll conservados. Al
+  salir de un módulo sus temporizadores se cancelan. Cliente: `staleTimes.dynamic = 30` (caché del
+  router de 30 s) y Mi pedido conserva su último estado. Confirmar un pedido llama
+  `router.refresh()`; iniciar o cerrar sesión y aceptar términos son cargas completas, y cerrar
+  sesión borra los stores (`clearSessionStores`).
+- **Aviso de conexión de marca.** `features/shared/components/ConnectionNotice` es el único aviso
+  de red del worker y del cliente: franja azul (cristal en el worker, tinte `#EAF4FF` en el
+  cliente), nube sin conexión de 20 px, «Reintentar» secundario y `role="status"`. Sin datos que
+  mostrar usa un tono de error suave; el rojo queda para errores que impiden actuar.
+- **Header del worker sin nombre de módulo.** A la izquierda solo el logo y «UniFood» (el nav
+  dice el módulo); 64 px en los cinco módulos. En Pedidos y Llamadas el buscador ocupa el espacio
+  central (44 px, hasta 560 px) y «Actualizado a las …» es una píldora con el ícono de recarga, que
+  gira solo mientras se refresca. El header del cliente ya mostraba solo la marca.
+
 ## 13. Línea de corte
 
 Si el 14 de noviembre el backend de pedidos no está terminado, se activa toda la línea.

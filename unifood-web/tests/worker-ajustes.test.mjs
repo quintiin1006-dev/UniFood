@@ -112,7 +112,8 @@ test("F2: one 44 px row of solid white filters, a small «Ver detalle» and a wh
   assert.match(css, /\.toggle::before \{[^}]*inset: -6px 0;/);
   assert.match(
     css,
-    /\.detail \{[^}]*background: #ffffff;[^}]*color: var\(--color-ink\);/,
+    // jj/cliente-ajustes-2 · D5: the white card is the whole open row.
+    /\.row\[data-open\] \{[^}]*background: #ffffff;[^}]*color: var\(--color-ink\);/,
   );
 });
 
@@ -194,14 +195,46 @@ test("D1: Pedidos, Historial and Disponibilidad load with the same shared glass 
     assert.doesNotMatch(read(file), /\.skeletons? \{|\.skeletons > div/, file);
 });
 
-test("D2: Historial refreshes by itself, so no «Actualizar»; Disponibilidad does not, so it keeps it", () => {
-  assert.doesNotMatch(
-    read("features/worker-history/components/WorkerHistoryPanel.tsx"),
-    /Actualizar historial|>Actualizar</,
-  );
+test("D2 and E1: Historial and Disponibilidad refresh by themselves every 30 s, so neither has «Actualizar»", () => {
+  for (const file of [
+    "features/worker-history/components/WorkerHistoryPanel.tsx",
+    "features/availability/components/AvailabilityPanel.tsx",
+  ])
+    assert.doesNotMatch(
+      read(file),
+      /Actualizar (historial|disponibilidad)|>Actualizar</,
+      file,
+    );
   assert.match(read("features/worker-history/state.ts"), /}, 30000\);/);
+  const hook = read("features/availability/useAvailability.ts");
+  assert.match(hook, /AVAILABILITY_POLL_MS = 30_000/);
+  // Paused with the tab hidden, read again on coming back, and stopped on unmount.
   assert.match(
-    read("features/availability/components/AvailabilityPanel.tsx"),
-    /aria-label="Actualizar disponibilidad"/,
+    hook,
+    /if \(visible\(\)\) void store\.refresh\(\);\s*\}, AVAILABILITY_POLL_MS\)/,
+  );
+  assert.match(hook, /window\.clearInterval\(timer\);/);
+  // A refresh keeps the data: the skeleton only shows without data.
+  assert.match(
+    read("features/availability/state.ts"),
+    /loading: this\.state\.data === null,/,
+  );
+});
+
+test("E3: Llamadas leaves its outer padding to the shared page, like Historial and Disponibilidad", () => {
+  const page = read("components/worker/WorkerDashboard.module.css");
+  const bottom = (selector) =>
+    page.match(
+      new RegExp(
+        String.raw`\.${selector} :global\(\.worker-main\) \{[^}]*padding: ([^;]*);`,
+      ),
+    )[1];
+  assert.equal(bottom("callsPage"), "0 0 calc(8px / var(--worker-zoom, 1))");
+  // Same on screen: 8 px at zoom 0.7 (Llamadas) and 8 px at zoom 1 (the other two).
+  assert.equal(bottom("historyPage"), "0 0 8px");
+  assert.equal(bottom("availabilityPage"), "0 0 8px");
+  assert.match(
+    read("components/worker/WorkerDashboard.tsx"),
+    /activeModule === "calls"\s*\?\s*` \$\{styles\.callsPage\}`/,
   );
 });

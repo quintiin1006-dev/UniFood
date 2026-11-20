@@ -1,5 +1,5 @@
 "use client";
-import { RefreshCw, CircleAlert } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import { useAvailability } from "../useAvailability";
 import {
   OPEN_WITHOUT_PRODUCTS_MESSAGE,
@@ -15,7 +15,7 @@ import {
 } from "@/features/worker-ui/components/PanelHeader";
 import styles from "./Availability.module.css";
 import { Notice } from "@/components/ui/Notice";
-import { Button } from "@/components/ui/Button";
+import { ConnectionNotice } from "@/features/shared/components/ConnectionNotice";
 import { Icon, ICON_MIN_20 } from "@/components/ui/Icon";
 
 /**
@@ -26,23 +26,6 @@ import { Icon, ICON_MIN_20 } from "@/components/ui/Icon";
 export function AvailabilityPanel() {
   const state = useAvailability();
   const blocked = state.refreshing || state.error !== null;
-  // No automatic refresh here (only on window focus), so «Actualizar» stays (D2).
-  const refresh = state.data ? (
-    <button
-      type="button"
-      className={styles.refresh}
-      aria-label="Actualizar disponibilidad"
-      disabled={
-        state.refreshing || state.cafeteriaBusy || state.busyItems.length > 0
-      }
-      onClick={() => {
-        void state.refresh();
-      }}
-    >
-      <RefreshCw size={20} style={ICON_MIN_20} aria-hidden="true" />
-      <span>{state.refreshing ? "Actualizando…" : "Actualizar"}</span>
-    </button>
-  ) : undefined;
   return (
     <div className={panelStyles.page}>
       <section
@@ -54,7 +37,6 @@ export function AvailabilityPanel() {
           icon={<Icon name="disponibilidad" size={26} />}
           title="Disponibilidad"
           titleId="availability-title"
-          aside={refresh}
         />
         {/* D1: the cafeteria row and two category sections, with the cards' own size. */}
         {state.loading && (
@@ -92,21 +74,16 @@ export function AvailabilityPanel() {
         )}
         {state.error && (
           <div className={panelStyles.section}>
-            <Notice
-              tone="error"
-              action={
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    void state.refresh();
-                  }}
-                >
-                  Reintentar
-                </Button>
-              }
+            <ConnectionNotice
+              surface="glass"
+              tone={state.data ? "offline" : "error"}
+              retrying={state.refreshing}
+              onRetry={() => {
+                void state.refresh();
+              }}
             >
               {state.error}
-            </Notice>
+            </ConnectionNotice>
           </div>
         )}
         {state.data && (

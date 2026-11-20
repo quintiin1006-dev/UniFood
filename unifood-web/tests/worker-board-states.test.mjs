@@ -63,6 +63,7 @@ test("the header status tells the last successful read instead of a fixed «En l
   // 17:43 UTC is 12:43 in Bogotá.
   assert.deepEqual(syncStatusLabel(Date.parse("2026-11-20T17:43:10Z"), false), {
     text: "Actualizado a las 12:43",
+    time: "12:43",
     tone: "ok",
   });
   assert.equal(syncStatusLabel(Date.now(), true).tone, "warning");
@@ -114,7 +115,8 @@ test("error, loading, stale and search states render accessible fixed texts", ()
     retrying: true,
     onRetry() {},
   });
-  assert.match(stale, /Se muestran los últimos datos/);
+  assert.match(stale, /Mostramos los últimos pedidos/);
+  assert.match(stale, /data-tone="offline" data-surface="glass" role="status"/);
   assert.match(stale, /Reintentando…/);
   const search = render(file, "SearchEmpty", {
     query: "  zzz ",
