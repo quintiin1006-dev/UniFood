@@ -17,6 +17,8 @@ export const ORDER_STATE_CHANGED =
   "El pedido ya cambió de estado. Revisa el tablero actualizado.";
 
 export const OFFLINE_RETRYING = "Sin conexión. Reintentando…";
+/** The worker header status when the listing cannot be read. */
+export const HEADER_OFFLINE = "Sin conexión";
 /* C (jj/cliente-ajustes-2): the brand's connection notice (features/shared/components). */
 export const CONNECTION_OFFLINE =
   "Sin conexión. Mostramos lo último que cargó.";

@@ -27,7 +27,7 @@ import {
 import {
   BACKEND_ERROR_CODES,
   BACKEND_ERROR_MESSAGES,
-  OFFLINE_RETRYING,
+  HEADER_OFFLINE,
   ORDER_STATE_CHANGED,
   SAVING,
   SESSION_EXPIRED,
@@ -94,7 +94,7 @@ export default function FeedbackGallery() {
         <div className={styles.stack}>
           <StaleListingBanner retrying={false} onRetry={noop} />
           <p className={styles.note}>
-            Encabezado del worker: «{OFFLINE_RETRYING}» sin conexión; «
+            Encabezado del worker: «{HEADER_OFFLINE}» en rojo sin conexión; «
             {syncStatusLabel(Date.parse("2026-11-20T17:43:00Z"), false)?.text}»
             con datos; nada antes de la primera lectura (el esqueleto lo
             indica).

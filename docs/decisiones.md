@@ -433,6 +433,13 @@ aíslan sus estilos de `globals.css`.
 
 - Tipografía: Inter, cargada solo en `/cuenta`. El resto de la app no cambia.
 - Modo oscuro: después del piloto. Los tokens del cliente quedan preparados para añadirlo.
+- Indicador de conexión del header del worker (Pedidos y Llamadas), 2026-11-20: vuelve el
+  diseño anterior al PR #164 (punto verde y «Actualizado a las HH:MM», sin recuadro) y es el
+  único elemento de estado del header. El punto pulsa solo mientras se refresca (quieto con
+  `prefers-reduced-motion`). Sin conexión, el mismo elemento pasa a rojo
+  (`--color-danger-ink` sobre blanco, punto `--color-danger`) con el texto «Sin conexión».
+  Excepción pedida por el usuario a la regla de «rojo solo para errores que impiden actuar».
+  El aviso `ConnectionNotice` bajo el header no cambia.
 
 ## 9. Infraestructura y Supabase
 

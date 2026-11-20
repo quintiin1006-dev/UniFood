@@ -133,42 +133,35 @@
   cursor: pointer;
 }
 
+/* The status as it was before #164: a green dot and the time, no box. Offline, the same element
+   turns red and says «Sin conexión» (docs/decisiones.md). */
 .status {
   display: flex;
   align-items: center;
-  gap: calc(6px / var(--worker-zoom, 1));
-  height: calc(36px / var(--worker-zoom, 1));
-  padding: 0 calc(12px / var(--worker-zoom, 1));
-  border: 1px solid #cfe3ff;
-  border-radius: 999px;
-  background: rgba(234, 244, 255, 0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  gap: calc(8px / var(--worker-zoom, 1));
   color: var(--color-brand-navy);
-  font-size: calc(13px / var(--worker-zoom, 1));
-  font-weight: 600;
+  font-size: calc(14px / var(--worker-zoom, 1));
+  font-weight: 500;
   white-space: nowrap;
 }
-.status time {
-  font-variant-numeric: tabular-nums;
-}
-.status > svg {
+.statusDot {
+  width: calc(10px / var(--worker-zoom, 1));
+  height: calc(10px / var(--worker-zoom, 1));
   flex-shrink: 0;
-  color: #0b5fff;
+  background: var(--color-success);
+  border-radius: 50%;
 }
-/* D3: the reload icon turns only while the board refreshes. */
-.statusSpin {
-  animation: status-spin 1s linear infinite;
+/* The dot pulses only while a read is in flight. */
+.statusRefreshing .statusDot {
+  animation: pulse 1.2s ease-out infinite;
 }
-@keyframes status-spin {
-  to {
-    transform: rotate(360deg);
-  }
+.statusWarning {
+  color: var(--color-danger-ink);
+}
+.statusWarning .statusDot {
+  background: var(--color-danger);
 }
 
-.statusWarning {
-  color: var(--color-brand-navy);
-}
 /* «Cerrar sesión»: the same size in every module, a 44 px target. */
 .logout {
   min-height: calc(44px / var(--worker-zoom, 1));
@@ -199,6 +192,18 @@
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(46, 125, 91, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(46, 125, 91, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(46, 125, 91, 0);
   }
 }
 
@@ -236,14 +241,8 @@
     justify-content: flex-end;
     padding: 0 calc(8px / var(--worker-zoom, 1));
   }
-  /* Narrow: the pill keeps the icon and the time. */
-  .statusLabel,
-  .statusWarning > span {
-    display: none;
-  }
-}
-@media (max-width: 1100px) {
-  .statusLabel {
+  /* Narrow: the dot alone when all is well; offline keeps its words. */
+  .status:not(.statusWarning) > span:last-child {
     display: none;
   }
 }
@@ -251,7 +250,7 @@
 @media (prefers-reduced-motion: reduce) {
   .header,
   .logoWrapper,
-  .statusSpin {
+  .statusRefreshing .statusDot {
     animation: none;
   }
   .search {
