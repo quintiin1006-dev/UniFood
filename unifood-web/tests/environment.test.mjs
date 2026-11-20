@@ -280,3 +280,48 @@ test("without UNIFOOD_EXPECTED_PROJECT_REF, or with it blank, nothing changes", 
     }),
   );
 });
+
+test("MENU_DINAMICO_ENABLED is off by default and read only on the server", () => {
+  assert.equal(config.readDailyMenuEnabled({}), false);
+  assert.equal(
+    config.readDailyMenuEnabled({ MENU_DINAMICO_ENABLED: " " }),
+    false,
+  );
+  assert.equal(
+    config.readDailyMenuEnabled({ MENU_DINAMICO_ENABLED: "false" }),
+    false,
+  );
+  assert.equal(
+    config.readDailyMenuEnabled({ MENU_DINAMICO_ENABLED: "TRUE" }),
+    true,
+  );
+  assert.equal(
+    config.readDailyMenuEnabled({ NEXT_PUBLIC_MENU_DINAMICO_ENABLED: "true" }),
+    false,
+  );
+  assert.throws(
+    () => config.readDailyMenuEnabled({ MENU_DINAMICO_ENABLED: "quizas" }),
+    {
+      message:
+        'Configuration error: MENU_DINAMICO_ENABLED must be "true" or "false".',
+    },
+  );
+  assert.equal(
+    load("config/server.ts", deployment).serverDailyMenuEnabled(),
+    false,
+  );
+  assert.equal(
+    load("config/server.ts", {
+      ...deployment,
+      MENU_DINAMICO_ENABLED: "true",
+    }).serverDailyMenuEnabled(),
+    true,
+  );
+  // The flag does not change environment validation.
+  assert.doesNotThrow(() =>
+    config.validateEnvironment({
+      ...deployment,
+      MENU_DINAMICO_ENABLED: "quizas",
+    }),
+  );
+});
