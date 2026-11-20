@@ -82,6 +82,18 @@ export function readAuthConfig(environment: Environment) {
   return { url: validatedUrl, key };
 }
 
+/**
+ * MENU_DINAMICO_ENABLED, the same flag the backend reads (docs/propuesta-menu-dinamico.md, 3.1).
+ * Server-only: the browser never receives it. Off when unset or blank; only "true" or "false"
+ * (any case) are accepted. Nothing uses it yet, and validateEnvironment does not check it.
+ */
+export function readDailyMenuEnabled(environment: Environment): boolean {
+  const value = environment.MENU_DINAMICO_ENABLED?.trim().toLowerCase();
+  if (!value || value === "false") return false;
+  if (value === "true") return true;
+  invalid("MENU_DINAMICO_ENABLED", 'must be "true" or "false"');
+}
+
 export function validateEnvironment(environment: Environment): void {
   readApiUrl(environment);
   readAuthConfig(environment);
