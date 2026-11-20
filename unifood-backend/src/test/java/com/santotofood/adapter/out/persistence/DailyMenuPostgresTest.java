@@ -11,6 +11,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -501,11 +502,20 @@ class DailyMenuPostgresTest {
         "23514",
         "order_daily_menu_immutable",
         () -> jdbc.update("DELETE FROM public.order_daily_menu_choices WHERE order_id=?", order));
-    // The order itself cannot be deleted while its snapshot exists.
-    failure(
-        "23001",
+    // The order itself cannot be deleted while its snapshot exists. An ON DELETE RESTRICT
+    // foreign key reports 23001 (restrict_violation) on PostgreSQL 18 and 23503
+    // (foreign_key_violation) on earlier versions; the constraint name is what proves the block.
+    var cause =
+        assertThrows(
+            DataAccessException.class,
+            () -> jdbc.update("DELETE FROM public.orders WHERE id=?", order));
+    var restrict = assertInstanceOf(PSQLException.class, cause.getMostSpecificCause());
+    assertTrue(Set.of("23001", "23503").contains(restrict.getSQLState()), restrict.getMessage());
+    assertNotNull(restrict.getServerErrorMessage());
+    assertEquals(
         "fk_order_daily_menu_order",
-        () -> jdbc.update("DELETE FROM public.orders WHERE id=?", order));
+        restrict.getServerErrorMessage().getConstraint(),
+        restrict.getMessage());
   }
 
   @Test
