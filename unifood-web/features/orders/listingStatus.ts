@@ -1,8 +1,6 @@
 // What the worker board says when the operational listing cannot be read (docs/ui-paneles.md,
 // W1, W2 and L1). Fixed Spanish texts chosen by HTTP status; no backend text reaches the screen.
 
-import { HEADER_OFFLINE } from "@/features/shared/messages";
-
 /** The same fixed text the BFF sends for an account without exactly one cafeteria. */
 export const LISTING_FORBIDDEN_MESSAGE =
   "No se pudo resolver la cafetería de tu cuenta.";
@@ -66,7 +64,9 @@ export function syncStatusLabel(
   lastSyncedAt: number | null,
   failing: boolean,
 ): { text: string; time?: string; tone: "ok" | "warning" } | null {
-  if (failing) return { text: HEADER_OFFLINE, tone: "warning" };
+  // Same text as HEADER_OFFLINE in features/shared/messages.ts (messages-catalog checks it);
+  // this file stays import-free for the sandboxed order tests.
+  if (failing) return { text: "Sin conexión", tone: "warning" };
   // Before the first read the board already shows its skeleton; no «Conectando…» text.
   if (lastSyncedAt === null) return null;
   const time = BOGOTA_CLOCK.format(new Date(lastSyncedAt));
