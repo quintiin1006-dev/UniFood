@@ -13,8 +13,9 @@ import {
   CLIENT_ORDER_EMPTY_TITLE,
   CLIENT_ORDER_GO_MENU,
   CLIENT_ORDER_TITLE,
-  OFFLINE_RETRYING,
+  CONNECTION_OFFLINE,
 } from "../../shared/messages";
+import { ConnectionNotice } from "@/features/shared/components/ConnectionNotice";
 import type { OrderFailure } from "../errors";
 import { statusLine } from "../presentation";
 import { isDeliveredToday } from "../stages";
@@ -116,9 +117,9 @@ export default function MyOrder({
       </div>
 
       {offline && (
-        <Notice tone="info" className={styles.offline}>
-          {OFFLINE_RETRYING} Mostramos lo último que vimos.
-        </Notice>
+        <ConnectionNotice className={styles.offline} onRetry={refresh}>
+          {CONNECTION_OFFLINE}
+        </ConnectionNotice>
       )}
 
       {!loaded && !failure && <Skeleton />}

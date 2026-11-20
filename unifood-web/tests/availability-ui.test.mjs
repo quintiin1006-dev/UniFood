@@ -109,7 +109,8 @@ test("loading and initial error do not render unconfirmed switches; retry and sa
   assert.match(loading, /Cargando disponibilidad/);
   assert.ok(!loading.includes('role="switch"'));
   const failed = render({ data: null, error: "Error temporal" });
-  assert.match(failed, /role="alert"/);
+  // C: a failed read is the brand's soft notice, not a red alert.
+  assert.match(failed, /data-tone="error" data-surface="glass" role="status"/);
   assert.match(failed, /Reintentar/);
   const saving = render({
     busyItems: [availabilityFixture().categories[1].items[0].id],

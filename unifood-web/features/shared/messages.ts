@@ -17,6 +17,13 @@ export const ORDER_STATE_CHANGED =
   "El pedido ya cambió de estado. Revisa el tablero actualizado.";
 
 export const OFFLINE_RETRYING = "Sin conexión. Reintentando…";
+/* C (jj/cliente-ajustes-2): the brand's connection notice (features/shared/components). */
+export const CONNECTION_OFFLINE =
+  "Sin conexión. Mostramos lo último que cargó.";
+export const CONNECTION_STALE_HISTORY =
+  "Mostramos la última consulta. Lo intentamos de nuevo en un momento.";
+export const CONNECTION_RETRY = "Reintentar";
+export const CONNECTION_RETRYING = "Reintentando…";
 
 export const SAVING = "Guardando…";
 

@@ -114,7 +114,8 @@ test("error, loading, stale and search states render accessible fixed texts", ()
     retrying: true,
     onRetry() {},
   });
-  assert.match(stale, /Se muestran los últimos datos/);
+  assert.match(stale, /Mostramos los últimos pedidos/);
+  assert.match(stale, /data-tone="offline" data-surface="glass" role="status"/);
   assert.match(stale, /Reintentando…/);
   const search = render(file, "SearchEmpty", {
     query: "  zzz ",

@@ -19,11 +19,11 @@ const screens = [
   "features/admin-dashboard/components/AdminDashboard.tsx",
 ];
 
-test("worker and admin response messages use the shared Notice", () => {
+test("worker and admin response messages use the shared Notice or the brand's connection notice", () => {
   for (const file of screens)
     assert.match(
       fs.readFileSync(file, "utf8"),
-      /from "@\/components\/ui\/Notice"/,
+      /from "@\/components\/ui\/Notice"|from "@\/features\/shared\/components\/ConnectionNotice"/,
       file,
     );
 });

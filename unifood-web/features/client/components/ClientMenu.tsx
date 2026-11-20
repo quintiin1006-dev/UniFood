@@ -15,7 +15,8 @@ import {
 import { useCafeteriaMenu } from "../hooks/useCafeteriaMenu";
 import { onlyAvailable } from "../menuRefresh";
 import type { CafeteriaMenu, MenuCategoryId } from "../types";
-import { OFFLINE_RETRYING } from "../../shared/messages";
+import { CONNECTION_OFFLINE } from "../../shared/messages";
+import { ConnectionNotice } from "@/features/shared/components/ConnectionNotice";
 import CafeteriaSelector from "./CafeteriaSelector";
 import ProductPlaceholder from "./ProductPlaceholder";
 import styles from "./ClientCatalog.module.css";
@@ -74,11 +75,7 @@ export default function ClientMenu({
           {CLOSED_NOTICE}
         </p>
       )}
-      {stale && (
-        <p className={menuStyles.closed} role="status">
-          {OFFLINE_RETRYING}
-        </p>
-      )}
+      {stale && <ConnectionNotice>{CONNECTION_OFFLINE}</ConnectionNotice>}
       <ul className={menuStyles.filters} aria-label="Categorías">
         <li>
           <Link

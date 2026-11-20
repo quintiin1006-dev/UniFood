@@ -11,8 +11,9 @@ import {
   panelStyles,
 } from "@/features/worker-ui/components/PanelHeader";
 import styles from "./WorkerHistory.module.css";
-import { Notice } from "@/components/ui/Notice";
-import { Button, buttonClass } from "@/components/ui/Button";
+import { ConnectionNotice } from "@/features/shared/components/ConnectionNotice";
+import { buttonClass } from "@/components/ui/Button";
+import { CONNECTION_STALE_HISTORY } from "@/features/shared/messages";
 import { Icon, ICON_MIN_20 } from "@/components/ui/Icon";
 
 /**
@@ -128,38 +129,23 @@ export function WorkerHistoryPanel() {
         )}
         {state.error && (
           <div className={panelStyles.section}>
-            <Notice
-              tone="error"
+            {/* C: with rows still on screen a calm notice; with nothing, a soft error. */}
+            <ConnectionNotice
+              surface="glass"
+              tone={state.data ? "offline" : "error"}
+              retrying={state.loading || state.refreshing}
+              onRetry={denied ? undefined : () => void state.refresh()}
               action={
                 state.error.status === 401 ? (
                   <a className={buttonClass("secondary")} href="/panel/login">
                     Iniciar sesión
                   </a>
-                ) : (
-                  !denied && (
-                    <Button
-                      variant="secondary"
-                      disabled={
-                        state.loading || state.refreshing || state.loadingMore
-                      }
-                      onClick={() => void state.refresh()}
-                    >
-                      {state.loading || state.refreshing
-                        ? "Reintentando…"
-                        : "Reintentar"}
-                    </Button>
-                  )
-                )
+                ) : undefined
               }
             >
               <p>{state.error.message}</p>
-              {state.data && (
-                <p className={styles.stale}>
-                  Datos de la última consulta. Actualiza para confirmar el
-                  historial.
-                </p>
-              )}
-            </Notice>
+              {state.data && <p>{CONNECTION_STALE_HISTORY}</p>}
+            </ConnectionNotice>
           </div>
         )}
         {state.data && !state.loading && (

@@ -1,0 +1,93 @@
+/* The brand's connection notice (C). Blue, calm and in the flow; lengths divided by
+   --worker-zoom so it measures the same on the worker board (drawn at 0.7) and elsewhere. */
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(10px / var(--worker-zoom, 1)) calc(12px / var(--worker-zoom, 1));
+  min-height: calc(48px / var(--worker-zoom, 1));
+  padding: calc(8px / var(--worker-zoom, 1)) calc(10px / var(--worker-zoom, 1))
+    calc(8px / var(--worker-zoom, 1)) calc(14px / var(--worker-zoom, 1));
+  border-radius: calc(16px / var(--worker-zoom, 1));
+  font-size: calc(14px / var(--worker-zoom, 1));
+  line-height: 1.45;
+}
+
+/* Client pages: brand tint with navy text (11.8:1). */
+.notice[data-surface="light"] {
+  border: 1px solid #cfe3ff;
+  background: #eaf4ff;
+  color: #0b2d6b;
+}
+
+/* Worker: glass on the deep blue page, white text (6:1 or more). */
+.notice[data-surface="glass"] {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(11, 45, 107, 0.45);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #ffffff;
+}
+
+/* A soft error: the same strip with a warmer edge, never the big red box. */
+.notice[data-tone="error"][data-surface="light"] {
+  border-color: #f1d08a;
+  background: #fff8e6;
+  color: #4d3507;
+}
+.notice[data-tone="error"][data-surface="glass"] {
+  border-color: rgba(255, 214, 140, 0.55);
+}
+
+.icon {
+  flex-shrink: 0;
+}
+.notice[data-surface="light"][data-tone="offline"] .icon {
+  color: #0b5fff;
+}
+
+.text {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.text p {
+  margin: 0;
+}
+
+/* «Reintentar»: secondary, 44 px to touch. */
+.retry {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: calc(6px / var(--worker-zoom, 1));
+  min-height: calc(44px / var(--worker-zoom, 1));
+  padding: 0 calc(14px / var(--worker-zoom, 1));
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.retry:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+.retry:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 2px;
+}
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}

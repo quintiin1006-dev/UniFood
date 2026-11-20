@@ -15,7 +15,7 @@ import {
 } from "@/features/worker-ui/components/PanelHeader";
 import styles from "./Availability.module.css";
 import { Notice } from "@/components/ui/Notice";
-import { Button } from "@/components/ui/Button";
+import { ConnectionNotice } from "@/features/shared/components/ConnectionNotice";
 import { Icon, ICON_MIN_20 } from "@/components/ui/Icon";
 
 /**
@@ -92,21 +92,16 @@ export function AvailabilityPanel() {
         )}
         {state.error && (
           <div className={panelStyles.section}>
-            <Notice
-              tone="error"
-              action={
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    void state.refresh();
-                  }}
-                >
-                  Reintentar
-                </Button>
-              }
+            <ConnectionNotice
+              surface="glass"
+              tone={state.data ? "offline" : "error"}
+              retrying={state.refreshing}
+              onRetry={() => {
+                void state.refresh();
+              }}
             >
               {state.error}
-            </Notice>
+            </ConnectionNotice>
           </div>
         )}
         {state.data && (

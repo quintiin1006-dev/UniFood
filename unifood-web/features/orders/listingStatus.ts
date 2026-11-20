@@ -48,8 +48,9 @@ export function listingErrorView(failure: ListingFailure): ListingErrorView {
 }
 
 /** Banner over a board that still shows the last orders it could read. */
+// C (jj/cliente-ajustes-2): a network drop is a calm notice, not an alarm.
 export const STALE_LISTING_MESSAGE =
-  "No pudimos actualizar los pedidos. Se muestran los últimos datos; lo seguimos intentando.";
+  "Sin conexión. Mostramos los últimos pedidos y lo seguimos intentando.";
 
 const BOGOTA_CLOCK = new Intl.DateTimeFormat("es-CO", {
   timeZone: "America/Bogota",

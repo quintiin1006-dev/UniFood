@@ -1090,6 +1090,10 @@ disponibilidad sin recargar:
   router de 30 s) y Mi pedido conserva su último estado. Confirmar un pedido llama
   `router.refresh()`; iniciar o cerrar sesión y aceptar términos son cargas completas, y cerrar
   sesión borra los stores (`clearSessionStores`).
+- **Aviso de conexión de marca.** `features/shared/components/ConnectionNotice` es el único aviso
+  de red del worker y del cliente: franja azul (cristal en el worker, tinte `#EAF4FF` en el
+  cliente), nube sin conexión de 20 px, «Reintentar» secundario y `role="status"`. Sin datos que
+  mostrar usa un tono de error suave; el rojo queda para errores que impiden actuar.
 
 ## 13. Línea de corte
 

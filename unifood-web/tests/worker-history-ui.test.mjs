@@ -182,9 +182,13 @@ test("safe recovery, session action and forbidden denial have distinct controls"
       message: "No pudimos cargar el historial en este momento.",
     },
   });
-  assert.match(temporary, /role="alert"/);
-  assert.match(temporary, />Reintentar</);
-  assert.match(temporary, /Datos de la última consulta/);
+  // C: with rows on screen, the calm brand notice (not a red alert).
+  assert.match(
+    temporary,
+    /data-tone="offline" data-surface="glass" role="status"/,
+  );
+  assert.match(temporary, /Reintentar<\/button>/);
+  assert.match(temporary, /Mostramos la última consulta/);
   const unauthorized = render({
     data: null,
     error: { status: 401, message: "Inicia sesión" },

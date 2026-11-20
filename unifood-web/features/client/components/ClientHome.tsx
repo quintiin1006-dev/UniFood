@@ -11,8 +11,9 @@ import {
   HOME_ALL_CATEGORIES,
   HOME_SEE_ALL,
   HOME_EMPTY_MENU,
-  OFFLINE_RETRYING,
+  CONNECTION_OFFLINE,
 } from "../../shared/messages";
+import { ConnectionNotice } from "@/features/shared/components/ConnectionNotice";
 import ClosedBanner from "./ClosedBanner";
 import FeaturedCarousel from "./FeaturedCarousel";
 import CafeteriaPicker from "./CafeteriaPicker";
@@ -72,11 +73,7 @@ export default function ClientHome({
         cafeteria={cafeteria}
         sites={sites}
       />
-      {stale && (
-        <p className={styles.notice} role="status">
-          {OFFLINE_RETRYING}
-        </p>
-      )}
+      {stale && <ConnectionNotice>{CONNECTION_OFFLINE}</ConnectionNotice>}
       {/* The same room either way: the closed notice takes the carousel's place. */}
       {cafeteria.open ? (
         <FeaturedCarousel
