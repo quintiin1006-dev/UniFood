@@ -883,6 +883,8 @@ test("cleanup checks every table that references an account", async (t) => {
     "client_code_corrections.actor_id",
     "client_code_corrections.client_id",
     "clients.user_id",
+    // 031: only a WORKER publishes the daily menu, so the user_roles check below covers it.
+    "daily_menu_days.published_by",
     "notification_preferences.user_id",
     "notifications.user_id",
     "orders.client_id",
