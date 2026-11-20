@@ -19,11 +19,11 @@ interface HeaderProps {
   /** Last read of the order listing (W1); absent in modules that do not poll. */
   syncStatus?: {
     text: string;
-    /** «HH:MM» alone, for the narrow pill. */
+    /** «HH:MM» alone. */
     time?: string;
     tone: "ok" | "warning" | "pending";
   };
-  /** A read is in flight: the reload icon turns (D3). */
+  /** A read is in flight: the status dot pulses. */
   refreshing?: boolean;
 }
 
@@ -125,29 +125,19 @@ export default function Header({
       )}
 
       <div className={styles.actions}>
-        {/* D3: a small glass pill; the icon turns only while the board refreshes. */}
+        {/* One status element: green dot and time; red «Sin conexión» offline. */}
         {syncStatus && (
           <div
-            className={`${styles.status} ${
-              syncStatus.tone === "warning" ? styles.statusWarning : ""
-            }`}
-            title={syncStatus.text}
+            className={`${styles.status}${
+              syncStatus.tone === "warning" ? ` ${styles.statusWarning}` : ""
+            }${refreshing ? ` ${styles.statusRefreshing}` : ""}`}
+            role="status"
+            aria-live="polite"
             aria-busy={refreshing || undefined}
+            title={syncStatus.text}
           >
-            <Icon
-              name="recargar"
-              size={20}
-              style={ICON_MIN_20}
-              className={refreshing ? styles.statusSpin : undefined}
-            />
-            {syncStatus.time ? (
-              <span>
-                <span className={styles.statusLabel}>Actualizado a las </span>
-                <time>{syncStatus.time}</time>
-              </span>
-            ) : (
-              <span>{syncStatus.text}</span>
-            )}
+            <span className={styles.statusDot} aria-hidden="true" />
+            <span>{syncStatus.text}</span>
           </div>
         )}
         <LogoutButton entrypoint="panel" className={styles.logout} />

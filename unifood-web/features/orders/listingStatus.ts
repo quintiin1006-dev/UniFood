@@ -64,7 +64,9 @@ export function syncStatusLabel(
   lastSyncedAt: number | null,
   failing: boolean,
 ): { text: string; time?: string; tone: "ok" | "warning" } | null {
-  if (failing) return { text: "Sin conexión. Reintentando…", tone: "warning" };
+  // Same text as HEADER_OFFLINE in features/shared/messages.ts (messages-catalog checks it);
+  // this file stays import-free for the sandboxed order tests.
+  if (failing) return { text: "Sin conexión", tone: "warning" };
   // Before the first read the board already shows its skeleton; no «Conectando…» text.
   if (lastSyncedAt === null) return null;
   const time = BOGOTA_CLOCK.format(new Date(lastSyncedAt));

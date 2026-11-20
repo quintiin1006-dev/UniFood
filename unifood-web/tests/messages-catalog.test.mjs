@@ -89,7 +89,7 @@ test("the shared UI texts keep one wording and lib/messages re-exports them", ()
   const listing = availabilityLoader()("features/orders/listingStatus.ts");
   assert.equal(
     listing.syncStatusLabel(Date.now(), true).text,
-    shared.OFFLINE_RETRYING,
+    shared.HEADER_OFFLINE,
   );
   assert.equal(shared.backendErrorMessage("NOPE", "fallback"), "fallback");
   assert.equal(

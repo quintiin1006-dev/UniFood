@@ -65,32 +65,51 @@ test("D2: the search grows between the brand and the actions, 44 px tall, with a
   assert.doesNotMatch(header({ activeModule: "history" }), /role="search"/);
 });
 
-test("D3: «Actualizado» is a glass pill whose reload icon turns only while refreshing", () => {
-  const status = { text: "Actualizado a las 10:42", time: "10:42", tone: "ok" };
-  const idle = header({ activeModule: "orders", syncStatus: status });
-  assert.match(idle, /<svg class="icon/);
-  assert.match(idle, /Actualizado a las <\/span><time>10:42<\/time>/);
-  assert.doesNotMatch(idle, /statusSpin/);
+test("status: one element, green dot when synced, pulses while refreshing, red offline", () => {
+  const ok = { text: "Actualizado a las 10:42", time: "10:42", tone: "ok" };
+  const idle = header({ activeModule: "orders", syncStatus: ok });
+  // A single status element, no glass pill and no second «Sin conexión» box.
+  assert.equal(idle.match(/role="status"/g).length, 1);
+  assert.match(idle, /aria-live="polite"/);
+  assert.match(idle, /statusDot/);
+  assert.match(idle, /<span>Actualizado a las 10:42<\/span>/);
+  assert.doesNotMatch(
+    idle,
+    /statusRefreshing|statusWarning|<svg[^>]*recargar|<time>/,
+  );
+
   const busy = header({
     activeModule: "orders",
-    syncStatus: status,
+    syncStatus: ok,
     refreshing: true,
   });
-  assert.match(busy, /statusSpin/);
+  assert.match(busy, /statusRefreshing/);
   assert.match(busy, /aria-busy="true"/);
+  assert.equal(busy.match(/role="status"/g).length, 1);
+
+  const off = header({
+    activeModule: "calls",
+    syncStatus: { text: "Sin conexión", tone: "warning" },
+  });
+  assert.equal(off.match(/role="status"/g).length, 1);
+  assert.equal(off.match(/Sin conexión/g).length, 2); // the text and its title
+  assert.match(off, /statusWarning/);
+
   const css = read("components/worker/Header.classic.module.css");
   const pill = css.match(/\.status \{[^}]*\}/)[0];
-  assert.match(pill, /height: calc\(36px/);
-  assert.match(pill, /border-radius: 999px;/);
+  assert.doesNotMatch(pill, /border|background|backdrop-filter/);
+  assert.match(css, /\.statusDot \{[^}]*background: var\(--color-success\);/);
+  assert.match(css, /\.statusWarning \{\s*color: var\(--color-danger-ink\);/);
   assert.match(
     css,
-    /prefers-reduced-motion: reduce\) \{[^}]*\.statusSpin \{\s*animation: none;/,
+    /\.statusWarning \.statusDot \{\s*background: var\(--color-danger\);/,
   );
-  // Narrow: icon and time only.
+  assert.match(css, /\.statusRefreshing \.statusDot \{\s*animation: pulse/);
   assert.match(
     css,
-    /max-width: 1100px\) \{\s*\.statusLabel \{\s*display: none;/,
+    /prefers-reduced-motion: reduce\) \{[^}]*\.statusRefreshing \.statusDot \{\s*animation: none;/,
   );
+  assert.doesNotMatch(css, /statusSpin|statusLabel/);
   assert.match(
     read("features/orders/hooks/useOrders.ts"),
     /setRefreshing\(true\);/,
