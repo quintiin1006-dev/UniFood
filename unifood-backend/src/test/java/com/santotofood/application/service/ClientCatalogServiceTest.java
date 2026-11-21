@@ -75,7 +75,27 @@ class ClientCatalogServiceTest {
   }
 
   FakeCatalog catalog = new FakeCatalog();
-  ClientCatalogService service = new ClientCatalogService(catalog, () -> LATE_EVENING);
+  ClientDailyMenuServiceTest.FakeMenus dailyMenus = new ClientDailyMenuServiceTest.FakeMenus();
+  boolean dailyMenuEnabled = false;
+  ClientCatalogService service =
+      new ClientCatalogService(catalog, () -> LATE_EVENING, () -> dailyMenuEnabled, dailyMenus);
+
+  @Test
+  void flagOffLeavesDailyMenuOutAndNeverReadsIt() {
+    assertNull(service.getClientMenu(USER, CAFETERIA).dailyMenu());
+    assertTrue(dailyMenus.dates.isEmpty());
+  }
+
+  @Test
+  void flagOnReportsWhetherTodaysDailyMenuIsPublishedAndComplete() {
+    dailyMenuEnabled = true;
+    assertTrue(service.getClientMenu(USER, CAFETERIA).dailyMenu().available());
+    assertTrue(dailyMenus.dates.stream().allMatch(LocalDate.of(2026, 11, 20)::equals));
+    dailyMenus.options.clear();
+    assertFalse(service.getClientMenu(USER, CAFETERIA).dailyMenu().available());
+    dailyMenus.day = Optional.empty();
+    assertFalse(service.getClientMenu(USER, CAFETERIA).dailyMenu().available());
+  }
 
   @Test
   void contextGroupsActiveCafeteriasBySiteForTheClientsInstitutionAndBogotaDate() {

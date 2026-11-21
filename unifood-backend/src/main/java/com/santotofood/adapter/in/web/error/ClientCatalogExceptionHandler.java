@@ -1,8 +1,10 @@
 package com.santotofood.adapter.in.web.error;
 
 import com.santotofood.adapter.in.web.ClientCatalogController;
+import com.santotofood.adapter.in.web.ClientDailyMenuController;
 import com.santotofood.application.exception.ClientCatalogException;
 import com.santotofood.application.exception.ClientProfileNotFoundException;
+import com.santotofood.application.exception.DailyMenuException;
 import com.santotofood.shared.error.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
@@ -20,7 +22,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @Order(Ordered.HIGHEST_PRECEDENCE)
-@RestControllerAdvice(assignableTypes = ClientCatalogController.class)
+/** Catalog and daily menu share the client's visibility rules, so they share their answers too. */
+@RestControllerAdvice(
+    assignableTypes = {ClientCatalogController.class, ClientDailyMenuController.class})
 public class ClientCatalogExceptionHandler {
   @ExceptionHandler(ClientCatalogException.class)
   public ResponseEntity<ApiErrorResponse> catalog(
@@ -30,6 +34,14 @@ public class ClientCatalogExceptionHandler {
             ? HttpStatus.FORBIDDEN
             : HttpStatus.NOT_FOUND;
     return response(status, exception.getCode().name(), exception.getMessage(), request);
+  }
+
+  /** DAILY_MENU_DISABLED and DAILY_MENU_NOT_PUBLISHED: both 404 (section 3.6). */
+  @ExceptionHandler(DailyMenuException.class)
+  public ResponseEntity<ApiErrorResponse> dailyMenu(
+      DailyMenuException exception, HttpServletRequest request) {
+    return response(
+        HttpStatus.NOT_FOUND, exception.getCode().name(), exception.getMessage(), request);
   }
 
   @ExceptionHandler(ClientProfileNotFoundException.class)

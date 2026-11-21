@@ -14,6 +14,7 @@ import com.santotofood.adapter.in.web.error.ClientCatalogExceptionHandler;
 import com.santotofood.adapter.in.web.error.GlobalExceptionHandler;
 import com.santotofood.adapter.out.persistence.AuthorizationPersistenceAdapter;
 import com.santotofood.adapter.out.persistence.ClientCatalogPersistenceAdapter;
+import com.santotofood.adapter.out.persistence.DailyMenuPersistenceAdapter;
 import com.santotofood.adapter.out.time.SystemTimeProvider;
 import com.santotofood.application.service.ClientCatalogService;
 import com.santotofood.domain.model.BusinessDate;
@@ -114,6 +115,8 @@ class ClientCatalogApiPostgresTest {
         OrderAuthorization.class,
         AuthorizationPersistenceAdapter.class,
         ClientCatalogPersistenceAdapter.class,
+        DailyMenuConfiguration.class,
+        DailyMenuPersistenceAdapter.class,
         SystemTimeProvider.class,
         ClientCatalogService.class,
         ClientCatalogController.class,

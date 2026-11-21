@@ -265,6 +265,8 @@ export const BACKEND_ERROR_CODES = [
   "CAFETERIA_NOT_FOUND",
   "CAFETERIA_NOT_SUBSCRIBED",
   "CLIENT_CATALOG_TEMPORARILY_UNAVAILABLE",
+  "DAILY_MENU_DISABLED",
+  "DAILY_MENU_NOT_PUBLISHED",
   "ORDER_NOT_FOUND",
   "INVALID_ORDER_REQUEST",
   "ORDER_LIMIT_EXCEEDED",
@@ -382,6 +384,9 @@ export const BACKEND_ERROR_MESSAGES: Record<BackendErrorCode, string> = {
   CAFETERIA_NOT_SUBSCRIBED: CAFETERIA_GONE,
   CLIENT_CATALOG_TEMPORARILY_UNAVAILABLE:
     "No pudimos cargar el menú en este momento. Inténtalo de nuevo en unos segundos.",
+  // Cliente · menú del día (PR 2; los demás códigos llegan en los PRs 3 y 4)
+  DAILY_MENU_DISABLED: "El menú del día no está disponible por ahora.",
+  DAILY_MENU_NOT_PUBLISHED: "Hoy todavía no hay menú del día publicado.",
   // Cliente · pedido
   ORDER_NOT_FOUND: "No encontramos ese pedido.",
   INVALID_ORDER_REQUEST:

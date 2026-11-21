@@ -598,8 +598,8 @@ Rutas nuevas bajo `/api/me` y `/api/worker` (y `/api/admin` en fase 9), con el e
 
 | Método y ruta | Rol | Qué hace | PR |
 | ------------- | --- | -------- | -- |
-| `GET /api/me/daily-menu?cafeteriaId=` | CLIENT | Menú publicado y completo de hoy, solo opciones disponibles | PR 2 |
-| `GET /api/me/menu` (ampliar) | CLIENT | Añade `dailyMenu: { available }` para la carta de Inicio | PR 2 |
+| `GET /api/me/daily-menu?cafeteriaId=` | CLIENT | Menú publicado y completo de hoy, solo opciones disponibles | PR 2 (hecho) |
+| `GET /api/me/menu` (ampliar) | CLIENT | Añade `dailyMenu: { available }` para la carta de Inicio | PR 2 (hecho) |
 | `POST /api/me/orders` (ampliar) | CLIENT | Acepta `dailyMenu` opcional en el cuerpo | PR 4 |
 | `GET /api/worker/daily-menu/today` | WORKER | Estado del día: categorías, opciones, adiciones, publicado, completo, versión | PR 3 |
 | `PUT /api/worker/daily-menu/today/categories/{categoryId}/options` | WORKER | Reemplaza las opciones de una categoría `SINGLE` | PR 3 |
@@ -623,20 +623,24 @@ publicado o no está completo)
   "cafeteria": { "id": "uuid", "name": "Cafetería Central", "open": true },
   "businessDate": "2026-11-18",
   "title": "Almuerzo del día",
-  "price": 9500.0,
+  "price": "9500.00",
   "categories": [
     { "id": "uuid", "label": "Proteína", "kind": "SINGLE", "canSkip": false,
       "options": [{ "id": "uuid", "label": "Pollo a la plancha" }] },
     { "id": "uuid", "label": "Acompañamientos", "kind": "SINGLE", "canSkip": true, "options": [] },
     { "id": "uuid", "label": "Adiciones", "kind": "ADDITIONS", "canSkip": true,
-      "additions": [{ "id": "uuid", "name": "Huevo frito", "extraPrice": 2000.0 }] }
+      "additions": [{ "id": "uuid", "name": "Huevo frito", "extraPrice": "2000.00" }] }
   ]
 }
 ```
 
+- `price` y `extraPrice` van como **cadena decimal** con dos decimales (`"9500.00"`), igual que el
+  catálogo (`/api/me/menu`). El BFF del PR 5 depende de ese formato.
 - `options: []` con `canSkip: true` significa que el cliente solo ve «Ninguna».
 - Las categorías `ADDITIONS` sin adiciones encendidas se omiten. Una categoría `SINGLE` obligatoria
   nunca llega vacía, porque el menú no se puede publicar así.
+- «Completo» exige además al menos una categoría `SINGLE` activa con opciones: un día publicado sin
+  ninguna responde `DAILY_MENU_NOT_PUBLISHED`. La misma regla valida el pedido (PR 4).
 
 **Cliente — `POST /api/me/orders`** (cuerpo ampliado; los demás campos no cambian)
 
