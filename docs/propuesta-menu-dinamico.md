@@ -34,7 +34,7 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
 | Letrero (P13) | Ya no aplica: el menú es una carta en Inicio, sin letrero |
 | Sin precio configurado (P14) | El worker ve un aviso y «Publicar menú» queda deshabilitado; el cliente no ve nada |
 | Quién publica (P15) | Solo el worker publica; el admin edita la plantilla |
-| Plantilla final (rev. 3) | Proteína (obligatoria), Principio (obligatoria), Acompañamientos (saltable), Complemento (saltable; una sola opción; sin costo; incluye sopa, fruta, postre) y Adiciones (con precio extra, varias). Sin categoría «Sopa» ni «Bebida»: la sopa va dentro de Complemento |
+| Plantilla final (rev. 7) | Proteína (obligatoria), Principio (obligatoria), Bebida (saltable), Complementos (saltable; una sola opción; sin costo; incluye sopa, fruta, postre) y Adiciones (con precio extra, varias). Sin categoría «Sopa» ni «Acompañamientos»: la sopa va dentro de Complementos. En staging, Acompañamientos queda desactivada |
 | Platos por pedido | Uno. Cuenta como una unidad de los límites 10/15; las adiciones no cuentan |
 | Agotado con pedidos hechos | El pedido no cambia; se usa el rechazo con motivo existente (B18) |
 | Copiar el de ayer | Copia solo ingredientes, no adiciones encendidas |
@@ -66,7 +66,7 @@ migraciones 001, 011, 013, 016, 019, 021, 022, `docs/decisiones.md` y `docs/cata
 - Cada cafetería tiene **un** plato del día (p. ej. «Almuerzo del día») con **precio fijo**.
   Lo que cambia cada día son sus ingredientes.
 - El plato tiene categorías de **una sola opción**: Proteína (obligatoria), Principio (obligatoria),
-  Acompañamientos (saltable), Complemento (saltable; incluye sopa, fruta, postre; sin costo).
+  Bebida (saltable), Complementos (saltable; incluye sopa, fruta, postre; sin costo).
   Mientras no haya panel admin, la plantilla es fija y la misma en todas las cafeterías.
 - Las categorías obligatorias no admiten saltarse. Las saltables muestran una ficha «Ninguna», así
   que la elección es siempre explícita y queda guardada.
@@ -510,8 +510,8 @@ INSERT INTO public.daily_menu_categories (cafeteria_id, label, kind, position, c
   FROM demo_cafeteria d CROSS JOIN (VALUES
     ('Proteína',        'SINGLE',    0, false),
     ('Principio',       'SINGLE',    1, false),
-    ('Acompañamientos', 'SINGLE',    2, true),
-    ('Complemento',     'SINGLE',    3, true),
+    ('Bebida',          'SINGLE',    2, true),
+    ('Complementos',    'SINGLE',    3, true),
     ('Adiciones',       'ADDITIONS', 4, true)
   ) AS v(label, kind, position, can_skip)
   ON CONFLICT DO NOTHING;
@@ -540,10 +540,10 @@ INSERT INTO public.daily_menu_options (cafeteria_id, business_date, category_id,
     ('Proteína',        'Carne en salsa'),
     ('Principio',       'Arroz blanco'),
     ('Principio',       'Lentejas'),
-    ('Acompañamientos', 'Ensalada de tomate'),
-    ('Complemento',     'Sopa de verduras'),
-    ('Complemento',     'Fruta de temporada'),
-    ('Complemento',     'Postre de la casa')
+    ('Bebida',          'Jugo natural'),
+    ('Complementos',    'Sopa de verduras'),
+    ('Complementos',    'Fruta de temporada'),
+    ('Complementos',    'Postre de la casa')
   ) AS v(cat, label) ON v.cat = c.label
   ON CONFLICT DO NOTHING;
 
@@ -627,7 +627,7 @@ publicado o no está completo)
   "categories": [
     { "id": "uuid", "label": "Proteína", "kind": "SINGLE", "canSkip": false,
       "options": [{ "id": "uuid", "label": "Pollo a la plancha" }] },
-    { "id": "uuid", "label": "Acompañamientos", "kind": "SINGLE", "canSkip": true, "options": [] },
+    { "id": "uuid", "label": "Bebida", "kind": "SINGLE", "canSkip": true, "options": [] },
     { "id": "uuid", "label": "Adiciones", "kind": "ADDITIONS", "canSkip": true,
       "additions": [{ "id": "uuid", "name": "Huevo frito", "extraPrice": "2000.00" }] }
   ]
@@ -742,7 +742,7 @@ total = Σ items.subtotal                                  (productos, como hoy)
   "price": 9500.0,
   "choices": [
     { "category": "Proteína", "kind": "OPTION", "label": "Pollo a la plancha", "extraPrice": null },
-    { "category": "Complemento", "kind": "NONE", "label": null, "extraPrice": null },
+    { "category": "Complementos", "kind": "NONE", "label": null, "extraPrice": null },
     { "category": "Adiciones", "kind": "ADDITION", "label": "Huevo frito", "extraPrice": 2000.0 }
   ]
 }
@@ -863,7 +863,7 @@ Decisión de la revisión 3: el menú no es una página ni una pestaña. Es un b
 - **Aspecto:** tarjeta blanca estilo carta de restaurante: borde suave, sombra leve, título «Menú del
   día» y el nombre del plato. El precio fijo aparece **una sola vez**, en el encabezado de la carta.
   Sin letrero de precio extra en el almuerzo.
-- **Secciones:** en el orden de la plantilla final: Proteína, Principio, Acompañamientos, Complemento
+- **Secciones:** en el orden de la plantilla final: Proteína, Principio, Bebida, Complementos
   y, al final, Adiciones.
   - Categoría `SINGLE` con opciones hoy: título de la sección y sus fichas. Si es saltable, la ficha
     «Ninguna» al final.
@@ -909,7 +909,7 @@ vive en la carta de la sección 4.4.
   Almuerzo del día · $9.500
   Proteína: Pollo a la plancha
   Principio: Arroz
-  Complemento: Ninguna
+  Complementos: Ninguna
   Adiciones: Huevo frito (+$2.000)
   ```
 
