@@ -9,9 +9,12 @@ import com.santotofood.application.port.in.GetClientContextUseCase;
 import com.santotofood.application.port.in.GetClientMenuUseCase;
 import com.santotofood.application.port.out.ClientCatalogQueryPort;
 import com.santotofood.application.port.out.ClientCatalogQueryPort.CafeteriaRow;
+import com.santotofood.application.port.out.DailyMenuFlag;
 import com.santotofood.domain.model.BusinessDate;
 import com.santotofood.domain.model.CatalogCategory;
+import com.santotofood.domain.port.out.DailyMenuReadRepository;
 import com.santotofood.domain.port.out.TimeProvider;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,10 +38,18 @@ public class ClientCatalogService implements GetClientContextUseCase, GetClientM
 
   private final ClientCatalogQueryPort catalog;
   private final TimeProvider clock;
+  private final DailyMenuFlag dailyMenuFlag;
+  private final DailyMenuReadRepository dailyMenus;
 
-  public ClientCatalogService(ClientCatalogQueryPort catalog, TimeProvider clock) {
+  public ClientCatalogService(
+      ClientCatalogQueryPort catalog,
+      TimeProvider clock,
+      DailyMenuFlag dailyMenuFlag,
+      DailyMenuReadRepository dailyMenus) {
     this.catalog = catalog;
     this.clock = clock;
+    this.dailyMenuFlag = dailyMenuFlag;
+    this.dailyMenus = dailyMenus;
   }
 
   @Override
@@ -98,7 +109,15 @@ public class ClientCatalogService implements GetClientContextUseCase, GetClientM
     return new ClientMenu(
         new ClientMenu.Cafeteria(cafeteria.id(), cafeteria.name(), cafeteria.open()),
         date,
-        categories);
+        categories,
+        dailyMenu(cafeteria.id(), date));
+  }
+
+  /** Null with the flag off, so the response stays exactly as before. */
+  private ClientMenu.DailyMenu dailyMenu(UUID cafeteriaId, LocalDate date) {
+    if (!dailyMenuFlag.enabled()) return null;
+    return new ClientMenu.DailyMenu(
+        DailyMenuRules.servable(dailyMenus, cafeteriaId, date).isPresent());
   }
 
   private ClientCatalogFacts client(UUID authenticatedUserId) {

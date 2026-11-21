@@ -598,8 +598,8 @@ Rutas nuevas bajo `/api/me` y `/api/worker` (y `/api/admin` en fase 9), con el e
 
 | Método y ruta | Rol | Qué hace | PR |
 | ------------- | --- | -------- | -- |
-| `GET /api/me/daily-menu?cafeteriaId=` | CLIENT | Menú publicado y completo de hoy, solo opciones disponibles | PR 2 |
-| `GET /api/me/menu` (ampliar) | CLIENT | Añade `dailyMenu: { available }` para la carta de Inicio | PR 2 |
+| `GET /api/me/daily-menu?cafeteriaId=` | CLIENT | Menú publicado y completo de hoy, solo opciones disponibles | PR 2 (hecho) |
+| `GET /api/me/menu` (ampliar) | CLIENT | Añade `dailyMenu: { available }` para la carta de Inicio | PR 2 (hecho) |
 | `POST /api/me/orders` (ampliar) | CLIENT | Acepta `dailyMenu` opcional en el cuerpo | PR 4 |
 | `GET /api/worker/daily-menu/today` | WORKER | Estado del día: categorías, opciones, adiciones, publicado, completo, versión | PR 3 |
 | `PUT /api/worker/daily-menu/today/categories/{categoryId}/options` | WORKER | Reemplaza las opciones de una categoría `SINGLE` | PR 3 |
