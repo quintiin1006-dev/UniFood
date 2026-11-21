@@ -13,9 +13,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Shared reading rule: a day is served only when published and complete, that is, every active
- * SINGLE category that cannot be skipped has an option that day (section 2.2). Completeness is
- * computed on read, never stored.
+ * Shared reading rule: a day is served only when published and complete (section 2.2). Completeness
+ * is computed on read, never stored.
  */
 final class DailyMenuRules {
   private DailyMenuRules() {}
@@ -32,10 +31,17 @@ final class DailyMenuRules {
     return Optional.of(new ServableDay(day.get(), categories, options));
   }
 
+  /**
+   * Complete: at least one active SINGLE category has options today, and every active SINGLE
+   * category that cannot be skipped has one. A day with no active category is never complete.
+   * Shared by the reads and, from PR 4, by the order validation.
+   */
   static boolean complete(List<Category> categories, List<Option> options) {
     Set<UUID> filled = options.stream().map(Option::categoryId).collect(Collectors.toSet());
-    return categories.stream()
-        .filter(category -> category.kind() == Kind.SINGLE && !category.canSkip())
-        .allMatch(category -> filled.contains(category.id()));
+    var singles = categories.stream().filter(category -> category.kind() == Kind.SINGLE).toList();
+    return singles.stream().anyMatch(category -> filled.contains(category.id()))
+        && singles.stream()
+            .filter(category -> !category.canSkip())
+            .allMatch(category -> filled.contains(category.id()));
   }
 }

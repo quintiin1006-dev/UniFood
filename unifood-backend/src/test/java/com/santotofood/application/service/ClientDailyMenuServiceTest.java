@@ -150,6 +150,34 @@ class ClientDailyMenuServiceTest {
   }
 
   @Test
+  void publishedWithoutActiveCategoriesIsNotPublished() {
+    menus.categories.clear();
+    var error =
+        assertThrows(DailyMenuException.class, () -> service.getClientDailyMenu(USER, CAFETERIA));
+    assertEquals(ErrorCode.DAILY_MENU_NOT_PUBLISHED, error.getCode());
+  }
+
+  @Test
+  void publishedWithOnlySkippableEmptyCategoriesIsNotPublished() {
+    // Additions alone, or skippable categories without options, are not a menu.
+    menus.categories.removeIf(category -> category.id().equals(PROTEIN));
+    menus.options.clear();
+    var error =
+        assertThrows(DailyMenuException.class, () -> service.getClientDailyMenu(USER, CAFETERIA));
+    assertEquals(ErrorCode.DAILY_MENU_NOT_PUBLISHED, error.getCode());
+  }
+
+  @Test
+  void onlySkippableCategoriesWithOneOptionIsServed() {
+    menus.categories.removeIf(category -> category.id().equals(PROTEIN));
+    menus.options =
+        new ArrayList<>(
+            List.of(new DailyMenuReadRepository.Option(UUID.randomUUID(), SIDES, "Arroz")));
+    var menu = service.getClientDailyMenu(USER, CAFETERIA);
+    assertEquals("Arroz", menu.categories().get(0).options().get(0).label());
+  }
+
+  @Test
   void publishedButIncompleteIsNotPublished() {
     menus.options.clear();
     var error =

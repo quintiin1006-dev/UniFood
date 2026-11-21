@@ -66,6 +66,7 @@ class DailyMenuClientApiPostgresTest {
   static final UUID DRAFT = UUID.randomUUID();
   static final UUID INCOMPLETE = UUID.randomUUID();
   static final UUID NO_MENU = UUID.randomUUID();
+  static final UUID NO_CATEGORIES = UUID.randomUUID();
   static final UUID INACTIVE = UUID.randomUUID();
   static final UUID FOREIGN = UUID.randomUUID();
   static UUID protein;
@@ -294,9 +295,11 @@ class DailyMenuClientApiPostgresTest {
     cafeteria(DRAFT, main, "Cafetería Borrador");
     cafeteria(INCOMPLETE, main, "Cafetería Incompleta");
     cafeteria(NO_MENU, main, "Cafetería Sin Menú");
+    cafeteria(NO_CATEGORIES, main, "Cafetería Sin Categorías");
     cafeteria(INACTIVE, main, "Cafetería Inactiva");
     cafeteria(FOREIGN, foreignSite, "Cafetería ajena");
-    for (UUID cafe : new UUID[] {OPEN, CLOSED, DRAFT, INCOMPLETE, NO_MENU, FOREIGN}) activate(cafe);
+    for (UUID cafe : new UUID[] {OPEN, CLOSED, DRAFT, INCOMPLETE, NO_MENU, NO_CATEGORIES, FOREIGN})
+      activate(cafe);
     jdbc.update(
         "INSERT INTO public.cafeteria_daily_states(cafeteria_id,business_date,is_open) VALUES (?,?,true),(?,?,false)",
         OPEN,
@@ -344,6 +347,8 @@ class DailyMenuClientApiPostgresTest {
     // Published, then the only mandatory option was removed: incomplete.
     category(INCOMPLETE, "Proteína", "SINGLE", 0, false);
     day(INCOMPLETE, today, "Almuerzo del día", 9500, true);
+    // Published day without any active category: never a menu.
+    day(NO_CATEGORIES, today, "Almuerzo del día", 9500, true);
     simpleMenu(FOREIGN, today, "Plato ajeno");
   }
 
@@ -418,7 +423,7 @@ class DailyMenuClientApiPostgresTest {
 
   @Test
   void draftIncompleteAndMissingMenusAreNotPublished() throws Exception {
-    for (UUID cafe : new UUID[] {DRAFT, INCOMPLETE, NO_MENU})
+    for (UUID cafe : new UUID[] {DRAFT, INCOMPLETE, NO_MENU, NO_CATEGORIES})
       dailyMenu(STUDENT, cafe)
           .andExpect(status().isNotFound())
           .andExpect(header().string("Cache-Control", "no-store"))
@@ -487,7 +492,19 @@ class DailyMenuClientApiPostgresTest {
   @Test
   void menuReportsWhetherTodaysDailyMenuIsAvailable() throws Exception {
     for (var entry :
-        Map.of(OPEN, true, CLOSED, true, DRAFT, false, INCOMPLETE, false, NO_MENU, false)
+        Map.of(
+                OPEN,
+                true,
+                CLOSED,
+                true,
+                DRAFT,
+                false,
+                INCOMPLETE,
+                false,
+                NO_MENU,
+                false,
+                NO_CATEGORIES,
+                false)
             .entrySet())
       mvc.perform(
               get("/api/me/menu")
