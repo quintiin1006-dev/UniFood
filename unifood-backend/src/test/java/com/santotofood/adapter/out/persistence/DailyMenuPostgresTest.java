@@ -610,8 +610,8 @@ class DailyMenuPostgresTest {
         List.of(
             "0:Proteína:SINGLE:false",
             "1:Principio:SINGLE:false",
-            "2:Acompañamientos:SINGLE:true",
-            "3:Complemento:SINGLE:true",
+            "2:Bebida:SINGLE:true",
+            "3:Complementos:SINGLE:true",
             "4:Adiciones:ADDITIONS:true"),
         jdbc.queryForList(
             "SELECT position||':'||label||':'||kind||':'||can_skip FROM public.daily_menu_categories WHERE cafeteria_id=? ORDER BY position",

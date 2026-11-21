@@ -45,14 +45,15 @@ BEGIN
     VALUES (cafeteria, 'Almuerzo del día', 9500.00)
     ON CONFLICT (cafeteria_id) DO NOTHING;
 
-  -- Fixed template: four single-choice categories and Adiciones.
+  -- Fixed template: four single-choice categories and Adiciones. Bebida and Complementos are
+  -- skippable («Ninguna»); Complementos is one choice, soup included, no extra cost.
   INSERT INTO public.daily_menu_categories (cafeteria_id, label, kind, position, can_skip)
   SELECT cafeteria, v.label, v.kind, v.position, v.can_skip
   FROM (VALUES
     ('Proteína',        'SINGLE',    0, false),
     ('Principio',       'SINGLE',    1, false),
-    ('Acompañamientos', 'SINGLE',    2, true),
-    ('Complemento',     'SINGLE',    3, true),
+    ('Bebida',          'SINGLE',    2, true),
+    ('Complementos',    'SINGLE',    3, true),
     ('Adiciones',       'ADDITIONS', 4, true)
   ) AS v(label, kind, position, can_skip)
   WHERE NOT EXISTS (
@@ -81,10 +82,10 @@ BEGIN
     ('Proteína',        'Carne en salsa'),
     ('Principio',       'Arroz blanco'),
     ('Principio',       'Lentejas'),
-    ('Acompañamientos', 'Ensalada de tomate'),
-    ('Complemento',     'Sopa de verduras'),
-    ('Complemento',     'Fruta de temporada'),
-    ('Complemento',     'Postre de la casa')
+    ('Bebida',          'Jugo natural'),
+    ('Complementos',    'Sopa de verduras'),
+    ('Complementos',    'Fruta de temporada'),
+    ('Complementos',    'Postre de la casa')
   ) AS v(cat, label)
   JOIN public.daily_menu_categories c
     ON c.cafeteria_id = cafeteria AND c.label = v.cat AND c.kind = 'SINGLE'
