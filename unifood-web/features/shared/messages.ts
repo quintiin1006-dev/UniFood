@@ -267,6 +267,19 @@ export const BACKEND_ERROR_CODES = [
   "CLIENT_CATALOG_TEMPORARILY_UNAVAILABLE",
   "DAILY_MENU_DISABLED",
   "DAILY_MENU_NOT_PUBLISHED",
+  "DAILY_MENU_INCOMPLETE",
+  "DAILY_MENU_PRICE_NOT_SET",
+  "DAILY_MENU_VERSION_CONFLICT",
+  "DAILY_MENU_OPTION_INVALID",
+  "DAILY_MENU_OPTION_DUPLICATED",
+  "DAILY_MENU_TEXT_TOO_LONG",
+  "DAILY_MENU_CATEGORY_NOT_FOUND",
+  "DAILY_MENU_ADDITION_UNAVAILABLE",
+  "DAILY_MENU_DATE_CHANGED",
+  "DAILY_MENU_INVALID_REQUEST",
+  "DAILY_MENU_FORBIDDEN",
+  "DAILY_MENU_TEMPORARILY_UNAVAILABLE",
+  "DAILY_MENU_INTERNAL_ERROR",
   "ORDER_NOT_FOUND",
   "INVALID_ORDER_REQUEST",
   "ORDER_LIMIT_EXCEEDED",
@@ -387,6 +400,27 @@ export const BACKEND_ERROR_MESSAGES: Record<BackendErrorCode, string> = {
   // Cliente · menú del día (PR 2; los demás códigos llegan en los PRs 3 y 4)
   DAILY_MENU_DISABLED: "El menú del día no está disponible por ahora.",
   DAILY_MENU_NOT_PUBLISHED: "Hoy todavía no hay menú del día publicado.",
+  // Worker · menú del día (PR 3)
+  DAILY_MENU_INCOMPLETE: "Falta completar el menú antes de publicarlo.",
+  DAILY_MENU_PRICE_NOT_SET:
+    "El plato del día aún no tiene precio configurado. Pídeselo al administrador.",
+  DAILY_MENU_VERSION_CONFLICT:
+    "El menú cambió en otra pantalla. Actualizamos los datos; revisa y vuelve a intentarlo.",
+  DAILY_MENU_OPTION_INVALID:
+    "Cada opción debe tener entre 1 y 350 caracteres, sin comas, y hasta 20 por categoría.",
+  DAILY_MENU_OPTION_DUPLICATED: "Hay opciones repetidas en la categoría.",
+  DAILY_MENU_TEXT_TOO_LONG:
+    "Las opciones de esta categoría superan los 350 caracteres en total.",
+  DAILY_MENU_CATEGORY_NOT_FOUND: "No encontramos esa categoría del menú.",
+  DAILY_MENU_ADDITION_UNAVAILABLE: "Esa adición no está disponible.",
+  DAILY_MENU_DATE_CHANGED:
+    "Cambió el día. Actualiza la pantalla para ver el menú de hoy.",
+  DAILY_MENU_INVALID_REQUEST:
+    "Revisa los datos del menú y la fecha de la pantalla.",
+  DAILY_MENU_FORBIDDEN: "No tienes permisos para gestionar el menú del día.",
+  DAILY_MENU_TEMPORARILY_UNAVAILABLE:
+    "No pudimos guardar el menú en este momento. Inténtalo nuevamente.",
+  DAILY_MENU_INTERNAL_ERROR: "No pudimos gestionar el menú del día.",
   // Cliente · pedido
   ORDER_NOT_FOUND: "No encontramos ese pedido.",
   INVALID_ORDER_REQUEST:

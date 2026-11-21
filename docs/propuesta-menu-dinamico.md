@@ -601,15 +601,16 @@ Rutas nuevas bajo `/api/me` y `/api/worker` (y `/api/admin` en fase 9), con el e
 | `GET /api/me/daily-menu?cafeteriaId=` | CLIENT | Menú publicado y completo de hoy, solo opciones disponibles | PR 2 (hecho) |
 | `GET /api/me/menu` (ampliar) | CLIENT | Añade `dailyMenu: { available }` para la carta de Inicio | PR 2 (hecho) |
 | `POST /api/me/orders` (ampliar) | CLIENT | Acepta `dailyMenu` opcional en el cuerpo | PR 4 |
-| `GET /api/worker/daily-menu/today` | WORKER | Estado del día: categorías, opciones, adiciones, publicado, completo, versión | PR 3 |
-| `PUT /api/worker/daily-menu/today/categories/{categoryId}/options` | WORKER | Reemplaza las opciones de una categoría `SINGLE` | PR 3 |
-| `PUT /api/worker/daily-menu/today/additions/{additionId}` | WORKER | Enciende o apaga una adición; copia su precio | PR 3 |
-| `POST /api/worker/daily-menu/today/copy-yesterday` | WORKER | Copia las opciones de ayer solo a categorías vacías hoy | PR 3 |
-| `POST /api/worker/daily-menu/today/publish` | WORKER | Publica si está completo; congela título y precio | PR 3 |
-| `POST /api/worker/daily-menu/today/unpublish` | WORKER | Oculta el menú para pedidos nuevos; los pedidos en curso no cambian | PR 3 |
+| `GET /api/worker/daily-menu/today` | WORKER | Estado del día: categorías, opciones, adiciones, publicado, completo, versión | PR 3 (hecho) |
+| `PUT /api/worker/daily-menu/today/categories/{categoryId}/options` | WORKER | Reemplaza las opciones de una categoría `SINGLE` | PR 3 (hecho) |
+| `PUT /api/worker/daily-menu/today/additions/{additionId}` | WORKER | Enciende o apaga una adición; copia su precio | PR 3 (hecho) |
+| `POST /api/worker/daily-menu/today/copy-yesterday` | WORKER | Copia las opciones de ayer solo a categorías vacías hoy | PR 3 (hecho) |
+| `POST /api/worker/daily-menu/today/publish` | WORKER | Publica si está completo; congela título y precio | PR 3 (hecho) |
+| `POST /api/worker/daily-menu/today/unpublish` | WORKER | Oculta el menú para pedidos nuevos; los pedidos en curso no cambian | PR 3 (hecho) |
 | `GET/PUT /api/admin/daily-menu/...` | ADMIN | Plato, precios, categorías y adiciones | PR 9 (requisito antes del piloto de febrero) |
 
-Todas las escrituras del worker llevan `expectedVersion`. El servicio bloquea la cabecera del día con
+Todas las escrituras del worker llevan `expectedVersion` y la cabecera `X-Business-Date` con el día de la
+pantalla, como Disponibilidad; si el día cambió, responden 409 `DAILY_MENU_DATE_CHANGED`. El servicio bloquea la cabecera del día con
 `FOR UPDATE`, compara la versión y la incrementa. Si no coincide, responde 409
 `DAILY_MENU_VERSION_CONFLICT` y el BFF resincroniza con un GET.
 
@@ -677,13 +678,13 @@ publicado o no está completo)
   "missingCategories": ["Principio"],
   "priceSet": true,
   "title": "Almuerzo del día",
-  "price": 9500.0,
+  "price": "9500.00",
   "categories": [
     { "id": "uuid", "label": "Principio", "kind": "SINGLE", "canSkip": false,
       "options": [{ "id": "uuid", "label": "Arroz" }], "textUsed": 4 }
   ],
   "additions": [
-    { "id": "uuid", "name": "Huevo frito", "extraPrice": 2000.0, "available": true }
+    { "id": "uuid", "name": "Huevo frito", "extraPrice": "2000.00", "available": true }
   ]
 }
 ```
