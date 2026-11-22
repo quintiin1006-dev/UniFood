@@ -53,4 +53,10 @@ public class DailyCloseService implements CloseStaleOrdersUseCase {
         closed.notCollected());
     return closed;
   }
+
+  @Override
+  public int countStaleOrders() {
+    var dayStart = BusinessDate.from(clock.now()).dayStartInstant();
+    return orders.countStale(dayStart);
+  }
 }

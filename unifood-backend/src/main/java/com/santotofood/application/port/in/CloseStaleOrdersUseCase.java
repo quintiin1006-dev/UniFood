@@ -8,6 +8,9 @@ public interface CloseStaleOrdersUseCase {
 
   ClosedOrders closeStaleOrders();
 
+  /** Active orders of previous business days still open right now; no ids or personal data. */
+  int countStaleOrders();
+
   /** How many orders each rule closed; no ids or personal data. */
   record ClosedOrders(int cancelled, int notCollected) {}
 }
