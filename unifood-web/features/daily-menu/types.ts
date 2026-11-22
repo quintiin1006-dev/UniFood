@@ -55,6 +55,11 @@ export type ClientDailyMenu = {
   /** For display only. */
   price: number;
   categories: DailyMenuCategory[];
+  /**
+   * Skippable SINGLE categories with no options today: hidden on the card, but the backend
+   * still expects «Ninguna» for each of them in the order (section 3.3).
+   */
+  hiddenSkips: string[];
 };
 
 /** «Ninguna» in a skippable SINGLE category. */

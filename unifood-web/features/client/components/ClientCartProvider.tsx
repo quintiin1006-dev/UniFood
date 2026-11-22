@@ -13,10 +13,22 @@ import {
   addProduct,
   cartCount,
   emptyCart,
+  menuLine,
+  removeMenuLine,
   restoreCart,
+  setMenuLine,
   setQuantity,
 } from "../domain/cart";
 import type { CafeteriaMenu, ClientCart } from "../types";
+import type {
+  ClientDailyMenu,
+  DailyMenuSelection,
+} from "@/features/daily-menu/types";
+import {
+  DAILY_MENU_ADDED,
+  DAILY_MENU_REMOVED,
+  DAILY_MENU_UPDATED,
+} from "@/features/shared/messages";
 import { clearAttempt } from "../idempotency";
 import { forgetCachedCafeteria } from "../state";
 import ConfirmDialog from "./ConfirmDialog";
@@ -33,6 +45,9 @@ type CartContextValue = {
   count: number;
   add: (menu: CafeteriaMenu, productId: string, quantity: number) => boolean;
   remove: (productId: string) => void;
+  /** Adds the daily menu plate, or replaces the one already in the cart. */
+  setMenu: (menu: ClientDailyMenu, selection: DailyMenuSelection) => boolean;
+  removeMenu: () => void;
   /** Sets a line's quantity; null on success, otherwise the reason it was refused. */
   update: (
     menu: CafeteriaMenu | null,
@@ -166,6 +181,25 @@ export default function ClientCartProvider({
     persist(result.cart);
     setToast({ message: "Producto eliminado del carrito", success: false });
   };
+  const setMenu: CartContextValue["setMenu"] = (menu, selection) => {
+    if (!ready) return false;
+    const had = !!menuLine(current.current);
+    const result = setMenuLine(current.current, menu, selection);
+    if (result.error) {
+      setToast({ message: result.error, success: false });
+      return false;
+    }
+    setToast({
+      message: had ? DAILY_MENU_UPDATED : DAILY_MENU_ADDED,
+      success: true,
+    });
+    persist(result.cart);
+    return true;
+  };
+  const removeMenu = () => {
+    persist(removeMenuLine(current.current));
+    setToast({ message: DAILY_MENU_REMOVED, success: false });
+  };
   const update: CartContextValue["update"] = (menu, productId, quantity) => {
     if (!ready) return "Espera a que termine de cargar el carrito.";
     const result = setQuantity(current.current, menu, productId, quantity);
@@ -229,6 +263,8 @@ export default function ClientCartProvider({
         count: cartCount(cart),
         add,
         remove,
+        setMenu,
+        removeMenu,
         update,
         latestCart,
         completeOrder,

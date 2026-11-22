@@ -49,3 +49,12 @@
   background: var(--color-danger);
   color: white;
 }
+/* The daily menu plate: one short line per choice, in the line's muted text. */
+.menuChoices {
+  margin: 6px 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--client-muted);
+}

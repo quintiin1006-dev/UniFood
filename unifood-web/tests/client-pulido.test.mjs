@@ -35,6 +35,14 @@ const home = (menu) => {
       },
       "./CafeteriaMemory": { RememberCafeteria: () => null },
       "./ProductAddButton": { __esModule: true, default: () => null },
+      // Inicio reads the cart for the daily menu plate (PR 6).
+      "./ClientCartProvider": {
+        useClientCart: () => ({
+          cart: { cafeteriaId: null, lines: [] },
+          ready: true,
+          setMenu: () => true,
+        }),
+      },
       "next/link": link,
     },
   });

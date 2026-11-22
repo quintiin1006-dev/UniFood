@@ -11,6 +11,7 @@ export type CheckoutAction =
   | "home" // go to Inicio (there is an active order)
   | "time" // change the pickup time
   | "note" // shorten the note
+  | "dailyMenu" // the plate is marked; today's menu is read again to choose again
   | "login"; // sign in again; the cart is kept
 
 export type CheckoutError = {
@@ -102,6 +103,16 @@ const byCode: Record<string, CheckoutError> = {
     "retry",
   ),
 };
+
+// The plate no longer matches the published menu: the cart keeps everything else.
+for (const code of [
+  "DAILY_MENU_SELECTION_INVALID",
+  "DAILY_MENU_ADDITION_UNAVAILABLE",
+  "DAILY_MENU_DATE_CHANGED",
+  "DAILY_MENU_NOT_PUBLISHED",
+  "DAILY_MENU_DISABLED",
+] as const)
+  byCode[code] = make(code, BACKEND_ERROR_MESSAGES[code], "dailyMenu");
 
 export const NETWORK_ERROR = make("NETWORK_ERROR", RETRY_MESSAGE, "retry");
 

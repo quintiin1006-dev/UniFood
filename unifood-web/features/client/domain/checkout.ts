@@ -1,6 +1,14 @@
-import type { CafeteriaMenu, ClientCart } from "../types";
+import type { CafeteriaMenu, ClientCart, MenuLine } from "../types";
+import { MENU_NONE } from "../types";
+import type { ClientDailyMenu } from "../../daily-menu/types";
 import { COLOMBIA_TIME_ZONE } from "./catalog";
-import { cartItems, restoreCart, validateCart } from "./cart";
+import {
+  cartItems,
+  menuLine,
+  productLines,
+  restoreCart,
+  validateCart,
+} from "./cart";
 
 /** §6: one note per order, at most 200 characters. */
 export const NOTE_LIMIT = 200;
@@ -76,14 +84,38 @@ export function limitNote(value: string): { note: string; truncated: boolean } {
   return { note: chars.slice(0, NOTE_LIMIT).join(""), truncated: true };
 }
 
+export type DailyMenuChoice =
+  { categoryId: string; optionId: string } | { categoryId: string; skip: true };
+/** The plate as POST /api/me/orders reads it (section 3.2): ids only, never a price. */
+export type DailyMenuRequest = {
+  businessDate: string;
+  choices: DailyMenuChoice[];
+  additionIds: string[];
+};
 export type OrderRequest = {
   cafeteriaId: string;
   items: { productId: string; quantity: number }[];
+  dailyMenu?: DailyMenuRequest;
   note?: string;
   requestedPickupAt?: string;
 };
 
-/** The body of POST /api/me/orders: ids, quantities, the note and the optional time only. */
+/** The plate in the backend's format, in a stable order so the same plate is the same body. */
+export function dailyMenuRequest(line: MenuLine): DailyMenuRequest {
+  return {
+    businessDate: line.businessDate,
+    choices: Object.keys(line.choices)
+      .sort()
+      .map((categoryId) =>
+        line.choices[categoryId] === MENU_NONE
+          ? { categoryId, skip: true as const }
+          : { categoryId, optionId: line.choices[categoryId] },
+      ),
+    additionIds: [...line.additionIds].sort(),
+  };
+}
+
+/** The body of POST /api/me/orders: ids, quantities, the plate, the note and the time only. */
 export function buildOrderRequest(
   cart: ClientCart,
   note: string,
@@ -91,12 +123,14 @@ export function buildOrderRequest(
 ): OrderRequest {
   const safe = restoreCart(cart);
   const trimmed = note.trim();
+  const plate = menuLine(safe);
   return {
     cafeteriaId: safe.cafeteriaId ?? "",
-    items: safe.lines.map(({ productId, quantity }) => ({
+    items: productLines(safe).map(({ productId, quantity }) => ({
       productId,
       quantity,
     })),
+    ...(plate ? { dailyMenu: dailyMenuRequest(plate) } : {}),
     ...(trimmed ? { note: trimmed } : {}),
     ...(requestedPickupAt ? { requestedPickupAt } : {}),
   };
@@ -109,6 +143,7 @@ export function orderSignature(request: OrderRequest) {
     [...request.items]
       .sort((a, b) => a.productId.localeCompare(b.productId))
       .map(({ productId, quantity }) => [productId, quantity]),
+    request.dailyMenu ?? null,
     request.note ?? null,
     request.requestedPickupAt ?? null,
   ]);
@@ -135,8 +170,9 @@ export function reviewOrder(
   menu: CafeteriaMenu | null,
   input: CheckoutInput,
   now: Date,
+  daily: ClientDailyMenu | null = null,
 ): ReviewResult {
-  const issue = validateCart(cart, menu);
+  const issue = validateCart(cart, menu, daily);
   if (issue) return { ok: false, error: issue };
   if (noteLength(input.note) > NOTE_LIMIT)
     return {

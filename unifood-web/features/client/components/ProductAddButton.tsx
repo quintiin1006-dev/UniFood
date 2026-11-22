@@ -1,5 +1,6 @@
 "use client";
 
+import { quantityInCart } from "../domain/cart";
 import { useEffect, useRef, useState } from "react";
 import { Check, Minus, Plus } from "lucide-react";
 import type { CafeteriaMenu, MenuProduct } from "../types";
@@ -43,8 +44,7 @@ export default function ProductAddButton({
 
   const inCart =
     cart.cafeteriaId === menu.cafeteria.id
-      ? (cart.lines.find((line) => line.productId === product.id)?.quantity ??
-        0)
+      ? quantityInCart(cart, product.id)
       : 0;
   const reason = !menu.cafeteria.open
     ? MENU_CLOSED_CHIP

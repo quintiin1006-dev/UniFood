@@ -9,7 +9,14 @@ import { Spinner } from "@/components/ui/Spinner";
 import type { CafeteriaMenu, ClientCart } from "../types";
 import { placeOrder } from "../api/placeOrder";
 import { currency } from "../domain/catalog";
-import { cartItems, validateCart } from "../domain/cart";
+import {
+  cartItems,
+  menuLine,
+  menuLineAmount,
+  menuLineStatus,
+  validateCart,
+} from "../domain/cart";
+import { useClientDailyMenu } from "@/features/daily-menu/useClientDailyMenu";
 import {
   checkoutLines,
   earliestPickup,
@@ -34,6 +41,7 @@ import {
 } from "../idempotency";
 import { useClientCart } from "./ClientCartProvider";
 import CartLineItem from "./CartLineItem";
+import MenuLineItem from "./MenuLineItem";
 import {
   CART_ADD_NOTE,
   CART_CONFIRM,
@@ -41,6 +49,8 @@ import {
   CART_PICKUP_AT,
   CART_TITLE,
   CART_TOTAL,
+  DAILY_MENU_CHECKING,
+  DAILY_MENU_LINE_CHANGED,
 } from "../../shared/messages";
 import CheckoutConfirmation from "./CheckoutConfirmation";
 import shared from "./ClientShopping.module.css";
@@ -125,11 +135,35 @@ function CheckoutForm({
   const timeInput = useRef<HTMLInputElement>(null);
   const noteInput = useRef<HTMLTextAreaElement>(null);
   const lines = checkoutLines(cart, menu);
-  const total = lines.reduce(
-    (sum, line) => sum + line.quantity * line.unitPrice,
-    0,
+  const plate = menuLine(cart);
+  // After the order refused the plate, today's menu is read again and the line stays marked
+  // until the client chooses again (the plate changes) or removes it.
+  const [reload, setReload] = useState(0);
+  const [refused, setRefused] = useState<string | null>(null);
+  const daily = useClientDailyMenu(
+    menu.cafeteria.id,
+    !!plate && menu.dailyMenuAvailable,
+    reload,
   );
-  const cartIssue = validateCart(cart, menu);
+  const dailyMenu = daily.status === "ok" ? daily.menu : null;
+  const checking = !!plate && daily.status === "loading";
+  const plateStatus = plate
+    ? menuLineStatus(plate, dailyMenu, cart.cafeteriaId)
+    : null;
+  const shownStatus =
+    plateStatus === "ok" && refused === JSON.stringify(plate)
+      ? "changed"
+      : plateStatus;
+  // Published prices for display only; Spring computes the total again.
+  const total =
+    lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0) +
+    (plate && dailyMenu && shownStatus === "ok"
+      ? menuLineAmount(plate, dailyMenu)
+      : 0);
+  const cartIssue = checking
+    ? DAILY_MENU_CHECKING
+    : (validateCart(cart, menu, dailyMenu) ??
+      (shownStatus === "changed" ? DAILY_MENU_LINE_CHANGED : null));
   const earliest = earliestPickup(now);
   // Checked against the live clock, so a time that expires while the summary is open is caught.
   const typedPickup =
@@ -145,11 +179,14 @@ function CheckoutForm({
     const latest = latestCart();
     // The provider already announced the change and the summary is rebuilding.
     if (JSON.stringify(latest) !== JSON.stringify(cart)) return;
+    // A plate still being checked or already refused is never sent.
+    if (checking || shownStatus === "changed") return;
     const review = reviewOrder(
       latest,
       menu,
       { note, pickupTime: choosePickup ? pickupTime : "" },
       new Date(),
+      dailyMenu,
     );
     if (!review.ok) {
       setProblem({
@@ -191,6 +228,10 @@ function CheckoutForm({
       clearAttempt();
     }
     setProblem({ message: result.error.message, action: result.error.action });
+    if (result.error.action === "dailyMenu" && plate) {
+      setRefused(JSON.stringify(plate));
+      setReload((value) => value + 1);
+    }
     if (result.error.action === "time")
       setTimeout(() => timeInput.current?.focus(), 0);
     if (result.error.action === "note") {
@@ -216,6 +257,9 @@ function CheckoutForm({
             menu={menu}
           />
         ))}
+        {plate && !checking && shownStatus && (
+          <MenuLineItem line={plate} daily={dailyMenu} status={shownStatus} />
+        )}
       </ul>
       {/* Asks for confirmation in the provider before emptying. */}
       <button type="button" className={shared.secondaryButton} onClick={clear}>

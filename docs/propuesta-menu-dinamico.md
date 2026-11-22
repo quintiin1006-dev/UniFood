@@ -976,7 +976,7 @@ paso deje la app en un estado usable** y para que, si hay que recortar, se sepa 
 | 3 | `menu-dia-worker-api` | Backend: escrituras del worker, publicar, copiar ayer, autorización y concurrencia | 2,5 d | El worker no puede publicar |
 | 7 | `menu-dia-editor` | Web: `DailyMenuEditor` en Disponibilidad, BFF del worker, publicar. **Cada escritura envía `X-Business-Date`** con el día de la pantalla (como Disponibilidad) y `expectedVersion`; si el día cambió, el backend responde 409 `DAILY_MENU_DATE_CHANGED` | 3 d | El worker publica solo por API o SQL |
 | 4 | `menu-dia-pedido` | Backend: validación del pedido, total, snapshots, `OrderResponse.dailyMenu` | 3 d | El cliente no puede pedir el menú |
-| 6 | `menu-dia-carrito` | Web: `MenuLine`, `validateCart`, `CartLineItem`, checkout, `orderForward` | 2 d | El cliente no puede pedir el menú |
+| 6 | `menu-dia-carrito` | Web: `MenuLine`, `validateCart`, `CartLineItem`, checkout, `orderForward` | 2 d (hecho) | El cliente no puede pedir el menú |
 | C | `cierre-diario-medianoche` | Cierre de pedidos de días anteriores (sección 8): `pg_cron` a medianoche de Bogotá en staging, respaldo en Spring con `WARN` con conteo y, opcional, aviso al worker. Entra después del freeze del 21 como corrección (Q7) y antes del PR 4 | 1 d | Pedidos de ayer siguen activos y bloquean al cliente |
 | 8 | `menu-dia-ver-pedido` | Web: `DailyMenuSummary` en la tarjeta del worker y en «Mi pedido» | 1 d | El worker no ve la elección |
 | 9 | `menu-dia-admin` | Panel admin: plato, precios, categorías, adiciones. Requisito antes del piloto de febrero | 3 d | Adiciones y precios solo por SQL en staging |
