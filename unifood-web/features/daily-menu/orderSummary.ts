@@ -133,3 +133,19 @@ export function historyUnitsText(itemCount: number): string | null {
   if (!Number.isSafeInteger(itemCount) || itemCount <= 0) return null;
   return `${itemCount} ${itemCount === 1 ? "unidad" : "unidades"}`;
 }
+
+/**
+ * The units line of an order in the worker's detail: «1 plato» or «1 plato y 2 unidades» when it
+ * carries the daily menu plate; without one, exactly as before («0 unidades» included).
+ */
+export function orderUnitsText(units: number, hasPlate: boolean): string {
+  const unitsLabel = `${units} ${units === 1 ? "unidad" : "unidades"}`;
+  if (!hasPlate) return unitsLabel;
+  return units > 0 ? `1 plato y ${unitsLabel}` : "1 plato";
+}
+
+/** «No hay productos registrados» only for an order with neither products nor a plate. */
+export const showsNoProducts = (order: {
+  items: readonly unknown[];
+  dailyMenu?: OrderPlate | null;
+}) => order.items.length === 0 && !order.dailyMenu;

@@ -212,3 +212,20 @@ test("the worker mapper accepts the plate and leaves orders without one unchange
     false,
   );
 });
+
+test("Llamadas units: «1 plato» with a plate, exactly as today without one", () => {
+  assert.equal(summary.orderUnitsText(0, true), "1 plato");
+  assert.equal(summary.orderUnitsText(1, true), "1 plato y 1 unidad");
+  assert.equal(summary.orderUnitsText(3, true), "1 plato y 3 unidades");
+  assert.equal(summary.orderUnitsText(0, false), "0 unidades");
+  assert.equal(summary.orderUnitsText(1, false), "1 unidad");
+  assert.equal(summary.orderUnitsText(2, false), "2 unidades");
+  const plate = summary.toOrderPlate(workerPlate);
+  assert.equal(summary.showsNoProducts({ items: [], dailyMenu: plate }), false);
+  assert.equal(summary.showsNoProducts({ items: [] }), true);
+  assert.equal(summary.showsNoProducts({ items: [], dailyMenu: null }), true);
+  assert.equal(
+    summary.showsNoProducts({ items: [{ quantity: 1 }], dailyMenu: plate }),
+    false,
+  );
+});
