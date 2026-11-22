@@ -164,8 +164,21 @@ export const DAILY_MENU_COLLAPSE = "Ocultar opciones";
 export const DAILY_MENU_VIEW = "Ver el menú";
 export const DAILY_MENU_SKIP = "Ninguna";
 export const DAILY_MENU_ADD = "Agregar al carrito";
-/** Everything chosen, but the cart for the menu arrives with PR 6. */
-export const DAILY_MENU_ADD_SOON = "Muy pronto podrás agregarlo al carrito.";
+/* Carrito con el menú del día (jj/menu-dia-carrito). */
+export const DAILY_MENU_UPDATE = "Actualizar carrito";
+export const DAILY_MENU_ADDED = "Plato agregado al carrito";
+export const DAILY_MENU_UPDATED = "Plato actualizado en el carrito";
+export const DAILY_MENU_REMOVED = "Plato eliminado del carrito";
+/** Title of the cart line while the menu is not there to name the dish. */
+export const DAILY_MENU_LINE_TITLE = "Menú del día";
+export const DAILY_MENU_PENDING_CHOICE =
+  "Completa tu elección antes de agregar el plato.";
+export const DAILY_MENU_LINE_UNAVAILABLE =
+  "El menú del día ya no está disponible. Retíralo para continuar.";
+export const DAILY_MENU_LINE_CHANGED = "El menú cambió: vuelve a elegir";
+export const DAILY_MENU_CHOOSE_AGAIN = "Volver a elegir";
+export const DAILY_MENU_CHECKING = "Revisando el menú del día…";
+export const DAILY_MENU_ADDITIONS_LABEL = "Adiciones";
 export const dailyMenuMissing = (labels: string[]) =>
   `Falta elegir: ${labels.join(", ")}`;
 export const dailyMenuProgress = (done: number, total: number) =>

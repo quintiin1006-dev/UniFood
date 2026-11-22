@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
-import type { CafeteriaMenu, CartLine, MenuProduct } from "../types";
+import type { CafeteriaMenu, MenuProduct, ProductLine } from "../types";
 import { currency } from "../domain/catalog";
 import { CLOSED_MESSAGE, MAX_PER_PRODUCT, maxQuantity } from "../domain/cart";
 import {
@@ -23,7 +23,7 @@ export default function CartLineItem({
   product,
   menu,
 }: {
-  line: CartLine;
+  line: ProductLine;
   /** Null when the product left the menu: the line can only be removed. */
   product: MenuProduct | null;
   menu: CafeteriaMenu;

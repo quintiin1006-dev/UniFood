@@ -117,9 +117,11 @@ export function toClientDailyMenu(payload: unknown): ClientDailyMenu | null {
   const unique = <T extends { id: string }>(items: T[]) =>
     items.filter(({ id }) => !seen.has(id) && !!seen.add(id));
   const categories: DailyMenuCategory[] = [];
+  const hiddenSkips: string[] = [];
   for (const category of unique(wire.categories)) {
     if (category.kind === "SINGLE") {
       const options = unique(category.options);
+      if (!options.length && category.canSkip) hiddenSkips.push(category.id);
       if (options.length)
         categories.push({
           id: category.id,
@@ -154,5 +156,6 @@ export function toClientDailyMenu(payload: unknown): ClientDailyMenu | null {
       ...singles,
       ...categories.filter(({ kind }) => kind === "ADDITIONS"),
     ],
+    hiddenSkips,
   };
 }

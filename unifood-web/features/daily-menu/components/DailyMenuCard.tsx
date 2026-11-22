@@ -4,11 +4,11 @@ import { ChevronDown, Clock3 } from "lucide-react";
 import { CLOSED_NOTICE } from "@/features/client/domain/menu";
 import {
   DAILY_MENU_ADD,
-  DAILY_MENU_ADD_SOON,
   DAILY_MENU_COLLAPSE,
   DAILY_MENU_COMPOSE,
   DAILY_MENU_LOADING,
   DAILY_MENU_SKIP,
+  DAILY_MENU_UPDATE,
   DAILY_MENU_VIEW,
   dailyMenuProgress,
 } from "@/features/shared/messages";
@@ -32,13 +32,18 @@ import styles from "./DailyMenu.module.css";
  * selection. Loading shows a skeleton of the folded card; no menu or any failure renders
  * nothing, so Inicio stays as today.
  */
+type CardAction = {
+  /** The cart action; without it the button stays disabled. */
+  onAdd?: (menu: ClientDailyMenu, selection: DailyMenuSelection) => void;
+  /** The plate already in the cart for this menu: its choices load and the button updates. */
+  inCart?: DailyMenuSelection | null;
+};
+
 export default function DailyMenuBlock({
   state,
   onAdd,
-}: {
-  state: ClientDailyMenuState;
-  onAdd?: (menu: ClientDailyMenu, selection: DailyMenuSelection) => void;
-}) {
+  inCart,
+}: { state: ClientDailyMenuState } & CardAction) {
   if (state.status === "loading")
     return (
       <div
@@ -48,20 +53,17 @@ export default function DailyMenuBlock({
       />
     );
   if (state.status !== "ok") return null;
-  return <DailyMenuCard menu={state.menu} onAdd={onAdd} />;
+  return <DailyMenuCard menu={state.menu} onAdd={onAdd} inCart={inCart} />;
 }
 
 /** The card itself, folded by default (DEFAULT_OPEN); choices survive folding. */
 export function DailyMenuCard({
   menu,
   onAdd,
-}: {
-  menu: ClientDailyMenu;
-  /** PR 6 passes the cart action; without it the button stays disabled. */
-  onAdd?: (menu: ClientDailyMenu, selection: DailyMenuSelection) => void;
-}) {
+  inCart = null,
+}: { menu: ClientDailyMenu } & CardAction) {
   const [open, setOpen] = useState(DEFAULT_OPEN);
-  const [selection, setSelection] = useState(EMPTY_SELECTION);
+  const [selection, setSelection] = useState(inCart ?? EMPTY_SELECTION);
   const id = useId();
   const panelId = `${id}-panel`;
   const titleId = `${id}-title`;
@@ -69,9 +71,7 @@ export function DailyMenuCard({
   const missing = missingChoices(menu, selection);
   const { done, total } = selectionProgress(menu, selection);
   const canAdd = !readOnly && missing.length === 0 && !!onAdd;
-  const reason = readOnly
-    ? null
-    : (missingText(missing) ?? (onAdd ? null : DAILY_MENU_ADD_SOON));
+  const reason = readOnly ? null : missingText(missing);
 
   return (
     <section className={styles.card} aria-labelledby={titleId}>
@@ -171,7 +171,7 @@ export function DailyMenuCard({
             disabled={!canAdd}
             onClick={() => canAdd && onAdd?.(menu, selection)}
           >
-            {DAILY_MENU_ADD}
+            {inCart ? DAILY_MENU_UPDATE : DAILY_MENU_ADD}
           </button>
         </div>
       </div>

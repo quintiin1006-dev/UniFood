@@ -42,5 +42,24 @@ export type CafeteriaMenu = {
   dailyMenuAvailable: boolean;
 };
 
-export type CartLine = { productId: string; quantity: number };
+/** A product line. Lines saved before the daily menu have no `kind` and are products too. */
+export type ProductLine = {
+  kind?: undefined;
+  productId: string;
+  quantity: number;
+};
+/** «NONE» is «Ninguna» in a skippable category. */
+export const MENU_NONE = "NONE";
+/**
+ * The daily menu plate (docs/propuesta-menu-dinamico.md 4.6): ids only, never a price or a
+ * label. At most one per cart; it counts as 1 unit of the 15.
+ */
+export type MenuLine = {
+  kind: "menu";
+  businessDate: string;
+  /** categoryId → optionId, or MENU_NONE. */
+  choices: Record<string, string>;
+  additionIds: string[];
+};
+export type CartLine = ProductLine | MenuLine;
 export type ClientCart = { cafeteriaId: string | null; lines: CartLine[] };

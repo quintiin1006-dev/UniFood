@@ -415,3 +415,95 @@ test("network failures, timeouts, redirects and raw errors become a generic 502"
     assert.equal(JSON.parse(text).code, "BACKEND_UNAVAILABLE");
   }
 });
+
+// PR 6 (docs/propuesta-menu-dinamico.md 3.2): the daily menu plate in the order body.
+const CATEGORY = "00000000-0000-0000-0000-000000000061";
+const SKIPPED = "00000000-0000-0000-0000-000000000062";
+const OPTION = "00000000-0000-0000-0000-000000000063";
+const EGG = "00000000-0000-0000-0000-000000000064";
+const plate = (overrides = {}) => ({
+  businessDate: "2026-11-22",
+  choices: [
+    { categoryId: CATEGORY, optionId: OPTION },
+    { categoryId: SKIPPED, skip: true },
+  ],
+  additionIds: [EGG],
+  ...overrides,
+});
+
+test("the plate reaches Spring exactly in its format, also without products", async () => {
+  for (const items of [[{ productId: JUICE, quantity: 2 }], []]) {
+    const { calls, POST } = route();
+    const response = await POST(
+      request({
+        body: { ...order({ items }), dailyMenu: plate(), total: "1.00" },
+      }),
+    );
+    assert.equal(response.status, 201);
+    assert.deepEqual(JSON.parse(calls[0].options.body), {
+      cafeteriaId: CAFETERIA,
+      items,
+      dailyMenu: plate(),
+    });
+  }
+  // null is "no plate", as Spring reads it.
+  const { calls, POST } = route();
+  await POST(request({ body: order({ dailyMenu: null }) }));
+  assert.equal("dailyMenu" in JSON.parse(calls[0].options.body), false);
+});
+
+test("a malformed plate, extra fields or prices inside it are rejected before Spring", async () => {
+  const choice = { categoryId: CATEGORY, optionId: OPTION };
+  const plates = [
+    "x",
+    [],
+    plate({ price: "9500.00" }),
+    plate({ total: 1 }),
+    plate({ businessDate: "22/11/2026" }),
+    plate({ businessDate: undefined }),
+    plate({ choices: [] }),
+    plate({ choices: "x" }),
+    plate({ choices: [{ ...choice, extraPrice: "0.00" }] }),
+    plate({ choices: [{ ...choice, skip: true }] }),
+    plate({ choices: [{ categoryId: CATEGORY }] }),
+    plate({ choices: [{ categoryId: CATEGORY, skip: false }] }),
+    plate({ choices: [{ categoryId: CATEGORY, optionId: "x" }] }),
+    plate({ choices: [{ categoryId: "x", skip: true }] }),
+    plate({ choices: [choice, choice] }),
+    plate({ additionIds: undefined }),
+    plate({ additionIds: ["x"] }),
+    plate({ additionIds: [EGG, EGG] }),
+    plate({ additionIds: [{ id: EGG, extraPrice: "0.00" }] }),
+  ];
+  for (const dailyMenu of plates) {
+    for (const items of [[{ productId: JUICE, quantity: 1 }], []]) {
+      const { calls, POST } = route();
+      const response = await POST(
+        request({ body: order({ items, dailyMenu }) }),
+      );
+      assert.equal(response.status, 400, JSON.stringify(dailyMenu));
+      assert.equal((await response.json()).code, "INVALID_ORDER_REQUEST");
+      assert.equal(calls.length, 0);
+    }
+  }
+});
+
+test("Spring's DAILY_MENU_* answers keep their status and code", async () => {
+  for (const [status, code] of [
+    [400, "DAILY_MENU_SELECTION_INVALID"],
+    [409, "DAILY_MENU_ADDITION_UNAVAILABLE"],
+    [409, "DAILY_MENU_DATE_CHANGED"],
+    [409, "DAILY_MENU_NOT_PUBLISHED"],
+    [409, "DAILY_MENU_DISABLED"],
+  ]) {
+    const { POST } = route({
+      fetchMock: () =>
+        Response.json({ status, code, message: "raw" }, { status }),
+    });
+    const response = await POST(
+      request({ body: order({ dailyMenu: plate() }) }),
+    );
+    assert.equal(response.status, status);
+    assert.equal((await response.json()).code, code);
+  }
+});

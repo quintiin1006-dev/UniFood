@@ -24,8 +24,13 @@ import ProductPlaceholder from "./ProductPlaceholder";
 import menuStyles from "./ClientMenu.module.css";
 import styles from "./HomeSections.module.css";
 import DailyMenuBlock from "@/features/daily-menu/components/DailyMenuCard";
-import { useClientDailyMenu } from "@/features/daily-menu/useClientDailyMenu";
+import {
+  useClientDailyMenu,
+  type ClientDailyMenuState,
+} from "@/features/daily-menu/useClientDailyMenu";
 import { DAILY_MENU_REPLACES, homeLayout } from "@/features/daily-menu/state";
+import { menuLine, selectionFromLine } from "../domain/cart";
+import { useClientCart } from "./ClientCartProvider";
 
 /**
  * Inicio, top to bottom: cafeteria selector, carousel (or the closed notice in its place),
@@ -58,6 +63,16 @@ export default function ClientHome({
   // Only what can be ordered is listed: a product that stopped being available leaves the page.
   const menu = onlyAvailable(current);
   const { cafeteria } = menu;
+  const { cart, ready: cartReady, setMenu } = useClientCart();
+  const plate = menuLine(cart);
+  // The plate of this cafeteria and day reopens the card with its choices.
+  const plateInCart = (state: ClientDailyMenuState) =>
+    plate &&
+    state.status === "ok" &&
+    cart.cafeteriaId === state.menu.cafeteria.id &&
+    plate.businessDate === state.menu.businessDate
+      ? selectionFromLine(plate)
+      : null;
   const daily = useClientDailyMenu(cafeteria.id, current.dailyMenuAvailable);
   // While the card loads or shows, it replaces «Corriente»; a failed read gives it back.
   const replacing = daily.status !== "hidden";
@@ -84,7 +99,13 @@ export default function ClientHome({
     (product) => !replacing || product.category !== DAILY_MENU_REPLACES,
   );
   const dailyMenu = layout.showCard ? (
-    <DailyMenuBlock key={cafeteria.id} state={daily} />
+    <DailyMenuBlock
+      // The cart loads after the first paint: the card starts again with the plate in it.
+      key={`${cafeteria.id}:${cartReady}`}
+      state={daily}
+      onAdd={(menu, selection) => setMenu(menu, selection)}
+      inCart={plateInCart(daily)}
+    />
   ) : null;
   return (
     <section className={styles.home} aria-label="Inicio">

@@ -12,15 +12,77 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9_-]{16,128}$/;
 const MAX_BODY_BYTES = 8192;
 
+type DailyMenuBody = {
+  businessDate: string;
+  choices: (
+    | { categoryId: string; optionId: string }
+    | { categoryId: string; skip: true }
+  )[];
+  additionIds: string[];
+};
 type OrderBody = {
   cafeteriaId: string;
   items: { productId: string; quantity: number }[];
+  dailyMenu?: DailyMenuBody;
   note?: string | null;
   requestedPickupAt?: string;
 };
 
 // An ISO-8601 instant is far shorter; Spring checks its format, offset and range.
 const MAX_PICKUP_LENGTH = 64;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** Far above any real menu; Spring owns every rule of the plate. */
+const MAX_MENU_IDS = 20;
+
+const plain = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+const onlyKeys = (value: Record<string, unknown>, keys: string[]) =>
+  Object.keys(value).every((key) => keys.includes(key));
+
+/**
+ * The plate exactly as section 3.2 defines it, or null. Unlike the rest of the body, an
+ * unknown field inside it is refused, not dropped: a price or total never travels with it.
+ */
+function readDailyMenu(value: unknown): DailyMenuBody | null {
+  if (
+    !plain(value) ||
+    !onlyKeys(value, ["businessDate", "choices", "additionIds"])
+  )
+    return null;
+  const { businessDate, choices, additionIds } = value;
+  if (typeof businessDate !== "string" || !DATE.test(businessDate)) return null;
+  if (
+    !Array.isArray(choices) ||
+    choices.length < 1 ||
+    choices.length > MAX_MENU_IDS ||
+    !Array.isArray(additionIds) ||
+    additionIds.length > MAX_MENU_IDS
+  )
+    return null;
+  const categories = new Set<string>();
+  const picked: DailyMenuBody["choices"] = [];
+  for (const choice of choices) {
+    if (!plain(choice)) return null;
+    const { categoryId, optionId, skip } = choice;
+    if (typeof categoryId !== "string" || !UUID.test(categoryId)) return null;
+    const key = categoryId.toLowerCase();
+    if (categories.has(key)) return null;
+    categories.add(key);
+    if (onlyKeys(choice, ["categoryId", "optionId"]) && "optionId" in choice) {
+      if (typeof optionId !== "string" || !UUID.test(optionId)) return null;
+      picked.push({ categoryId, optionId });
+    } else if (onlyKeys(choice, ["categoryId", "skip"]) && skip === true) {
+      picked.push({ categoryId, skip: true });
+    } else return null;
+  }
+  const additions = new Set<string>();
+  for (const id of additionIds) {
+    if (typeof id !== "string" || !UUID.test(id)) return null;
+    if (additions.has(id.toLowerCase())) return null;
+    additions.add(id.toLowerCase());
+  }
+  return { businessDate, choices: picked, additionIds: [...additionIds] };
+}
 
 /** Server-side diagnostics only; logging must never break the answer. */
 function logServer(message: string, details: Record<string, unknown>) {
@@ -42,7 +104,8 @@ const invalid = () =>
 
 /**
  * POST /api/me/orders (B15). The session gives the identity and the bearer; the browser
- * only chooses a cafeteria, products, quantities, a note and an optional pickup time.
+ * only chooses a cafeteria, products, quantities, the daily menu plate (ids only), a note and
+ * an optional pickup time.
  * Limits, the pickup time's range, prices, totals and
  * availability are Spring's: anything else in the body is dropped, never forwarded.
  */
@@ -262,12 +325,16 @@ async function readOrder(request: Request): Promise<OrderBody | null> {
     return null;
   }
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const { cafeteriaId, items, note, requestedPickupAt } = raw as Record<
-    string,
-    unknown
-  >;
+  const { cafeteriaId, items, dailyMenu, note, requestedPickupAt } =
+    raw as Record<string, unknown>;
   if (typeof cafeteriaId !== "string" || !UUID.test(cafeteriaId)) return null;
-  if (!Array.isArray(items) || items.length === 0) return null;
+  const plate =
+    dailyMenu === undefined || dailyMenu === null
+      ? null
+      : readDailyMenu(dailyMenu);
+  if (dailyMenu !== undefined && dailyMenu !== null && !plate) return null;
+  // Without products an order needs the plate (Spring applies the same rule).
+  if (!Array.isArray(items) || (items.length === 0 && !plate)) return null;
   if (note !== undefined && note !== null && typeof note !== "string")
     return null;
   // Optional: absent or null is "as soon as possible"; a string goes to Spring as is.
@@ -290,6 +357,7 @@ async function readOrder(request: Request): Promise<OrderBody | null> {
   return {
     cafeteriaId,
     items: lines,
+    ...(plate ? { dailyMenu: plate } : {}),
     ...(typeof note === "string" ? { note } : {}),
     ...(typeof requestedPickupAt === "string" ? { requestedPickupAt } : {}),
   };
