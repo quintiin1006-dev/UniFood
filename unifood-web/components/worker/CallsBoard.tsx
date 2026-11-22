@@ -20,6 +20,7 @@ import {
 } from "@/features/orders/components/CalledOrderActions";
 import type { CalledOrderAction } from "@/features/orders/calledOrderActions";
 import type { Order } from "@/types/order";
+import { DailyMenuSummary } from "@/features/daily-menu/components/DailyMenuSummary";
 
 import {
   PanelCounter,
@@ -300,6 +301,7 @@ export default function CallsBoard({
                   className={styles.productsSection}
                   aria-label="Productos del pedido"
                 >
+                  <DailyMenuSummary order={selectedOrder} />
                   {selectedOrder.items.length === 0 ? (
                     <p className={styles.emptyProducts}>
                       No hay productos registrados en este pedido.

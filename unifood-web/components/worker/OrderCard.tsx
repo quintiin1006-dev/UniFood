@@ -16,6 +16,7 @@ import { RejectOrderButton } from "@/features/orders/components/RejectOrderDialo
 import { clientIdentity } from "@/features/orders/utils/clientIdentity";
 import { pickupLabel } from "@/features/orders/utils/pickupTime";
 import type { Order } from "@/types/order";
+import { DailyMenuSummary } from "@/features/daily-menu/components/DailyMenuSummary";
 
 import modernStyles from "./OrderCard.module.css";
 import classicStyles from "./OrderCard.classic.module.css";
@@ -102,6 +103,7 @@ export default function OrderCard({
         </div>
       )}
 
+      <DailyMenuSummary order={order} />
       <OrderNote note={order.note} />
 
       {/* Estado del estudiante */}

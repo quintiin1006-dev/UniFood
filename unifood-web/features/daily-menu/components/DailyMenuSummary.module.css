@@ -1,0 +1,52 @@
+/* Kitchen ticket of the plate: legible at a glance, never truncated (4.7). #0B2D6B on #EAF4FF
+   is about 12:1. The same block on the worker's glass panels and on the client's white cards. */
+.summary {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  margin: 8px 0;
+  padding: 12px 14px;
+  border: 1px solid #3ba7ff;
+  border-left: 4px solid #0b5fff;
+  border-radius: 12px;
+  background: #eaf4ff;
+  color: #0b2d6b;
+  font-size: 15px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.heading,
+.total {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 12px;
+  margin: 0;
+  font-size: 16px;
+}
+.heading strong,
+.total strong {
+  font-weight: 700;
+}
+.lines {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 6px;
+}
+.line dt {
+  font-weight: 700;
+}
+.line dd {
+  margin: 0;
+  min-width: 0;
+}
+.total {
+  padding-top: 6px;
+  border-top: 1px solid #3ba7ff;
+}

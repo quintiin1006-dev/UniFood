@@ -5,6 +5,7 @@ import type {
   OrderLine,
   OrderStatus,
 } from "./types";
+import { toOrderPlate } from "../daily-menu/orderSummary";
 
 const STATUSES: readonly string[] = [
   "PENDING",
@@ -89,6 +90,7 @@ export function toClientOrder(raw: unknown): ClientOrder | null {
     requestedPickupAt: instant(order.requestedPickupAt)
       ? order.requestedPickupAt
       : null,
+    dailyMenu: toOrderPlate(order.dailyMenu),
   };
 }
 
