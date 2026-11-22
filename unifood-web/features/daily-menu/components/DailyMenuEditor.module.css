@@ -1,0 +1,251 @@
+/* «Menú del día» inside Disponibilidad: more sections of the same glass panel
+   (features/worker-ui/WorkerPanel.module.css), white text on glass and solid white controls,
+   like the availability cards. Only existing tokens. */
+.editor {
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+.loading {
+  min-height: 120px;
+}
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+.heading {
+  min-width: 0;
+}
+.title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+.badge {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 12px;
+  font-weight: 600;
+}
+.badge[data-published="true"] {
+  background: var(--color-success-bg);
+  color: var(--color-success-ink);
+}
+.category {
+  min-width: 0;
+}
+.label {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 650;
+}
+/* The white box with the chips and the field, like the availability switches. */
+.box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  transition: border-color 160ms ease;
+}
+.box:focus-within {
+  outline: var(--focus-ring-width) solid #ffffff;
+  outline-offset: var(--focus-ring-offset);
+}
+.box[data-invalid] {
+  border: 2px solid var(--color-danger);
+  background: var(--color-danger-bg);
+}
+.chips {
+  display: contents;
+  list-style: none;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 0 0 12px;
+  border-radius: 999px;
+  background: var(--color-brand-tint);
+  color: var(--color-brand-navy);
+  font-size: 14px;
+  font-weight: 600;
+}
+.chip > span {
+  overflow-wrap: anywhere;
+}
+.chipRemove {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-brand-navy);
+  cursor: pointer;
+}
+.chipRemove:hover:not(:disabled) {
+  background: var(--color-brand-tint-2);
+}
+.chipRemove:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-brand);
+  outline-offset: -2px;
+}
+.chipRemove:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.input {
+  flex: 1 1 180px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  font-size: 15px;
+}
+.input:focus {
+  outline: none;
+}
+.input::placeholder {
+  color: var(--color-text-soft);
+}
+.hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+/* Errors next to the field: dark red on its soft background, readable on the glass. */
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--color-danger-bg);
+  color: var(--color-danger-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.error svg {
+  flex-shrink: 0;
+}
+.additions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.addition {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.additionName {
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px 16px;
+}
+.status {
+  flex: 1 1 auto;
+  min-height: 1.5em;
+  margin: 0;
+  font-size: 13px;
+}
+.reasons {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 10px 14px 10px 30px;
+  border-radius: 12px;
+  background: var(--color-brand-tint);
+  color: var(--color-ink);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.primary,
+.secondary {
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+.primary {
+  border: 1px solid var(--color-surface);
+  background: var(--color-surface);
+  color: var(--color-brand-navy);
+}
+.primary:hover:not(:disabled) {
+  background: var(--color-brand-tint);
+}
+.secondary {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: transparent;
+  color: #ffffff;
+}
+.secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.primary:focus-visible,
+.secondary:focus-visible {
+  outline: var(--focus-ring-width) solid #ffffff;
+  outline-offset: var(--focus-ring-offset);
+}
+@media (max-width: 760px) {
+  .foot > button {
+    width: 100%;
+  }
+  .additions {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .box,
+  .primary,
+  .secondary {
+    transition: none;
+  }
+}

@@ -17,6 +17,7 @@ import styles from "./Availability.module.css";
 import { Notice } from "@/components/ui/Notice";
 import { ConnectionNotice } from "@/features/shared/components/ConnectionNotice";
 import { Icon, ICON_MIN_20 } from "@/components/ui/Icon";
+import { DailyMenuEditor } from "@/features/daily-menu/components/DailyMenuEditor";
 
 /**
  * Disponibilidad as ONE glass panel, like Llamadas (F1, F3): the shared header with the nav's
@@ -183,6 +184,8 @@ export function AvailabilityPanel() {
             ))}
           </>
         )}
+        {/* PR 7: the daily menu below the catalogue categories, in the same panel. */}
+        {!state.loading && <DailyMenuEditor />}
       </section>
     </div>
   );

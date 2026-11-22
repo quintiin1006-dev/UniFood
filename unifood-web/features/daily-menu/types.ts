@@ -70,3 +70,36 @@ export type DailyMenuSelection = {
   choices: Record<string, string>;
   additionIds: string[];
 };
+
+/**
+ * GET /api/worker/daily-menu/today (section 3.2, worker side) as the BFF sends it: only the
+ * published fields. Prices are decimal strings; `price` is null without a plate price.
+ * `skippedCategories` only comes back from «Copiar el de ayer».
+ */
+export type WorkerDailyMenu = {
+  businessDate: string;
+  version: number;
+  published: boolean;
+  complete: boolean;
+  missingCategories: string[];
+  priceSet: boolean;
+  title: string | null;
+  price: string | null;
+  categories: WorkerDailyMenuCategory[];
+  additions: WorkerDailyMenuAddition[];
+  skippedCategories?: string[];
+};
+export type WorkerDailyMenuCategory = {
+  id: string;
+  label: string;
+  kind: "SINGLE";
+  canSkip: boolean;
+  options: DailyMenuOption[];
+  textUsed: number;
+};
+export type WorkerDailyMenuAddition = {
+  id: string;
+  name: string;
+  extraPrice: string | null;
+  available: boolean;
+};

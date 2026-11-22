@@ -3,10 +3,13 @@ import type {
   DailyMenuCategory,
   DailyMenuWire,
   DailyMenuWireCategory,
+  WorkerDailyMenu,
+  WorkerDailyMenuAddition,
+  WorkerDailyMenuCategory,
 } from "./types";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
+export const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MONEY = /^\d{1,9}(\.\d{1,2})?$/;
 /** Each option holds up to 350 characters (section 2.2); anything longer is malformed. */
 const MAX_TEXT = 350;
@@ -158,4 +161,106 @@ export function toClientDailyMenu(payload: unknown): ClientDailyMenu | null {
     ],
     hiddenSkips,
   };
+}
+
+const SAFE_VERSION = (value: unknown): value is number =>
+  Number.isSafeInteger(value) && (value as number) >= 0;
+const labels = (value: unknown): string[] | null =>
+  Array.isArray(value) && value.every((item) => text(item, 80) !== null)
+    ? (value as string[])
+    : null;
+
+/**
+ * The worker's day rebuilt from the published fields only; anything malformed makes it null.
+ * Used by the BFF (what reaches the browser) and by the browser (what it trusts).
+ */
+export function pickWorkerDay(payload: unknown): WorkerDailyMenu | null {
+  const body = record(payload);
+  if (
+    !body ||
+    typeof body.businessDate !== "string" ||
+    !DATE.test(body.businessDate) ||
+    !SAFE_VERSION(body.version) ||
+    typeof body.published !== "boolean" ||
+    typeof body.complete !== "boolean" ||
+    typeof body.priceSet !== "boolean" ||
+    !Array.isArray(body.categories) ||
+    !Array.isArray(body.additions)
+  )
+    return null;
+  const missingCategories = labels(body.missingCategories);
+  if (!missingCategories) return null;
+  const title = body.title === null ? null : text(body.title, 200);
+  const price = body.price === null ? null : money(body.price);
+  if (body.title !== null && !title) return null;
+  if (body.price !== null && !price) return null;
+  const categories: WorkerDailyMenuCategory[] = [];
+  for (const item of body.categories) {
+    const category = record(item);
+    const label = text(category?.label, 80);
+    if (
+      !category ||
+      !isUuid(category.id) ||
+      !label ||
+      category.kind !== "SINGLE" ||
+      typeof category.canSkip !== "boolean" ||
+      !Array.isArray(category.options) ||
+      !Number.isSafeInteger(category.textUsed)
+    )
+      return null;
+    const options = [];
+    for (const raw of category.options) {
+      const option = record(raw);
+      const optionLabel = text(option?.label);
+      if (!option || !isUuid(option.id) || !optionLabel) return null;
+      options.push({ id: option.id, label: optionLabel });
+    }
+    categories.push({
+      id: category.id,
+      label,
+      kind: "SINGLE",
+      canSkip: category.canSkip,
+      options,
+      textUsed: category.textUsed as number,
+    });
+  }
+  const additions: WorkerDailyMenuAddition[] = [];
+  for (const item of body.additions) {
+    const addition = record(item);
+    const name = text(addition?.name, 120);
+    const extraPrice =
+      addition?.extraPrice === null ? null : money(addition?.extraPrice);
+    if (
+      !addition ||
+      !isUuid(addition.id) ||
+      !name ||
+      (addition.extraPrice !== null && !extraPrice) ||
+      typeof addition.available !== "boolean"
+    )
+      return null;
+    additions.push({
+      id: addition.id,
+      name,
+      extraPrice,
+      available: addition.available,
+    });
+  }
+  const day: WorkerDailyMenu = {
+    businessDate: body.businessDate,
+    version: body.version,
+    published: body.published,
+    complete: body.complete,
+    missingCategories,
+    priceSet: body.priceSet,
+    title,
+    price,
+    categories,
+    additions,
+  };
+  if (body.skippedCategories !== undefined) {
+    const skipped = labels(body.skippedCategories);
+    if (!skipped) return null;
+    day.skippedCategories = skipped;
+  }
+  return day;
 }
