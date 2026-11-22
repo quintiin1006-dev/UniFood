@@ -10,6 +10,8 @@ import { DailyMenuEditorStore } from "./editor";
  * again with Disponibilidad's rhythm (poll, focus, visibility), but never while a write is
  * pending; what the worker is typing lives in the editor, so a read never touches it.
  */
+export type DailyMenuEditorState = ReturnType<typeof useDailyMenu>;
+
 export function useDailyMenu() {
   const store = useWorkerStore(
     "daily-menu",
