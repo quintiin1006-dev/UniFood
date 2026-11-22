@@ -229,6 +229,36 @@ export const PUSH_MESSAGES = {
 
 export type PushMessageKey = keyof typeof PUSH_MESSAGES;
 
+/* ---------- Worker · editor del menú del día en Disponibilidad (jj/menu-dia-editor) ---------- */
+export const DAILY_MENU_EDITOR_TITLE = "Menú del día";
+export const DAILY_MENU_EDITOR_PUBLISHED = "Publicado";
+export const DAILY_MENU_EDITOR_DRAFT = "Sin publicar";
+export const DAILY_MENU_EDITOR_PLACEHOLDER = "Escribe una opción y pulsa Enter";
+export const DAILY_MENU_EDITOR_HINT =
+  "Enter o coma crea una opción. Se guarda al crearla o quitarla.";
+export const DAILY_MENU_TOO_LONG = "Superaste el máximo de 350 caracteres";
+export const DAILY_MENU_DUPLICATE = "Esa opción ya está en la lista.";
+export const DAILY_MENU_MAX_OPTIONS = "Llegaste al máximo de 20 opciones.";
+export const dailyMenuRemoveOption = (label: string) => `Quitar ${label}`;
+export const DAILY_MENU_EDITOR_ADDITIONS = "Adiciones";
+export const DAILY_MENU_NO_EXTRA_PRICE = "Sin precio";
+export const DAILY_MENU_COPY = "Copiar el de ayer";
+export const dailyMenuCopyDone = (skipped: string[]) =>
+  skipped.length
+    ? `Copiamos el menú de ayer en las categorías vacías. Omitimos ${skipped.join(", ")} porque ya tenían opciones.`
+    : "Copiamos el menú de ayer en las categorías vacías.";
+export const DAILY_MENU_PUBLISH = "Publicar menú";
+export const DAILY_MENU_UNPUBLISH = "Despublicar";
+export const DAILY_MENU_NO_PRICE = "Falta el precio del plato";
+export const DAILY_MENU_FIX_LENGTH =
+  "Acorta las categorías que superan el máximo de 350 caracteres.";
+export const dailyMenuMissingOption = (label: string) =>
+  `Falta una opción en ${label}`;
+export const DAILY_MENU_EDITOR_SAVING = "Guardando…";
+export const DAILY_MENU_EDITOR_OFFLINE = "Sin conexión. Reintentando…";
+export const DAILY_MENU_EDITOR_UNAVAILABLE =
+  "No pudimos cargar el menú del día.";
+
 /* ---------- Backend ErrorCode ---------- */
 
 /** Mirror of the backend enum, in its order. The test compares it with ErrorCode.java. */
