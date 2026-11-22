@@ -27,6 +27,10 @@ public interface DailyMenuWriteRepository {
   /** The addition of this cafeteria, locked FOR SHARE; empty when missing or foreign. */
   Optional<CatalogAddition> lockAddition(UUID cafeteriaId, UUID additionId);
 
+  /**
+   * Leaves the category with exactly {@code labels}, in that order. An option whose label_key stays
+   * keeps its id, so an edit never invalidates a client's choice of an unchanged option.
+   */
   void replaceOptions(
       UUID cafeteriaId, LocalDate businessDate, UUID categoryId, List<String> labels);
 

@@ -600,7 +600,7 @@ Rutas nuevas bajo `/api/me` y `/api/worker` (y `/api/admin` en fase 9), con el e
 | ------------- | --- | -------- | -- |
 | `GET /api/me/daily-menu?cafeteriaId=` | CLIENT | Menú publicado y completo de hoy, solo opciones disponibles | PR 2 (hecho) |
 | `GET /api/me/menu` (ampliar) | CLIENT | Añade `dailyMenu: { available }` para la carta de Inicio | PR 2 (hecho) |
-| `POST /api/me/orders` (ampliar) | CLIENT | Acepta `dailyMenu` opcional en el cuerpo | PR 4 |
+| `POST /api/me/orders` (ampliar) | CLIENT | Acepta `dailyMenu` opcional en el cuerpo | PR 4 (hecho) |
 | `GET /api/worker/daily-menu/today` | WORKER | Estado del día: categorías, opciones, adiciones, publicado, completo, versión | PR 3 (hecho) |
 | `PUT /api/worker/daily-menu/today/categories/{categoryId}/options` | WORKER | Reemplaza las opciones de una categoría `SINGLE` | PR 3 (hecho) |
 | `PUT /api/worker/daily-menu/today/additions/{additionId}` | WORKER | Enciende o apaga una adición; copia su precio | PR 3 (hecho) |
@@ -735,7 +735,10 @@ total = Σ items.subtotal                                  (productos, como hoy)
 
 ### 3.5 Respuesta del pedido
 
-`OrderResponse` añade `dailyMenu`, que es `null` si el pedido no tiene menú:
+`OrderResponse` añade `dailyMenu`, que es `null` si el pedido no tiene menú (PR 4: hecho). En la
+respuesta del cliente (`ClientOrderResponse`) los precios van como cadena decimal (`"9500.00"`), igual
+que su `total`; en la del worker (`OrderResponse`) van como número, igual que su `total`. En las dos
+el campo se omite cuando el pedido no tiene menú, así que esos pedidos responden igual que antes:
 
 ```json
 "dailyMenu": {
@@ -959,7 +962,7 @@ paso deje la app en un estado usable** y para que, si hay que recortar, se sepa 
 | 2 | `menu-dia-lectura` | Backend: `GET /api/me/daily-menu`, `dailyMenu` en `/api/me/menu`, pruebas | 1 d | El cliente no ve el menú |
 | 5 | `menu-dia-carta-inicio` | Web: BFF de lectura y carta «Menú del día» en Inicio con fichas. El botón «Agregar al carrito» queda deshabilitado hasta el PR 6 | 2,5 d | El cliente no ve el menú |
 | 3 | `menu-dia-worker-api` | Backend: escrituras del worker, publicar, copiar ayer, autorización y concurrencia | 2,5 d | El worker no puede publicar |
-| 7 | `menu-dia-editor` | Web: `DailyMenuEditor` en Disponibilidad, BFF del worker, publicar | 3 d | El worker publica solo por API o SQL |
+| 7 | `menu-dia-editor` | Web: `DailyMenuEditor` en Disponibilidad, BFF del worker, publicar. **Cada escritura envía `X-Business-Date`** con el día de la pantalla (como Disponibilidad) y `expectedVersion`; si el día cambió, el backend responde 409 `DAILY_MENU_DATE_CHANGED` | 3 d | El worker publica solo por API o SQL |
 | 4 | `menu-dia-pedido` | Backend: validación del pedido, total, snapshots, `OrderResponse.dailyMenu` | 3 d | El cliente no puede pedir el menú |
 | 6 | `menu-dia-carrito` | Web: `MenuLine`, `validateCart`, `CartLineItem`, checkout, `orderForward` | 2 d | El cliente no puede pedir el menú |
 | C | `cierre-diario-medianoche` | Cierre de pedidos de días anteriores (sección 8): `pg_cron` a medianoche de Bogotá en staging, respaldo en Spring con `WARN` con conteo y, opcional, aviso al worker. Entra después del freeze del 21 como corrección (Q7) y antes del PR 4 | 1 d | Pedidos de ayer siguen activos y bloquean al cliente |
@@ -979,6 +982,13 @@ Lo que no esté estable el 25 se apaga con la variable; la demo sigue sin esa pa
   ve la elección en su tarjeta, así que el PR 8 no es opcional para operar; sí lo es para la demo.
 - **Mínimo útil para la demo:** PR 1, 2, 5 y 3 (≈ 8 d). El cliente ve el menú y el worker puede publicar
   por API o SQL.
+
+**Pendiente para después de la demo (anotado en el PR 4, sin cambiar ahora):**
+- Las métricas del panel admin que suman `order_items` (ranking, calidad de ítems) no ven el ingreso
+  del menú del día: el plato y las adiciones viven en `order_daily_menus` y
+  `order_daily_menu_choices`. `orders.total` sí lo incluye.
+- Los historiales del cliente y del worker cuentan unidades y nombres desde `order_items`: un pedido
+  solo con plato aparece (no desaparece), pero con 0 productos, hasta que el PR 8 muestre la elección.
 
 **Recorte si hace falta:** primero se quita el «Copiar el de ayer» (dentro del PR 7); después, los
 interruptores de adiciones; después, el PR 8 a solo la tarjeta del worker. No se recortan la regla

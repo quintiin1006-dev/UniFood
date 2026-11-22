@@ -1,9 +1,12 @@
 package com.santotofood.adapter.in.web.dto;
 
+import com.santotofood.application.port.in.CreateOwnOrderUseCase.Choice;
+import com.santotofood.application.port.in.CreateOwnOrderUseCase.DailyMenuRequest;
 import com.santotofood.application.port.in.CreateOwnOrderUseCase.Line;
 import com.santotofood.application.port.in.CreateOwnOrderUseCase.OrderRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -15,12 +18,16 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Bounded decoding of the create-order body (docs/decisiones.md §11). Only {@code cafeteriaId},
- * {@code items[].productId}, {@code items[].quantity}, {@code note} and {@code requestedPickupAt}
- * are read: prices, totals or any other field the browser sends are ignored, never trusted.
+ * {@code items[].productId}, {@code items[].quantity}, {@code note}, {@code requestedPickupAt} and
+ * {@code dailyMenu} ({@code businessDate}, {@code choices[].categoryId}, {@code
+ * choices[].optionId}, {@code choices[].skip} and {@code additionIds},
+ * docs/propuesta-menu-dinamico.md section 3.2) are read: prices, totals or any other field the
+ * browser sends are ignored, never trusted.
  */
 public final class ClientOrderRequests {
   public static final int MAX_BYTES = 8192;
   private static final String UUID_FORMAT = "(?i)[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}";
+  private static final String DATE_FORMAT = "\\d{4}-\\d{2}-\\d{2}";
   private static final JsonMapper JSON =
       JsonMapper.builder()
           .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
@@ -55,10 +62,50 @@ public final class ClientOrderRequests {
       if (pickup != null && !(pickup instanceof String)) return null;
       var cafeteriaId = uuid(body.get("cafeteriaId"));
       if (cafeteriaId == null) return null;
-      return new OrderRequest(cafeteriaId, List.copyOf(items), (String) note, (String) pickup);
+      DailyMenuRequest dailyMenu = null;
+      if (body.get("dailyMenu") != null) {
+        dailyMenu = dailyMenu(body.get("dailyMenu"));
+        if (dailyMenu == null) return null;
+      }
+      return new OrderRequest(
+          cafeteriaId, List.copyOf(items), (String) note, (String) pickup, dailyMenu);
     } catch (IOException | RuntimeException unreadable) {
       return null;
     }
+  }
+
+  /** The plate as sent, or null when its shape is wrong; the use case owns every rule. */
+  private static DailyMenuRequest dailyMenu(Object raw) {
+    if (!(raw instanceof Map<?, ?> menu)
+        || !(menu.get("businessDate") instanceof String date)
+        || !date.matches(DATE_FORMAT)
+        || !(menu.get("choices") instanceof List<?> rawChoices)) return null;
+    var businessDate = LocalDate.parse(date);
+    var choices = new ArrayList<Choice>();
+    for (Object rawChoice : rawChoices) {
+      if (!(rawChoice instanceof Map<?, ?> choice)) return null;
+      var categoryId = uuid(choice.get("categoryId"));
+      if (categoryId == null) return null;
+      UUID optionId = null;
+      if (choice.get("optionId") != null) {
+        optionId = uuid(choice.get("optionId"));
+        if (optionId == null) return null;
+      }
+      var skip = choice.get("skip");
+      if (skip != null && !(skip instanceof Boolean)) return null;
+      choices.add(new Choice(categoryId, optionId, Boolean.TRUE.equals(skip)));
+    }
+    var additions = new ArrayList<UUID>();
+    var rawAdditions = menu.get("additionIds");
+    if (rawAdditions != null) {
+      if (!(rawAdditions instanceof List<?> list)) return null;
+      for (Object rawAddition : list) {
+        var additionId = uuid(rawAddition);
+        if (additionId == null) return null;
+        additions.add(additionId);
+      }
+    }
+    return new DailyMenuRequest(businessDate, List.copyOf(choices), List.copyOf(additions));
   }
 
   private static UUID uuid(Object value) {

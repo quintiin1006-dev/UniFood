@@ -32,7 +32,8 @@ public class DailyMenuPersistenceAdapter
   private static final String LOCK_DAY = sql("lock-day.sql");
   private static final String WORKER_ADDITIONS = sql("worker-additions.sql");
   private static final String LOCK_ADDITION = sql("lock-addition.sql");
-  private static final String DELETE_OPTIONS = sql("delete-options.sql");
+  private static final String DELETE_REMOVED_OPTIONS = sql("delete-removed-options.sql");
+  private static final String KEEP_OPTION = sql("keep-option.sql");
   private static final String INSERT_OPTION = sql("insert-option.sql");
   private static final String COPY_OPTIONS = sql("copy-options.sql");
   private static final String SET_ADDITION = sql("set-addition.sql");
@@ -155,10 +156,20 @@ public class DailyMenuPersistenceAdapter
   @Override
   public void replaceOptions(
       UUID cafeteriaId, LocalDate businessDate, UUID categoryId, List<String> labels) {
-    jdbc.update(DELETE_OPTIONS, cafeteriaId, businessDate, categoryId);
-    // One row at a time, in order: created_at keeps the worker's order.
+    jdbc.update(
+        connection -> {
+          var statement = connection.prepareStatement(DELETE_REMOVED_OPTIONS);
+          statement.setObject(1, cafeteriaId);
+          statement.setObject(2, businessDate);
+          statement.setObject(3, categoryId);
+          statement.setArray(4, connection.createArrayOf("text", labels.toArray()));
+          return statement;
+        });
+    // One row at a time, in order: created_at keeps the worker's order. Options compared by
+    // label_key keep their id, so an edit never invalidates a choice of an unchanged option.
     for (String label : labels)
-      jdbc.update(INSERT_OPTION, cafeteriaId, businessDate, categoryId, label);
+      if (jdbc.update(KEEP_OPTION, label, cafeteriaId, businessDate, categoryId, label) == 0)
+        jdbc.update(INSERT_OPTION, cafeteriaId, businessDate, categoryId, label);
   }
 
   @Override

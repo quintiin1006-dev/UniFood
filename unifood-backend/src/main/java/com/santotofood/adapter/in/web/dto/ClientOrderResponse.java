@@ -1,6 +1,8 @@
 package com.santotofood.adapter.in.web.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.santotofood.application.model.ClientOrder;
+import com.santotofood.application.model.OrderDailyMenu;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -10,7 +12,9 @@ import java.util.UUID;
 /**
  * docs/decisiones.md §11 order, shared by create, current, detail and cancel. B16 only appends
  * fields after the B15 ones, and {@code requestedPickupAt} (nullable) comes last. Amounts travel as
- * decimal strings; the client's document is never part of it.
+ * decimal strings; the client's document is never part of it. {@code dailyMenu}
+ * (docs/propuesta-menu-dinamico.md, section 3.5) is left out for an order without the daily menu,
+ * so those orders answer exactly as before.
  */
 public record ClientOrderResponse(
     UUID id,
@@ -29,9 +33,15 @@ public record ClientOrderResponse(
     Instant deliveredAt,
     Instant notCollectedAt,
     Instant cancelledAt,
-    Instant requestedPickupAt) {
+    Instant requestedPickupAt,
+    @JsonInclude(JsonInclude.Include.NON_NULL) DailyMenu dailyMenu) {
 
   public record Item(String name, int quantity, String unitPrice, String subtotal) {}
+
+  public record DailyMenu(String title, String price, List<DailyMenuChoice> choices) {}
+
+  /** {@code label} is null for «Ninguna»; {@code extraPrice} only for an addition. */
+  public record DailyMenuChoice(String category, String kind, String label, String extraPrice) {}
 
   public record Cafeteria(UUID id, String name) {}
 
@@ -62,7 +72,24 @@ public record ClientOrderResponse(
         timeline.deliveredAt(),
         timeline.notCollectedAt(),
         timeline.cancelledAt(),
-        order.requestedPickupAt());
+        order.requestedPickupAt(),
+        dailyMenu(order.dailyMenu()));
+  }
+
+  static DailyMenu dailyMenu(OrderDailyMenu menu) {
+    if (menu == null) return null;
+    return new DailyMenu(
+        menu.title(),
+        amount(menu.price()),
+        menu.choices().stream()
+            .map(
+                choice ->
+                    new DailyMenuChoice(
+                        choice.category(),
+                        choice.kind(),
+                        choice.label(),
+                        choice.extraPrice() == null ? null : amount(choice.extraPrice())))
+            .toList());
   }
 
   static String amount(BigDecimal value) {

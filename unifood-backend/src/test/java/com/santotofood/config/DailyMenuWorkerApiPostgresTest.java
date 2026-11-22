@@ -562,4 +562,29 @@ class DailyMenuWorkerApiPostgresTest {
         .andExpect(jsonPath("$.version").value(1))
         .andExpect(jsonPath("$.categories[0].options[*].label", contains("Pollo")));
   }
+
+  static List<String> ids(UUID category) {
+    return jdbc.queryForList(
+        "SELECT id::text FROM public.daily_menu_options WHERE cafeteria_id=? AND business_date=? AND category_id=? ORDER BY created_at, id",
+        String.class,
+        MAIN,
+        today(),
+        category);
+  }
+
+  @Test
+  void reorderingKeepsTheIdsAndChangesTheOrder() throws Exception {
+    options(WORKER, protein, 0, "[\"Pollo\",\"Res\",\"Cerdo\"]").andExpect(status().isOk());
+    var before = ids(protein);
+    options(WORKER, protein, 1, "[\"Cerdo\",\" pollo \",\"Res\"]")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.categories[0].options[*].label", contains("Cerdo", "pollo", "Res")));
+    // Same three ids, now in the new order; «pollo» kept the id of «Pollo».
+    assertEquals(List.of(before.get(2), before.get(0), before.get(1)), ids(protein));
+    // Removing one keeps the others; a new one gets a new id.
+    options(WORKER, protein, 2, "[\"Res\",\"Pescado\"]").andExpect(status().isOk());
+    var after = ids(protein);
+    assertEquals(before.get(1), after.get(0));
+    assertFalse(before.contains(after.get(1)));
+  }
 }
