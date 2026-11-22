@@ -1,3 +1,5 @@
+import type { OrderPlate } from "../daily-menu/orderSummary";
+
 /** Order as Spring answers it for the owner (docs/decisiones.md §11, B15 + B16). */
 export type OrderStatus =
   | "PENDING"
@@ -29,6 +31,8 @@ export type ClientOrder = {
   rejectionReason: string | null;
   reminderCount: number;
   requestedPickupAt: string | null;
+  /** The daily menu plate (4.7), prices read to numbers; null without one. */
+  dailyMenu: OrderPlate | null;
 };
 
 /** One row of GET /api/me/orders; the detail is fetched when the row is opened. */

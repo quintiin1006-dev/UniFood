@@ -1,3 +1,5 @@
+import type { OrderPlate } from "@/features/daily-menu/orderSummary";
+
 export type OrderStatus =
   | "pending"
   | "preparing"
@@ -39,4 +41,6 @@ export interface Order {
   deliveredAt?: string;
   // Optional pickup time chosen by the client; informative, the queue stays FIFO.
   requestedPickupAt?: string;
+  /** The daily menu plate (4.7); absent for orders without one and for old ones. */
+  dailyMenu?: OrderPlate;
 }

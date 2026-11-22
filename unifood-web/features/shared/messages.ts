@@ -184,6 +184,11 @@ export const dailyMenuMissing = (labels: string[]) =>
 export const dailyMenuProgress = (done: number, total: number) =>
   `${done} de ${total} ${total === 1 ? "elegida" : "elegidas"}`;
 export const dailyMenuExtra = (price: string) => `+ ${price}`;
+/* Ficha de cocina del pedido con menú del día (jj/menu-dia-ver-pedido). */
+export const DAILY_MENU_ORDER_LABEL = "Menú del día";
+export const DAILY_MENU_ORDER_TOTAL = "Total del pedido";
+export const dailyMenuOrderAddition = (label: string, price: string) =>
+  `${label} (+${price})`;
 
 /* ---------- Cliente · agregar al carrito (jj/cliente-agregar) ---------- */
 

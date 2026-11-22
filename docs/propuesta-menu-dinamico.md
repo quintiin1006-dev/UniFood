@@ -988,7 +988,7 @@ paso deje la app en un estado usable** y para que, si hay que recortar, se sepa 
 | 4 | `menu-dia-pedido` | Backend: validación del pedido, total, snapshots, `OrderResponse.dailyMenu` | 3 d | El cliente no puede pedir el menú |
 | 6 | `menu-dia-carrito` | Web: `MenuLine`, `validateCart`, `CartLineItem`, checkout, `orderForward` | 2 d (hecho) | El cliente no puede pedir el menú |
 | C | `cierre-diario-medianoche` | Cierre de pedidos de días anteriores (sección 8): `pg_cron` a medianoche de Bogotá en staging, respaldo en Spring con `WARN` con conteo y, opcional, aviso al worker. Entra después del freeze del 21 como corrección (Q7) y antes del PR 4 | 1 d | Pedidos de ayer siguen activos y bloquean al cliente |
-| 8 | `menu-dia-ver-pedido` | Web: `DailyMenuSummary` en la tarjeta del worker y en «Mi pedido» | 1 d | El worker no ve la elección |
+| 8 | `menu-dia-ver-pedido` | Web: `DailyMenuSummary` en la tarjeta, el detalle y Llamadas del worker y en «Mi pedido» (y su detalle en el historial). Los historiales del worker y del cliente aún no reciben `dailyMenu`: PR de backend aparte | 1 d (hecho) | El worker no ve la elección |
 | 9 | `menu-dia-admin` | Panel admin: plato, precios, categorías, adiciones. Requisito antes del piloto de febrero | 3 d | Adiciones y precios solo por SQL en staging |
 
 El orden de ejecución es **1 → 2 → 5 → 3 → 7 → C → 4 → 6 → 8**, detrás de `MENU_DINAMICO_ENABLED` (Q1).

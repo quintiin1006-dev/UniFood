@@ -1,8 +1,9 @@
 import { formatOrderDate, formatTotal, pickupLabel } from "../presentation";
 import type { ClientOrder } from "../types";
 import styles from "./ClientOrders.module.css";
+import { DailyMenuSummary } from "@/features/daily-menu/components/DailyMenuSummary";
 
-/** Items, pickup time, note and total of an order: shared by «Mi pedido» and the history detail. */
+/** Plate, items, pickup time, note and total of an order: shared by «Mi pedido» and the history detail. */
 export default function OrderSummary({
   order,
   showDate = false,
@@ -17,16 +18,19 @@ export default function OrderSummary({
         {order.cafeteria.name}
         {showDate && <span> · {formatOrderDate(order.createdAt)}</span>}
       </p>
-      <ul className={styles.lines} aria-label="Productos del pedido">
-        {order.items.map((item, index) => (
-          <li key={`${item.name}-${index}`}>
-            <span>
-              {item.quantity}× {item.name}
-            </span>
-            <span>{formatTotal(item.subtotal)}</span>
-          </li>
-        ))}
-      </ul>
+      <DailyMenuSummary order={order} />
+      {order.items.length > 0 && (
+        <ul className={styles.lines} aria-label="Productos del pedido">
+          {order.items.map((item, index) => (
+            <li key={`${item.name}-${index}`}>
+              <span>
+                {item.quantity}× {item.name}
+              </span>
+              <span>{formatTotal(item.subtotal)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       {(pickup || order.note) && (
         <dl className={styles.facts}>
           {pickup && (

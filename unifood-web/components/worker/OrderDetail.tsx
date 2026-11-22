@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { AlertTriangle, Clock3, X, ShoppingBag } from "lucide-react";
 
 import type { Order } from "@/types/order";
+import { DailyMenuSummary } from "@/features/daily-menu/components/DailyMenuSummary";
 import { Spinner } from "@/components/ui/Spinner";
 import { clientIdentity } from "@/features/orders/utils/clientIdentity";
 import { pickupLabel } from "@/features/orders/utils/pickupTime";
@@ -233,6 +234,7 @@ export default function OrderDetail({
             ))}
           </div>
 
+          <DailyMenuSummary order={order} withTotal />
           {/* Total: only when it is not already the single line's value. */}
           {showsTotal(order.items) && (
             <div className={styles.total}>
