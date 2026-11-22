@@ -67,4 +67,13 @@ class DailyCloseServiceTest {
     assertFalse(definition.getValue().isReadOnly());
     verify(manager).commit(any());
   }
+
+  @Test
+  void theCountOfWhatIsLeftUsesTheSameBogotaDayStart() {
+    // 03:00Z is still the previous business day in Bogota (22:00 of the 19th).
+    when(port.countStale(Instant.parse("2026-11-19T05:00:00Z"))).thenReturn(7);
+    assertEquals(7, at("2026-11-20T03:00:00Z").countStaleOrders());
+    verify(port, never()).cancelStalePending(any(), any());
+    verify(port, never()).markStaleNotCollected(any(), any());
+  }
 }

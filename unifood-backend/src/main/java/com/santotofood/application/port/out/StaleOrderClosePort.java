@@ -13,4 +13,7 @@ public interface StaleOrderClosePort {
 
   /** PREPARING, READY and CALLED created before {@code dayStart} become NOT_COLLECTED. */
   int markStaleNotCollected(Instant dayStart, Instant closedAt);
+
+  /** How many active orders created before {@code dayStart} are still open; a count only. */
+  int countStale(Instant dayStart);
 }

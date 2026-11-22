@@ -31,8 +31,21 @@ public class DailyCloseScheduler {
     try {
       close.closeStaleOrders();
     } catch (RuntimeException failure) {
-      // The next run retries; the type is enough and carries no order data.
-      LOGGER.warn("Cierre diario no completado: {}", failure.getClass().getSimpleName());
+      // The next run retries. The type and a count only: never order ids, names or codes.
+      String type = failure.getClass().getSimpleName();
+      Integer left = staleLeft();
+      if (left == null)
+        LOGGER.warn("Cierre diario no completado: {}; no se pudo contar lo pendiente", type);
+      else LOGGER.warn("Cierre diario no completado: {}; {} pedidos sin cerrar", type, left);
+    }
+  }
+
+  /** How many stale orders the failed run left open, or null if they cannot be counted now. */
+  private Integer staleLeft() {
+    try {
+      return close.countStaleOrders();
+    } catch (RuntimeException countFailure) {
+      return null;
     }
   }
 }

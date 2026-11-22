@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 public class StaleOrderClosePersistenceAdapter implements StaleOrderClosePort {
   private static final String CANCEL_PENDING = sql("cancel-stale-pending.sql");
   private static final String NOT_COLLECT = sql("not-collect-stale.sql");
+  private static final String COUNT_STALE = sql("count-stale.sql");
   private final JdbcTemplate jdbc;
 
   public StaleOrderClosePersistenceAdapter(JdbcTemplate jdbc) {
@@ -29,6 +30,13 @@ public class StaleOrderClosePersistenceAdapter implements StaleOrderClosePort {
   public int markStaleNotCollected(Instant dayStart, Instant closedAt) {
     return jdbc.update(
         NOT_COLLECT, dayStart.atOffset(ZoneOffset.UTC), closedAt.atOffset(ZoneOffset.UTC));
+  }
+
+  @Override
+  public int countStale(Instant dayStart) {
+    Integer count =
+        jdbc.queryForObject(COUNT_STALE, Integer.class, dayStart.atOffset(ZoneOffset.UTC));
+    return count == null ? 0 : count;
   }
 
   private static String sql(String name) {
