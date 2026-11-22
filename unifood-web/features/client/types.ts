@@ -38,6 +38,8 @@ export type CafeteriaMenu = {
   cafeteria: ContextCafeteria;
   businessDate: string;
   categories: MenuCategory[];
+  /** dailyMenu.available: the flag is on and today's menu is published and complete. */
+  dailyMenuAvailable: boolean;
 };
 
 export type CartLine = { productId: string; quantity: number };

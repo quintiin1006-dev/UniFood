@@ -151,6 +151,7 @@ export function toCafeteriaMenu(payload: unknown): CafeteriaMenu | null {
     // The closed state wins: a closed cafeteria never offers products, whatever each says.
     cafeteria,
     businessDate,
+    dailyMenuAvailable: asRecord(body.dailyMenu)?.available === true,
     categories: cafeteria.open
       ? categories
       : categories.map((category) => ({
