@@ -5,6 +5,8 @@ import {
   OPEN_WITHOUT_PRODUCTS_MESSAGE,
   formatBusinessDate,
   openWithoutAvailableProducts,
+  panelCategories,
+  showDelDiaSection,
 } from "../presentation";
 import { AvailabilitySwitch } from "./AvailabilitySwitch";
 import { CategoryCarousel } from "./CategoryCarousel";
@@ -18,15 +20,22 @@ import { Notice } from "@/components/ui/Notice";
 import { ConnectionNotice } from "@/features/shared/components/ConnectionNotice";
 import { Icon, ICON_MIN_20 } from "@/components/ui/Icon";
 import { DailyMenuEditor } from "@/features/daily-menu/components/DailyMenuEditor";
+import { useDailyMenu } from "@/features/daily-menu/useDailyMenu";
 
 /**
  * Disponibilidad as ONE glass panel, like Llamadas (F1, F3): the shared header with the nav's
  * switch icon (the module name appears once), the cafeteria as a row, and each category as a
- * section of the same panel, all separated by thin dividers.
+ * section of the same panel, all separated by thin dividers. «Menú del día» goes right after the
+ * cafeteria row and takes the place of the catalogue's «Del día» (showDelDiaSection).
  */
 export function AvailabilityPanel() {
   const state = useAvailability();
+  const dailyMenu = useDailyMenu();
   const blocked = state.refreshing || state.error !== null;
+  const delDiaItems =
+    state.data?.categories.find(({ category }) => category === "DEL_DIA")?.items
+      .length ?? 0;
+  const showDelDia = showDelDiaSection(dailyMenu, delDiaItems);
   return (
     <div className={panelStyles.page}>
       <section
@@ -157,6 +166,7 @@ export function AvailabilityPanel() {
                 </p>
               </div>
             </section>
+            <DailyMenuEditor state={dailyMenu} />
             {openWithoutAvailableProducts(state.data) && (
               <div className={panelStyles.section}>
                 <p
@@ -169,7 +179,7 @@ export function AvailabilityPanel() {
                 </p>
               </div>
             )}
-            {state.data.categories.map((group) => (
+            {panelCategories(state.data.categories, showDelDia).map((group) => (
               <CategoryCarousel
                 key={group.category}
                 {...group}
@@ -184,8 +194,6 @@ export function AvailabilityPanel() {
             ))}
           </>
         )}
-        {/* PR 7: the daily menu below the catalogue categories, in the same panel. */}
-        {!state.loading && <DailyMenuEditor />}
       </section>
     </div>
   );

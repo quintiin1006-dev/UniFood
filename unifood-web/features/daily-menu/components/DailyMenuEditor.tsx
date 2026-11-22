@@ -35,7 +35,7 @@ import {
 } from "../editor";
 import { formatExtra, formatPrice } from "../presentation";
 import type { WorkerDailyMenuCategory } from "../types";
-import { useDailyMenu } from "../useDailyMenu";
+import type { DailyMenuEditorState } from "../useDailyMenu";
 import styles from "./DailyMenuEditor.module.css";
 
 const CHIP_ERRORS: Record<ChipError, string> = {
@@ -45,12 +45,12 @@ const CHIP_ERRORS: Record<ChipError, string> = {
 };
 
 /**
- * «Menú del día» inside Disponibilidad (docs/propuesta-menu-dinamico.md 4.3): more sections of
- * the same glass panel, below the catalogue categories. Hidden with the flag off or without a
- * daily menu for this worker (the BFF answers 404 and nothing is drawn).
+ * «Menú del día» inside Disponibilidad (docs/propuesta-menu-dinamico.md 4.3): sections of the
+ * same glass panel, at the top, in the place of the catalogue's «Del día». Hidden with the flag
+ * off or without a daily menu for this worker (the BFF answers 404 and nothing is drawn). The
+ * panel owns the state (useDailyMenu) because it also decides whether «Del día» is drawn.
  */
-export function DailyMenuEditor() {
-  const state = useDailyMenu();
+export function DailyMenuEditor({ state }: { state: DailyMenuEditorState }) {
   // What the worker is typing per category; a read or a conflict never clears it.
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, ChipError | null>>({});

@@ -8,7 +8,42 @@ import {
   availabilityFixture,
 } from "./helpers/load-availability.mjs";
 
-function render(state = {}) {
+const HIDDEN_EDITOR = { status: "hidden", day: null };
+
+function editorDay({ published = false, complete = true } = {}) {
+  return {
+    businessDate: "2026-10-13",
+    version: 1,
+    published,
+    complete,
+    missingCategories: [],
+    priceSet: true,
+    title: "Almuerzo del día",
+    price: "9500.00",
+    categories: [],
+    additions: [],
+  };
+}
+
+function editorState(status, day = null) {
+  return {
+    status,
+    day,
+    categories: [],
+    additions: [],
+    pending: 0,
+    offline: false,
+    busyAction: null,
+    notice: null,
+    resync: 0,
+    refresh() {},
+    setOptions() {},
+    setAddition() {},
+    runAction() {},
+  };
+}
+
+function render(state = {}, dailyMenu = editorState("hidden")) {
   const data = availabilityFixture();
   const defaults = {
     data,
@@ -28,6 +63,9 @@ function render(state = {}) {
     mocks: {
       [path.resolve("features/availability/useAvailability.ts")]: {
         useAvailability: () => ({ ...defaults, ...state }),
+      },
+      [path.resolve("features/daily-menu/useDailyMenu.ts")]: {
+        useDailyMenu: () => dailyMenu,
       },
       "next/image": ({ src, alt, className }) =>
         React.createElement("img", { src, alt, className }),
@@ -312,4 +350,96 @@ test("A1: an open cafeteria without available products shows a persistent warnin
     render({ data: availabilityFixture({ active: false, open: true }) }),
     warning,
   );
+});
+
+test("showDelDiaSection: the editor takes «Del día»'s place only while it is active", () => {
+  const { showDelDiaSection } = availabilityLoader()(
+    "features/availability/presentation.ts",
+  );
+  // Flag off, 401, 403 or 404: no editor, «Del día» as today, with or without products.
+  assert.equal(showDelDiaSection(HIDDEN_EDITOR, 0), true);
+  assert.equal(showDelDiaSection(HIDDEN_EDITOR, 3), true);
+  // A failed first read: the error notice, and «Del día» as today.
+  assert.equal(showDelDiaSection({ status: "error", day: null }, 3), true);
+  assert.equal(showDelDiaSection({ status: "error", day: null }, 0), true);
+  // Loading for the first time: the skeleton holds the place, «Del día» waits (no flicker).
+  assert.equal(showDelDiaSection({ status: "loading", day: null }, 0), false);
+  assert.equal(showDelDiaSection({ status: "loading", day: null }, 3), false);
+  // Ready without «Del día» products: always gives way.
+  for (const published of [true, false])
+    for (const complete of [true, false])
+      assert.equal(
+        showDelDiaSection({ status: "ready", day: { published, complete } }, 0),
+        false,
+      );
+  // Ready with «Del día» products: hidden only while the menu is published and complete.
+  const ready = (published, complete) =>
+    showDelDiaSection({ status: "ready", day: { published, complete } }, 2);
+  assert.equal(ready(true, true), false);
+  assert.equal(ready(true, false), true);
+  assert.equal(ready(false, true), true);
+  assert.equal(ready(false, false), true);
+  // «ready» without a day never hides it.
+  assert.equal(showDelDiaSection({ status: "ready", day: null }, 0), true);
+});
+
+test("panel order: cafeteria row, then the daily menu editor, then the catalogue without «Del día»", () => {
+  const markup = render(
+    {},
+    editorState("ready", editorDay({ published: true })),
+  );
+  const cafeteria = markup.indexOf('id="availability-cafeteria-name"');
+  const editor = markup.indexOf('id="daily-menu-editor-title"');
+  const corriente = markup.indexOf(">Corriente</h3>");
+  assert.ok(cafeteria >= 0 && editor > cafeteria && corriente > editor);
+  assert.equal(markup.indexOf(">Del día</h3>"), -1);
+  // Corriente and the others stay, in their order.
+  const rest = ["Corriente", "Ejecutivo", "Especial", "Desayuno", "Bebida"].map(
+    (label) => markup.indexOf(`>${label}</h3>`),
+  );
+  assert.ok(rest.every((position) => position > editor));
+  assert.deepEqual(
+    [...rest].sort((a, b) => a - b),
+    rest,
+  );
+});
+
+test("panel: a draft menu with «Del día» products keeps the section, under the editor", () => {
+  const data = availabilityFixture();
+  data.categories[0].items = [
+    {
+      ...data.categories[1].items[0],
+      id: "00000000-0000-0000-0000-000000000023",
+    },
+  ];
+  const draft = render(
+    { data },
+    editorState("ready", editorDay({ published: false })),
+  );
+  const editor = draft.indexOf('id="daily-menu-editor-title"');
+  assert.ok(editor >= 0 && draft.indexOf(">Del día</h3>") > editor);
+  // Published and complete: the same products give way to the editor.
+  const published = render(
+    { data },
+    editorState("ready", editorDay({ published: true })),
+  );
+  assert.equal(published.indexOf(">Del día</h3>"), -1);
+  // An empty «Del día» gives way even to a draft.
+  assert.equal(
+    render({}, editorState("ready", editorDay())).indexOf(">Del día</h3>"),
+    -1,
+  );
+});
+
+test("panel: hidden editor shows «Del día» as today; loading shows the skeleton instead", () => {
+  const hidden = render({}, editorState("hidden"));
+  assert.ok(hidden.indexOf(">Del día</h3>") >= 0);
+  assert.equal(hidden.indexOf('id="daily-menu-editor-title"'), -1);
+  const loading = render({}, editorState("loading"));
+  assert.equal(loading.indexOf(">Del día</h3>"), -1);
+  const skeleton = loading.indexOf('aria-label="Cargando el menú del día"');
+  assert.ok(skeleton > loading.indexOf('id="availability-cafeteria-name"'));
+  assert.ok(skeleton < loading.indexOf(">Corriente</h3>"));
+  const error = render({}, editorState("error"));
+  assert.ok(error.indexOf(">Del día</h3>") >= 0);
 });

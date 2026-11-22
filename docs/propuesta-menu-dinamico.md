@@ -835,6 +835,13 @@ categorías de catálogo. No se toca `components/worker/`.
 
 ### 4.3 Worker: editor en Disponibilidad
 
+- **Lugar (decisión del dueño):** el editor «Menú del día» va arriba del panel, justo después de la
+  fila de la cafetería y antes de las categorías del catálogo, y **reemplaza a la sección «Del
+  día»**. La sección «Del día» se oculta cuando el editor está listo y, además, no tiene productos
+  o el menú está publicado y completo (`showDelDiaSection` en `features/availability/presentation.ts`).
+  Con el editor oculto (bandera apagada, 401/403/404), en error, o con el menú sin publicar y
+  productos en «Del día», la sección se ve como antes. Mientras el editor carga por primera vez,
+  su esqueleto ocupa el lugar y «Del día» no se dibuja. «Corriente» y las demás no cambian.
 - **Por cada categoría `SINGLE`:** título, un recuadro con las fichas creadas y un campo de texto.
   Enter o coma crea una ficha; los espacios de los extremos se quitan.
 - **Límite de 350:** si la suma de fichas más el texto pendiente pasa de 350, el recuadro se pone
@@ -889,13 +896,16 @@ Decisión de la revisión 3: el menú no es una página ni una pestaña. Es un b
   rótulo «Menú del día», y el botón «Armar mi almuerzo» (`aria-expanded`, `aria-controls`). Con
   elecciones hechas muestra el avance («2 de 4 elegidas»); plegar no borra la selección. Con la
   cafetería cerrada se puede desplegar para ver el menú en solo lectura.
-- **El menú del día reemplaza a «Corriente» (decisión del PR 5):** con `dailyMenu.available` en el
-  menú vivo y la carta montada, Inicio no muestra los productos `CORRIENTE` (secciones ni
-  carrusel); la ficha de filtro «Corriente» se queda y muestra la carta. La carta se ve con «Todo»
-  y con «Corriente», y se oculta con los demás filtros. Sin menú, con la bandera apagada o si la
-  lectura falla, `CORRIENTE` se ve como antes. No se tocan datos ni productos. La categoría está en
-  una sola constante (`DAILY_MENU_REPLACES`). Con la bandera web apagada, el BFF de `/api/me/menu`
-  quita `dailyMenu` de la respuesta.
+- **La carta ocupa el lugar de «Del día» (decisión del dueño; corrige la del PR 5):** el menú
+  dinámico NO reemplaza a «Corriente». Con `dailyMenu.available` en el menú vivo y la carta
+  montada, la carta ocupa el lugar y la ficha de filtro de «Del día» (`DEL_DIA`, la primera del
+  catálogo), aunque esa categoría no tenga productos. Mientras la carta está montada, los
+  productos de «Del día» (si los hubiera) no se muestran. Con «Todo» se ve la carta primero y
+  luego las demás secciones, «Corriente» incluida; con «Del día» solo la carta; con los demás
+  filtros, la carta se oculta. «Corriente» nunca se oculta, ni en secciones ni en el carrusel. Sin
+  menú, con la bandera apagada o si la lectura falla, Inicio queda como antes. No se tocan datos
+  ni productos. La categoría está en una sola constante (`DAILY_MENU_SLOT`). Con la bandera web
+  apagada, el BFF de `/api/me/menu` quita `dailyMenu` de la respuesta.
 
 ### 4.5 Cliente: sin página propia
 
