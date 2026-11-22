@@ -1,5 +1,7 @@
 package com.santotofood.adapter.in.web.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.santotofood.application.model.OrderDailyMenu;
 import com.santotofood.domain.model.OrderStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -11,7 +13,9 @@ import java.util.UUID;
  * requestedPickupAt} is null for "as soon as possible". {@code calledAt}, {@code reminderCount} and
  * {@code lastRemindedAt} let the panel show the reminders and enable "No recogido". {@code note} is
  * the client's free text (021), null when there is none; the panel shows it as plain text. {@code
- * maxReminders} is the server limit, so the panel never hardcodes it.
+ * maxReminders} is the server limit, so the panel never hardcodes it. {@code dailyMenu} is the
+ * plate copied into the order (docs/propuesta-menu-dinamico.md, section 3.5), left out when there
+ * is none.
  */
 public record OrderResponse(
     UUID id,
@@ -31,4 +35,5 @@ public record OrderResponse(
     int reminderCount,
     Instant lastRemindedAt,
     String note,
-    int maxReminders) {}
+    int maxReminders,
+    @JsonInclude(JsonInclude.Include.NON_NULL) OrderDailyMenu dailyMenu) {}

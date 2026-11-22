@@ -85,6 +85,49 @@ public class ClientOrderException extends RuntimeException {
         "Uno de los productos ya no está disponible. Actualiza tu carrito.");
   }
 
+  /** MENU_DINAMICO_ENABLED is off and the order carries a daily menu. */
+  public static ClientOrderException dailyMenuDisabled() {
+    return of(
+        Kind.CONFLICT,
+        ErrorCode.DAILY_MENU_DISABLED,
+        "El menú del día no está disponible por ahora.");
+  }
+
+  /** Not published, incomplete or no menu today: the order is not created. */
+  public static ClientOrderException dailyMenuNotPublished() {
+    return of(
+        Kind.CONFLICT,
+        ErrorCode.DAILY_MENU_NOT_PUBLISHED,
+        "Hoy todavía no hay menú del día publicado.");
+  }
+
+  /** The client saw another business date than the server's. */
+  public static ClientOrderException dailyMenuDateChanged() {
+    return of(
+        Kind.CONFLICT,
+        ErrorCode.DAILY_MENU_DATE_CHANGED,
+        "Cambió el día. Actualiza la pantalla para ver el menú de hoy.");
+  }
+
+  /**
+   * A missing or repeated choice, an option of another category or «Ninguna» where it is not
+   * allowed.
+   */
+  public static ClientOrderException dailyMenuSelectionInvalid() {
+    return of(
+        Kind.BAD_REQUEST,
+        ErrorCode.DAILY_MENU_SELECTION_INVALID,
+        "Revisa tu elección del menú del día: falta una opción o ya no está disponible.");
+  }
+
+  /** An addition that is off, inactive or not of this cafeteria today. */
+  public static ClientOrderException dailyMenuAdditionUnavailable() {
+    return of(
+        Kind.CONFLICT,
+        ErrorCode.DAILY_MENU_ADDITION_UNAVAILABLE,
+        "Esa adición no está disponible.");
+  }
+
   public static ClientOrderException activeOrderExists(UUID activeOrderId) {
     return new ClientOrderException(
         Kind.CONFLICT,

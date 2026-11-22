@@ -276,6 +276,7 @@ export const BACKEND_ERROR_CODES = [
   "DAILY_MENU_CATEGORY_NOT_FOUND",
   "DAILY_MENU_ADDITION_UNAVAILABLE",
   "DAILY_MENU_DATE_CHANGED",
+  "DAILY_MENU_SELECTION_INVALID",
   "DAILY_MENU_INVALID_REQUEST",
   "DAILY_MENU_FORBIDDEN",
   "DAILY_MENU_TEMPORARILY_UNAVAILABLE",
@@ -415,6 +416,8 @@ export const BACKEND_ERROR_MESSAGES: Record<BackendErrorCode, string> = {
   DAILY_MENU_ADDITION_UNAVAILABLE: "Esa adición no está disponible.",
   DAILY_MENU_DATE_CHANGED:
     "Cambió el día. Actualiza la pantalla para ver el menú de hoy.",
+  DAILY_MENU_SELECTION_INVALID:
+    "Revisa tu elección del menú del día: falta una opción o ya no está disponible.",
   DAILY_MENU_INVALID_REQUEST:
     "Revisa los datos del menú y la fecha de la pantalla.",
   DAILY_MENU_FORBIDDEN: "No tienes permisos para gestionar el menú del día.",

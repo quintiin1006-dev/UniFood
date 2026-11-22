@@ -5,6 +5,7 @@ import com.santotofood.adapter.in.web.dto.RejectOrderRequest;
 import com.santotofood.adapter.in.web.mapper.OrderResponseMapper;
 import com.santotofood.application.port.in.CallStudentUseCase;
 import com.santotofood.application.port.in.DeliverOrderUseCase;
+import com.santotofood.application.port.in.GetOrderDailyMenusUseCase;
 import com.santotofood.application.port.in.GetOrdersByCafeteriaUseCase;
 import com.santotofood.application.port.in.MarkOrderNotCollectedUseCase;
 import com.santotofood.application.port.in.MarkOrderReadyUseCase;
@@ -14,6 +15,8 @@ import com.santotofood.application.port.in.RemindStudentUseCase;
 import com.santotofood.config.OrderAuthorization;
 import com.santotofood.domain.model.Order;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -37,14 +40,24 @@ public class OrderController {
   private final RejectOrderUseCase rejectOrderUseCase;
   private final OrderResponseMapper orderResponseMapper;
   private final OrderAuthorization orderAuthorization;
+  // Optional: contexts without the daily menu module still build; orders then carry none.
+  private final Optional<GetOrderDailyMenusUseCase> dailyMenus;
 
   @GetMapping
   @PreAuthorize("@orderAuthorization.cafeteria(authentication, #cafeteriaId)")
   public ResponseEntity<List<OrderResponse>> getOrdersByCafeteria(@RequestParam UUID cafeteriaId) {
 
     var listing = getOrdersByCafeteriaUseCase.getOperationalOrders(cafeteriaId);
+    // One read for the whole listing, never one per order.
+    var menus = menus(listing.orders().stream().map(Order::getId).toList());
     List<OrderResponse> response =
-        listing.orders().stream().map(orderResponseMapper::toResponse).toList();
+        listing.orders().stream()
+            .map(
+                order ->
+                    order.getId() != null && menus.containsKey(order.getId())
+                        ? orderResponseMapper.toResponse(order, menus.get(order.getId()))
+                        : orderResponseMapper.toResponse(order))
+            .toList();
 
     return ResponseEntity.ok()
         .header("Cache-Control", "no-store")
@@ -59,7 +72,7 @@ public class OrderController {
 
     Order updatedOrder = prepareOrderUseCase.prepareOrder(orderId);
 
-    return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
+    return ResponseEntity.ok(respond(updatedOrder));
   }
 
   @PatchMapping("/{orderId}/ready")
@@ -68,7 +81,7 @@ public class OrderController {
 
     Order updatedOrder = markOrderReadyUseCase.markOrderReady(orderId);
 
-    return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
+    return ResponseEntity.ok(respond(updatedOrder));
   }
 
   @PatchMapping("/{orderId}/call")
@@ -77,7 +90,7 @@ public class OrderController {
 
     Order updatedOrder = callStudentUseCase.callStudent(orderId);
 
-    return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
+    return ResponseEntity.ok(respond(updatedOrder));
   }
 
   /**
@@ -90,7 +103,7 @@ public class OrderController {
 
     Order updatedOrder = remindStudentUseCase.remindStudent(orderId);
 
-    return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
+    return ResponseEntity.ok(respond(updatedOrder));
   }
 
   @PatchMapping("/{orderId}/deliver")
@@ -99,7 +112,7 @@ public class OrderController {
 
     Order updatedOrder = deliverOrderUseCase.deliverOrder(orderId);
 
-    return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
+    return ResponseEntity.ok(respond(updatedOrder));
   }
 
   /**
@@ -112,7 +125,7 @@ public class OrderController {
 
     Order updatedOrder = markOrderNotCollectedUseCase.markOrderNotCollected(orderId);
 
-    return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
+    return ResponseEntity.ok(respond(updatedOrder));
   }
 
   /**
@@ -132,6 +145,18 @@ public class OrderController {
     Order updatedOrder =
         rejectOrderUseCase.rejectOrder(
             orderId, workerId, request == null ? null : request.reason());
-    return ResponseEntity.ok(orderResponseMapper.toResponse(updatedOrder));
+    return ResponseEntity.ok(respond(updatedOrder));
+  }
+
+  /** Without a menu (or without an order, as in tests), exactly the response of before. */
+  private OrderResponse respond(Order order) {
+    var menu = order == null ? null : menus(List.of(order.getId())).get(order.getId());
+    return menu == null
+        ? orderResponseMapper.toResponse(order)
+        : orderResponseMapper.toResponse(order, menu);
+  }
+
+  private Map<UUID, com.santotofood.application.model.OrderDailyMenu> menus(List<UUID> ids) {
+    return dailyMenus.map(use -> use.getDailyMenus(ids)).orElse(Map.of());
   }
 }

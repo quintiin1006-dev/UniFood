@@ -11,8 +11,8 @@ import java.util.UUID;
 
 /**
  * Order creation facts and writes. The lock methods run inside the caller's transaction, in the
- * order of docs/decisiones.md §11: cafeteria (it carries the subscription), products by id and
- * today's rows.
+ * order of docs/decisiones.md §11: cafeteria (it carries the subscription), products by id, today's
+ * rows and, with a daily menu, the day header (docs/propuesta-menu-dinamico.md, section 3.4).
  */
 public interface ClientOrderCommandPort {
 
@@ -37,9 +37,23 @@ public interface ClientOrderCommandPort {
   /** {@code FOR SHARE ORDER BY item_id}; the ids marked available today. */
   Set<UUID> lockAvailableToday(UUID cafeteriaId, List<UUID> productIds, LocalDate businessDate);
 
+  /**
+   * {@code FOR SHARE} on the daily menu day header, so a worker write (FOR UPDATE) waits for this
+   * order or the order waits for it; never a half-published menu. Empty unless it is published.
+   */
+  Optional<PublishedDailyMenu> lockPublishedDailyMenu(UUID cafeteriaId, LocalDate businessDate);
+
   void insertOrder(NewOrder order);
 
   void insertItems(UUID orderId, UUID cafeteriaId, List<NewItem> items);
+
+  /** order_daily_menus and its choices, in the given order, in the order's transaction. */
+  void insertDailyMenu(
+      UUID orderId,
+      UUID cafeteriaId,
+      LocalDate businessDate,
+      PublishedDailyMenu plate,
+      List<NewChoice> choices);
 
   record OrderingClient(
       UUID clientId,
@@ -63,6 +77,19 @@ public interface ClientOrderCommandPort {
       Instant requestedPickupAt,
       String idempotencyKey,
       String requestHash) {}
+
+  /** The frozen title and plate price of the published day. */
+  record PublishedDailyMenu(String title, BigDecimal price) {}
+
+  /** One copied line: OPTION, NONE («Ninguna») or ADDITION, as chk_choice_shape (031) allows. */
+  record NewChoice(
+      String kind,
+      UUID categoryId,
+      String categoryLabel,
+      String label,
+      BigDecimal extraPrice,
+      UUID sourceOptionId,
+      UUID sourceAdditionId) {}
 
   record NewItem(UUID productId, String name, BigDecimal unitPrice, int quantity) {
     public BigDecimal subtotal() {

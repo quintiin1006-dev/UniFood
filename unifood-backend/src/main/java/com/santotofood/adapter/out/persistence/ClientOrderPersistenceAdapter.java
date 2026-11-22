@@ -1,8 +1,10 @@
 package com.santotofood.adapter.out.persistence;
 
 import com.santotofood.application.model.ClientOrder;
+import com.santotofood.application.model.OrderDailyMenu;
 import com.santotofood.application.port.out.ClientOrderCommandPort;
 import com.santotofood.application.port.out.ClientOrderQueryPort;
+import com.santotofood.application.port.out.OrderDailyMenuQueryPort;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.Array;
@@ -14,9 +16,13 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -27,7 +33,8 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ClientOrderPersistenceAdapter implements ClientOrderCommandPort, ClientOrderQueryPort {
+public class ClientOrderPersistenceAdapter
+    implements ClientOrderCommandPort, ClientOrderQueryPort, OrderDailyMenuQueryPort {
   private static final String CLIENT = sql("ordering-client.sql");
   private static final String BY_KEY = sql("by-idempotency-key.sql");
   private static final String ACTIVE_ORDER = sql("active-order.sql");
@@ -45,6 +52,11 @@ public class ClientOrderPersistenceAdapter implements ClientOrderCommandPort, Cl
   private static final String READING_CLIENT = sql("reading-client.sql");
   private static final String HISTORY_FIRST = sql("history-first.sql");
   private static final String HISTORY_AFTER = sql("history-after.sql");
+  private static final String LOCK_DAILY_MENU_DAY = sql("lock-daily-menu-day.sql");
+  private static final String INSERT_DAILY_MENU = sql("insert-daily-menu.sql");
+  private static final String INSERT_DAILY_MENU_CHOICE = sql("insert-daily-menu-choice.sql");
+  private static final String DAILY_MENUS = sql("daily-menus.sql");
+  private static final String DAILY_MENU_CHOICES = sql("daily-menu-choices.sql");
   private final JdbcTemplate jdbc;
 
   public ClientOrderPersistenceAdapter(JdbcTemplate jdbc) {
@@ -92,7 +104,9 @@ public class ClientOrderPersistenceAdapter implements ClientOrderCommandPort, Cl
   @Override
   public Optional<ClientOrder> findOrder(UUID orderId) {
     var items = jdbc.query(ORDER_ITEMS, ClientOrderPersistenceAdapter::item, orderId);
-    return jdbc.query(ORDER, (row, number) -> order(row, items), orderId).stream().findFirst();
+    return jdbc.query(ORDER, (row, number) -> order(row, items), orderId).stream()
+        .findFirst()
+        .map(this::withDailyMenu);
   }
 
   @Override
@@ -120,18 +134,19 @@ public class ClientOrderPersistenceAdapter implements ClientOrderCommandPort, Cl
     var items = jdbc.query(OWN_ORDER_ITEMS, ClientOrderPersistenceAdapter::item, orderId, userId);
     var found = order.get();
     return Optional.of(
-        new ClientOrder(
-            found.id(),
-            found.status(),
-            found.total(),
-            found.note(),
-            found.createdAt(),
-            items,
-            found.cafeteria(),
-            found.cancellationSource(),
-            found.rejectionReason(),
-            found.timeline(),
-            found.requestedPickupAt()));
+        withDailyMenu(
+            new ClientOrder(
+                found.id(),
+                found.status(),
+                found.total(),
+                found.note(),
+                found.createdAt(),
+                items,
+                found.cafeteria(),
+                found.cancellationSource(),
+                found.rejectionReason(),
+                found.timeline(),
+                found.requestedPickupAt())));
   }
 
   @Override
@@ -294,6 +309,90 @@ public class ClientOrderPersistenceAdapter implements ClientOrderCommandPort, Cl
           item.unitPrice(),
           item.quantity(),
           item.subtotal());
+  }
+
+  @Override
+  public Optional<PublishedDailyMenu> lockPublishedDailyMenu(
+      UUID cafeteriaId, LocalDate businessDate) {
+    return jdbc
+        .query(
+            LOCK_DAILY_MENU_DAY,
+            (row, number) ->
+                row.getBoolean("published")
+                    ? new PublishedDailyMenu(
+                        row.getString("title_snapshot"), row.getBigDecimal("plate_price_snapshot"))
+                    : null,
+            cafeteriaId,
+            businessDate)
+        .stream()
+        .filter(java.util.Objects::nonNull)
+        .findFirst();
+  }
+
+  @Override
+  public void insertDailyMenu(
+      UUID orderId,
+      UUID cafeteriaId,
+      LocalDate businessDate,
+      PublishedDailyMenu plate,
+      List<NewChoice> choices) {
+    jdbc.update(
+        INSERT_DAILY_MENU, orderId, cafeteriaId, businessDate, plate.title(), plate.price());
+    // One row at a time, in order: created_at keeps the template order.
+    for (var choice : choices)
+      jdbc.update(
+          INSERT_DAILY_MENU_CHOICE,
+          orderId,
+          cafeteriaId,
+          choice.kind(),
+          choice.categoryId(),
+          choice.categoryLabel(),
+          choice.label(),
+          choice.extraPrice(),
+          choice.sourceOptionId(),
+          choice.sourceAdditionId());
+  }
+
+  /** Two reads for any number of orders: the headers, then every choice in written order. */
+  @Override
+  public Map<UUID, OrderDailyMenu> findDailyMenus(Collection<UUID> orderIds) {
+    if (orderIds.isEmpty()) return Map.of();
+    var ids = List.copyOf(orderIds);
+    var headers = new HashMap<UUID, OrderDailyMenu>();
+    jdbc.query(
+        withIds(DAILY_MENUS, ids),
+        (ResultSet row) -> {
+          headers.put(
+              row.getObject("order_id", UUID.class),
+              new OrderDailyMenu(
+                  row.getString("title_snapshot"), row.getBigDecimal("plate_price"), List.of()));
+        });
+    if (headers.isEmpty()) return Map.of();
+    var choices = new HashMap<UUID, List<OrderDailyMenu.Choice>>();
+    jdbc.query(
+        withIds(DAILY_MENU_CHOICES, ids),
+        (ResultSet row) -> {
+          choices
+              .computeIfAbsent(row.getObject("order_id", UUID.class), id -> new ArrayList<>())
+              .add(
+                  new OrderDailyMenu.Choice(
+                      row.getString("category_label"),
+                      row.getString("line_kind"),
+                      row.getString("option_label"),
+                      row.getBigDecimal("extra_price")));
+        });
+    var menus = new HashMap<UUID, OrderDailyMenu>();
+    headers.forEach(
+        (id, header) ->
+            menus.put(
+                id,
+                new OrderDailyMenu(
+                    header.title(), header.price(), choices.getOrDefault(id, List.of()))));
+    return Map.copyOf(menus);
+  }
+
+  private ClientOrder withDailyMenu(ClientOrder order) {
+    return order.withDailyMenu(findDailyMenus(List.of(order.id())).get(order.id()));
   }
 
   /** Binds {@code leading} in order, then the ids as a uuid[] in the last placeholder. */

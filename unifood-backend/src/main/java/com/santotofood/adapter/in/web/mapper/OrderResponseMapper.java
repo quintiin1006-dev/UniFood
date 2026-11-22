@@ -2,6 +2,7 @@ package com.santotofood.adapter.in.web.mapper;
 
 import com.santotofood.adapter.in.web.dto.OrderItemResponse;
 import com.santotofood.adapter.in.web.dto.OrderResponse;
+import com.santotofood.application.model.OrderDailyMenu;
 import com.santotofood.domain.model.Order;
 import com.santotofood.domain.model.OrderItem;
 import org.springframework.stereotype.Component;
@@ -10,6 +11,11 @@ import org.springframework.stereotype.Component;
 public class OrderResponseMapper {
 
   public OrderResponse toResponse(Order order) {
+    return toResponse(order, null);
+  }
+
+  /** {@code dailyMenu} is the order's copy, or null when it has none. */
+  public OrderResponse toResponse(Order order, OrderDailyMenu dailyMenu) {
 
     return new OrderResponse(
         order.getId(),
@@ -29,7 +35,8 @@ public class OrderResponseMapper {
         order.getReminderCount(),
         order.getLastRemindedAt(),
         order.getNote(),
-        Order.MAX_REMINDERS);
+        Order.MAX_REMINDERS,
+        dailyMenu);
   }
 
   private OrderItemResponse toItemResponse(OrderItem item) {
