@@ -884,6 +884,18 @@ Decisión de la revisión 3: el menú no es una página ni una pestaña. Es un b
 - **Plato ya en el carrito:** la carta abre con sus elecciones cargadas y el botón dice «Actualizar
   carrito» (P8).
 - **Sin menú publicado o incompleto:** la carta no aparece y Inicio se ve como hoy.
+- **Plegable (decisión del PR 5):** la carta abre plegada (`DEFAULT_OPEN = false` en
+  `features/daily-menu/state.ts`). Plegada muestra solo el nombre del plato y el precio fijo, sin
+  rótulo «Menú del día», y el botón «Armar mi almuerzo» (`aria-expanded`, `aria-controls`). Con
+  elecciones hechas muestra el avance («2 de 4 elegidas»); plegar no borra la selección. Con la
+  cafetería cerrada se puede desplegar para ver el menú en solo lectura.
+- **El menú del día reemplaza a «Corriente» (decisión del PR 5):** con `dailyMenu.available` en el
+  menú vivo y la carta montada, Inicio no muestra los productos `CORRIENTE` (secciones ni
+  carrusel); la ficha de filtro «Corriente» se queda y muestra la carta. La carta se ve con «Todo»
+  y con «Corriente», y se oculta con los demás filtros. Sin menú, con la bandera apagada o si la
+  lectura falla, `CORRIENTE` se ve como antes. No se tocan datos ni productos. La categoría está en
+  una sola constante (`DAILY_MENU_REPLACES`). Con la bandera web apagada, el BFF de `/api/me/menu`
+  quita `dailyMenu` de la respuesta.
 
 ### 4.5 Cliente: sin página propia
 
@@ -960,7 +972,7 @@ paso deje la app en un estado usable** y para que, si hay que recortar, se sepa 
 | - | -- | --------- | -------- | ----------------------- |
 | 1 | `menu-dia-db` | Migración 031 (la 030 es la de recordatorios), pruebas de base, siembra de staging con `SET unifood.seed_target = 'staging'`, bandera | 2 d | Nada del menú |
 | 2 | `menu-dia-lectura` | Backend: `GET /api/me/daily-menu`, `dailyMenu` en `/api/me/menu`, pruebas | 1 d | El cliente no ve el menú |
-| 5 | `menu-dia-carta-inicio` | Web: BFF de lectura y carta «Menú del día» en Inicio con fichas. El botón «Agregar al carrito» queda deshabilitado hasta el PR 6 | 2,5 d | El cliente no ve el menú |
+| 5 | `menu-dia-carta-inicio` | Web: BFF de lectura y carta «Menú del día» en Inicio con fichas. El botón «Agregar al carrito» queda deshabilitado hasta el PR 6 | 2,5 d (hecho) | El cliente no ve el menú |
 | 3 | `menu-dia-worker-api` | Backend: escrituras del worker, publicar, copiar ayer, autorización y concurrencia | 2,5 d | El worker no puede publicar |
 | 7 | `menu-dia-editor` | Web: `DailyMenuEditor` en Disponibilidad, BFF del worker, publicar. **Cada escritura envía `X-Business-Date`** con el día de la pantalla (como Disponibilidad) y `expectedVersion`; si el día cambió, el backend responde 409 `DAILY_MENU_DATE_CHANGED` | 3 d | El worker publica solo por API o SQL |
 | 4 | `menu-dia-pedido` | Backend: validación del pedido, total, snapshots, `OrderResponse.dailyMenu` | 3 d | El cliente no puede pedir el menú |

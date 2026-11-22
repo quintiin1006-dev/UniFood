@@ -157,6 +157,21 @@ export const HOME_EMPTY_MENU =
 export const closedOpensAt = (when: string) => `Abre ${when}`;
 export const CAROUSEL_LABEL = "Productos destacados";
 
+/* ---------- Cliente · carta «Menú del día» en Inicio (jj/menu-dia-carta-inicio) ---------- */
+export const DAILY_MENU_LOADING = "Cargando el menú del día";
+export const DAILY_MENU_COMPOSE = "Armar mi almuerzo";
+export const DAILY_MENU_COLLAPSE = "Ocultar opciones";
+export const DAILY_MENU_VIEW = "Ver el menú";
+export const DAILY_MENU_SKIP = "Ninguna";
+export const DAILY_MENU_ADD = "Agregar al carrito";
+/** Everything chosen, but the cart for the menu arrives with PR 6. */
+export const DAILY_MENU_ADD_SOON = "Muy pronto podrás agregarlo al carrito.";
+export const dailyMenuMissing = (labels: string[]) =>
+  `Falta elegir: ${labels.join(", ")}`;
+export const dailyMenuProgress = (done: number, total: number) =>
+  `${done} de ${total} ${total === 1 ? "elegida" : "elegidas"}`;
+export const dailyMenuExtra = (price: string) => `+ ${price}`;
+
 /* ---------- Cliente · agregar al carrito (jj/cliente-agregar) ---------- */
 
 /** Announced after each «+»: what was done and how many are now in the cart. */

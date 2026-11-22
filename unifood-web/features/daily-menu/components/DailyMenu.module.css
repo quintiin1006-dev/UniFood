@@ -1,0 +1,248 @@
+/* «Menú del día» in Inicio: the same white card, line, radius and shadow as Inicio's cards. */
+.card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--color-brand-tint);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: 0 5px 14px
+    color-mix(in srgb, var(--color-brand-hover) 6%, transparent);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+/* Same size and weight as Inicio's section headings (HomeSections .sectionHeader h2). */
+.title {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--client-ink);
+  font-size: 20px;
+  line-height: 1.25;
+  letter-spacing: -0.3px;
+}
+/* The fixed price, once: the product card's price colour. */
+.price {
+  flex-shrink: 0;
+  color: var(--color-brand-navy);
+  font-size: 17px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* The closed notice, as in the catalogue (ClientMenu .closed). */
+.closed {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--color-brand-tint);
+  color: var(--color-brand-hover);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.closed > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Disclosure: the whole row opens the selection. */
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-brand-tint);
+  color: var(--color-brand-hover);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.progress {
+  margin-left: auto;
+  color: var(--color-brand-navy);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.chevron {
+  flex-shrink: 0;
+  margin-left: auto;
+  transition: transform 160ms var(--ease-out, ease-out);
+}
+.progress + .chevron {
+  margin-left: 0;
+}
+.toggle[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+
+.panel {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding-top: 4px;
+  animation: panel-in 160ms var(--ease-out, ease-out);
+}
+.panel[hidden] {
+  display: none;
+}
+
+.group {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.groupTitle {
+  margin: 0;
+  color: var(--client-ink);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* Chips: the category filters' pill, wrapping onto several lines for long options. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--color-brand-tint-2);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--client-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  cursor: pointer;
+}
+.chipDetail {
+  color: var(--color-brand-navy);
+  font-size: 13px;
+  font-weight: 700;
+}
+.chip[aria-checked="true"] {
+  border-color: var(--client-blue);
+  background: var(--client-blue);
+  color: var(--color-surface);
+}
+.chip[aria-checked="true"] .chipDetail {
+  color: var(--color-surface);
+}
+.chip[aria-disabled="true"] {
+  cursor: default;
+}
+
+.toggle:focus-visible,
+.chip:focus-visible,
+.add:focus-visible {
+  outline: 3px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+.footer {
+  display: grid;
+  gap: 8px;
+}
+.reason {
+  margin: 0;
+  color: var(--client-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.reason:empty {
+  display: none;
+}
+/* The app's primary button (ClientShopping .primaryButton). */
+.add {
+  width: 100%;
+  min-height: 52px;
+  padding: 12px;
+  border: 0;
+  border-radius: 26px;
+  background: var(--color-brand);
+  color: var(--color-surface);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.add:disabled {
+  background: var(--color-brand-tint);
+  color: var(--color-text-soft);
+  cursor: not-allowed;
+}
+
+/* Loading: the folded card's height, so Inicio does not jump. */
+.skeleton {
+  height: 132px;
+  border: 1px solid var(--color-brand-tint);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface) 0%,
+    var(--color-brand-tint) 50%,
+    var(--color-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (hover: hover) {
+  .chip:not([aria-checked="true"]):not([aria-disabled="true"]):hover {
+    border-color: var(--client-blue);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .skeleton {
+    animation: none;
+  }
+  .chevron {
+    transition: none;
+  }
+}

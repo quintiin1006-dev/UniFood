@@ -23,11 +23,18 @@ import ProductAddButton from "./ProductAddButton";
 import ProductPlaceholder from "./ProductPlaceholder";
 import menuStyles from "./ClientMenu.module.css";
 import styles from "./HomeSections.module.css";
+import DailyMenuBlock from "@/features/daily-menu/components/DailyMenuCard";
+import { useClientDailyMenu } from "@/features/daily-menu/useClientDailyMenu";
+import { DAILY_MENU_REPLACES, homeLayout } from "@/features/daily-menu/state";
 
 /**
  * Inicio, top to bottom: cafeteria selector, carousel (or the closed notice in its place),
  * category chips and one horizontal row per category. Only categories with available products
  * appear, as a chip and as a section; an empty one is not rendered at all.
+ *
+ * «Menú del día» (docs/propuesta-menu-dinamico.md 4.4): when the live menu says
+ * dailyMenuAvailable, the card sits after the chips and takes the place of «Corriente»
+ * (DAILY_MENU_REPLACES). Without a card (flag off, no menu, any read failure) Inicio is as today.
  */
 export default function ClientHome({
   ownerId,
@@ -51,20 +58,34 @@ export default function ClientHome({
   // Only what can be ordered is listed: a product that stopped being available leaves the page.
   const menu = onlyAvailable(current);
   const { cafeteria } = menu;
-  const sections = menuCategories
-    .map((category) => ({
-      category,
-      products:
-        menu.categories.find(({ id }) => id === category.id)?.products ?? [],
-    }))
-    .filter(({ products }) => products.length > 0);
+  const daily = useClientDailyMenu(cafeteria.id, current.dailyMenuAvailable);
+  // While the card loads or shows, it replaces «Corriente»; a failed read gives it back.
+  const replacing = daily.status !== "hidden";
+  const productsOf = (id: MenuCategoryId) =>
+    menu.categories.find((category) => category.id === id)?.products ?? [];
+  const layout = homeLayout({
+    order: menuCategories.map(({ id }) => id),
+    withProducts: menuCategories
+      .map(({ id }) => id)
+      .filter((id) => productsOf(id).length > 0),
+    replacing,
+    filter,
+  });
   // A chosen category that just emptied falls back to «Todo».
-  const active = sections.some(({ category }) => category.id === filter)
-    ? filter
-    : null;
-  const shown = sections.filter(
-    ({ category }) => !active || category.id === active,
+  const active = layout.active;
+  const chips = menuCategories.filter(({ id }) =>
+    layout.filterIds.includes(id),
   );
+  const shown = menuCategories
+    .filter(({ id }) => layout.sectionIds.includes(id))
+    .map((category) => ({ category, products: productsOf(category.id) }));
+  // The carousel never features a «Corriente» product while the card replaces it.
+  const featured = featuredProducts(menu).filter(
+    (product) => !replacing || product.category !== DAILY_MENU_REPLACES,
+  );
+  const dailyMenu = layout.showCard ? (
+    <DailyMenuBlock key={cafeteria.id} state={daily} />
+  ) : null;
   return (
     <section className={styles.home} aria-label="Inicio">
       <RememberCafeteria ownerId={ownerId} cafeteriaId={cafeteria.id} />
@@ -76,14 +97,11 @@ export default function ClientHome({
       {stale && <ConnectionNotice>{CONNECTION_OFFLINE}</ConnectionNotice>}
       {/* The same room either way: the closed notice takes the carousel's place. */}
       {cafeteria.open ? (
-        <FeaturedCarousel
-          products={featuredProducts(menu)}
-          cafeteriaId={cafeteria.id}
-        />
+        <FeaturedCarousel products={featured} cafeteriaId={cafeteria.id} />
       ) : (
         <ClosedBanner />
       )}
-      {sections.length === 0 ? (
+      {chips.length === 0 ? (
         <p className={styles.notice}>{HOME_EMPTY_MENU}</p>
       ) : (
         <>
@@ -97,7 +115,7 @@ export default function ClientHome({
                 {HOME_ALL_CATEGORIES}
               </button>
             </li>
-            {sections.map(({ category }) => (
+            {chips.map((category) => (
               <li key={category.id}>
                 <button
                   type="button"
@@ -109,6 +127,7 @@ export default function ClientHome({
               </li>
             ))}
           </ul>
+          {dailyMenu}
           {shown.map(({ category, products }) => {
             const headingId = `category-${category.slug}`;
             return (

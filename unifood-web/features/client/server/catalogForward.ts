@@ -6,6 +6,7 @@ import {
   temporaryAuthResponse,
 } from "@/features/auth/server/failures";
 import { isClient } from "@/features/auth/validation";
+import { serverDailyMenuEnabled } from "@/config/server";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -40,10 +41,28 @@ export function forwardClientMenuFor(
   return forward(
     `/api/me/menu?cafeteriaId=${encodeURIComponent(cafeteriaId)}`,
     ifNoneMatch,
+    !dailyMenuEnabled(),
   );
 }
 
-async function forward(path: string, ifNoneMatch: string | null) {
+/** MENU_DINAMICO_ENABLED, read on the server only; a malformed value counts as off. */
+function dailyMenuEnabled() {
+  try {
+    return serverDailyMenuEnabled();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * `withoutDailyMenu`: with the web flag off, `dailyMenu` is removed from the menu, so Inicio
+ * never mounts the card and the browser never learns the flag (propuesta 3.1).
+ */
+async function forward(
+  path: string,
+  ifNoneMatch: string | null,
+  withoutDailyMenu = false,
+) {
   let auth: Awaited<ReturnType<typeof getAuth>>;
   try {
     auth = await getAuth();
@@ -102,6 +121,21 @@ async function forward(path: string, ifNoneMatch: string | null) {
       "BACKEND_UNAVAILABLE",
     );
   out.set("Content-Type", "application/json");
+  if (withoutDailyMenu && upstream.status === 200) {
+    let body: unknown;
+    try {
+      body = await upstream.json();
+    } catch {
+      return fail(
+        502,
+        "No pudimos cargar esta información. Inténtalo nuevamente.",
+        "BACKEND_UNAVAILABLE",
+      );
+    }
+    if (body && typeof body === "object" && "dailyMenu" in body)
+      delete (body as { dailyMenu?: unknown }).dailyMenu;
+    return new Response(JSON.stringify(body), { status: 200, headers: out });
+  }
   return new Response(await upstream.text(), {
     status: upstream.status,
     headers: out,
