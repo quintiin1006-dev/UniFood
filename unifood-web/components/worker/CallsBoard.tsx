@@ -20,6 +20,11 @@ import {
 } from "@/features/orders/components/CalledOrderActions";
 import type { CalledOrderAction } from "@/features/orders/calledOrderActions";
 import type { Order } from "@/types/order";
+import { DailyMenuSummary } from "@/features/daily-menu/components/DailyMenuSummary";
+import {
+  orderUnitsText,
+  showsNoProducts,
+} from "@/features/daily-menu/orderSummary";
 
 import {
   PanelCounter,
@@ -300,7 +305,8 @@ export default function CallsBoard({
                   className={styles.productsSection}
                   aria-label="Productos del pedido"
                 >
-                  {selectedOrder.items.length === 0 ? (
+                  <DailyMenuSummary order={selectedOrder} />
+                  {showsNoProducts(selectedOrder) ? (
                     <p className={styles.emptyProducts}>
                       No hay productos registrados en este pedido.
                     </p>
@@ -356,7 +362,10 @@ export default function CallsBoard({
                     <span>
                       Total
                       <small>
-                        {totalUnits} {totalUnits === 1 ? "unidad" : "unidades"}
+                        {orderUnitsText(
+                          totalUnits,
+                          Boolean(selectedOrder.dailyMenu),
+                        )}
                       </small>
                     </span>
                     <strong>

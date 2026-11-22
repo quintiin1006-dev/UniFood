@@ -3,6 +3,7 @@ import type {
   BackendOrder,
   BackendOrderStatus,
 } from "@/features/orders/types/backendOrder";
+import { toOrderPlate } from "@/features/daily-menu/orderSummary";
 
 export function mapOrderStatus(status: BackendOrderStatus): Order["status"] {
   switch (status) {
@@ -33,7 +34,9 @@ export function mapOrderStatus(status: BackendOrderStatus): Order["status"] {
 }
 
 export function mapBackendOrder(backendOrder: BackendOrder): Order {
+  const plate = toOrderPlate(backendOrder.dailyMenu);
   return {
+    ...(plate ? { dailyMenu: plate } : {}),
     id: backendOrder.id,
     student: backendOrder.clientName,
     clientCode: backendOrder.clientCode ?? null,

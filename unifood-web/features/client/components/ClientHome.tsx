@@ -28,7 +28,7 @@ import {
   useClientDailyMenu,
   type ClientDailyMenuState,
 } from "@/features/daily-menu/useClientDailyMenu";
-import { DAILY_MENU_REPLACES, homeLayout } from "@/features/daily-menu/state";
+import { homeLayout } from "@/features/daily-menu/state";
 import { menuLine, selectionFromLine } from "../domain/cart";
 import { useClientCart } from "./ClientCartProvider";
 
@@ -38,8 +38,8 @@ import { useClientCart } from "./ClientCartProvider";
  * appear, as a chip and as a section; an empty one is not rendered at all.
  *
  * «Menú del día» (docs/propuesta-menu-dinamico.md 4.4): when the live menu says
- * dailyMenuAvailable, the card sits after the chips and takes the place of «Corriente»
- * (DAILY_MENU_REPLACES). Without a card (flag off, no menu, any read failure) Inicio is as today.
+ * dailyMenuAvailable, the card sits after the chips and takes the place of «Del día»
+ * (DAILY_MENU_SLOT); «Corriente» stays as a normal category. Without a card (flag off, no menu, any read failure) Inicio is as today.
  */
 export default function ClientHome({
   ownerId,
@@ -74,7 +74,7 @@ export default function ClientHome({
       ? selectionFromLine(plate)
       : null;
   const daily = useClientDailyMenu(cafeteria.id, current.dailyMenuAvailable);
-  // While the card loads or shows, it replaces «Corriente»; a failed read gives it back.
+  // While the card loads or shows, it takes «Del día»'s place; a failed read gives it back.
   const replacing = daily.status !== "hidden";
   const productsOf = (id: MenuCategoryId) =>
     menu.categories.find((category) => category.id === id)?.products ?? [];
@@ -94,10 +94,7 @@ export default function ClientHome({
   const shown = menuCategories
     .filter(({ id }) => layout.sectionIds.includes(id))
     .map((category) => ({ category, products: productsOf(category.id) }));
-  // The carousel never features a «Corriente» product while the card replaces it.
-  const featured = featuredProducts(menu).filter(
-    (product) => !replacing || product.category !== DAILY_MENU_REPLACES,
-  );
+  const featured = featuredProducts(menu);
   const dailyMenu = layout.showCard ? (
     <DailyMenuBlock
       // The cart loads after the first paint: the card starts again with the plate in it.

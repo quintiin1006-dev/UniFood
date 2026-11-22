@@ -39,4 +39,6 @@ export interface BackendOrder {
   lastRemindedAt?: string | null;
   // The client's free text (021); null without one.
   note: string | null;
+  /** The plate of the daily menu (section 3.5, prices as numbers); absent without one. */
+  dailyMenu?: unknown;
 }

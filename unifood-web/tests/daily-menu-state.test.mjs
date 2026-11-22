@@ -171,37 +171,77 @@ const ORDER = [
   "BEBIDA",
 ];
 
-test("without the card, Inicio keeps «Corriente» exactly as today", () => {
+test("without the card, Inicio keeps «Del día» and «Corriente» exactly as today", () => {
   const layout = state.homeLayout({
     order: ORDER,
-    withProducts: ["DESAYUNO", "CORRIENTE", "BEBIDA"],
+    withProducts: ["DEL_DIA", "DESAYUNO", "CORRIENTE", "BEBIDA"],
     replacing: false,
     filter: null,
   });
-  assert.equal(state.DAILY_MENU_REPLACES, "CORRIENTE");
+  assert.equal(state.DAILY_MENU_SLOT, "DEL_DIA");
+  assert.equal(state.DAILY_MENU_REPLACES, undefined);
   assert.equal(layout.showCard, false);
-  assert.deepEqual(layout.filterIds, ["DESAYUNO", "CORRIENTE", "BEBIDA"]);
-  assert.deepEqual(layout.sectionIds, ["DESAYUNO", "CORRIENTE", "BEBIDA"]);
+  assert.deepEqual(layout.filterIds, [
+    "DEL_DIA",
+    "DESAYUNO",
+    "CORRIENTE",
+    "BEBIDA",
+  ]);
+  assert.deepEqual(layout.sectionIds, [
+    "DEL_DIA",
+    "DESAYUNO",
+    "CORRIENTE",
+    "BEBIDA",
+  ]);
   const filtered = state.homeLayout({
     order: ORDER,
-    withProducts: ["DESAYUNO", "CORRIENTE"],
+    withProducts: ["DEL_DIA", "CORRIENTE"],
     replacing: false,
-    filter: "CORRIENTE",
+    filter: "DEL_DIA",
   });
-  assert.deepEqual(filtered.sectionIds, ["CORRIENTE"]);
+  assert.deepEqual(filtered.sectionIds, ["DEL_DIA"]);
   assert.equal(filtered.showCard, false);
+  // An empty «Del día» has no chip without the card, as today.
+  assert.deepEqual(
+    state.homeLayout({
+      order: ORDER,
+      withProducts: ["CORRIENTE"],
+      replacing: false,
+      filter: null,
+    }).filterIds,
+    ["CORRIENTE"],
+  );
 });
 
-test("with the card, «Corriente» products leave and the card takes their place", () => {
+test("with the card, it takes «Del día»'s place and «Corriente» stays visible", () => {
   const all = state.homeLayout({
     order: ORDER,
-    withProducts: ["DESAYUNO", "CORRIENTE", "BEBIDA"],
+    withProducts: ["DEL_DIA", "DESAYUNO", "CORRIENTE", "BEBIDA"],
     replacing: true,
     filter: null,
   });
   assert.equal(all.showCard, true, "visible with «Todo»");
-  assert.deepEqual(all.sectionIds, ["DESAYUNO", "BEBIDA"]);
-  assert.deepEqual(all.filterIds, ["DESAYUNO", "CORRIENTE", "BEBIDA"]);
+  assert.deepEqual(all.sectionIds, ["DESAYUNO", "CORRIENTE", "BEBIDA"]);
+  assert.deepEqual(all.filterIds, [
+    "DEL_DIA",
+    "DESAYUNO",
+    "CORRIENTE",
+    "BEBIDA",
+  ]);
+
+  const delDia = state.homeLayout({
+    order: ORDER,
+    withProducts: ["DEL_DIA", "CORRIENTE"],
+    replacing: true,
+    filter: "DEL_DIA",
+  });
+  assert.equal(delDia.active, "DEL_DIA");
+  assert.equal(
+    delDia.showCard,
+    true,
+    "the «Del día» filter shows only the card",
+  );
+  assert.deepEqual(delDia.sectionIds, []);
 
   const corriente = state.homeLayout({
     order: ORDER,
@@ -209,34 +249,25 @@ test("with the card, «Corriente» products leave and the card takes their place
     replacing: true,
     filter: "CORRIENTE",
   });
-  assert.equal(corriente.active, "CORRIENTE");
-  assert.equal(corriente.showCard, true, "visible with the Corriente filter");
-  assert.deepEqual(corriente.sectionIds, []);
+  assert.equal(corriente.showCard, false, "hidden with the other filters");
+  assert.deepEqual(corriente.sectionIds, ["CORRIENTE"]);
 
-  const other = state.homeLayout({
-    order: ORDER,
-    withProducts: ["DESAYUNO", "CORRIENTE"],
-    replacing: true,
-    filter: "DESAYUNO",
-  });
-  assert.equal(other.showCard, false, "hidden with the other filters");
-  assert.deepEqual(other.sectionIds, ["DESAYUNO"]);
-
-  // The «Corriente» chip stays for the card even without Corriente products in the catalogue.
+  // The «Del día» chip is first and stays for the card even with no «Del día» products.
   const noProducts = state.homeLayout({
     order: ORDER,
-    withProducts: ["BEBIDA"],
+    withProducts: ["CORRIENTE", "BEBIDA"],
     replacing: true,
     filter: null,
   });
-  assert.deepEqual(noProducts.filterIds, ["CORRIENTE", "BEBIDA"]);
+  assert.deepEqual(noProducts.filterIds, ["DEL_DIA", "CORRIENTE", "BEBIDA"]);
+  assert.deepEqual(noProducts.sectionIds, ["CORRIENTE", "BEBIDA"]);
   // A filter no longer on the chips falls back to «Todo».
   assert.equal(
     state.homeLayout({
       order: ORDER,
       withProducts: ["BEBIDA"],
       replacing: false,
-      filter: "CORRIENTE",
+      filter: "DEL_DIA",
     }).active,
     null,
   );

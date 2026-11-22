@@ -27,6 +27,7 @@ import type { ClientOrder, OrderHistoryItem } from "../types";
 import { useOrderHistory } from "../useOrderHistory";
 import OrderSummary from "./OrderSummary";
 import styles from "./ClientOrders.module.css";
+import { historyUnitsText } from "@/features/daily-menu/orderSummary";
 
 /**
  * The ended orders, newest first, at the bottom of «Mi pedido». `refreshKey` changes when an
@@ -108,8 +109,9 @@ export default function OrderHistory({
                   <span className={styles.rowPlace}>{order.cafeteriaName}</span>
                   <span className={styles.rowSummary}>{order.summary}</span>
                   <span className={styles.rowTotal}>
-                    {order.itemCount}{" "}
-                    {order.itemCount === 1 ? "unidad" : "unidades"} ·{" "}
+                    {historyUnitsText(order.itemCount) && (
+                      <>{historyUnitsText(order.itemCount)} · </>
+                    )}
                     <strong>{formatTotal(order.total)}</strong>
                   </span>
                 </button>
