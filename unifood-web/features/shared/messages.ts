@@ -332,6 +332,9 @@ export const BACKEND_ERROR_CODES = [
   "PUSH_DISABLED",
   "PUSH_TEMPORARILY_UNAVAILABLE",
   "PUSH_INTERNAL_ERROR",
+  "ORDER_NOTICES_DISABLED",
+  "ORDER_NOTICES_FORBIDDEN",
+  "ORDER_NOTICES_TEMPORARILY_UNAVAILABLE",
   "CLIENT_PROFILE_NOT_FOUND",
   "CLIENT_PROFILE_TEMPORARILY_UNAVAILABLE",
   "CAFETERIA_NOT_FOUND",
@@ -471,6 +474,10 @@ export const BACKEND_ERROR_MESSAGES: Record<BackendErrorCode, string> = {
   PUSH_TEMPORARILY_UNAVAILABLE:
     "No pudimos guardar tus avisos en este momento. Inténtalo nuevamente.",
   PUSH_INTERNAL_ERROR: "No pudimos guardar tus avisos. Inténtalo nuevamente.",
+  ORDER_NOTICES_DISABLED: "Los avisos recientes no están disponibles.",
+  ORDER_NOTICES_FORBIDDEN: "No tienes permisos para consultar estos avisos.",
+  ORDER_NOTICES_TEMPORARILY_UNAVAILABLE:
+    "No pudimos cargar tus avisos en este momento. Inténtalo nuevamente.",
   // Cliente · perfil y catálogo (F5: new, they had no message in the front)
   CLIENT_PROFILE_NOT_FOUND:
     "No encontramos tu perfil. Cierra sesión y vuelve a entrar; si sigue igual, escríbenos.",
@@ -575,3 +582,39 @@ export const REMINDER_LIMIT_NOTICE =
   "Ya enviaste el máximo de recordatorios para este pedido";
 export const NOT_COLLECTED_NEEDS_REMINDERS =
   "Disponible después de enviar todos los recordatorios";
+
+/* ---------- Cliente · bandeja de avisos recientes en la campana (jj/campana-avisos) ---------- */
+export const NOTICES_MESSAGES = {
+  panelTitle: "Avisos",
+  switchLabel: "Recibir avisos",
+  listTitle: "Avisos recientes",
+  close: "Cerrar avisos",
+  loading: "Cargando avisos…",
+  empty:
+    "Aún no tienes avisos. Cuando tu pedido cambie de estado, aparecerá aquí.",
+  failed: "No pudimos cargar tus avisos.",
+  retry: "Reintentar",
+  unreadOne: "1 aviso nuevo",
+  unreadMany: "avisos nuevos",
+  orderPrefix: "Pedido",
+  reminderPrefix: "Recordatorio",
+  justNow: "hace un momento",
+  ago: "hace",
+  minutes: "min",
+  hours: "h",
+  yesterday: "ayer",
+  days: "días",
+  goToOrder: "Ver en Mi pedido",
+  newLabel: "Nuevo",
+} as const;
+
+export const NOTICE_TITLES = {
+  PREPARING: "Tu pedido está en preparación",
+  READY: "Tu pedido está listo",
+  CALLED: "Te estamos llamando",
+  REMINDER: "Recordatorio",
+  DELIVERED: "Pedido entregado",
+  NOT_COLLECTED: "Pedido no recogido",
+  REJECTED: "La cafetería rechazó tu pedido",
+  CANCELLED_BY_CLIENT: "Cancelaste tu pedido",
+} as const;

@@ -95,6 +95,18 @@ export function readDailyMenuEnabled(environment: Environment): boolean {
 }
 
 /**
+ * AVISOS_BANDEJA_ENABLED, the same flag the backend reads: the bell inbox of recent notices.
+ * Server-only: the browser never receives it, only whether to render the inbox. Off when unset or
+ * blank; only "true" or "false" (any case) are accepted.
+ */
+export function readNoticesEnabled(environment: Environment): boolean {
+  const value = environment.AVISOS_BANDEJA_ENABLED?.trim().toLowerCase();
+  if (!value || value === "false") return false;
+  if (value === "true") return true;
+  invalid("AVISOS_BANDEJA_ENABLED", 'must be "true" or "false"');
+}
+
+/**
  * SERVICE_FEE_ENABLED, the same flag the backend reads (docs/modelo-de-negocio.md). Server-only:
  * the browser never receives it. Off when unset or blank; only "true" or "false" (any case).
  */

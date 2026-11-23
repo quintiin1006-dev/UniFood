@@ -61,7 +61,10 @@ WITH account_fks AS (
       -- browser, and the cleanup skips accounts with a role; ON DELETE RESTRICT as well.
       'cafeteria_service_fee.updated_by', 'service_fee_audit.changed_by',
       'service_fee_settings.updated_by', 'service_fee_settlements.created_by',
-      'service_fee_settlements.paid_by')
+      'service_fee_settlements.paid_by',
+      -- 034: a notice is only written for the client of an existing order, so the clients
+      -- check of the cleanup covers it; the row is ON DELETE CASCADE as well.
+      'order_notices.user_id')
 ), checks(object, ok) AS (VALUES
   ('every account foreign key is covered by the cleanup', NOT EXISTS (SELECT 1 FROM uncovered_fks)),
   ('browser roles cannot write account columns', CASE WHEN to_regclass('public.pending_registrations') IS NULL THEN false
@@ -144,7 +147,9 @@ WHERE c.contype = 'f'
     -- 033: only an active SUPER_ADMIN writes the service fee; the cleanup skips accounts with a role.
     'cafeteria_service_fee.updated_by', 'service_fee_audit.changed_by',
     'service_fee_settings.updated_by', 'service_fee_settlements.created_by',
-    'service_fee_settlements.paid_by')
+    'service_fee_settlements.paid_by',
+    -- 034: only for the client of an existing order; ON DELETE CASCADE as well.
+    'order_notices.user_id')
 ORDER BY 1;
 
 -- Read-only: objects of migration 022 (visibility and billing). Every row must say true.

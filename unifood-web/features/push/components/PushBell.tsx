@@ -6,6 +6,7 @@ import { PUSH_MESSAGES } from "@/features/shared/messages";
 import { writeMuted } from "@/features/client-orders/sound";
 import { usePush } from "../usePush";
 import { PushUnavailable } from "./PushControls";
+import InboxBell from "@/features/notices/components/InboxBell";
 import styles from "./PushBell.module.css";
 
 /**
@@ -17,7 +18,12 @@ import styles from "./PushBell.module.css";
  * The panel is ready for a «recent notifications» list: it would go in the `recent` slot below
  * the switch (not implemented yet).
  */
-export default function PushBell() {
+export default function PushBell({ inbox = false }: { inbox?: boolean }) {
+  // AVISOS_BANDEJA_ENABLED (read on the server): off, the bell is exactly the switch below.
+  return inbox ? <InboxBell /> : <SwitchBell />;
+}
+
+function SwitchBell() {
   const view = usePush("client");
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
