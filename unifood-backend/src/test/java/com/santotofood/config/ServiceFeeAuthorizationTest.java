@@ -203,6 +203,14 @@ class ServiceFeeAuthorizationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"feeCop\":400,\"expectedVersion\":0}"))
         .andExpect(status().isForbidden());
+    // The four writes of the five account columns (updated_by, created_by, paid_by and, through
+    // the audit triggers, changed_by) are all refused below SUPER_ADMIN.
+    mvc.perform(
+            put(ROOT + "/cafeterias/" + cafeteriaId)
+                .with(as(userId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"feeCop\":200,\"expectedVersion\":0}"))
+        .andExpect(status().isForbidden());
     mvc.perform(post(ROOT + "/settlements/" + cafeteriaId + "/2026-10/close").with(as(userId)))
         .andExpect(status().isForbidden());
     mvc.perform(post(ROOT + "/settlements/" + cafeteriaId + "/2026-10/paid").with(as(userId)))

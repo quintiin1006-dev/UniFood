@@ -332,6 +332,16 @@ export const BACKEND_ERROR_CODES = [
   "PUSH_DISABLED",
   "PUSH_TEMPORARILY_UNAVAILABLE",
   "PUSH_INTERNAL_ERROR",
+  "SERVICE_FEE_CHANGED",
+  "SERVICE_FEE_DISABLED",
+  "SERVICE_FEE_INVALID_REQUEST",
+  "SERVICE_FEE_STATE_CHANGED",
+  "SERVICE_FEE_MONTH_OPEN",
+  "SERVICE_FEE_MONTH_NOT_CLOSED",
+  "SERVICE_FEE_FORBIDDEN",
+  "SERVICE_FEE_TEMPORARILY_UNAVAILABLE",
+  "SERVICE_FEE_INTERNAL_ERROR",
+  "BILLING_DEPRECATED",
   "CLIENT_PROFILE_NOT_FOUND",
   "CLIENT_PROFILE_TEMPORARILY_UNAVAILABLE",
   "CAFETERIA_NOT_FOUND",
@@ -471,6 +481,23 @@ export const BACKEND_ERROR_MESSAGES: Record<BackendErrorCode, string> = {
   PUSH_TEMPORARILY_UNAVAILABLE:
     "No pudimos guardar tus avisos en este momento. Inténtalo nuevamente.",
   PUSH_INTERNAL_ERROR: "No pudimos guardar tus avisos. Inténtalo nuevamente.",
+  // 033: the same texts as the backend (ServiceFeeException and its handler).
+  SERVICE_FEE_CHANGED:
+    "El cargo por servicio cambió. Revisa el total y confirma de nuevo.",
+  SERVICE_FEE_DISABLED: "Esta función no está disponible.",
+  SERVICE_FEE_INVALID_REQUEST:
+    "Revisa el valor: debe ser un número entero de pesos entre 0 y 2.000.",
+  SERVICE_FEE_STATE_CHANGED:
+    "Otra persona cambió este valor. Revisa el valor actual e inténtalo de nuevo.",
+  SERVICE_FEE_MONTH_OPEN:
+    "Este mes todavía no ha terminado. Podrás cerrarlo desde el primer día del mes siguiente.",
+  SERVICE_FEE_MONTH_NOT_CLOSED: "Cierra el mes antes de marcarlo como pagado.",
+  SERVICE_FEE_FORBIDDEN: "No tienes permisos para ver el cargo por servicio.",
+  SERVICE_FEE_TEMPORARILY_UNAVAILABLE:
+    "No pudimos cargar el cargo por servicio en este momento. Inténtalo nuevamente.",
+  SERVICE_FEE_INTERNAL_ERROR: "No pudimos cargar el cargo por servicio.",
+  BILLING_DEPRECATED:
+    "El modelo de cobro fue reemplazado por el cargo por servicio.",
   // Cliente · perfil y catálogo (F5: new, they had no message in the front)
   CLIENT_PROFILE_NOT_FOUND:
     "No encontramos tu perfil. Cierra sesión y vuelve a entrar; si sigue igual, escríbenos.",
