@@ -5,6 +5,7 @@ import com.santotofood.adapter.in.web.dto.OrderResponse;
 import com.santotofood.application.model.OrderDailyMenu;
 import com.santotofood.domain.model.Order;
 import com.santotofood.domain.model.OrderItem;
+import java.math.BigDecimal;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -36,7 +37,9 @@ public class OrderResponseMapper {
         order.getLastRemindedAt(),
         order.getNote(),
         Order.MAX_REMINDERS,
-        dailyMenu);
+        dailyMenu,
+        order.getProductsSubtotal(),
+        BigDecimal.valueOf(order.getServiceFeeCop()));
   }
 
   private OrderItemResponse toItemResponse(OrderItem item) {

@@ -34,7 +34,30 @@ public record WorkerHistory(
       BigDecimal total,
       List<Item> items,
       String cancellationSource,
-      String rejectionReason) {
+      String rejectionReason,
+      int serviceFeeCop) {
+    /** Without a service fee (033). */
+    public Entry(
+        UUID id,
+        String clientName,
+        OrderStatus status,
+        Instant completedAt,
+        BigDecimal total,
+        List<Item> items,
+        String cancellationSource,
+        String rejectionReason) {
+      this(
+          id,
+          clientName,
+          status,
+          completedAt,
+          total,
+          items,
+          cancellationSource,
+          rejectionReason,
+          0);
+    }
+
     /** Orders that are not cancelled have neither a source nor a reason. */
     public Entry(
         UUID id,

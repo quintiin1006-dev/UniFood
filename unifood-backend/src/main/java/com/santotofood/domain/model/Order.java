@@ -57,6 +57,23 @@ public class Order {
     this.note = note;
   }
 
+  /** The service fee frozen into the order (033); {@link #getTotal()} already includes it. */
+  private int serviceFeeCop;
+
+  /** Restore only when reconstituting an aggregate from persistence. */
+  public void restoreServiceFee(int serviceFeeCop) {
+    this.serviceFeeCop = serviceFeeCop;
+  }
+
+  public int getServiceFeeCop() {
+    return serviceFeeCop;
+  }
+
+  /** Plate, products and additions: the total without the service fee. */
+  public BigDecimal getProductsSubtotal() {
+    return total == null ? null : total.subtract(BigDecimal.valueOf(serviceFeeCop));
+  }
+
   public static final int MIN_REJECTION_REASON_LENGTH = 3;
   public static final int MAX_REJECTION_REASON_LENGTH = 200;
 

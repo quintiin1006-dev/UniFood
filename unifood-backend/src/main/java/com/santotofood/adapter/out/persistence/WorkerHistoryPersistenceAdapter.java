@@ -85,19 +85,21 @@ public class WorkerHistoryPersistenceAdapter implements WorkerHistoryQueryPort {
       var status = OrderStatus.valueOf(rows.getString("status"));
       var completedAt = rows.getObject("completed_at", OffsetDateTime.class).toInstant();
       var total = Objects.requireNonNull(rows.getBigDecimal("total"));
+      int fee = rows.getInt("service_fee_cop");
       String clientName = rows.getString("client_name");
       String source = rows.getString("cancellation_source");
       String reason = rows.getString("rejection_reason");
       var entry = orders.get(id);
       if (entry == null) {
-        entry = new EntryBuilder(id, clientName, status, completedAt, total, source, reason);
+        entry = new EntryBuilder(id, clientName, status, completedAt, total, source, reason, fee);
         orders.put(id, entry);
       } else if (entry.status != status
           || !Objects.equals(entry.clientName, clientName)
           || !Objects.equals(entry.source, source)
           || !Objects.equals(entry.reason, reason)
           || !entry.completedAt.equals(completedAt)
-          || entry.total.compareTo(total) != 0) {
+          || entry.total.compareTo(total) != 0
+          || entry.fee != fee) {
         throw new IllegalStateException("Inconsistent worker history projection");
       }
       UUID itemId = rows.getObject("item_id", UUID.class);
@@ -124,6 +126,7 @@ public class WorkerHistoryPersistenceAdapter implements WorkerHistoryQueryPort {
     final BigDecimal total;
     final String source;
     final String reason;
+    final int fee;
     final List<WorkerHistory.Item> items = new ArrayList<>();
 
     EntryBuilder(
@@ -133,7 +136,8 @@ public class WorkerHistoryPersistenceAdapter implements WorkerHistoryQueryPort {
         Instant completedAt,
         BigDecimal total,
         String source,
-        String reason) {
+        String reason,
+        int fee) {
       this.id = id;
       this.clientName = clientName;
       this.status = status;
@@ -141,11 +145,12 @@ public class WorkerHistoryPersistenceAdapter implements WorkerHistoryQueryPort {
       this.total = total;
       this.source = source;
       this.reason = reason;
+      this.fee = fee;
     }
 
     WorkerHistory.Entry build() {
       return new WorkerHistory.Entry(
-          id, clientName, status, completedAt, total, items, source, reason);
+          id, clientName, status, completedAt, total, items, source, reason, fee);
     }
   }
 

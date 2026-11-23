@@ -8,10 +8,20 @@ import java.util.UUID;
 /**
  * Today's menu. A closed cafeteria still lists its active products, each unavailable, so the client
  * can browse without ordering (docs/decisiones.md §6). {@code dailyMenu} is null while
- * MENU_DINAMICO_ENABLED is off (docs/propuesta-menu-dinamico.md, section 3.1).
+ * MENU_DINAMICO_ENABLED is off (docs/propuesta-menu-dinamico.md, section 3.1). {@code serviceFee}
+ * is the fee in force in whole pesos, null while SERVICE_FEE_ENABLED is off (033).
  */
 public record ClientMenu(
-    Cafeteria cafeteria, LocalDate businessDate, List<Category> categories, DailyMenu dailyMenu) {
+    Cafeteria cafeteria,
+    LocalDate businessDate,
+    List<Category> categories,
+    DailyMenu dailyMenu,
+    Integer serviceFee) {
+
+  public ClientMenu(
+      Cafeteria cafeteria, LocalDate businessDate, List<Category> categories, DailyMenu dailyMenu) {
+    this(cafeteria, businessDate, categories, dailyMenu, null);
+  }
 
   public record Cafeteria(UUID id, String name, boolean open) {}
 

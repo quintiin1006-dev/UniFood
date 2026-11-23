@@ -27,7 +27,9 @@ public record WorkerHistoryResponse(
       BigDecimal total,
       List<Item> items,
       String cancellationSource,
-      String rejectionReason) {}
+      String rejectionReason,
+      BigDecimal productsSubtotal,
+      BigDecimal serviceFee) {}
 
   public record Item(String name, int quantity, BigDecimal unitPrice, BigDecimal subtotal) {}
 
@@ -58,7 +60,9 @@ public record WorkerHistoryResponse(
                                         item.subtotal()))
                             .toList(),
                         order.cancellationSource(),
-                        order.rejectionReason()))
+                        order.rejectionReason(),
+                        order.total().subtract(BigDecimal.valueOf(order.serviceFeeCop())),
+                        BigDecimal.valueOf(order.serviceFeeCop())))
             .toList(),
         history.nextCursor(),
         history.hasHistory());

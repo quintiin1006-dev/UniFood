@@ -14,7 +14,9 @@ import java.util.UUID;
  * fields after the B15 ones, and {@code requestedPickupAt} (nullable) comes last. Amounts travel as
  * decimal strings; the client's document is never part of it. {@code dailyMenu}
  * (docs/propuesta-menu-dinamico.md, section 3.5) is left out for an order without the daily menu,
- * so those orders answer exactly as before.
+ * so those orders answer exactly as before. {@code productsSubtotal} and {@code serviceFee} (033,
+ * docs/modelo-de-negocio.md) come last: {@code total} = productsSubtotal + serviceFee, all computed
+ * and frozen by the server; serviceFee is "0.00" for orders without a fee.
  */
 public record ClientOrderResponse(
     UUID id,
@@ -34,7 +36,9 @@ public record ClientOrderResponse(
     Instant notCollectedAt,
     Instant cancelledAt,
     Instant requestedPickupAt,
-    @JsonInclude(JsonInclude.Include.NON_NULL) DailyMenu dailyMenu) {
+    @JsonInclude(JsonInclude.Include.NON_NULL) DailyMenu dailyMenu,
+    String productsSubtotal,
+    String serviceFee) {
 
   public record Item(String name, int quantity, String unitPrice, String subtotal) {}
 
@@ -73,7 +77,13 @@ public record ClientOrderResponse(
         timeline.notCollectedAt(),
         timeline.cancelledAt(),
         order.requestedPickupAt(),
-        dailyMenu(order.dailyMenu()));
+        dailyMenu(order.dailyMenu()),
+        amount(order.productsSubtotal()),
+        fee(order.serviceFeeCop()));
+  }
+
+  static String fee(int pesos) {
+    return amount(BigDecimal.valueOf(pesos));
   }
 
   static DailyMenu dailyMenu(OrderDailyMenu menu) {

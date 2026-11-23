@@ -1,7 +1,7 @@
 -- Page orders before joining their historical items: no split cards or N+1.
 -- A cancelled order also carries who ended it and, for a worker rejection, the reason (021).
 WITH completed_orders AS (
-  (SELECT o.id, o.client_name, o.status, o.total, o.delivered_at AS completed_at,
+  (SELECT o.id, o.client_name, o.status, o.total, o.service_fee_cop, o.delivered_at AS completed_at,
           o.cancellation_source, o.rejection_reason
    FROM public.orders o
    WHERE o.cafeteria_id = :cafeteriaId AND o.status = 'DELIVERED'
@@ -16,7 +16,7 @@ WITH completed_orders AS (
                   WHERE s.order_id = o.id AND position(:search IN lower(regexp_replace(normalize(regexp_replace(coalesce(s.lunch_name, ''), '[[:space:]]+', ' ', 'g'), NFD), U&'[\0300-\036f]', '', 'g'))) > 0))
    ORDER BY o.delivered_at DESC, o.id DESC LIMIT :limit)
   UNION ALL
-  (SELECT o.id, o.client_name, o.status, o.total, o.not_collected_at AS completed_at,
+  (SELECT o.id, o.client_name, o.status, o.total, o.service_fee_cop, o.not_collected_at AS completed_at,
           o.cancellation_source, o.rejection_reason
    FROM public.orders o
    WHERE o.cafeteria_id = :cafeteriaId AND o.status = 'NOT_COLLECTED'
@@ -31,7 +31,7 @@ WITH completed_orders AS (
                   WHERE s.order_id = o.id AND position(:search IN lower(regexp_replace(normalize(regexp_replace(coalesce(s.lunch_name, ''), '[[:space:]]+', ' ', 'g'), NFD), U&'[\0300-\036f]', '', 'g'))) > 0))
    ORDER BY o.not_collected_at DESC, o.id DESC LIMIT :limit)
   UNION ALL
-  (SELECT o.id, o.client_name, o.status, o.total, o.cancelled_at AS completed_at,
+  (SELECT o.id, o.client_name, o.status, o.total, o.service_fee_cop, o.cancelled_at AS completed_at,
           o.cancellation_source, o.rejection_reason
    FROM public.orders o
    WHERE o.cafeteria_id = :cafeteriaId AND o.status = 'CANCELLED'
@@ -56,7 +56,7 @@ WITH completed_orders AS (
     SELECT 1 FROM public.orders WHERE cafeteria_id = :cafeteriaId AND status = 'CANCELLED' AND cancelled_at >= :monthStart AND cancelled_at < :nextDayStart
   ) AS has_history
 )
-SELECT m.has_history, o.id, o.client_name, o.status, o.total, o.completed_at,
+SELECT m.has_history, o.id, o.client_name, o.status, o.total, o.service_fee_cop, o.completed_at,
        o.cancellation_source::text AS cancellation_source, o.rejection_reason,
        i.id AS item_id, i.lunch_name AS item_name, i.quantity AS item_quantity,
        i.unit_price AS item_unit_price, i.subtotal AS item_subtotal

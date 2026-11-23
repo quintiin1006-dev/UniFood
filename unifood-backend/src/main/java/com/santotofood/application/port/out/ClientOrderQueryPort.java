@@ -36,5 +36,30 @@ public interface ClientOrderQueryPort {
       int units,
       int products,
       List<String> firstNames,
-      List<Integer> firstQuantities) {}
+      List<Integer> firstQuantities,
+      int serviceFeeCop) {
+
+    public HistoryRow(
+        UUID id,
+        String status,
+        BigDecimal total,
+        Instant createdAt,
+        String cafeteriaName,
+        int units,
+        int products,
+        List<String> firstNames,
+        List<Integer> firstQuantities) {
+      this(
+          id,
+          status,
+          total,
+          createdAt,
+          cafeteriaName,
+          units,
+          products,
+          firstNames,
+          firstQuantities,
+          0);
+    }
+  }
 }

@@ -1,4 +1,4 @@
-SELECT o.id, o.status::text AS status, o.total, o.created_at, f.name AS cafeteria_name,
+SELECT o.id, o.status::text AS status, o.total, o.service_fee_cop, o.created_at, f.name AS cafeteria_name,
        s.units, s.products, s.first_names, s.first_quantities
 FROM public.orders o
 JOIN public.cafeterias f ON f.id = o.cafeteria_id

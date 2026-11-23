@@ -316,4 +316,23 @@ class ClientOrderDailyMenuTest {
     assertEquals("Pollo a la plancha", copied.get(0).label());
     verify(port, times(1)).insertDailyMenu(any(), any(), any(), any(), any());
   }
+
+  @Test
+  void theServiceFeeIsAddedOnTopOfPlateProductsAndAdditions() {
+    var manager = mock(PlatformTransactionManager.class);
+    when(manager.getTransaction(any())).thenAnswer(call -> new SimpleTransactionStatus());
+    var fees = mock(com.santotofood.application.port.out.ServiceFeeQueryPort.class);
+    when(fees.lockEffectiveFee(CAFETERIA)).thenReturn(300);
+    var withFee =
+        new ClientOrderCreationService(
+            port, () -> NOW, manager, event -> {}, () -> enabled, menus, () -> true, fees);
+    withFee.createOwnOrder(
+        USER,
+        KEY,
+        new OrderRequest(
+            CAFETERIA, List.of(new Line(JUICE, 2)), null, null, plate(List.of(egg)), 300));
+    // 2 x 4500 + 9500 + 2000 + 300 of service fee.
+    assertEquals(0, new BigDecimal("20800.00").compareTo(inserted().total()));
+    assertEquals(300, inserted().serviceFeeCop());
+  }
 }

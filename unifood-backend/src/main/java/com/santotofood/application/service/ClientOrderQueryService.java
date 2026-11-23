@@ -111,7 +111,8 @@ public class ClientOrderQueryService
         row.createdAt(),
         row.cafeteriaName(),
         row.units(),
-        summary(row));
+        summary(row),
+        row.serviceFeeCop());
   }
 
   /** «2× Jugo natural, 1× Corriente y 2 más»: «más» counts the remaining distinct products. */

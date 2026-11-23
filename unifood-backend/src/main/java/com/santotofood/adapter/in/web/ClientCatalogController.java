@@ -31,7 +31,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ClientCatalogController {
   // Polled: always revalidated, and only ever stored privately.
-  private static final CacheControl MENU_CACHE = CacheControl.noCache().cachePrivate();
+  // 033: the menu carries the service fee in force; nothing stores it, and the ETag still lets a
+  // client that kept its own copy revalidate with If-None-Match.
+  private static final CacheControl MENU_CACHE = CacheControl.noStore().cachePrivate();
   private final GetClientContextUseCase contexts;
   private final GetClientMenuUseCase menus;
   private final OrderAuthorization authorization;

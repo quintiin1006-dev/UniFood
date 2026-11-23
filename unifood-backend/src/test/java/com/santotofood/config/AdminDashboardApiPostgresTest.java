@@ -176,7 +176,7 @@ class AdminDashboardApiPostgresTest {
           from '../unifood-web/tests/helpers/native-auth-database.mjs';
         const binaries = await postgresBinaries();
         if (!binaries) throw new Error('Isolated native PostgreSQL required for dashboard tests');
-        const db = await createNativeAuthDatabase(binaries, { throughMigration: '017' });
+        const db = await createNativeAuthDatabase(binaries, { throughMigration: '033' });
         try {
           console.log(JSON.stringify({ url: `jdbc:postgresql://127.0.0.1:${await db.query('SHOW port')}/postgres` }));
           await new Promise(resolve => {

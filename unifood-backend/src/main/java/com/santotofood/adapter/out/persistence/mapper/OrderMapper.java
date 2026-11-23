@@ -33,6 +33,7 @@ public class OrderMapper {
     // the pickup time, although the read-only column itself is never written.
     entity.setRequestedPickupAt(order.getRequestedPickupAt());
     entity.setNote(order.getNote());
+    entity.setServiceFeeCop(order.getServiceFeeCop());
     return entity;
   }
 
@@ -61,6 +62,7 @@ public class OrderMapper {
         entity.getCancellationSource(), entity.getRejectionReason(), entity.getRejectedBy());
     order.restoreRequestedPickupAt(entity.getRequestedPickupAt());
     order.restoreNote(entity.getNote());
+    order.restoreServiceFee(entity.getServiceFeeCop());
     return order;
   }
 }

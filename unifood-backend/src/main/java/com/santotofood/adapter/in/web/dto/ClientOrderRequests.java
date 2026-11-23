@@ -21,7 +21,8 @@ import tools.jackson.databind.json.JsonMapper;
  * {@code items[].productId}, {@code items[].quantity}, {@code note}, {@code requestedPickupAt} and
  * {@code dailyMenu} ({@code businessDate}, {@code choices[].categoryId}, {@code
  * choices[].optionId}, {@code choices[].skip} and {@code additionIds},
- * docs/propuesta-menu-dinamico.md section 3.2) are read: prices, totals or any other field the
+ * docs/propuesta-menu-dinamico.md section 3.2) and {@code expectedServiceFee} (whole pesos the
+ * client was shown, docs/modelo-de-negocio.md) are read: prices, totals or any other field the
  * browser sends are ignored, never trusted.
  */
 public final class ClientOrderRequests {
@@ -67,8 +68,16 @@ public final class ClientOrderRequests {
         dailyMenu = dailyMenu(body.get("dailyMenu"));
         if (dailyMenu == null) return null;
       }
+      // Optional; only an integer reaches the use case, which owns its range.
+      var expectedFee = body.get("expectedServiceFee");
+      if (expectedFee != null && !(expectedFee instanceof Integer)) return null;
       return new OrderRequest(
-          cafeteriaId, List.copyOf(items), (String) note, (String) pickup, dailyMenu);
+          cafeteriaId,
+          List.copyOf(items),
+          (String) note,
+          (String) pickup,
+          dailyMenu,
+          (Integer) expectedFee);
     } catch (IOException | RuntimeException unreadable) {
       return null;
     }

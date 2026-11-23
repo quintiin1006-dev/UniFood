@@ -20,20 +20,32 @@ public interface CreateOwnOrderUseCase {
    * {@code requestedPickupAt} is the raw ISO-8601 text, or {@code null} for "as soon as possible";
    * the use case parses and validates it. {@code dailyMenu} is null for an order without the daily
    * menu (docs/propuesta-menu-dinamico.md, section 3.2); with it, {@code items} may be empty.
+   * {@code expectedServiceFee} is the fee in whole pesos the client was shown (docs/modelo-de-
+   * negocio.md), or null when it sent none; it never sets the fee, it only detects a change.
    */
   record OrderRequest(
       UUID cafeteriaId,
       List<Line> items,
       String note,
       String requestedPickupAt,
-      DailyMenuRequest dailyMenu) {
+      DailyMenuRequest dailyMenu,
+      Integer expectedServiceFee) {
+
+    public OrderRequest(
+        UUID cafeteriaId,
+        List<Line> items,
+        String note,
+        String requestedPickupAt,
+        DailyMenuRequest dailyMenu) {
+      this(cafeteriaId, items, note, requestedPickupAt, dailyMenu, null);
+    }
 
     public OrderRequest(UUID cafeteriaId, List<Line> items, String note, String requestedPickupAt) {
-      this(cafeteriaId, items, note, requestedPickupAt, null);
+      this(cafeteriaId, items, note, requestedPickupAt, null, null);
     }
 
     public OrderRequest(UUID cafeteriaId, List<Line> items, String note) {
-      this(cafeteriaId, items, note, null, null);
+      this(cafeteriaId, items, note, null, null, null);
     }
   }
 
