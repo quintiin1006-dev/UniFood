@@ -12,6 +12,7 @@ import {
 } from "@/features/auth/validation";
 import ClientShell from "@/features/client/components/ClientShell";
 import ClientCartProvider from "@/features/client/components/ClientCartProvider";
+import { serverNoticesEnabled } from "@/config/server";
 
 export const dynamic = "force-dynamic";
 export const viewport: Viewport = {
@@ -35,7 +36,10 @@ export default async function ClientLayout({
   }
   return (
     <ClientCartProvider key={profile.id} userId={profile.id}>
-      <ClientShell>{children}</ClientShell>
+      {/* Only whether to render the inbox reaches the browser, never the flag itself. */}
+      <ClientShell noticesEnabled={serverNoticesEnabled()}>
+        {children}
+      </ClientShell>
     </ClientCartProvider>
   );
 }

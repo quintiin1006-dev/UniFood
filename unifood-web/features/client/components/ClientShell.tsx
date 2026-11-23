@@ -7,7 +7,8 @@ import styles from "./ClientShell.module.css";
 
 export default function ClientShell({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+  noticesEnabled = false,
+}: Readonly<{ children: React.ReactNode; noticesEnabled?: boolean }>) {
   return (
     <div className={styles.shell}>
       <a className={styles.skipLink} href="#client-content">
@@ -34,7 +35,7 @@ export default function ClientShell({
             </span>
           </Link>
           <div className={styles.headerActions}>
-            <PushBell />
+            <PushBell inbox={noticesEnabled} />
             <Link
               href="/cuenta/perfil"
               className={styles.profileLink}
