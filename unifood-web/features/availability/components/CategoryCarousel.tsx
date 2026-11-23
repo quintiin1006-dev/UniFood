@@ -72,7 +72,8 @@ export function CategoryCarousel({
             {items.length} {items.length === 1 ? "producto" : "productos"}
           </span>
         </div>
-        {items.length > 0 && (
+        {/* Only when the row overflows: touch, keys and the arrows move the same rail. */}
+        {(bounds.previous || bounds.next) && (
           <div className={styles.carouselActions}>
             <button
               type="button"

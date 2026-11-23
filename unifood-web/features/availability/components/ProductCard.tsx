@@ -26,7 +26,12 @@ export function ProductCard({
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const feedbackId = `availability-feedback-${item.id}`;
   return (
-    <article className={styles.card} aria-label={item.name} aria-busy={busy}>
+    <article
+      className={styles.card}
+      aria-label={item.name}
+      aria-busy={busy}
+      data-available={item.available}
+    >
       <div className={styles.photo}>
         {source && source !== failedImage ? (
           <Image
