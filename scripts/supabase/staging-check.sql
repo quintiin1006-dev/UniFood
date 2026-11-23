@@ -56,7 +56,12 @@ WITH account_fks AS (
       -- checks of the cleanup cover it; the row is ON DELETE CASCADE as well.
       'push_subscriptions.user_id',
       -- 031: only a WORKER publishes the daily menu; the cleanup skips accounts with a role.
-      'daily_menu_days.published_by')
+      'daily_menu_days.published_by',
+      -- 033: only a SUPER_ADMIN changes the service fee and closes or pays a month; the
+      -- cleanup skips accounts with a role.
+      'cafeteria_service_fee.updated_by', 'service_fee_settings.updated_by',
+      'service_fee_audit.changed_by', 'service_fee_settlements.created_by',
+      'service_fee_settlements.paid_by')
 ), checks(object, ok) AS (VALUES
   ('every account foreign key is covered by the cleanup', NOT EXISTS (SELECT 1 FROM uncovered_fks)),
   ('browser roles cannot write account columns', CASE WHEN to_regclass('public.pending_registrations') IS NULL THEN false
@@ -135,7 +140,11 @@ WHERE c.contype = 'f'
     -- 027: only an active CLIENT or WORKER registers a device; ON DELETE CASCADE as well.
     'push_subscriptions.user_id',
     -- 031: only a WORKER publishes the daily menu; the cleanup skips accounts with a role.
-    'daily_menu_days.published_by')
+    'daily_menu_days.published_by',
+    -- 033: only a SUPER_ADMIN changes the service fee and closes or pays a month.
+    'cafeteria_service_fee.updated_by', 'service_fee_settings.updated_by',
+    'service_fee_audit.changed_by', 'service_fee_settlements.created_by',
+    'service_fee_settlements.paid_by')
 ORDER BY 1;
 
 -- Read-only: objects of migration 022 (visibility and billing). Every row must say true.

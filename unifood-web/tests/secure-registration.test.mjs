@@ -878,6 +878,9 @@ test("cleanup checks every table that references an account", async (t) => {
   assert.deepEqual(references, [
     // 022: only a SUPER_ADMIN writes them, so the user_roles check below covers them.
     "cafeteria_billing_settings.updated_by",
+    // 033: only a SUPER_ADMIN writes this one and the four service_fee_* below (fee values,
+    // month close and payment), so the user_roles check covers them; manual SQL leaves NULL.
+    "cafeteria_service_fee.updated_by",
     "cafeteria_settings_audit.changed_by",
     "cafeteria_users.user_id",
     "client_code_corrections.actor_id",
@@ -894,6 +897,10 @@ test("cleanup checks every table that references an account", async (t) => {
     // 027: only an active CLIENT or WORKER registers a device, so the clients and user_roles
     // checks below cover it; the row is ON DELETE CASCADE as well.
     "push_subscriptions.user_id",
+    "service_fee_audit.changed_by",
+    "service_fee_settings.updated_by",
+    "service_fee_settlements.created_by",
+    "service_fee_settlements.paid_by",
     "user_roles.user_id",
   ]);
   const source = (
