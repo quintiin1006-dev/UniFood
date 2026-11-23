@@ -861,6 +861,176 @@ test("cleanup deletes registrations unfinished after 24 hours, in bounded and lo
   );
 });
 
+// 033: the five account columns of the service fee. Before excepting them below, prove that
+// (b) no browser role can write those tables and (c) the cleanup never deletes their authors.
+// (a), the endpoints, is ServiceFeeAuthorizationTest: every write is SUPER_ADMIN only.
+const SERVICE_FEE_TABLES = [
+  "service_fee_settings",
+  "cafeteria_service_fee",
+  "service_fee_settlements",
+  "service_fee_audit",
+];
+
+test("033: browser roles can neither write nor reach the service fee tables", async (t) => {
+  const db = await createAuthDatabase();
+  t.after(() => db.close());
+  for (const table of SERVICE_FEE_TABLES) {
+    const rls = await one(
+      db,
+      "SELECT relrowsecurity FROM pg_class WHERE oid = $1::regclass",
+      [`public.${table}`],
+    );
+    assert.equal(rls.relrowsecurity, true, `${table} has RLS on`);
+    const policies = await one(
+      db,
+      "SELECT count(*)::int n FROM pg_policies WHERE schemaname = 'public' AND tablename = $1",
+      [table],
+    );
+    assert.equal(policies.n, 0, `${table} has no policy that could open it`);
+    for (const role of ["anon", "authenticated"])
+      for (const privilege of ["SELECT", "INSERT", "UPDATE", "DELETE"])
+        assert.equal(
+          (
+            await one(db, "SELECT has_table_privilege($1, $2, $3) ok", [
+              role,
+              `public.${table}`,
+              privilege,
+            ])
+          ).ok,
+          false,
+          `${role} ${privilege} ${table}`,
+        );
+  }
+  // No function a browser role may execute writes them on its behalf.
+  const definers = (
+    await db.query(
+      `SELECT p.proname FROM pg_proc p
+       WHERE p.pronamespace = 'public'::regnamespace
+         AND p.prosrc ~ 'service_fee_(settings|settlements|audit)|cafeteria_service_fee'
+         AND (has_function_privilege('anon', p.oid, 'EXECUTE')
+              OR has_function_privilege('authenticated', p.oid, 'EXECUTE'))`,
+    )
+  ).rows.map((row) => row.proname);
+  assert.deepEqual(definers, []);
+  // And a real attempt by a signed-in client fails for lack of privilege.
+  const uid = await ready(db, "client-fee@ustavillavo.edu.co");
+  await complete(db, uid);
+  await assert.rejects(
+    as(
+      db,
+      "authenticated",
+      uid,
+      "UPDATE public.service_fee_settings SET updated_by = $1",
+      [uid],
+    ),
+    denied,
+  );
+  await assert.rejects(
+    as(
+      db,
+      "authenticated",
+      uid,
+      "INSERT INTO public.service_fee_audit (action, old_value, new_value, changed_by, source) VALUES ('GENERAL_FEE', '{}', '{}', $1, 'API')",
+      [uid],
+    ),
+    denied,
+  );
+  assert.equal(
+    (await one(db, "SELECT updated_by FROM public.service_fee_settings"))
+      .updated_by,
+    null,
+  );
+});
+
+test("033: the cleanup never deletes an account that wrote a service fee column", async (t) => {
+  const db = await createAuthDatabase();
+  t.after(() => db.close());
+  // The worst case: an old pending registration whose account then acts as SUPER_ADMIN.
+  const author = await signup(db, "author@ustavillavo.edu.co");
+  await db.query(
+    "INSERT INTO public.user_roles (user_id, role_id) SELECT $1, id FROM public.roles WHERE name::text = 'SUPER_ADMIN'",
+    [author],
+  );
+  const site = (
+    await one(
+      db,
+      "INSERT INTO public.sites (name, city, institution_id) SELECT 'Sede cargo', 'Villavicencio', id FROM public.institutions WHERE email_domain = 'ustavillavo.edu.co' RETURNING id",
+    )
+  ).id;
+  const cafeteria = (
+    await one(
+      db,
+      "INSERT INTO public.cafeterias (site_id, name, is_active, lunch_order_start, lunch_order_end) VALUES ($1, 'Cafetería cargo', false, '06:00', '18:00') RETURNING id",
+      [site],
+    )
+  ).id;
+  // The four writes of the backend, each with the author. As the backend does
+  // (sql/service-fee/set-audit-actor.sql), the transaction names the actor for the audit.
+  await db.exec("BEGIN");
+  await db.query("SELECT set_config('unifood.actor_id', $1, true)", [author]);
+  await db.query(
+    "UPDATE public.service_fee_settings SET fee_cop = 400, version = version + 1, updated_by = $1",
+    [author],
+  );
+  await db.query(
+    "INSERT INTO public.cafeteria_service_fee (cafeteria_id) VALUES ($1) ON CONFLICT DO NOTHING",
+    [cafeteria],
+  );
+  await db.query(
+    "UPDATE public.cafeteria_service_fee SET fee_cop = 200, version = version + 1, updated_by = $1 WHERE cafeteria_id = $2",
+    [author, cafeteria],
+  );
+  await db.query(
+    `INSERT INTO public.service_fee_settlements
+       (cafeteria_id, period_month, delivered_orders_count, products_total, fee_total, created_by)
+     VALUES ($1, '2026-10-01', 0, 0, 0, $2)`,
+    [cafeteria, author],
+  );
+  await db.query(
+    "UPDATE public.service_fee_settlements SET status = 'PAGADA', paid_at = now(), paid_by = $1 WHERE cafeteria_id = $2",
+    [author, cafeteria],
+  );
+  await db.exec("COMMIT");
+  const columns = [
+    ["service_fee_settings", "updated_by"],
+    ["cafeteria_service_fee", "updated_by"],
+    ["service_fee_settlements", "created_by"],
+    ["service_fee_settlements", "paid_by"],
+    ["service_fee_audit", "changed_by"],
+  ];
+  for (const [table, column] of columns)
+    assert.ok(
+      (
+        await one(
+          db,
+          `SELECT count(*)::int n FROM public.${table} WHERE ${column} = $1`,
+          [author],
+        )
+      ).n > 0,
+      `${table}.${column} names the author`,
+    );
+  // A plain abandoned signup of the same age, to show the cleanup does run.
+  const abandoned = await signup(db, "abandoned@ustavillavo.edu.co");
+  await db.query(
+    `UPDATE public.pending_registrations SET created_at = now() - interval '25 hours'
+     WHERE user_id = ANY($1)`,
+    [[author, abandoned]],
+  );
+  await db.query(
+    "UPDATE public.registration_cleanup_settings SET enabled = true, batch_limit = 50",
+  );
+  assert.equal(
+    (await one(db, "SELECT public.purge_unconfirmed_accounts() n")).n,
+    1,
+  );
+  const left = (
+    await db.query("SELECT id FROM auth.users WHERE id = ANY($1)", [
+      [author, abandoned],
+    ])
+  ).rows.map((row) => row.id);
+  assert.deepEqual(left, [author]);
+});
+
 test("cleanup checks every table that references an account", async (t) => {
   const db = await createAuthDatabase();
   t.after(() => db.close());
@@ -878,6 +1048,10 @@ test("cleanup checks every table that references an account", async (t) => {
   assert.deepEqual(references, [
     // 022: only a SUPER_ADMIN writes them, so the user_roles check below covers them.
     "cafeteria_billing_settings.updated_by",
+    // 033: only an active SUPER_ADMIN writes the service fee (ServiceFeeAuthorizationTest), the
+    // tables are closed to the browser and the cleanup skips accounts with a role (the two 033
+    // tests above); ON DELETE RESTRICT as well, so no author can vanish under a row.
+    "cafeteria_service_fee.updated_by",
     "cafeteria_settings_audit.changed_by",
     "cafeteria_users.user_id",
     "client_code_corrections.actor_id",
@@ -894,6 +1068,11 @@ test("cleanup checks every table that references an account", async (t) => {
     // 027: only an active CLIENT or WORKER registers a device, so the clients and user_roles
     // checks below cover it; the row is ON DELETE CASCADE as well.
     "push_subscriptions.user_id",
+    // 033: SUPER_ADMIN only, closed to the browser, skipped by the cleanup (see above).
+    "service_fee_audit.changed_by",
+    "service_fee_settings.updated_by",
+    "service_fee_settlements.created_by",
+    "service_fee_settlements.paid_by",
     "user_roles.user_id",
   ]);
   const source = (
