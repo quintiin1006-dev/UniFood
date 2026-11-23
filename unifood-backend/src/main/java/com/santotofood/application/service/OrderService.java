@@ -3,6 +3,7 @@ package com.santotofood.application.service;
 import com.santotofood.application.exception.OrderNotFoundException;
 import com.santotofood.application.exception.OrderProcessingSequenceException;
 import com.santotofood.application.model.OperationalOrders;
+import com.santotofood.application.model.OrderNoticeKind;
 import com.santotofood.application.port.in.CallStudentUseCase;
 import com.santotofood.application.port.in.CancelOrderUseCase;
 import com.santotofood.application.port.in.DeliverOrderUseCase;
@@ -49,6 +50,7 @@ public class OrderService
   private final OrderItemRepository orderItemRepository;
   private final TimeProvider timeProvider;
   private final PushNotificationPort push;
+  private final OrderNoticeRecorder notices;
 
   public OrderService(
       OrderRepository orderRepository,
@@ -63,9 +65,14 @@ public class OrderService
       OrderRepository orderRepository,
       OrderItemRepository orderItemRepository,
       TimeProvider timeProvider,
-      java.util.Optional<PushNotificationPort> push) {
+      java.util.Optional<PushNotificationPort> push,
+      java.util.Optional<OrderNoticeRecorder> notices) {
     this(
-        orderRepository, orderItemRepository, timeProvider, push.orElse(PushNotificationPort.NONE));
+        orderRepository,
+        orderItemRepository,
+        timeProvider,
+        push.orElse(PushNotificationPort.NONE),
+        notices.orElse(OrderNoticeRecorder.NONE));
   }
 
   public OrderService(
@@ -73,10 +80,20 @@ public class OrderService
       OrderItemRepository orderItemRepository,
       TimeProvider timeProvider,
       PushNotificationPort push) {
+    this(orderRepository, orderItemRepository, timeProvider, push, OrderNoticeRecorder.NONE);
+  }
+
+  public OrderService(
+      OrderRepository orderRepository,
+      OrderItemRepository orderItemRepository,
+      TimeProvider timeProvider,
+      PushNotificationPort push,
+      OrderNoticeRecorder notices) {
     this.orderRepository = orderRepository;
     this.orderItemRepository = orderItemRepository;
     this.timeProvider = timeProvider;
     this.push = push;
+    this.notices = notices;
   }
 
   @Override
@@ -159,7 +176,8 @@ public class OrderService
     order.remindStudent(now);
 
     Order savedOrder = orderRepository.save(order);
-    // One push per reminder number: a retried request never repeats the same reminder.
+    // One push and one notice per reminder number: a retried request never repeats a reminder.
+    recordNotice(savedOrder.getId(), OrderNoticeKind.REMINDER, savedOrder.getReminderCount());
     notify(
         () ->
             new OrderPushEvent(
@@ -207,6 +225,7 @@ public class OrderService
     Order order = findOrder(orderId);
     if (!order.rejectByWorker(workerId, reason, timeProvider.now())) return loadOrderItems(order);
     Order saved = orderRepository.save(order);
+    recordNotice(saved.getId(), OrderNoticeKind.REJECTED, 0);
     notify(() -> OrderPushEvent.of(saved.getId(), OrderPushEvent.Kind.REJECTED));
     return loadOrderItems(saved);
   }
@@ -216,7 +235,10 @@ public class OrderService
   public Order cancelOwnOrder(UUID orderId) {
     Order order = findOrder(orderId);
     if (!order.cancelByClient(timeProvider.now())) return loadOrderItems(order);
-    return loadOrderItems(orderRepository.save(order));
+    Order saved = orderRepository.save(order);
+    // Inbox only: the client's own cancellation never pushes.
+    recordNotice(saved.getId(), OrderNoticeKind.CANCELLED_BY_CLIENT, 0);
+    return loadOrderItems(saved);
   }
 
   @Override
@@ -255,7 +277,19 @@ public class OrderService
    * cancellation and the daily close never push (docs/notificaciones-push.md).
    */
   private void publishStatus(Order saved) {
+    OrderPushEvent.forStatus(saved)
+        .ifPresent(
+            event -> recordNotice(saved.getId(), OrderNoticeKind.valueOf(event.kind().name()), 0));
     notify(() -> OrderPushEvent.forStatus(saved).orElse(null));
+  }
+
+  /** Same transaction as the transition; the recorder never throws or aborts it. */
+  private void recordNotice(UUID orderId, OrderNoticeKind kind, int sequence) {
+    try {
+      notices.record(orderId, kind, sequence, timeProvider.now());
+    } catch (RuntimeException failure) {
+      LOG.warn("Order notice not recorded ({})", failure.getClass().getSimpleName());
+    }
   }
 
   /** Defense in depth: no push failure can roll back, fail or delay the transition. */
