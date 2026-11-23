@@ -19,5 +19,18 @@ public record ClientOrderHistory(List<Entry> orders, String nextCursor) {
       Instant createdAt,
       String cafeteriaName,
       int itemCount,
-      String summary) {}
+      String summary,
+      int serviceFeeCop) {
+
+    public Entry(
+        UUID id,
+        String status,
+        BigDecimal total,
+        Instant createdAt,
+        String cafeteriaName,
+        int itemCount,
+        String summary) {
+      this(id, status, total, createdAt, cafeteriaName, itemCount, summary, 0);
+    }
+  }
 }

@@ -43,6 +43,7 @@ public class SuperAdminExceptionHandler {
           case BAD_REQUEST -> HttpStatus.BAD_REQUEST;
           case NOT_FOUND -> HttpStatus.NOT_FOUND;
           case CONFLICT -> HttpStatus.CONFLICT;
+          case GONE -> HttpStatus.GONE;
         };
     return response(status, exception.code(), exception.getMessage(), request);
   }

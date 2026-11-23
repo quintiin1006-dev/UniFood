@@ -68,6 +68,7 @@ public interface ClientOrderCommandPort {
 
   record LockedProduct(UUID id, String name, BigDecimal price, boolean active) {}
 
+  /** {@code total} already includes {@code serviceFeeCop}, the fee frozen into the order (033). */
   record NewOrder(
       UUID id,
       UUID cafeteriaId,
@@ -76,7 +77,21 @@ public interface ClientOrderCommandPort {
       String note,
       Instant requestedPickupAt,
       String idempotencyKey,
-      String requestHash) {}
+      String requestHash,
+      int serviceFeeCop) {
+
+    public NewOrder(
+        UUID id,
+        UUID cafeteriaId,
+        OrderingClient client,
+        BigDecimal total,
+        String note,
+        Instant requestedPickupAt,
+        String idempotencyKey,
+        String requestHash) {
+      this(id, cafeteriaId, client, total, note, requestedPickupAt, idempotencyKey, requestHash, 0);
+    }
+  }
 
   /** The frozen title and plate price of the published day. */
   record PublishedDailyMenu(String title, BigDecimal price) {}

@@ -15,7 +15,8 @@ import java.util.UUID;
  * the client's free text (021), null when there is none; the panel shows it as plain text. {@code
  * maxReminders} is the server limit, so the panel never hardcodes it. {@code dailyMenu} is the
  * plate copied into the order (docs/propuesta-menu-dinamico.md, section 3.5), left out when there
- * is none.
+ * is none. {@code productsSubtotal} and {@code serviceFee} (033) let the panel show «Total a
+ * cobrar» with its breakdown: total = productsSubtotal + serviceFee, all from the server.
  */
 public record OrderResponse(
     UUID id,
@@ -36,4 +37,6 @@ public record OrderResponse(
     Instant lastRemindedAt,
     String note,
     int maxReminders,
-    @JsonInclude(JsonInclude.Include.NON_NULL) OrderDailyMenu dailyMenu) {}
+    @JsonInclude(JsonInclude.Include.NON_NULL) OrderDailyMenu dailyMenu,
+    BigDecimal productsSubtotal,
+    BigDecimal serviceFee) {}

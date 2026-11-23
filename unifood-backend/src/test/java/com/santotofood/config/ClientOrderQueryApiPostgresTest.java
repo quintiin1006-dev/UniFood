@@ -449,7 +449,7 @@ class ClientOrderQueryApiPostgresTest {
     var result =
         current(user, null)
             .andExpect(status().isOk())
-            .andExpect(header().string("Cache-Control", "no-cache, private"))
+            .andExpect(header().string("Cache-Control", "no-store, private"))
             .andExpect(header().exists("ETag"))
             .andExpect(content().contentTypeCompatibleWith("application/json"))
             .andReturn();
@@ -484,7 +484,7 @@ class ClientOrderQueryApiPostgresTest {
             .andExpect(jsonPath("$.updatedAt").isString())
             .andExpect(jsonPath("$.reminderCount").value(0))
             .andExpect(jsonPath("$.deliveredAt").value(nullValue()))
-            .andExpect(jsonPath("$.*", hasSize(17)))
+            .andExpect(jsonPath("$.*", hasSize(19)))
             .andReturn();
     private_(result);
   }
@@ -500,7 +500,7 @@ class ClientOrderQueryApiPostgresTest {
           current(user, header)
               .andExpect(status().isNotModified())
               .andExpect(header().string("ETag", tag))
-              .andExpect(header().string("Cache-Control", "no-cache, private"))
+              .andExpect(header().string("Cache-Control", "no-store, private"))
               .andReturn();
       assertEquals("", result.getResponse().getContentAsString());
       var statements = List.copyOf(source.sql);
@@ -647,7 +647,8 @@ class ClientOrderQueryApiPostgresTest {
             .andExpect(jsonPath("$.orders[2].total").value("32500.00"))
             .andExpect(jsonPath("$.orders[2].cafeteriaName").value("Cafetería Central"))
             .andExpect(jsonPath("$.orders[2].createdAt").value(NOW.minusSeconds(7200).toString()))
-            .andExpect(jsonPath("$.orders[0].*", hasSize(7)))
+            .andExpect(jsonPath("$.orders[0].*", hasSize(9)))
+            .andExpect(jsonPath("$.orders[0].serviceFee").value("0.00"))
             .andReturn();
     private_(result);
   }
@@ -761,7 +762,7 @@ class ClientOrderQueryApiPostgresTest {
             .andExpect(jsonPath("$.note").value("Bien caliente"))
             .andExpect(jsonPath("$.total").value("30500.00"))
             .andExpect(jsonPath("$.items", hasSize(2)))
-            .andExpect(jsonPath("$.*", hasSize(17)))
+            .andExpect(jsonPath("$.*", hasSize(19)))
             .andReturn();
     private_(result);
     UUID system = order(user, NOW.minusSeconds(300), null, JUICE, 1);

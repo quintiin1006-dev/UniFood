@@ -710,7 +710,7 @@ class WorkerHistoryApiPostgresTest {
             .andExpect(jsonPath("$.orders[1].id").value(low.toString()))
             .andExpect(jsonPath("$.orders[2].id").value(older.toString()))
             .andExpect(jsonPath("$.orders[0].reference").value("Pedido · FFFFFFFF"))
-            .andExpect(jsonPath("$.orders[0].length()").value(9))
+            .andExpect(jsonPath("$.orders[0].length()").value(11))
             .andExpect(jsonPath("$.orders[0].clientName").value("Cliente de prueba"))
             .andExpect(jsonPath("$.orders[0].total").value(10000))
             .andExpect(jsonPath("$.orders[0].items", hasSize(2)))

@@ -9,13 +9,16 @@ import java.util.UUID;
 
 /**
  * docs/decisiones.md §11 menu. Prices travel as decimal strings, as in the contract. {@code
- * dailyMenu} is left out of the JSON while MENU_DINAMICO_ENABLED is off.
+ * dailyMenu} is left out of the JSON while MENU_DINAMICO_ENABLED is off. {@code serviceFee} (whole
+ * pesos, 033) is the fee a new order pays now, shown before confirming; left out while
+ * SERVICE_FEE_ENABLED is off. The client never computes it.
  */
 public record ClientMenuResponse(
     Cafeteria cafeteria,
     LocalDate businessDate,
     List<Category> categories,
-    @JsonInclude(JsonInclude.Include.NON_NULL) DailyMenu dailyMenu) {
+    @JsonInclude(JsonInclude.Include.NON_NULL) DailyMenu dailyMenu,
+    @JsonInclude(JsonInclude.Include.NON_NULL) Integer serviceFee) {
 
   public record Cafeteria(UUID id, String name, boolean open) {}
 
@@ -51,6 +54,7 @@ public record ClientMenuResponse(
                                         product.available()))
                             .toList()))
             .toList(),
-        menu.dailyMenu() == null ? null : new DailyMenu(menu.dailyMenu().available()));
+        menu.dailyMenu() == null ? null : new DailyMenu(menu.dailyMenu().available()),
+        menu.serviceFee());
   }
 }

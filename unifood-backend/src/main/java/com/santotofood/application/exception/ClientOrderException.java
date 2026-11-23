@@ -20,12 +20,19 @@ public class ClientOrderException extends RuntimeException {
   private final Kind kind;
   private final String code;
   private final UUID activeOrderId;
+  private final Integer serviceFee;
 
   private ClientOrderException(Kind kind, String code, String message, UUID activeOrderId) {
+    this(kind, code, message, activeOrderId, null);
+  }
+
+  private ClientOrderException(
+      Kind kind, String code, String message, UUID activeOrderId, Integer serviceFee) {
     super(message, null, false, false);
     this.kind = kind;
     this.code = code;
     this.activeOrderId = activeOrderId;
+    this.serviceFee = serviceFee;
   }
 
   private static ClientOrderException of(Kind kind, ErrorCode code, String message) {
@@ -128,6 +135,19 @@ public class ClientOrderException extends RuntimeException {
         "Esa adición no está disponible.");
   }
 
+  /**
+   * The fee the client was shown is not the one in force (docs/modelo-de-negocio.md, rule 5). It
+   * carries the current fee so the app can show it; nothing was written.
+   */
+  public static ClientOrderException serviceFeeChanged(int currentFee) {
+    return new ClientOrderException(
+        Kind.CONFLICT,
+        ErrorCode.SERVICE_FEE_CHANGED.name(),
+        "El cargo por servicio cambió. Revisa el total y confirma de nuevo.",
+        null,
+        currentFee);
+  }
+
   public static ClientOrderException activeOrderExists(UUID activeOrderId) {
     return new ClientOrderException(
         Kind.CONFLICT,
@@ -165,6 +185,11 @@ public class ClientOrderException extends RuntimeException {
         Kind.UNAVAILABLE,
         ErrorCode.ORDER_TEMPORARILY_UNAVAILABLE,
         "No pudimos cargar tus pedidos en este momento. Inténtalo nuevamente.");
+  }
+
+  /** The fee in force, only for SERVICE_FEE_CHANGED. */
+  public Integer getServiceFee() {
+    return serviceFee;
   }
 
   public Kind getKind() {

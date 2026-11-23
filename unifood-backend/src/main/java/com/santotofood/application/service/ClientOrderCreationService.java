@@ -10,6 +10,8 @@ import com.santotofood.application.port.out.ClientOrderCommandPort.NewChoice;
 import com.santotofood.application.port.out.ClientOrderCommandPort.NewItem;
 import com.santotofood.application.port.out.ClientOrderCommandPort.NewOrder;
 import com.santotofood.application.port.out.DailyMenuFlag;
+import com.santotofood.application.port.out.ServiceFeeFlag;
+import com.santotofood.application.port.out.ServiceFeeQueryPort;
 import com.santotofood.domain.model.BusinessDate;
 import com.santotofood.domain.model.OrderPushEvent;
 import com.santotofood.domain.model.PickupTime;
@@ -55,6 +57,12 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>An order may carry one daily menu plate (docs/propuesta-menu-dinamico.md, sections 3.2 to
  * 3.4): it counts as one unit, its additions do not, and its price and the additions' prices are
  * the frozen copies of the day. Behind MENU_DINAMICO_ENABLED; without a menu nothing changes.
+ *
+ * <p>Service fee (docs/modelo-de-negocio.md): with SERVICE_FEE_ENABLED on, the fee in force for the
+ * cafeteria is added to the total and frozen into the order. The client sends the fee it was shown
+ * ({@code expectedServiceFee}); a different value is a 409 SERVICE_FEE_CHANGED and nothing is
+ * written. Without it, only a fee of 0 is accepted. It is not part of the request hash, so a retry
+ * with the same key returns the same order whether it carries the field or not.
  */
 @Service
 public class ClientOrderCreationService implements CreateOwnOrderUseCase {
@@ -78,6 +86,8 @@ public class ClientOrderCreationService implements CreateOwnOrderUseCase {
   private final PushNotificationPort push;
   private final DailyMenuFlag dailyMenuFlag;
   private final DailyMenuReadRepository dailyMenus;
+  private final ServiceFeeFlag serviceFeeFlag;
+  private final ServiceFeeQueryPort serviceFees;
 
   public ClientOrderCreationService(
       ClientOrderCommandPort orders, TimeProvider clock, PlatformTransactionManager manager) {
@@ -103,14 +113,29 @@ public class ClientOrderCreationService implements CreateOwnOrderUseCase {
       PlatformTransactionManager manager,
       Optional<PushNotificationPort> push,
       Optional<DailyMenuFlag> dailyMenuFlag,
-      Optional<DailyMenuReadRepository> dailyMenus) {
+      Optional<DailyMenuReadRepository> dailyMenus,
+      Optional<ServiceFeeFlag> serviceFeeFlag,
+      Optional<ServiceFeeQueryPort> serviceFees) {
     this(
         orders,
         clock,
         manager,
         push.orElse(PushNotificationPort.NONE),
         dailyMenus.isPresent() ? dailyMenuFlag.orElse(() -> false) : () -> false,
-        dailyMenus.orElse(null));
+        dailyMenus.orElse(null),
+        serviceFees.isPresent() ? serviceFeeFlag.orElse(() -> false) : () -> false,
+        serviceFees.orElse(null));
+  }
+
+  /** Without the service fee: every order has fee 0. */
+  public ClientOrderCreationService(
+      ClientOrderCommandPort orders,
+      TimeProvider clock,
+      PlatformTransactionManager manager,
+      PushNotificationPort push,
+      DailyMenuFlag dailyMenuFlag,
+      DailyMenuReadRepository dailyMenus) {
+    this(orders, clock, manager, push, dailyMenuFlag, dailyMenus, () -> false, null);
   }
 
   public ClientOrderCreationService(
@@ -119,7 +144,9 @@ public class ClientOrderCreationService implements CreateOwnOrderUseCase {
       PlatformTransactionManager manager,
       PushNotificationPort push,
       DailyMenuFlag dailyMenuFlag,
-      DailyMenuReadRepository dailyMenus) {
+      DailyMenuReadRepository dailyMenus,
+      ServiceFeeFlag serviceFeeFlag,
+      ServiceFeeQueryPort serviceFees) {
     this.push = push;
     this.orders = orders;
     this.clock = clock;
@@ -127,6 +154,8 @@ public class ClientOrderCreationService implements CreateOwnOrderUseCase {
     this.read = transaction(manager, true);
     this.dailyMenuFlag = dailyMenuFlag;
     this.dailyMenus = dailyMenus;
+    this.serviceFeeFlag = serviceFeeFlag;
+    this.serviceFees = serviceFees;
   }
 
   @Override
@@ -176,6 +205,11 @@ public class ClientOrderCreationService implements CreateOwnOrderUseCase {
             .lockCafeteria(client.institutionId(), order.cafeteriaId())
             .orElseThrow(ClientOrderException::cafeteriaNotFound);
     if (!cafeteria.active()) throw ClientOrderException.cafeteriaNotSubscribed();
+    // Right after the cafeteria: the general fee row is the next lock (FOR SHARE).
+    int fee = serviceFeeFlag.enabled() ? serviceFees.lockEffectiveFee(cafeteria.id()) : 0;
+    var expected = order.expectedServiceFee();
+    if (expected == null ? fee != 0 : expected != fee)
+      throw ClientOrderException.serviceFeeChanged(fee);
     var ids = order.items().stream().map(Line::productId).toList();
     var products =
         orders.lockProducts(cafeteria.id(), ids).stream()
@@ -209,6 +243,8 @@ public class ClientOrderCreationService implements CreateOwnOrderUseCase {
         if (choice.extraPrice() != null) total = total.add(choice.extraPrice());
     }
 
+    total = total.add(BigDecimal.valueOf(fee));
+
     var id = UUID.randomUUID();
     orders.insertOrder(
         new NewOrder(
@@ -219,7 +255,8 @@ public class ClientOrderCreationService implements CreateOwnOrderUseCase {
             order.note(),
             order.pickup() == null ? null : order.pickup().value(),
             idempotencyKey,
-            order.hash()));
+            order.hash(),
+            fee));
     orders.insertItems(id, cafeteria.id(), items);
     if (plate != null) orders.insertDailyMenu(id, cafeteria.id(), date, plate, choices);
     // Only a new order: an idempotent replay returned above and never notifies twice.
@@ -329,7 +366,13 @@ public class ClientOrderCreationService implements CreateOwnOrderUseCase {
    * pickup time is the instant it names, whatever offset it was written in.
    */
   record Normalized(
-      UUID cafeteriaId, List<Line> items, String note, PickupTime pickup, Menu menu, String hash) {
+      UUID cafeteriaId,
+      List<Line> items,
+      String note,
+      PickupTime pickup,
+      Menu menu,
+      Integer expectedServiceFee,
+      String hash) {
 
     static Normalized of(String idempotencyKey, OrderRequest request) {
       if (idempotencyKey == null
@@ -375,12 +418,18 @@ public class ClientOrderCreationService implements CreateOwnOrderUseCase {
             PickupTime.parse(request.requestedPickupAt())
                 .orElseThrow(ClientOrderException::invalidPickupTime);
 
+      // What the client was shown: never hashed, so a retry with or without it is the same request.
+      var expectedFee = request.expectedServiceFee();
+      if (expectedFee != null && (expectedFee < 0 || expectedFee > ServiceFeeRules.MAX_FEE_COP))
+        throw ClientOrderException.invalidRequest();
+
       return new Normalized(
           request.cafeteriaId(),
           List.copyOf(items),
           note,
           pickup,
           menu,
+          expectedFee,
           hash(request.cafeteriaId(), items, pickup, menu, note));
     }
 

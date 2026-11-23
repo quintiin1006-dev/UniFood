@@ -35,7 +35,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ClientOrderController {
   // Polled every few seconds: always revalidated, and only ever stored privately.
-  private static final CacheControl POLLED = CacheControl.noCache().cachePrivate();
+  // 033: the order carries its service fee; nothing stores it. The app sends its last ETag
+  // itself (features/client-orders/api.ts), so the 304 of the poll keeps working.
+  private static final CacheControl POLLED = CacheControl.noStore().cachePrivate();
   private final CancelOrderUseCase cancelOrderUseCase;
   private final CreateOwnOrderUseCase createOwnOrderUseCase;
   private final GetOwnCurrentOrderUseCase currentOrders;

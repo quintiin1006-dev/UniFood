@@ -10,6 +10,8 @@ import com.santotofood.application.port.in.GetClientMenuUseCase;
 import com.santotofood.application.port.out.ClientCatalogQueryPort;
 import com.santotofood.application.port.out.ClientCatalogQueryPort.CafeteriaRow;
 import com.santotofood.application.port.out.DailyMenuFlag;
+import com.santotofood.application.port.out.ServiceFeeFlag;
+import com.santotofood.application.port.out.ServiceFeeQueryPort;
 import com.santotofood.domain.model.BusinessDate;
 import com.santotofood.domain.model.CatalogCategory;
 import com.santotofood.domain.port.out.DailyMenuReadRepository;
@@ -18,7 +20,9 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,16 +44,49 @@ public class ClientCatalogService implements GetClientContextUseCase, GetClientM
   private final TimeProvider clock;
   private final DailyMenuFlag dailyMenuFlag;
   private final DailyMenuReadRepository dailyMenus;
+  private final ServiceFeeFlag serviceFeeFlag;
+  private final ServiceFeeQueryPort serviceFees;
 
+  /** Without the service fee: the menu never carries one. */
   public ClientCatalogService(
       ClientCatalogQueryPort catalog,
       TimeProvider clock,
       DailyMenuFlag dailyMenuFlag,
       DailyMenuReadRepository dailyMenus) {
+    this(catalog, clock, dailyMenuFlag, dailyMenus, () -> false, null);
+  }
+
+  /** Spring: the service fee beans are optional; without them the menu never carries a fee. */
+  @Autowired
+  public ClientCatalogService(
+      ClientCatalogQueryPort catalog,
+      TimeProvider clock,
+      DailyMenuFlag dailyMenuFlag,
+      DailyMenuReadRepository dailyMenus,
+      Optional<ServiceFeeFlag> serviceFeeFlag,
+      Optional<ServiceFeeQueryPort> serviceFees) {
+    this(
+        catalog,
+        clock,
+        dailyMenuFlag,
+        dailyMenus,
+        serviceFees.isPresent() ? serviceFeeFlag.orElse(() -> false) : () -> false,
+        serviceFees.orElse(null));
+  }
+
+  public ClientCatalogService(
+      ClientCatalogQueryPort catalog,
+      TimeProvider clock,
+      DailyMenuFlag dailyMenuFlag,
+      DailyMenuReadRepository dailyMenus,
+      ServiceFeeFlag serviceFeeFlag,
+      ServiceFeeQueryPort serviceFees) {
     this.catalog = catalog;
     this.clock = clock;
     this.dailyMenuFlag = dailyMenuFlag;
     this.dailyMenus = dailyMenus;
+    this.serviceFeeFlag = serviceFeeFlag;
+    this.serviceFees = serviceFees;
   }
 
   @Override
@@ -110,7 +147,8 @@ public class ClientCatalogService implements GetClientContextUseCase, GetClientM
         new ClientMenu.Cafeteria(cafeteria.id(), cafeteria.name(), cafeteria.open()),
         date,
         categories,
-        dailyMenu(cafeteria.id(), date));
+        dailyMenu(cafeteria.id(), date),
+        serviceFeeFlag.enabled() ? serviceFees.effectiveFee(cafeteria.id()) : null);
   }
 
   /** Null with the flag off, so the response stays exactly as before. */

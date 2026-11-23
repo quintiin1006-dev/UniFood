@@ -117,6 +117,10 @@ public class OrderEntity {
   @Column(name = "note", insertable = false, updatable = false)
   private String note;
 
+  // 033: the service fee frozen by the client's INSERT. Read-only here, so nothing rewrites it.
+  @Column(name = "service_fee_cop", insertable = false, updatable = false)
+  private int serviceFeeCop;
+
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;
 
@@ -293,6 +297,14 @@ public class OrderEntity {
 
   public void setNote(String note) {
     this.note = note;
+  }
+
+  public int getServiceFeeCop() {
+    return serviceFeeCop;
+  }
+
+  public void setServiceFeeCop(int serviceFeeCop) {
+    this.serviceFeeCop = serviceFeeCop;
   }
 
   public Instant getCreatedAt() {
