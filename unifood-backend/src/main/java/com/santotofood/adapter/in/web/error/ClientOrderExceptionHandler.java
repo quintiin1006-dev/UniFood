@@ -24,7 +24,8 @@ public class ClientOrderExceptionHandler {
 
   /**
    * ApiErrorResponse plus {@code activeOrderId}, present only for ACTIVE_ORDER_EXISTS
-   * (docs/decisiones.md §11).
+   * (docs/decisiones.md §11), and {@code serviceFee}, the fee in force, only for
+   * SERVICE_FEE_CHANGED.
    */
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public record ClientOrderErrorResponse(
@@ -33,7 +34,8 @@ public class ClientOrderExceptionHandler {
       String message,
       Instant timestamp,
       String path,
-      UUID activeOrderId) {}
+      UUID activeOrderId,
+      Integer serviceFee) {}
 
   @ExceptionHandler(ClientOrderException.class)
   public ResponseEntity<ClientOrderErrorResponse> order(
@@ -55,6 +57,7 @@ public class ClientOrderExceptionHandler {
             exception.getMessage(),
             Instant.now(),
             request.getRequestURI(),
-            exception.getActiveOrderId()));
+            exception.getActiveOrderId(),
+            exception.getServiceFee()));
   }
 }

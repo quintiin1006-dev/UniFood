@@ -3,12 +3,15 @@ package com.santotofood.adapter.in.web;
 import com.santotofood.adapter.in.web.dto.CafeteriaSettingsAuditResponse;
 import com.santotofood.adapter.in.web.dto.SuperAdminCafeteriaRequests;
 import com.santotofood.adapter.in.web.dto.SuperAdminCafeteriasResponse;
+import com.santotofood.application.exception.CafeteriaSettingsException;
 import com.santotofood.application.port.in.ChangeCafeteriaBillingUseCase;
 import com.santotofood.application.port.in.ChangeCafeteriaVisibilityUseCase;
 import com.santotofood.application.port.in.ListCafeteriaSettingsAuditUseCase;
 import com.santotofood.application.port.in.ListSuperAdminCafeteriasUseCase;
+import com.santotofood.application.port.out.ServiceFeeFlag;
 import com.santotofood.config.OrderAuthorization;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
@@ -32,18 +35,22 @@ public class SuperAdminCafeteriaController {
   private final ChangeCafeteriaVisibilityUseCase visibility;
   private final ChangeCafeteriaBillingUseCase billing;
   private final ListCafeteriaSettingsAuditUseCase audit;
+  private final ServiceFeeFlag serviceFee;
 
   public SuperAdminCafeteriaController(
       OrderAuthorization authorization,
       ListSuperAdminCafeteriasUseCase cafeterias,
       ChangeCafeteriaVisibilityUseCase visibility,
       ChangeCafeteriaBillingUseCase billing,
-      ListCafeteriaSettingsAuditUseCase audit) {
+      ListCafeteriaSettingsAuditUseCase audit,
+      Optional<ServiceFeeFlag> serviceFee) {
     this.authorization = authorization;
     this.cafeterias = cafeterias;
     this.visibility = visibility;
     this.billing = billing;
     this.audit = audit;
+    // Optional so contexts without the service fee module still build: then it is off.
+    this.serviceFee = serviceFee.orElse(() -> false);
   }
 
   private UUID user(Authentication authentication) {
@@ -75,6 +82,8 @@ public class SuperAdminCafeteriaController {
   @PutMapping("/{cafeteriaId}/billing")
   public ResponseEntity<SuperAdminCafeteriasResponse.Cafeteria> billing(
       Authentication authentication, @PathVariable String cafeteriaId, HttpServletRequest request) {
+    // 033: the service fee replaces the billing agreement; its data stays, it is no longer edited.
+    if (serviceFee.enabled()) throw CafeteriaSettingsException.billingDeprecated();
     UUID id = SuperAdminCafeteriaRequests.id(cafeteriaId);
     var body = SuperAdminCafeteriaRequests.billing(request);
     return ResponseEntity.ok()

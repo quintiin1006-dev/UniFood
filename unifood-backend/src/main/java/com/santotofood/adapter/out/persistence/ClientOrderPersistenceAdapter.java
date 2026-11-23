@@ -146,7 +146,9 @@ public class ClientOrderPersistenceAdapter
                 found.cancellationSource(),
                 found.rejectionReason(),
                 found.timeline(),
-                found.requestedPickupAt())));
+                found.requestedPickupAt(),
+                null,
+                found.serviceFeeCop())));
   }
 
   @Override
@@ -170,7 +172,8 @@ public class ClientOrderPersistenceAdapter
                 row.getInt("units"),
                 row.getInt("products"),
                 array(row, "first_names", String.class),
-                array(row, "first_quantities", Integer.class));
+                array(row, "first_quantities", Integer.class),
+                row.getInt("service_fee_cop"));
     if (after == null) return jdbc.query(HISTORY_FIRST, mapper, clientId, limit);
     return jdbc.query(
         HISTORY_AFTER,
@@ -202,7 +205,9 @@ public class ClientOrderPersistenceAdapter
             instant(row, "delivered_at"),
             instant(row, "not_collected_at"),
             instant(row, "cancelled_at")),
-        instant(row, "requested_pickup_at"));
+        instant(row, "requested_pickup_at"),
+        null,
+        row.getInt("service_fee_cop"));
   }
 
   private static ClientOrder.Item item(ResultSet row, int number) throws SQLException {
@@ -294,7 +299,8 @@ public class ClientOrderPersistenceAdapter
         order.idempotencyKey(),
         order.requestHash(),
         order.client().institutionalCode(),
-        order.client().clientType());
+        order.client().clientType(),
+        order.serviceFeeCop());
   }
 
   @Override

@@ -7,7 +7,8 @@ public class CafeteriaSettingsException extends RuntimeException {
   public enum Kind {
     BAD_REQUEST,
     NOT_FOUND,
-    CONFLICT
+    CONFLICT,
+    GONE
   }
 
   private final Kind kind;
@@ -48,6 +49,14 @@ public class CafeteriaSettingsException extends RuntimeException {
         Kind.CONFLICT,
         ErrorCode.BILLING_STATE_CHANGED,
         "Otra persona cambió esta cafetería. Revisa el valor actual e inténtalo de nuevo.");
+  }
+
+  /** With SERVICE_FEE_ENABLED on, the 022 billing agreement is replaced by the service fee. */
+  public static CafeteriaSettingsException billingDeprecated() {
+    return new CafeteriaSettingsException(
+        Kind.GONE,
+        ErrorCode.BILLING_DEPRECATED,
+        "El modelo de cobro fue reemplazado por el cargo por servicio.");
   }
 
   public static CafeteriaSettingsException requiresAdmin() {

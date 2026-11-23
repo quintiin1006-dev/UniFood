@@ -473,7 +473,8 @@ class ClientOrderCreationApiPostgresTest {
             .andExpect(jsonPath("$.items[1].unitPrice").value("4500.00"))
             .andExpect(jsonPath("$.items[1].subtotal").value("9000.00"))
             // The 6 fields of B15, the ones B16 appends and requestedPickupAt (023).
-            .andExpect(jsonPath("$.*", hasSize(17)))
+            .andExpect(jsonPath("$.*", hasSize(19)))
+            .andExpect(jsonPath("$.serviceFee").value("0.00"))
             .andExpect(jsonPath("$.cafeteria.name").value("Cafetería Central"))
             .andExpect(jsonPath("$.cancellationSource").value(nullValue()))
             .andExpect(content().string(not(containsString("DOC-PRIVATE"))))

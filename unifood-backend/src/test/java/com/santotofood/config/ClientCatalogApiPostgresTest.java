@@ -326,7 +326,7 @@ class ClientCatalogApiPostgresTest {
   void menuGroupsActiveProductsAndMarksTodaysAvailability() throws Exception {
     mvc.perform(get("/api/me/menu").with(as(STUDENT)).queryParam("cafeteriaId", OPEN.toString()))
         .andExpect(status().isOk())
-        .andExpect(header().string("Cache-Control", "no-cache, private"))
+        .andExpect(header().string("Cache-Control", "no-store, private"))
         .andExpect(header().exists("ETag"))
         .andExpect(jsonPath("$.cafeteria.open").value(true))
         .andExpect(
