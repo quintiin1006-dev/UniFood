@@ -1,118 +1,105 @@
-/* Disponibilidad inside the shared glass panel (features/worker-ui, F1 and F3). Frame, header,
-   padding and radius come from WorkerPanel.module.css. */
-.panel {
+/* Disponibilidad in grays (base: b4d455f, made neutral). The shared panel frame, header and
+   sections come from WorkerPanel.module.css; this module repaints its own panel as a neutral
+   dark glass so the daily menu editor and the connection notice (white on glass) keep working,
+   and puts the products on light neutral cards. Tokens are local: the brand tokens used by the
+   other worker modules are not touched. #0b5fff only marks «Disponible» and the focus.
+   Contrast: text 4.5:1 or more, control borders 3:1 or more (values below). */
+section.panel {
+  /* On the dark glass (about #1b1d22 over the worker background). */
+  --av-glass: rgba(24, 24, 27, 0.86);
+  --av-glass-head: rgba(255, 255, 255, 0.04);
+  --av-divider: rgba(255, 255, 255, 0.12);
+  --av-on-glass: #fafafa; /* 16:1 */
+  --av-on-glass-soft: #d4d4d8; /* 11:1 */
+  /* On the product cards (#ffffff). */
+  --av-card: #ffffff;
+  --av-card-muted: #f1f1f3;
+  --av-card-line: #e4e4e7;
+  --av-control-line: #85858d; /* 3.7:1, control border */
+  --av-text: #18181b; /* 17:1 */
+  --av-text-soft: #52525b; /* 7.7:1 */
+  --av-off: #71717a; /* 4.8:1, track «No disponible» */
+  --av-on: #0b5fff; /* 5.1:1, track «Disponible» and focus */
+  --av-danger: #b42318; /* 6.5:1 */
+  --av-warning-bg: #fff4d9;
+  --av-warning-line: #d9a63a;
+  --av-warning-text: #6a460b; /* 7.9:1 on its background */
+
   overflow: visible;
+  border-color: var(--av-divider);
+  background: var(--av-glass);
+  color: var(--av-on-glass);
 }
-.cafeteriaName {
-  margin: 0;
-  font-size: 17px;
-  font-weight: 650;
-  overflow-wrap: anywhere;
+/* The shared header keeps its layout; only its blue tint becomes neutral. */
+section.panel > header {
+  border-bottom-color: var(--av-divider);
+  background: var(--av-glass-head);
 }
-.date {
-  margin: 4px 0 0;
-  color: #ffffff;
-  font-size: 13px;
+section.panel > * + * {
+  border-top-color: var(--av-divider);
 }
-.refresh,
-.error button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 12px;
-  background: transparent;
-  color: #ffffff;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 650;
-  cursor: pointer;
-  transition: background-color 160ms ease;
-}
-.refresh:hover:not(:disabled),
-.error button:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-.refresh:disabled {
-  opacity: 0.65;
-  cursor: wait;
-}
-.refresh {
-  flex-shrink: 0;
-}
+
+/* ------------------------------------------------------------------ cafeteria */
 .cafeteriaState {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px 24px;
-  color: #ffffff;
 }
 .cafeteriaDetails,
 .cafeteriaControl {
   min-width: 0;
 }
-/* Discreet: one more part of the date line, not a badge. */
+.cafeteriaControl {
+  flex: 0 0 220px;
+}
+.cafeteriaName {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.date {
+  margin: 4px 0 0;
+  color: var(--av-on-glass-soft);
+  font-size: 13px;
+}
+/* Secondary: part of the date line, not a badge. */
 .administrativeState {
-  color: #ffffff;
-  font-size: 13px;
+  color: var(--av-on-glass-soft);
 }
-.notice,
+.administrativeState strong {
+  font-weight: 600;
+}
+
+/* Inactive cafeteria and open without products: the same persistent, static warning. */
 .warning,
-.error {
-  margin: 0 0 18px;
-  padding: 14px 16px;
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 1.6;
-}
-.notice {
-  background: var(--color-brand-tint);
-  color: var(--color-ink);
-}
-.warning {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  background: var(--color-brand-tint);
-  color: var(--color-ink);
-  margin: 12px 0 0;
-  padding: 10px 12px;
-  font-size: 13px;
-}
-.warning svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-/* §2: open without any available product. Persistent and static, never animated. */
 .openWarning {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  margin: 0 0 18px;
-  padding: 14px 16px;
-  border: 1px solid #f1d08a;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--av-warning-line);
   border-radius: 12px;
-  background: #fff4d9;
-  color: #6a460b;
-  font-size: 15px;
+  background: var(--av-warning-bg);
+  color: var(--av-warning-text);
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.5;
 }
+.openWarning {
+  margin: 0;
+}
+.warning svg,
 .openWarning svg {
   flex-shrink: 0;
   margin-top: 2px;
 }
-.error {
-  background: var(--color-danger-bg);
-  color: var(--color-danger-ink);
-}
-.error p {
-  margin: 0 0 12px;
-}
+
+/* ------------------------------------------------------------------ categories */
 .category {
   min-width: 0;
 }
@@ -121,92 +108,96 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 10px;
-}
-.categoryHeader h3 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 650;
+  min-height: 44px;
+  margin-bottom: 8px;
 }
 .categoryTitle {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
+.categoryHeader h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+/* A quiet count next to the title, not a pill. */
 .categoryCount {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 600;
+  color: var(--av-on-glass-soft);
+  font-size: 13px;
+  font-weight: 500;
 }
 .carouselActions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 .carouselActions button {
   display: grid;
   place-items: center;
   width: 44px;
   height: 44px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--av-divider);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  background: transparent;
+  color: var(--av-on-glass);
   cursor: pointer;
   transition: background-color 160ms ease;
 }
 .carouselActions button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
 }
 .carouselActions button:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: default;
 }
 .rail {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
   overflow-x: auto;
   scroll-snap-type: x proximity;
   scroll-padding-inline: 3px;
   overscroll-behavior-x: contain;
-  padding: 5px 3px 10px;
+  padding: 4px 3px 10px;
   scrollbar-width: thin;
 }
+/* One product: centred in its row, as before. */
+.singleRail {
+  justify-content: center;
+}
+.empty {
+  margin: 0;
+  color: var(--av-on-glass-soft);
+  font-size: 14px;
+}
+
+/* ------------------------------------------------------------------ product card */
 .card {
   flex: 0 0 196px;
   min-width: 0;
   overflow: hidden;
   scroll-snap-align: start;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--av-card-line);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--color-ink);
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease;
-}
-.singleRail {
-  justify-content: center;
-}
-.card:hover {
-  border-color: var(--color-brand-tint-2);
-  box-shadow: 0 2px 8px rgb(23 55 94 / 5%);
+  background: var(--av-card);
+  color: var(--av-text);
 }
 .photo {
   position: relative;
   aspect-ratio: 16 / 9;
   width: 100%;
-  background: var(--color-brand-tint);
   overflow: hidden;
-  /* «Arco de la U» on product images. */
-  border-radius: 0 0 28px 28px;
+  background: var(--av-card-muted);
 }
 .image {
   object-fit: cover;
+  transition: filter 160ms ease;
+}
+/* «No disponible» reads in the switch text; the photo turns gray as a second cue. */
+.card[data-available="false"] .image {
+  filter: grayscale(1);
+  opacity: 0.7;
 }
 .placeholder {
   position: absolute;
@@ -215,15 +206,15 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  color: var(--color-text-soft);
+  gap: 6px;
+  color: var(--av-text-soft);
   font-size: 12px;
 }
 .cardBody {
-  padding: 10px 12px 8px;
+  padding: 10px 12px 6px;
 }
 .productName {
-  margin: 0 0 4px;
+  margin: 0;
   overflow: hidden;
   font-size: 14px;
   font-weight: 650;
@@ -232,11 +223,14 @@
   white-space: nowrap;
 }
 .price {
-  margin: 0 0 8px;
-  color: var(--color-brand-navy);
+  margin: 2px 0 10px;
+  color: var(--av-text-soft);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
+
+/* ------------------------------------------------------------------ switch */
 .switch {
   display: flex;
   align-items: center;
@@ -244,13 +238,13 @@
   gap: 8px;
   width: 100%;
   min-height: 44px;
-  padding: 6px 9px;
-  border: 1px solid var(--color-brand-tint-2);
-  border-radius: 10px;
-  background: var(--color-surface);
-  color: var(--color-ink);
+  padding: 6px 8px 6px 12px;
+  border: 1px solid var(--av-control-line);
+  border-radius: 12px;
+  background: var(--av-card);
+  color: var(--av-text);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   text-align: left;
   cursor: pointer;
@@ -258,12 +252,21 @@
     background-color 160ms ease,
     border-color 160ms ease;
 }
+/* «ABIERTA» and «CERRADA» read as a word, not a shout (the text itself is unchanged). */
+.switch > span:first-child {
+  text-transform: lowercase;
+}
+.switch > span:first-child::first-letter {
+  text-transform: uppercase;
+}
+.switch[aria-checked="true"] {
+  border-color: var(--av-on);
+}
 .switch:hover:not(:disabled) {
-  background: var(--color-brand-tint);
-  border-color: var(--color-brand-tint-2);
+  background: var(--av-card-muted);
 }
 .switch:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 .card[aria-busy="true"] .switch:disabled,
@@ -275,87 +278,83 @@
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  width: 46px;
+  width: 44px;
   height: 26px;
   padding: 3px;
-  border-radius: 20px;
-  background: var(--color-text-soft);
+  border-radius: 999px;
+  background: var(--av-off);
   transition: background-color 160ms ease;
 }
 .thumb {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: white;
+  background: #ffffff;
   transition: transform 160ms ease;
 }
 .switch[aria-checked="true"] .track {
-  background: var(--color-success-ink);
+  background: var(--av-on);
+}
+/* «Abierta» is not «Disponible»: the cafeteria switch stays neutral (dark track when open). */
+.cafeteriaControl .switch[aria-checked="true"] {
+  border-color: var(--av-control-line);
+}
+.cafeteriaControl .switch[aria-checked="true"] .track {
+  background: var(--av-text);
 }
 .switch[aria-checked="true"] .thumb {
-  transform: translateX(20px);
+  transform: translateX(18px);
 }
+
+/* Saving or the reason a change was undone, under the switch. */
 .feedback {
   min-height: 1.5em;
-  margin: 8px 0 0 !important;
-  color: var(--color-text-soft);
+  margin: 6px 0 0 !important;
+  color: var(--av-text-soft);
   font-size: 12px !important;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
 .feedback[role="alert"] {
-  color: var(--color-danger);
+  color: var(--av-danger);
 }
-.empty {
-  margin: 0;
-  color: #ffffff;
-  font-size: 14px;
+/* On the glass (cafeteria row) the feedback is light. */
+.cafeteriaControl .feedback {
+  color: var(--av-on-glass-soft);
 }
-.panel button:focus-visible,
-.rail:focus-visible {
-  outline: var(--focus-ring-width) solid #ffffff;
-  outline-offset: var(--focus-ring-offset);
-}
-@media (max-width: 760px) {
-  .refresh {
-    padding: 10px;
-  }
-  .refresh span {
-    display: none;
-  }
-  .cafeteriaControl {
-    width: 100%;
-  }
-  .categoryTitle {
-    gap: 4px;
-    flex-direction: column;
-  }
-  .card {
-    flex-basis: min(196px, 64vw);
-  }
-  .rail {
-    gap: 12px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .panel button,
-  .card,
-  .track,
-  .thumb {
-    transition: none;
-  }
+.cafeteriaControl .feedback[role="alert"] {
+  color: #ffb4ab;
 }
 
-/* Response messages use the shared Notice (components/ui); only spacing lives here. */
-.message {
-  margin: 0 0 18px;
+/* ------------------------------------------------------------------ focus and motion */
+.panel button:focus-visible,
+.rail:focus-visible {
+  outline: var(--focus-ring-width) solid var(--av-on-glass);
+  outline-offset: var(--focus-ring-offset);
 }
+.card button:focus-visible {
+  outline-color: var(--av-on);
+}
+
 /* D1: a loading card, the size of a real one. */
 .cardGhost {
   flex: 0 0 196px;
 }
+
 @media (max-width: 760px) {
+  .cafeteriaControl {
+    flex-basis: 100%;
+  }
+  .card,
   .cardGhost {
     flex-basis: min(196px, 64vw);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel button,
+  .image,
+  .track,
+  .thumb {
+    transition: none;
   }
 }
