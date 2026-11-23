@@ -57,6 +57,11 @@ WITH account_fks AS (
       'push_subscriptions.user_id',
       -- 031: only a WORKER publishes the daily menu; the cleanup skips accounts with a role.
       'daily_menu_days.published_by',
+      -- 033: only an active SUPER_ADMIN writes the service fee, the tables are closed to the
+      -- browser, and the cleanup skips accounts with a role; ON DELETE RESTRICT as well.
+      'cafeteria_service_fee.updated_by', 'service_fee_audit.changed_by',
+      'service_fee_settings.updated_by', 'service_fee_settlements.created_by',
+      'service_fee_settlements.paid_by',
       -- 034: a notice is only written for the client of an existing order, so the clients
       -- check of the cleanup covers it; the row is ON DELETE CASCADE as well.
       'order_notices.user_id')
@@ -139,6 +144,10 @@ WHERE c.contype = 'f'
     'push_subscriptions.user_id',
     -- 031: only a WORKER publishes the daily menu; the cleanup skips accounts with a role.
     'daily_menu_days.published_by',
+    -- 033: only an active SUPER_ADMIN writes the service fee; the cleanup skips accounts with a role.
+    'cafeteria_service_fee.updated_by', 'service_fee_audit.changed_by',
+    'service_fee_settings.updated_by', 'service_fee_settlements.created_by',
+    'service_fee_settlements.paid_by',
     -- 034: only for the client of an existing order; ON DELETE CASCADE as well.
     'order_notices.user_id')
 ORDER BY 1;

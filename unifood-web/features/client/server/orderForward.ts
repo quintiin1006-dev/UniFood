@@ -26,6 +26,7 @@ type OrderBody = {
   dailyMenu?: DailyMenuBody;
   note?: string | null;
   requestedPickupAt?: string;
+  expectedServiceFee?: number;
 };
 
 // An ISO-8601 instant is far shorter; Spring checks its format, offset and range.
@@ -33,6 +34,8 @@ const MAX_PICKUP_LENGTH = 64;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 /** Far above any real menu; Spring owns every rule of the plate. */
 const MAX_MENU_IDS = 20;
+/** chk_orders_service_fee (033); Spring checks the range again. */
+const MAX_SERVICE_FEE = 2000;
 
 const plain = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === "object" && !Array.isArray(value);
@@ -325,8 +328,14 @@ async function readOrder(request: Request): Promise<OrderBody | null> {
     return null;
   }
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const { cafeteriaId, items, dailyMenu, note, requestedPickupAt } =
-    raw as Record<string, unknown>;
+  const {
+    cafeteriaId,
+    items,
+    dailyMenu,
+    note,
+    requestedPickupAt,
+    expectedServiceFee,
+  } = raw as Record<string, unknown>;
   if (typeof cafeteriaId !== "string" || !UUID.test(cafeteriaId)) return null;
   const plate =
     dailyMenu === undefined || dailyMenu === null
@@ -345,6 +354,15 @@ async function readOrder(request: Request): Promise<OrderBody | null> {
       requestedPickupAt.length > MAX_PICKUP_LENGTH)
   )
     return null;
+  // Optional: whole pesos the client was shown; it only detects a change, never sets the fee.
+  if (
+    expectedServiceFee !== undefined &&
+    expectedServiceFee !== null &&
+    (!Number.isSafeInteger(expectedServiceFee) ||
+      (expectedServiceFee as number) < 0 ||
+      (expectedServiceFee as number) > MAX_SERVICE_FEE)
+  )
+    return null;
   const lines: OrderBody["items"] = [];
   for (const item of items) {
     if (!item || typeof item !== "object" || Array.isArray(item)) return null;
@@ -360,5 +378,6 @@ async function readOrder(request: Request): Promise<OrderBody | null> {
     ...(plate ? { dailyMenu: plate } : {}),
     ...(typeof note === "string" ? { note } : {}),
     ...(typeof requestedPickupAt === "string" ? { requestedPickupAt } : {}),
+    ...(typeof expectedServiceFee === "number" ? { expectedServiceFee } : {}),
   };
 }

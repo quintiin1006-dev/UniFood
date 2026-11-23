@@ -1,3 +1,4 @@
+import { readServiceFee } from "../service-fee/presentation";
 import type { HistoryItem, HistoryOrder, WorkerHistoryPage } from "./types";
 
 const record = (value: unknown): value is Record<string, unknown> =>
@@ -123,6 +124,7 @@ export function parseWorkerHistory(value: unknown): WorkerHistoryPage | null {
       status: entry.status as HistoryOrder["status"],
       completedAt: entry.completedAt,
       total: entry.total,
+      serviceFee: readServiceFee(entry.serviceFee),
       items,
       ...cancellation(entry),
     });

@@ -1,3 +1,4 @@
+import { readServiceFee } from "../../service-fee/presentation";
 import type { CafeteriaMenu, ClientCart, MenuLine } from "../types";
 import { MENU_NONE } from "../types";
 import type { ClientDailyMenu } from "../../daily-menu/types";
@@ -98,6 +99,11 @@ export type OrderRequest = {
   dailyMenu?: DailyMenuRequest;
   note?: string;
   requestedPickupAt?: string;
+  /**
+   * The service fee the client was shown (whole pesos). Spring refuses a stale one with 409
+   * SERVICE_FEE_CHANGED; it never sets the fee. Absent when the menu carries none.
+   */
+  expectedServiceFee?: number;
 };
 
 /** The plate in the backend's format, in a stable order so the same plate is the same body. */
@@ -120,6 +126,7 @@ export function buildOrderRequest(
   cart: ClientCart,
   note: string,
   requestedPickupAt: string | null,
+  expectedServiceFee: number | null = null,
 ): OrderRequest {
   const safe = restoreCart(cart);
   const trimmed = note.trim();
@@ -133,10 +140,15 @@ export function buildOrderRequest(
     ...(plate ? { dailyMenu: dailyMenuRequest(plate) } : {}),
     ...(trimmed ? { note: trimmed } : {}),
     ...(requestedPickupAt ? { requestedPickupAt } : {}),
+    ...(expectedServiceFee !== null ? { expectedServiceFee } : {}),
   };
 }
 
-/** Same content, same signature: the Idempotency-Key follows it (docs/decisiones.md §6). */
+/**
+ * Same content, same signature: the Idempotency-Key follows it (docs/decisiones.md §6). The
+ * expected service fee is left out on purpose, as Spring leaves it out of the request hash: a
+ * fee that changed is a 409 that writes nothing, so the same key is still free.
+ */
 export function orderSignature(request: OrderRequest) {
   return JSON.stringify([
     request.cafeteriaId,
@@ -186,7 +198,15 @@ export function reviewOrder(
     if (!result.ok) return { ...result, field: "pickup" };
     pickup = result.iso;
   }
-  return { ok: true, request: buildOrderRequest(cart, input.note, pickup) };
+  return {
+    ok: true,
+    request: buildOrderRequest(
+      cart,
+      input.note,
+      pickup,
+      menu?.serviceFee ?? null,
+    ),
+  };
 }
 
 /** Lines for display, from the current menu. */
@@ -205,7 +225,10 @@ export function checkoutLines(
 export type PlacedOrder = {
   id: string;
   status: string;
+  /** Includes serviceFee. */
   total: number;
+  /** Frozen by Spring; 0 without a fee. */
+  serviceFee: number;
   note: string | null;
   requestedPickupAt: string | null;
   cafeteria: string | null;
@@ -264,6 +287,7 @@ export function parsePlacedOrder(payload: unknown): PlacedOrder | null {
     id: body.id,
     status: body.status,
     total,
+    serviceFee: readServiceFee(body.serviceFee),
     note: typeof body.note === "string" && body.note ? body.note : null,
     requestedPickupAt: pickup,
     cafeteria: typeof cafeteria?.name === "string" ? cafeteria.name : null,

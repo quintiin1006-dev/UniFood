@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkerChargeTotal } from "@/features/service-fee/components/WorkerChargeTotal";
 import {
   Check,
   Megaphone,
@@ -358,22 +359,20 @@ export default function CallsBoard({
                       ))}
                     </ul>
                   )}
-                  <div className={styles.total}>
-                    <span>
-                      Total
+                  <WorkerChargeTotal
+                    total={selectedOrder.total}
+                    serviceFee={selectedOrder.serviceFee}
+                    className={styles.total}
+                    format={formatCurrency}
+                    detail={
                       <small>
                         {orderUnitsText(
                           totalUnits,
                           Boolean(selectedOrder.dailyMenu),
                         )}
                       </small>
-                    </span>
-                    <strong>
-                      {selectedOrder.total !== undefined
-                        ? formatCurrency(selectedOrder.total)
-                        : "No disponible"}
-                    </strong>
-                  </div>
+                    }
+                  />
                 </section>
                 {selectedOrder.note && (
                   <section className={styles.orderNote} aria-label="Notas">

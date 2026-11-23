@@ -41,4 +41,6 @@ export interface BackendOrder {
   note: string | null;
   /** The plate of the daily menu (section 3.5, prices as numbers); absent without one. */
   dailyMenu?: unknown;
+  /** 033: the service fee frozen into the order; total already includes it. */
+  serviceFee?: unknown;
 }

@@ -98,6 +98,13 @@ a UniFood, no a la cafetería.
   Apagada: cargo 0, la carta no trae `serviceFee`, los endpoints nuevos responden 404
   `SERVICE_FEE_DISABLED` y el billing anterior sigue igual.
 - Orden de despliegue: aplicar la 033 en staging, desplegar el backend, encender el flag.
+- **Web (PR 2):** con `SERVICE_FEE_ENABLED` apagado en Vercel, el BFF quita `serviceFee` de la
+  carta: no se ve ninguna línea nueva y el carrito no envía `expectedServiceFee`. Las líneas
+  «Productos» y «Cargo por servicio» solo aparecen cuando el cargo es mayor que 0.
+- **Orden de encendido:** primero Vercel y después Render. Con la web encendida y el backend
+  apagado no pasa nada (la carta no trae cargo). Al revés (backend encendido, web apagada) el
+  carrito no envía el cargo y cada pedido con cargo recibe el 409 «El cargo por servicio
+  cambió…», que ya muestra el valor nuevo para confirmar de nuevo.
 - Seed de staging: `scripts/supabase/seed-cargo-servicio-staging.sql`.
 
 ## 7. Pendientes explícitos (fuera de este alcance)

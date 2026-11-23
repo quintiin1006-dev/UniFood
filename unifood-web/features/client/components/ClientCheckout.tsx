@@ -53,6 +53,11 @@ import {
   DAILY_MENU_LINE_CHANGED,
 } from "../../shared/messages";
 import CheckoutConfirmation from "./CheckoutConfirmation";
+import { FeeLines } from "@/features/service-fee/components/FeeLines";
+import {
+  shownServiceFee,
+  type FeeOverride,
+} from "@/features/service-fee/checkout";
 import shared from "./ClientShopping.module.css";
 import styles from "./ClientCheckout.module.css";
 
@@ -99,6 +104,7 @@ export default function ClientCheckout({
       cart={cart}
       menu={state.menu}
       initialTime={initialTime}
+      onRefreshMenu={retry}
       onPlaced={(order) => {
         setPlaced(order);
         // The pages cached for 30 s (Inicio, Mi pedido) must not show the cart before the order.
@@ -114,11 +120,14 @@ function CheckoutForm({
   cart,
   menu,
   initialTime,
+  onRefreshMenu,
   onPlaced,
 }: {
   cart: ClientCart;
   menu: CafeteriaMenu;
   initialTime: string;
+  /** Reads the menu again now (after a 409 SERVICE_FEE_CHANGED); the cart is kept. */
+  onRefreshMenu: () => void;
   onPlaced: (order: PlacedOrder) => void;
 }) {
   const { ownerId, latestCart, completeOrder, clear } = useClientCart();
@@ -140,6 +149,9 @@ function CheckoutForm({
   // until the client chooses again (the plate changes) or removes it.
   const [reload, setReload] = useState(0);
   const [refused, setRefused] = useState<string | null>(null);
+  // The fee Spring answered with in a 409, shown until the menu read again brings its own.
+  const [feeOverride, setFeeOverride] = useState<FeeOverride | null>(null);
+  const serviceFee = shownServiceFee(menu.serviceFee, feeOverride);
   const daily = useClientDailyMenu(
     menu.cafeteria.id,
     !!plate && menu.dailyMenuAvailable,
@@ -154,12 +166,13 @@ function CheckoutForm({
     plateStatus === "ok" && refused === JSON.stringify(plate)
       ? "changed"
       : plateStatus;
-  // Published prices for display only; Spring computes the total again.
+  // Published prices and the fee in force, for display only; Spring computes the total again.
   const total =
     lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0) +
     (plate && dailyMenu && shownStatus === "ok"
       ? menuLineAmount(plate, dailyMenu)
-      : 0);
+      : 0) +
+    (serviceFee ?? 0);
   const cartIssue = checking
     ? DAILY_MENU_CHECKING
     : (validateCart(cart, menu, dailyMenu) ??
@@ -183,7 +196,8 @@ function CheckoutForm({
     if (checking || shownStatus === "changed") return;
     const review = reviewOrder(
       latest,
-      menu,
+      // The fee on screen is the one sent: after a 409 that is the value Spring answered with.
+      { ...menu, serviceFee },
       { note, pickupTime: choosePickup ? pickupTime : "" },
       new Date(),
       dailyMenu,
@@ -228,6 +242,14 @@ function CheckoutForm({
       clearAttempt();
     }
     setProblem({ message: result.error.message, action: result.error.action });
+    if (result.error.action === "serviceFee") {
+      // Show the new total at once, read the menu again, and wait for a new confirmation.
+      setFeeOverride({
+        value: result.error.serviceFee ?? menu.serviceFee ?? 0,
+        menuFee: menu.serviceFee,
+      });
+      onRefreshMenu();
+    }
     if (result.error.action === "dailyMenu" && plate) {
       setRefused(JSON.stringify(plate));
       setReload((value) => value + 1);
@@ -378,6 +400,12 @@ function CheckoutForm({
             />
           </div>
         )}
+        {/* Products and the fee before the total; nothing without a fee. */}
+        <FeeLines
+          total={total}
+          serviceFee={serviceFee ?? 0}
+          format={(amount) => currency.format(amount)}
+        />
         {/* Fixed at the bottom of the screen: the total and the one action. */}
         <div className={styles.bar}>
           <div className={styles.barTotal}>

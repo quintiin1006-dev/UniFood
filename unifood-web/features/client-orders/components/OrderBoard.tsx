@@ -1,5 +1,6 @@
 "use client";
 
+import { FeeLines } from "@/features/service-fee/components/FeeLines";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
@@ -160,6 +161,11 @@ export default function OrderBoard({
             <span>{CLIENT_ORDER_NOTE_LABEL}</span> {order.note}
           </p>
         )}
+        <FeeLines
+          total={Number(order.total)}
+          serviceFee={order.serviceFee}
+          format={(amount) => formatTotal(String(amount))}
+        />
         <p className={styles.total}>
           <span>Total</span>
           <strong>{formatTotal(order.total)}</strong>

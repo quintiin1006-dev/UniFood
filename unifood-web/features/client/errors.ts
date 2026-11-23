@@ -12,6 +12,7 @@ export type CheckoutAction =
   | "time" // change the pickup time
   | "note" // shorten the note
   | "dailyMenu" // the plate is marked; today's menu is read again to choose again
+  | "serviceFee" // the fee changed: the new total is shown and the client confirms again
   | "login"; // sign in again; the cart is kept
 
 export type CheckoutError = {
@@ -20,6 +21,8 @@ export type CheckoutError = {
   action: CheckoutAction;
   /** The order changed under the old key, so the next attempt needs a new one. */
   newKey: boolean;
+  /** SERVICE_FEE_CHANGED only: the fee in force that Spring answered with. */
+  serviceFee?: number;
 };
 
 const make = (
@@ -97,6 +100,12 @@ const byCode: Record<string, CheckoutError> = {
     "retry",
   ),
   BACKEND_UNAVAILABLE: make("BACKEND_UNAVAILABLE", RETRY_MESSAGE, "retry"),
+  // Nothing was written: the same key is still free for the confirmation with the new total.
+  SERVICE_FEE_CHANGED: make(
+    "SERVICE_FEE_CHANGED",
+    BACKEND_ERROR_MESSAGES.SERVICE_FEE_CHANGED,
+    "serviceFee",
+  ),
   AUTH_TEMPORARILY_UNAVAILABLE: make(
     "AUTH_TEMPORARILY_UNAVAILABLE",
     "No pudimos verificar tu sesión en este momento. Inténtalo de nuevo; tu carrito se conserva.",

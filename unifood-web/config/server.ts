@@ -4,6 +4,7 @@ import {
   readAuthConfig,
   readDailyMenuEnabled,
   readNoticesEnabled,
+  readServiceFeeEnabled,
   validateEnvironment,
 } from "./environment";
 
@@ -26,6 +27,10 @@ export function serverNoticesEnabled() {
   } catch {
     return false;
   }
+}
+
+export function serverServiceFeeEnabled() {
+  return readServiceFeeEnabled(process.env);
 }
 
 export function validateServerEnvironment() {

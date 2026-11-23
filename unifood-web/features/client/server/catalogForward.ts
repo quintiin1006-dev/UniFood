@@ -6,7 +6,10 @@ import {
   temporaryAuthResponse,
 } from "@/features/auth/server/failures";
 import { isClient } from "@/features/auth/validation";
-import { serverDailyMenuEnabled } from "@/config/server";
+import {
+  serverDailyMenuEnabled,
+  serverServiceFeeEnabled,
+} from "@/config/server";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -41,8 +44,20 @@ export function forwardClientMenuFor(
   return forward(
     `/api/me/menu?cafeteriaId=${encodeURIComponent(cafeteriaId)}`,
     ifNoneMatch,
-    !dailyMenuEnabled(),
+    [
+      ...(dailyMenuEnabled() ? [] : ["dailyMenu"]),
+      ...(serviceFeeEnabled() ? [] : ["serviceFee"]),
+    ],
   );
+}
+
+/** SERVICE_FEE_ENABLED, read on the server only; a malformed value counts as off. */
+function serviceFeeEnabled() {
+  try {
+    return serverServiceFeeEnabled();
+  } catch {
+    return false;
+  }
 }
 
 /** MENU_DINAMICO_ENABLED, read on the server only; a malformed value counts as off. */
@@ -55,13 +70,14 @@ function dailyMenuEnabled() {
 }
 
 /**
- * `withoutDailyMenu`: with the web flag off, `dailyMenu` is removed from the menu, so Inicio
- * never mounts the card and the browser never learns the flag (propuesta 3.1).
+ * `hidden`: the menu fields a web flag that is off removes, so the browser never learns the
+ * flag: `dailyMenu` (Inicio never mounts the card, propuesta 3.1) and `serviceFee` (no fee
+ * line in the cart and no `expectedServiceFee` sent, docs/modelo-de-negocio.md).
  */
 async function forward(
   path: string,
   ifNoneMatch: string | null,
-  withoutDailyMenu = false,
+  hidden: string[] = [],
 ) {
   let auth: Awaited<ReturnType<typeof getAuth>>;
   try {
@@ -121,7 +137,7 @@ async function forward(
       "BACKEND_UNAVAILABLE",
     );
   out.set("Content-Type", "application/json");
-  if (withoutDailyMenu && upstream.status === 200) {
+  if (hidden.length && upstream.status === 200) {
     let body: unknown;
     try {
       body = await upstream.json();
@@ -132,8 +148,8 @@ async function forward(
         "BACKEND_UNAVAILABLE",
       );
     }
-    if (body && typeof body === "object" && "dailyMenu" in body)
-      delete (body as { dailyMenu?: unknown }).dailyMenu;
+    if (body && typeof body === "object")
+      for (const key of hidden) delete (body as Record<string, unknown>)[key];
     return new Response(JSON.stringify(body), { status: 200, headers: out });
   }
   return new Response(await upstream.text(), {

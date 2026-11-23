@@ -40,6 +40,12 @@ export type CafeteriaMenu = {
   categories: MenuCategory[];
   /** dailyMenu.available: the flag is on and today's menu is published and complete. */
   dailyMenuAvailable: boolean;
+  /**
+   * The service fee a new order pays now, in whole pesos, read from the server and shown before
+   * confirming. null when the menu carries none (SERVICE_FEE_ENABLED off): then nothing is shown
+   * and no expectedServiceFee is sent.
+   */
+  serviceFee: number | null;
 };
 
 /** A product line. Lines saved before the daily menu have no `kind` and are products too. */

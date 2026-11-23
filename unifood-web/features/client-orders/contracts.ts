@@ -1,3 +1,4 @@
+import { readServiceFee } from "../service-fee/presentation";
 import type {
   ClientOrder,
   OrderHistoryItem,
@@ -75,6 +76,7 @@ export function toClientOrder(raw: unknown): ClientOrder | null {
     id: order.id,
     status: order.status,
     total: order.total,
+    serviceFee: readServiceFee(order.serviceFee),
     note: text(order.note) ? order.note : null,
     createdAt: order.createdAt,
     deliveredAt: instant(order.deliveredAt) ? order.deliveredAt : null,
@@ -112,6 +114,7 @@ function historyItem(raw: unknown): OrderHistoryItem | null {
     id: item.id,
     status: item.status,
     total: item.total,
+    serviceFee: readServiceFee(item.serviceFee),
     createdAt: item.createdAt,
     cafeteriaName: item.cafeteriaName,
     itemCount: item.itemCount as number,
