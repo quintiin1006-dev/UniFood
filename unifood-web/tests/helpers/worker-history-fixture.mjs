@@ -16,6 +16,7 @@ export function workerHistoryFixture() {
         status: "DELIVERED",
         completedAt: "2026-10-14T17:43:00Z",
         total: 19000,
+        serviceFee: 0,
         cancellationSource: /** @type {string|null} */ (null),
         rejectionReason: /** @type {string|null} */ (null),
         items: [
@@ -35,6 +36,7 @@ export function workerHistoryFixture() {
         status: "NOT_COLLECTED",
         completedAt: "2026-10-14T17:20:00Z",
         total: 30000,
+        serviceFee: 0,
         cancellationSource: /** @type {string|null} */ (null),
         rejectionReason: /** @type {string|null} */ (null),
         items: [
@@ -53,6 +55,7 @@ export function workerHistoryFixture() {
         status: "CANCELLED",
         completedAt: "2026-10-14T16:10:00Z",
         total: 18000,
+        serviceFee: 0,
         cancellationSource: /** @type {string|null} */ ("WORKER"),
         rejectionReason: /** @type {string|null} */ (
           "Se acabó el ingrediente principal"

@@ -16,7 +16,10 @@ export type HistoryOrder = {
   clientName: string | null;
   status: HistoryStatus;
   completedAt: string;
+  /** Includes serviceFee (033). */
   total: number;
+  /** Service fee frozen into the order, whole pesos; 0 without one. */
+  serviceFee: number;
   items: HistoryItem[];
   cancellationSource: CancellationSource | null;
   rejectionReason: string | null;

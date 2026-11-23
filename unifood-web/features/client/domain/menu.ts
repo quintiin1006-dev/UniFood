@@ -1,3 +1,4 @@
+import { readServiceFee } from "../../service-fee/presentation";
 import type {
   CafeteriaMenu,
   ContextCafeteria,
@@ -152,6 +153,10 @@ export function toCafeteriaMenu(payload: unknown): CafeteriaMenu | null {
     cafeteria,
     businessDate,
     dailyMenuAvailable: asRecord(body.dailyMenu)?.available === true,
+    serviceFee:
+      body.serviceFee === undefined || body.serviceFee === null
+        ? null
+        : readServiceFee(body.serviceFee),
     categories: cafeteria.open
       ? categories
       : categories.map((category) => ({

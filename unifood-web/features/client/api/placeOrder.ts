@@ -1,3 +1,4 @@
+import { readServiceFee } from "../../service-fee/presentation";
 import {
   parsePlacedOrder,
   type OrderRequest,
@@ -60,11 +61,18 @@ export async function placeOrder(
     body && typeof body === "object"
       ? (body as { code?: unknown }).code
       : undefined;
-  return {
-    ok: false,
-    error: describeOrderError(
-      response.status,
-      typeof code === "string" && code.length <= 64 ? code : undefined,
-    ),
-  };
+  const error = describeOrderError(
+    response.status,
+    typeof code === "string" && code.length <= 64 ? code : undefined,
+  );
+  // The fee in force comes with the 409, so the new total shows before the menu is read again.
+  if (error.action === "serviceFee" && body && typeof body === "object") {
+    const fee = (body as { serviceFee?: unknown }).serviceFee;
+    if (fee !== undefined && fee !== null)
+      return {
+        ok: false,
+        error: { ...error, serviceFee: readServiceFee(fee) },
+      };
+  }
+  return { ok: false, error };
 }

@@ -1,3 +1,5 @@
+import { SERVICE_FEE_TOTAL_TO_CHARGE } from "@/features/shared/messages";
+import { FeeLines } from "@/features/service-fee/components/FeeLines";
 import { Check, Clock3, X } from "lucide-react";
 import { StatusChip } from "@/components/ui/StatusChip";
 import type { HistoryOrder } from "../types";
@@ -58,8 +60,15 @@ export function HistoryOrderCard({ order }: { order: HistoryOrder }) {
       ) : (
         <p className={styles.noItems}>Sin detalle de productos registrado.</p>
       )}
+      <FeeLines
+        total={order.total}
+        serviceFee={order.serviceFee}
+        format={formatHistoryPrice}
+      />
       <div className={styles.total}>
-        <span>Total</span>
+        <span>
+          {order.serviceFee > 0 ? SERVICE_FEE_TOTAL_TO_CHARGE : "Total"}
+        </span>
         <strong>{formatHistoryPrice(order.total)}</strong>
       </div>
     </article>

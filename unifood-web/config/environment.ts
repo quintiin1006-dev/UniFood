@@ -94,6 +94,17 @@ export function readDailyMenuEnabled(environment: Environment): boolean {
   invalid("MENU_DINAMICO_ENABLED", 'must be "true" or "false"');
 }
 
+/**
+ * SERVICE_FEE_ENABLED, the same flag the backend reads (docs/modelo-de-negocio.md). Server-only:
+ * the browser never receives it. Off when unset or blank; only "true" or "false" (any case).
+ */
+export function readServiceFeeEnabled(environment: Environment): boolean {
+  const value = environment.SERVICE_FEE_ENABLED?.trim().toLowerCase();
+  if (!value || value === "false") return false;
+  if (value === "true") return true;
+  invalid("SERVICE_FEE_ENABLED", 'must be "true" or "false"');
+}
+
 export function validateEnvironment(environment: Environment): void {
   readApiUrl(environment);
   readAuthConfig(environment);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { WorkerChargeTotal } from "@/features/service-fee/components/WorkerChargeTotal";
 
 import { AlertTriangle, Clock3, X, ShoppingBag } from "lucide-react";
 
@@ -236,13 +237,13 @@ export default function OrderDetail({
 
           <DailyMenuSummary order={order} withTotal />
           {/* Total: only when it is not already the single line's value. */}
-          {showsTotal(order.items) && (
-            <div className={styles.total}>
-              <span>Total</span>
-
-              <strong>${total.toLocaleString("es-CO")}</strong>
-            </div>
-          )}
+          <WorkerChargeTotal
+            total={total}
+            serviceFee={order.serviceFee}
+            className={styles.total}
+            show={showsTotal(order.items)}
+            format={(amount) => `$${amount.toLocaleString("es-CO")}`}
+          />
         </section>
 
         {/* Observaciones generales */}

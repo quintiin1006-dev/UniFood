@@ -20,7 +20,10 @@ export type OrderLine = {
 export type ClientOrder = {
   id: string;
   status: OrderStatus;
+  /** Includes serviceFee (033). */
   total: string;
+  /** Service fee frozen by Spring, whole pesos; 0 without one. */
+  serviceFee: number;
   note: string | null;
   createdAt: string;
   /** When the cafeteria marked it delivered; null until then. */
@@ -39,7 +42,9 @@ export type ClientOrder = {
 export type OrderHistoryItem = {
   id: string;
   status: OrderStatus;
+  /** Includes serviceFee (033). */
   total: string;
+  serviceFee: number;
   createdAt: string;
   cafeteriaName: string;
   itemCount: number;
