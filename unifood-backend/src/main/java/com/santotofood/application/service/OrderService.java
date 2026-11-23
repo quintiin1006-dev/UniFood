@@ -277,16 +277,41 @@ public class OrderService
    * cancellation and the daily close never push (docs/notificaciones-push.md).
    */
   private void publishStatus(Order saved) {
-    OrderPushEvent.forStatus(saved)
-        .ifPresent(
-            event -> recordNotice(saved.getId(), OrderNoticeKind.valueOf(event.kind().name()), 0));
+    recordNotice(
+        saved.getId(),
+        () -> OrderPushEvent.forStatus(saved).flatMap(e -> noticeKind(e.kind())).orElse(null),
+        0);
     notify(() -> OrderPushEvent.forStatus(saved).orElse(null));
   }
 
-  /** Same transaction as the transition; the recorder never throws or aborts it. */
+  /** Explicit mapping; a push kind without an inbox equivalent stores no notice. */
+  static java.util.Optional<OrderNoticeKind> noticeKind(OrderPushEvent.Kind kind) {
+    if (kind == null) return java.util.Optional.empty();
+    return switch (kind) {
+      case PREPARING -> java.util.Optional.of(OrderNoticeKind.PREPARING);
+      case READY -> java.util.Optional.of(OrderNoticeKind.READY);
+      case CALLED -> java.util.Optional.of(OrderNoticeKind.CALLED);
+      case REMINDER -> java.util.Optional.of(OrderNoticeKind.REMINDER);
+      case DELIVERED -> java.util.Optional.of(OrderNoticeKind.DELIVERED);
+      case NOT_COLLECTED -> java.util.Optional.of(OrderNoticeKind.NOT_COLLECTED);
+      case REJECTED -> java.util.Optional.of(OrderNoticeKind.REJECTED);
+      default -> java.util.Optional.empty(); // NEW_ORDER (workers) and any later kind
+    };
+  }
+
   private void recordNotice(UUID orderId, OrderNoticeKind kind, int sequence) {
+    recordNotice(orderId, () -> kind, sequence);
+  }
+
+  /**
+   * Same transaction as the transition; computing the kind and recording both run inside the try,
+   * so nothing here can throw or abort the transition. A null kind records nothing.
+   */
+  private void recordNotice(
+      UUID orderId, java.util.function.Supplier<OrderNoticeKind> kind, int sequence) {
     try {
-      notices.record(orderId, kind, sequence, timeProvider.now());
+      var computed = kind.get();
+      if (computed != null) notices.record(orderId, computed, sequence, timeProvider.now());
     } catch (RuntimeException failure) {
       LOG.warn("Order notice not recorded ({})", failure.getClass().getSimpleName());
     }

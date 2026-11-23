@@ -5,6 +5,7 @@ import static org.mockito.Mockito.*;
 
 import com.santotofood.application.model.OrderNoticeKind;
 import com.santotofood.domain.model.Order;
+import com.santotofood.domain.model.OrderPushEvent;
 import com.santotofood.domain.model.OrderStatus;
 import com.santotofood.domain.port.out.OrderItemRepository;
 import com.santotofood.domain.port.out.OrderRepository;
@@ -129,6 +130,32 @@ class OrderServiceNoticeTest {
     service.cancelOwnOrder(id);
     service.cancelOwnOrder(id);
     assertEquals(List.of(OrderNoticeKind.CANCELLED_BY_CLIENT), kinds());
+  }
+
+  @Test
+  void aStatusKindWithoutInboxEquivalentConfirmsTheTransitionAndStoresNoNotice() {
+    Instant called = created.plusSeconds(600);
+    Order order = order(OrderStatus.CALLED, called, 0);
+    when(clock.now()).thenReturn(called.plusSeconds(10));
+    var workersOnly = Optional.of(OrderPushEvent.of(id, OrderPushEvent.Kind.NEW_ORDER));
+    try (var events = mockStatic(OrderPushEvent.class, CALLS_REAL_METHODS)) {
+      events.when(() -> OrderPushEvent.forStatus(any())).thenReturn(workersOnly);
+      assertDoesNotThrow(() -> service.deliverOrder(id));
+    }
+    assertEquals(OrderStatus.DELIVERED, order.getStatus());
+    verify(orders).save(order);
+    assertTrue(recorded.isEmpty());
+  }
+
+  @Test
+  void everyClientStatusKindMapsExplicitlyAndTheWorkersKindDoesNot() {
+    for (OrderStatus status : OrderStatus.values()) {
+      var event = OrderPushEvent.forStatus(order(status, null, 0));
+      event.ifPresent(
+          e -> assertTrue(OrderService.noticeKind(e.kind()).isPresent(), status.name()));
+    }
+    assertTrue(OrderService.noticeKind(OrderPushEvent.Kind.NEW_ORDER).isEmpty());
+    assertTrue(OrderService.noticeKind(null).isEmpty());
   }
 
   @Test
