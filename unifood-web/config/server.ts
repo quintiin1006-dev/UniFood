@@ -3,6 +3,7 @@ import {
   readApiUrl,
   readAuthConfig,
   readDailyMenuEnabled,
+  readNoticesEnabled,
   validateEnvironment,
 } from "./environment";
 
@@ -16,6 +17,15 @@ export function serverAuthConfig() {
 
 export function serverDailyMenuEnabled() {
   return readDailyMenuEnabled(process.env);
+}
+
+/** A malformed value counts as off, so the client shell always renders. */
+export function serverNoticesEnabled() {
+  try {
+    return readNoticesEnabled(process.env);
+  } catch {
+    return false;
+  }
 }
 
 export function validateServerEnvironment() {
