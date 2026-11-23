@@ -1,3 +1,4 @@
+import { FeeLines } from "@/features/service-fee/components/FeeLines";
 import { formatOrderDate, formatTotal, pickupLabel } from "../presentation";
 import type { ClientOrder } from "../types";
 import styles from "./ClientOrders.module.css";
@@ -47,6 +48,11 @@ export default function OrderSummary({
           )}
         </dl>
       )}
+      <FeeLines
+        total={Number(order.total)}
+        serviceFee={order.serviceFee}
+        format={(amount) => formatTotal(String(amount))}
+      />
       <p className={styles.total}>
         <span>Total</span>
         <strong>{formatTotal(order.total)}</strong>

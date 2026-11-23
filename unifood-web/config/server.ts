@@ -3,6 +3,7 @@ import {
   readApiUrl,
   readAuthConfig,
   readDailyMenuEnabled,
+  readServiceFeeEnabled,
   validateEnvironment,
 } from "./environment";
 
@@ -16,6 +17,10 @@ export function serverAuthConfig() {
 
 export function serverDailyMenuEnabled() {
   return readDailyMenuEnabled(process.env);
+}
+
+export function serverServiceFeeEnabled() {
+  return readServiceFeeEnabled(process.env);
 }
 
 export function validateServerEnvironment() {

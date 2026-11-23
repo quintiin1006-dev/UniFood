@@ -1,5 +1,7 @@
 "use client";
 
+import { SERVICE_FEE_TOTAL_TO_CHARGE } from "@/features/shared/messages";
+import { FeeLines } from "@/features/service-fee/components/FeeLines";
 import { useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import {
@@ -87,8 +89,15 @@ export function HistoryOrderRow({
                 Sin detalle de productos registrado.
               </p>
             )}
+            <FeeLines
+              total={order.total}
+              serviceFee={order.serviceFee}
+              format={formatHistoryPrice}
+            />
             <div className={styles.total}>
-              <span>Total</span>
+              <span>
+                {order.serviceFee > 0 ? SERVICE_FEE_TOTAL_TO_CHARGE : "Total"}
+              </span>
               <strong>{formatHistoryPrice(order.total)}</strong>
             </div>
           </div>

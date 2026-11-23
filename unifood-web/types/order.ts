@@ -43,4 +43,6 @@ export interface Order {
   requestedPickupAt?: string;
   /** The daily menu plate (4.7); absent for orders without one and for old ones. */
   dailyMenu?: OrderPlate;
+  /** 033: service fee in whole pesos, included in total; 0 without one. */
+  serviceFee?: number;
 }

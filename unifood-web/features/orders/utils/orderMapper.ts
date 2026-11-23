@@ -4,6 +4,7 @@ import type {
   BackendOrderStatus,
 } from "@/features/orders/types/backendOrder";
 import { toOrderPlate } from "@/features/daily-menu/orderSummary";
+import { readServiceFee } from "../../service-fee/presentation";
 
 export function mapOrderStatus(status: BackendOrderStatus): Order["status"] {
   switch (status) {
@@ -72,6 +73,7 @@ export function mapBackendOrder(backendOrder: BackendOrder): Order {
       subtotal: item.subtotal,
     })),
     total: backendOrder.total,
+    serviceFee: readServiceFee(backendOrder.serviceFee),
     status: mapOrderStatus(backendOrder.status),
   };
 }

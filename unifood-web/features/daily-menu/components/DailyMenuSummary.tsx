@@ -15,7 +15,8 @@ import styles from "./DailyMenuSummary.module.css";
  * plate it draws nothing, so old orders look exactly as before.
  *
  * `withTotal`: the worker's detail shows its total only for several lines; with a plate the
- * order's total is shown here instead whenever the detail would hide it.
+ * order's total is shown here instead whenever the detail would hide it. With a service fee
+ * (033) the detail always shows «Total a cobrar» itself, so it is not repeated here.
  */
 export function DailyMenuSummary({
   order,
@@ -24,6 +25,7 @@ export function DailyMenuSummary({
   order: {
     dailyMenu?: OrderPlate | null;
     total?: number | string;
+    serviceFee?: number;
     items: { quantity: number }[];
   };
   withTotal?: boolean;
@@ -57,12 +59,15 @@ export function DailyMenuSummary({
           </div>
         )}
       </dl>
-      {withTotal && total !== null && !showsTotal(order.items) && (
-        <p className={styles.total}>
-          <span>{DAILY_MENU_ORDER_TOTAL}</span>
-          <strong>{formatPrice(total)}</strong>
-        </p>
-      )}
+      {withTotal &&
+        total !== null &&
+        !showsTotal(order.items) &&
+        !((order.serviceFee ?? 0) > 0) && (
+          <p className={styles.total}>
+            <span>{DAILY_MENU_ORDER_TOTAL}</span>
+            <strong>{formatPrice(total)}</strong>
+          </p>
+        )}
     </section>
   );
 }

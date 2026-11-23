@@ -6,6 +6,7 @@ import { CircleCheck } from "lucide-react";
 import { currency } from "../domain/catalog";
 import { pickupLabel, type PlacedOrder } from "../domain/checkout";
 import CheckoutLines from "./CheckoutLines";
+import { FeeLines } from "@/features/service-fee/components/FeeLines";
 import shared from "./ClientShopping.module.css";
 import styles from "./ClientCheckout.module.css";
 
@@ -56,6 +57,11 @@ export default function CheckoutConfirmation({
         )}
       </dl>
       <CheckoutLines lines={order.items} />
+      <FeeLines
+        total={order.total}
+        serviceFee={order.serviceFee}
+        format={(amount) => currency.format(amount)}
+      />
       <div className={shared.cartTotal}>
         <span>Total</span>
         <strong>{currency.format(order.total)}</strong>

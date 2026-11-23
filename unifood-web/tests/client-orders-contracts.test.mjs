@@ -66,7 +66,7 @@ test("history pages need orders and a cursor or null", () => {
   };
   assert.deepEqual(
     contracts.toHistoryPage({ orders: [item], nextCursor: "abc_-1" }),
-    { orders: [item], nextCursor: "abc_-1" },
+    { orders: [{ ...item, serviceFee: 0 }], nextCursor: "abc_-1" },
   );
   assert.equal(
     contracts.toHistoryPage({ orders: [], nextCursor: null }).nextCursor,

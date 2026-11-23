@@ -111,6 +111,15 @@ export const CART_ADD_NOTE = "Agregar una nota";
 export const CART_TOTAL = "Total";
 export const CART_CONFIRM = "Confirmar pedido";
 export const CART_EMPTY_ACTION = "Vaciar carrito";
+/* Cargo por servicio (docs/modelo-de-negocio.md): una línea más; sin cargo, no se muestra. */
+export const SERVICE_FEE_PRODUCTS = "Productos";
+export const SERVICE_FEE_LABEL = "Cargo por servicio";
+/** Worker: what is charged at the counter, products plus the service fee. */
+export const SERVICE_FEE_TOTAL_TO_CHARGE = "Total a cobrar";
+export const SERVICE_FEE_BREAKDOWN_LABEL = "Desglose del total";
+/** The fee changed between the cart and the confirmation: the new total is on screen. */
+export const SERVICE_FEE_CHANGED =
+  "El cargo por servicio cambió. Revisa el total y confirma de nuevo.";
 /* Contraseña olvidada: un código al correo; la respuesta no revela si la cuenta existe. */
 /** Same text whether or not the address has an account: it never reveals which ones exist. */
 export const RECOVERY_CODE_SENT =
@@ -339,6 +348,16 @@ export const BACKEND_ERROR_CODES = [
   "DAILY_MENU_CATEGORY_NOT_FOUND",
   "DAILY_MENU_ADDITION_UNAVAILABLE",
   "DAILY_MENU_DATE_CHANGED",
+  "SERVICE_FEE_CHANGED",
+  "SERVICE_FEE_DISABLED",
+  "SERVICE_FEE_INVALID_REQUEST",
+  "SERVICE_FEE_STATE_CHANGED",
+  "SERVICE_FEE_MONTH_OPEN",
+  "SERVICE_FEE_MONTH_NOT_CLOSED",
+  "SERVICE_FEE_FORBIDDEN",
+  "SERVICE_FEE_TEMPORARILY_UNAVAILABLE",
+  "SERVICE_FEE_INTERNAL_ERROR",
+  "BILLING_DEPRECATED",
   "DAILY_MENU_SELECTION_INVALID",
   "DAILY_MENU_INVALID_REQUEST",
   "DAILY_MENU_FORBIDDEN",
@@ -477,6 +496,21 @@ export const BACKEND_ERROR_MESSAGES: Record<BackendErrorCode, string> = {
     "Las opciones de esta categoría superan los 350 caracteres en total.",
   DAILY_MENU_CATEGORY_NOT_FOUND: "No encontramos esa categoría del menú.",
   DAILY_MENU_ADDITION_UNAVAILABLE: "Esa adición no está disponible.",
+  SERVICE_FEE_CHANGED,
+  SERVICE_FEE_DISABLED: "Esta función no está disponible.",
+  SERVICE_FEE_INVALID_REQUEST:
+    "Revisa el valor: debe ser un número entero de pesos entre 0 y 2.000.",
+  SERVICE_FEE_STATE_CHANGED:
+    "Otra persona cambió este valor. Revisa el valor actual e inténtalo de nuevo.",
+  SERVICE_FEE_MONTH_OPEN:
+    "Este mes todavía no ha terminado. Podrás cerrarlo desde el primer día del mes siguiente.",
+  SERVICE_FEE_MONTH_NOT_CLOSED: "Cierra el mes antes de marcarlo como pagado.",
+  SERVICE_FEE_FORBIDDEN: "No tienes permisos para ver el cargo por servicio.",
+  SERVICE_FEE_TEMPORARILY_UNAVAILABLE:
+    "No pudimos cargar el cargo por servicio en este momento. Inténtalo nuevamente.",
+  SERVICE_FEE_INTERNAL_ERROR: "No pudimos cargar el cargo por servicio.",
+  BILLING_DEPRECATED:
+    "El modelo de cobro fue reemplazado por el cargo por servicio.",
   DAILY_MENU_DATE_CHANGED:
     "Cambió el día. Actualiza la pantalla para ver el menú de hoy.",
   DAILY_MENU_SELECTION_INVALID:
