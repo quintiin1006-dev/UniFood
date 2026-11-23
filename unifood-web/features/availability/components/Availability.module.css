@@ -1,16 +1,15 @@
-/* Disponibilidad in grays (base: b4d455f, made neutral). The shared panel frame, header and
-   sections come from WorkerPanel.module.css; this module repaints its own panel as a neutral
-   dark glass so the daily menu editor and the connection notice (white on glass) keep working,
-   and puts the products on light neutral cards. Tokens are local: the brand tokens used by the
+/* Disponibilidad in grays (base: b4d455f, made neutral). The panel frame, its glass, header and
+   sections come from WorkerPanel.module.css and are not repainted here (no own background, as
+   in Historial); the products sit on light neutral cards. Tokens are local: the brand tokens used by the
    other worker modules are not touched. #0b5fff only marks «Disponible» and the focus.
    Contrast: text 4.5:1 or more, control borders 3:1 or more (values below). */
-section.panel {
-  /* On the dark glass (about #1b1d22 over the worker background). */
-  --av-glass: rgba(24, 24, 27, 0.86);
-  --av-glass-head: rgba(255, 255, 255, 0.04);
+.panel {
+  /* On the shared glass panel (WorkerPanel.module.css), about #1666bc at its lightest. */
   --av-divider: rgba(255, 255, 255, 0.12);
-  --av-on-glass: #fafafa; /* 16:1 */
-  --av-on-glass-soft: #d4d4d8; /* 11:1 */
+  --av-on-glass: #ffffff; /* 5.7:1 */
+  --av-on-glass-soft: #f4f4f5; /* 5.2:1 */
+  --av-on-glass-alert: #ffe1dc; /* 4.7:1 */
+  --av-on-glass-control: rgba(255, 255, 255, 0.7); /* 3.7:1, control border */
   /* On the product cards (#ffffff). */
   --av-card: #ffffff;
   --av-card-muted: #f1f1f3;
@@ -23,20 +22,10 @@ section.panel {
   --av-danger: #b42318; /* 6.5:1 */
   --av-warning-bg: #fff4d9;
   --av-warning-line: #d9a63a;
-  --av-warning-text: #6a460b; /* 7.9:1 on its background */
+  --av-warning-text: #6a460b; /* 7.9:1 on --av-warning-bg */
 
   overflow: visible;
-  border-color: var(--av-divider);
-  background: var(--av-glass);
   color: var(--av-on-glass);
-}
-/* The shared header keeps its layout; only its blue tint becomes neutral. */
-section.panel > header {
-  border-bottom-color: var(--av-divider);
-  background: var(--av-glass-head);
-}
-section.panel > * + * {
-  border-top-color: var(--av-divider);
 }
 
 /* ------------------------------------------------------------------ cafeteria */
@@ -137,7 +126,7 @@ section.panel > * + * {
   place-items: center;
   width: 44px;
   height: 44px;
-  border: 1px solid var(--av-divider);
+  border: 1px solid var(--av-on-glass-control);
   border-radius: 12px;
   background: transparent;
   color: var(--av-on-glass);
@@ -323,7 +312,7 @@ section.panel > * + * {
   color: var(--av-on-glass-soft);
 }
 .cafeteriaControl .feedback[role="alert"] {
-  color: #ffb4ab;
+  color: var(--av-on-glass-alert);
 }
 
 /* ------------------------------------------------------------------ focus and motion */
