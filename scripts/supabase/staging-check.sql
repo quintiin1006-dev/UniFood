@@ -56,7 +56,10 @@ WITH account_fks AS (
       -- checks of the cleanup cover it; the row is ON DELETE CASCADE as well.
       'push_subscriptions.user_id',
       -- 031: only a WORKER publishes the daily menu; the cleanup skips accounts with a role.
-      'daily_menu_days.published_by')
+      'daily_menu_days.published_by',
+      -- 034: a notice is only written for the client of an existing order, so the clients
+      -- check of the cleanup covers it; the row is ON DELETE CASCADE as well.
+      'order_notices.user_id')
 ), checks(object, ok) AS (VALUES
   ('every account foreign key is covered by the cleanup', NOT EXISTS (SELECT 1 FROM uncovered_fks)),
   ('browser roles cannot write account columns', CASE WHEN to_regclass('public.pending_registrations') IS NULL THEN false
@@ -135,7 +138,9 @@ WHERE c.contype = 'f'
     -- 027: only an active CLIENT or WORKER registers a device; ON DELETE CASCADE as well.
     'push_subscriptions.user_id',
     -- 031: only a WORKER publishes the daily menu; the cleanup skips accounts with a role.
-    'daily_menu_days.published_by')
+    'daily_menu_days.published_by',
+    -- 034: only for the client of an existing order; ON DELETE CASCADE as well.
+    'order_notices.user_id')
 ORDER BY 1;
 
 -- Read-only: objects of migration 022 (visibility and billing). Every row must say true.

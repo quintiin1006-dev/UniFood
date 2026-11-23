@@ -887,6 +887,9 @@ test("cleanup checks every table that references an account", async (t) => {
     "daily_menu_days.published_by",
     "notification_preferences.user_id",
     "notifications.user_id",
+    // 034: a notice is only written for the client of an existing order, so the clients check
+    // below covers it; the row is ON DELETE CASCADE as well.
+    "order_notices.user_id",
     "orders.client_id",
     // 021: whoever rejects is a WORKER, so the user_roles check below covers it.
     "orders.rejected_by",
